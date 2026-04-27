@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Jet ski & boat rentals on Lake Lewisville, TX. Yamaha VX, SeaDoo TRIXX, and boat rentals delivered to your spot. Life jackets, full tank, and cooler included. Book online — (469) 693-7164.">
-<meta name="keywords" content="jet ski rental lake lewisville, boat rental lewisville texas, DFW jet ski rental, hickory creek boat rental, seadoo rental texas">
+<meta name="description" content="Jet ski & boat rentals on Lake Lewisville, TX. Choose 1 to 4 jet skis or a captained boat rental delivered to your spot. Life jackets, full tank, and cooler included. Book online — (469) 693-7164.">
+<meta name="keywords" content="jet ski rental lake lewisville, boat rental lewisville texas, DFW jet ski rental, hickory creek boat rental, lake lewisville jet ski rental">
 <meta property="og:title" content="Shoreline Aquatics — Jet Ski & Boat Rentals | Lake Lewisville TX">
-<meta property="og:description" content="Jet ski & boat rentals delivered to Lake Lewisville. SeaDoo TRIXX, Yamaha VX, boat rental with captain. Book online or call (469) 693-7164.">
+<meta property="og:description" content="Jet ski & boat rentals delivered to Lake Lewisville. Choose 1 to 4 jet skis or a boat rental with captain. Book online or call (469) 693-7164.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://slaquatics.com">
 <meta name="twitter:card" content="summary_large_image">
@@ -471,16 +471,20 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <div>
           <div class="calc-col-label">1 · Number of jet skis needed</div>
           <div class="calc-select-group" id="js-craft-opts">
-            <div class="calc-option selected" data-craft="yamaha" onclick="selectOpt('js-craft-opts',this);calcPrice()">
-              <div><div class="calc-option-name">2 Jet Skis · Yamaha VX</div><div class="calc-option-sub">Great for couples or smaller groups</div></div>
+            <div class="calc-option" data-craft="jetski1" onclick="selectOpt('js-craft-opts',this);calcPrice()">
+              <div><div class="calc-option-name">1 Jet Ski</div><div class="calc-option-sub">Perfect for solo riders</div></div>
               <div class="calc-check"></div>
             </div>
-            <div class="calc-option" data-craft="seadoo2" onclick="selectOpt('js-craft-opts',this);calcPrice()">
-              <div><div class="calc-option-name">2 Jet Skis · SeaDoo</div><div class="calc-option-sub">Sporty and fun on the water</div></div>
+            <div class="calc-option selected" data-craft="jetski2" onclick="selectOpt('js-craft-opts',this);calcPrice()">
+              <div><div class="calc-option-name">2 Jet Skis</div><div class="calc-option-sub">Great for couples or smaller groups</div></div>
               <div class="calc-check"></div>
             </div>
-            <div class="calc-option" data-craft="seadoo4" onclick="selectOpt('js-craft-opts',this);calcPrice()">
-              <div><div class="calc-option-name">4 Jet Skis · SeaDoo TRIXX</div><div class="calc-option-sub">Perfect for big groups and parties</div></div>
+            <div class="calc-option" data-craft="jetski3" onclick="selectOpt('js-craft-opts',this);calcPrice()">
+              <div><div class="calc-option-name">3 Jet Skis</div><div class="calc-option-sub">Best for small groups that want more room</div></div>
+              <div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-craft="jetski4" onclick="selectOpt('js-craft-opts',this);calcPrice()">
+              <div><div class="calc-option-name">4 Jet Skis</div><div class="calc-option-sub">Perfect for big groups and parties</div></div>
               <div class="calc-check"></div>
             </div>
           </div>
@@ -508,7 +512,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <div class="calc-result-box">
             <div class="calc-result-label">Your Total</div>
             <div class="calc-result-price" id="js-price">$300</div>
-            <div class="calc-result-desc" id="js-desc">2 Jet Skis · Yamaha VX · 2hrs</div>
+            <div class="calc-result-desc" id="js-desc">2 Jet Skis · 2hrs</div>
             <div class="calc-deposit-row">
               <div class="calc-deposit-item"><div class="dl">Booking deposit</div><div class="dv" style="color:var(--gold);">$50</div></div>
               <div class="calc-deposit-item"><div class="dl">Damage deposit/ski</div><div class="dv" style="color:var(--gold);">$250</div></div>
@@ -524,7 +528,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Safety Briefing</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=jetski&craft=yamaha&hours=2&total=300" class="calc-book-btn" id="js-book-btn">Book for $300 →</a>
+          <a href="./jetski-booking/?type=jetski&craft=jetski2&hours=2&total=300" class="calc-book-btn" id="js-book-btn">Book for $300 →</a>
           <p class="price-match">💰 Found a lower price? <span>We'll match it.</span></p>
         </div>
       </div>
@@ -909,15 +913,17 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 <script>
 // ── CALC ──
 const PRICING = {
-  yamaha:  {2:300,3:450,4:560,6:680,8:800},
-  seadoo2: {2:300,3:450,4:560,6:680,8:800},
-  seadoo4: {2:600,3:900,4:1120,6:1360,8:1600},
+  jetski1: {2:150,3:225,4:280,6:340,8:400},
+  jetski2: {2:300,3:450,4:560,6:680,8:800},
+  jetski3: {2:450,3:675,4:840,6:1020,8:1200},
+  jetski4: {2:600,3:900,4:1120,6:1360,8:1600},
   boat:    {1:150,2:220,3:330,4:500,6:750,8:1000}
 };
 const CRAFT_NAMES = {
-  yamaha:'2 Jet Skis · Yamaha VX',
-  seadoo2:'2 Jet Skis · SeaDoo',
-  seadoo4:'4 Jet Skis · SeaDoo TRIXX'
+  jetski1:'1 Jet Ski',
+  jetski2:'2 Jet Skis',
+  jetski3:'3 Jet Skis',
+  jetski4:'4 Jet Skis'
 };
 
 function buildBookingUrl(params) {
@@ -939,7 +945,7 @@ function getSelected(groupId, attr) {
 }
 
 function calcPrice() {
-  const craft = getSelected('js-craft-opts','craft') || 'yamaha';
+  const craft = getSelected('js-craft-opts','craft') || 'jetski2';
   const hours = parseInt(getSelected('js-dur-opts','hours')) || 2;
   const price = PRICING[craft]?.[hours] || 0;
   const name = CRAFT_NAMES[craft] || craft;
