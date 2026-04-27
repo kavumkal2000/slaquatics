@@ -599,6 +599,10 @@ const equipment = [
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 }
+function shortText(value, max = 110) {
+  const text = String(value || '').trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
 function phoneHref(phone) {
   return String(phone ?? '').replace(/[^\d+]/g, '');
 }
@@ -633,6 +637,16 @@ function rowValue(row, candidates) {
     }
   }
   return '';
+}
+function collectCrmFields(row) {
+  return Object.fromEntries(
+    Object.entries(row || {})
+      .map(([key, value]) => [String(key || '').trim(), String(value || '').trim()])
+      .filter(([key, value]) => key && value)
+  );
+}
+function mergeCrmFields(existingFields, incomingFields) {
+  return {...(existingFields || {}), ...(incomingFields || {})};
 }
 function parseMoney(value) {
   const parsed = parseFloat(String(value || '').replace(/[^0-9.-]/g, ''));
@@ -738,6 +752,11 @@ function upsertImportedCustomer(data) {
     existing.source = data.source || existing.source;
     existing.tag = existing.tag || data.tag || '';
     existing.crmTags = data.crmTags || existing.crmTags || '';
+    existing.company = data.company || existing.company || '';
+    existing.createdAt = data.createdAt || existing.createdAt || '';
+    existing.lastActivity = data.lastActivity || existing.lastActivity || '';
+    existing.crmNotes = data.crmNotes || existing.crmNotes || '';
+    existing.crmFields = mergeCrmFields(existing.crmFields, data.crmFields);
     return 'updated';
   }
   customers.push({
@@ -751,6 +770,11 @@ function upsertImportedCustomer(data) {
     source: data.source || 'Admin Tribe',
     tag: data.tag || '',
     crmTags: data.crmTags || '',
+    company: data.company || '',
+    createdAt: data.createdAt || '',
+    lastActivity: data.lastActivity || '',
+    crmNotes: data.crmNotes || '',
+    crmFields: data.crmFields || {},
     importSource: 'admintribe'
   });
   return 'added';
@@ -860,7 +884,12 @@ function importContactsFromCsv(rows, fileName) {
       lastBooking: isoDate(rowValue(row, ['last booking', 'last activity cdt', 'last activity', 'created cdt', 'created'])),
       source: rowValue(row, ['source', 'business name', 'company']) || 'Admin Tribe',
       tag: deriveCustomerTag(rowValue(row, ['tags', 'tag'])),
-      crmTags: rowValue(row, ['tags', 'tag'])
+      crmTags: rowValue(row, ['tags', 'tag']),
+      company: rowValue(row, ['business name', 'company', 'company name']),
+      createdAt: rowValue(row, ['created cdt', 'created', 'date added']),
+      lastActivity: rowValue(row, ['last activity cdt', 'last activity']),
+      crmNotes: rowValue(row, ['notes', 'note']),
+      crmFields: collectCrmFields(row)
     };
     if (replaceSeed) {
       importedCustomers.push({id: importedCustomers.length + 1, ...customer});
@@ -928,6 +957,7 @@ function importOpportunitiesFromCsv(rows, fileName) {
       status: mapImportedStatus(stage, status),
       deposit: /deposit|paid|won|closed/i.test(`${stage} ${status}`),
       notes: buildOpportunityNotes(row),
+      crmFields: collectCrmFields(row),
       importSource: 'admintribe'
     };
     const dedupeKey = [
@@ -950,7 +980,10 @@ function importOpportunitiesFromCsv(rows, fileName) {
       lastBooking: booking.date === 'TBD' ? 'N/A' : booking.date,
       source: pipeline || 'Admin Tribe',
       tag: deriveCustomerTag(tags),
-      crmTags: tags
+      crmTags: tags,
+      company: rowValue(row, ['business name', 'company', 'company name']),
+      crmNotes: rowValue(row, ['notes', 'note']),
+      crmFields: collectCrmFields(row)
     });
     if (action === 'updated') updated += 1;
   }
@@ -1170,10 +1203,13 @@ function renderCRM() {
         <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
         <div>
           <div class="customer-name">${escapeHtml(c.name)}</div>
-          <div class="customer-meta">${c.phone ? `<a href="tel:${phoneHref(c.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(c.phone)}</a>` : 'No phone on file'}${c.source ? ` · ${escapeHtml(c.source)}` : ''}</div>
+          <div class="customer-meta">${c.phone ? `<a href="tel:${phoneHref(c.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(c.phone)}</a>` : 'No phone on file'}${c.email ? ` · ${escapeHtml(c.email)}` : ''}</div>
         </div>
         ${c.tag==='vip'?'<span class="badge badge-vip" style="margin-left:auto;">VIP</span>':c.tag==='repeat'?'<span class="badge badge-completed" style="margin-left:auto;">Repeat</span>':''}
       </div>
+      <div class="customer-meta">${[c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ') || 'Imported CRM profile'}</div>
+      ${(c.createdAt || c.lastActivity) ? `<div class="customer-meta">Created ${escapeHtml(c.createdAt || '—')} · Last activity ${escapeHtml(c.lastActivity || '—')}</div>` : ''}
+      ${c.crmNotes ? `<div class="customer-meta">${escapeHtml(shortText(c.crmNotes))}</div>` : ''}
       <div class="customer-stats">
         <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>
         <div class="customer-stat"><div class="num">$${c.totalSpent.toLocaleString()}</div><div class="lbl">Total spent</div></div>
