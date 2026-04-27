@@ -314,6 +314,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="crm-toolbar">
       <input class="search-input" placeholder="Search customers..." oninput="filterCRM(this)">
       <button class="btn btn-ghost btn-sm" onclick="triggerCRMImport()">Import Admin Tribe CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="openModal('crm-paste-modal')">Paste CRM CSV</button>
       <button class="btn btn-primary btn-sm" onclick="openModal('customer-modal')">+ Add Customer</button>
     </div>
   </div>
@@ -516,6 +517,25 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('customer-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CRM PASTE MODAL -->
+<div class="modal-overlay" id="crm-paste-modal">
+  <div class="modal" style="width:min(760px,92vw);">
+    <div class="modal-head"><h3>Paste Admin Tribe CSV</h3><button class="modal-close" onclick="closeModal('crm-paste-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid full">
+        <div class="form-group">
+          <label>CSV data</label>
+          <textarea id="crm-paste-data" placeholder="Paste Contacts or Opportunities CSV content from Admin Tribe here..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('crm-paste-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="importCRMFromTextarea()">Import CRM Data</button>
     </div>
   </div>
 </div>
@@ -1029,6 +1049,38 @@ function handleCRMImport(event) {
     }
   };
   reader.readAsText(file);
+}
+function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
+  const parsed = parseCsvObjects(rawText);
+  if (!parsed.rows.length) throw new Error('No records were found in that CSV.');
+  const type = detectImportType(parsed.headers);
+  if (type === 'unknown') {
+    throw new Error('Could not identify that CSV. Export Contacts or Opportunities from Admin Tribe and try again.');
+  }
+  const summary = type === 'contacts'
+    ? importContactsFromCsv(parsed.rows, fileName)
+    : importOpportunitiesFromCsv(parsed.rows, fileName);
+  saveData();
+  renderImportSummary();
+  renderUpcoming();
+  if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
+  renderCRM();
+  renderReminders();
+  document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
+  return { type, summary };
+}
+function importCRMFromTextarea() {
+  const textarea = document.getElementById('crm-paste-data');
+  const rawText = textarea?.value || '';
+  try {
+    const result = processCRMImportText(rawText, 'pasted-admintribe.csv');
+    if (textarea) textarea.value = '';
+    closeModal('crm-paste-modal');
+    showToast(`✅ Imported ${result.type === 'contacts' ? 'customers' : 'bookings'} — ${result.summary.added} added, ${result.summary.updated} updated`);
+  } catch (error) {
+    console.error('CRM paste import failed:', error);
+    showToast(`⚠️ ${error.message}`);
+  }
 }
 
 // ── NAVIGATION ──
