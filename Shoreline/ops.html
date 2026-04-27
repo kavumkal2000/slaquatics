@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="description" content="Shoreline Aquatics Operations — Bookings, CRM, Margins, Fuel, Maintenance">
+<meta name="description" content="Shoreline Aquatics Operations — Bookings, CRM, Fuel, Maintenance, Reminders">
 <meta name="robots" content="noindex, nofollow">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -133,18 +133,6 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .customer-stat .num{font-size:1rem;font-weight:500;color:var(--wave);}
 .customer-stat .lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
 
-/* MARGIN TRACKER */
-.margin-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;}
-.margin-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.2rem;}
-.margin-card h4{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.5rem;}
-.margin-value{font-family:'Bebas Neue',cursive;font-size:1.8rem;line-height:1;letter-spacing:0.04em;}
-.margin-bar-wrap{margin-top:0.8rem;}
-.margin-bar-track{background:rgba(255,255,255,0.08);border-radius:4px;height:6px;overflow:hidden;}
-.margin-bar-fill{height:100%;border-radius:4px;transition:width 0.4s;}
-.profit-table .profit-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:0.5rem;padding:0.8rem 1.2rem;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center;}
-.profit-table .profit-row:last-child{border-bottom:none;}
-.profit-table .profit-head{font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);border-bottom:1px solid var(--border) !important;}
-
 /* FUEL TRACKER */
 .fuel-log{display:flex;flex-direction:column;gap:0.5rem;}
 .fuel-entry{background:var(--deep);border-radius:10px;border:1px solid var(--border);padding:0.9rem 1.2rem;display:flex;align-items:center;gap:1rem;}
@@ -225,7 +213,6 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <button class="nav-item" onclick="showPage('bookings',this)"><span class="icon">📅</span><span>Bookings</span><span class="nav-badge" id="pending-badge">2</span></button>
   <div class="nav-section">Business</div>
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
-  <button class="nav-item" onclick="showPage('margins',this)"><span class="icon">💰</span><span>Margins</span></button>
   <button class="nav-item" onclick="showPage('fuel',this)"><span class="icon">⛽</span><span>Fuel Log</span></button>
   <button class="nav-item" onclick="showPage('maintenance',this)"><span class="icon">🔧</span><span>Maintenance</span></button>
   <div class="nav-section">Growth</div>
@@ -253,19 +240,19 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
 
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">Revenue this month</div><div class="value" style="color:var(--wave);">$53,419</div><div class="delta up">186 customers · 163 invoices</div></div>
-    <div class="kpi-card"><div class="label">Net margin</div><div class="value" style="color:var(--green);">61%</div><div class="delta up">↑ 8pts — fuel down</div></div>
+    <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);">2</div><div class="delta warn">Tomorrow's bookings need follow-up</div></div>
+    <div class="kpi-card"><div class="label">Equipment due soon</div><div class="value" style="color:var(--green);">1</div><div class="delta up">SeaDoo TRIXX #2 before weekend</div></div>
     <div class="kpi-card"><div class="label">No-show rate</div><div class="value" style="color:var(--amber);">14%</div><div class="delta warn">▲ Add deposit reminders</div></div>
     <div class="kpi-card"><div class="label">Bookings this month</div><div class="value">18</div><div class="delta up">↑ 3 vs last month</div></div>
   </div>
 
   <div class="charts-grid">
     <div class="chart-card">
-      <h3>Revenue by week (this month)</h3>
-      <div class="bar-chart" id="revenue-bars"></div>
+      <h3>Bookings by week (this month)</h3>
+      <div class="bar-chart" id="booking-bars"></div>
     </div>
     <div class="chart-card">
-      <h3>Revenue by craft</h3>
+      <h3>Fleet mix</h3>
       <div class="donut-wrap">
         <svg width="100" height="100" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"/>
@@ -274,8 +261,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
           <circle cx="50" cy="50" r="38" fill="none" stroke="#10b981" stroke-width="14" stroke-dasharray="55 183" stroke-dashoffset="-183" transform="rotate(-90 50 50)"/>
         </svg>
         <div class="donut-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:#1a9ed4"></div>SeaDoo TRIXX — 45%</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#0fb8e0"></div>Yamaha VX — 32%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#1a9ed4"></div>4 Jet Skis — 45%</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#0fb8e0"></div>2 Jet Skis — 32%</div>
           <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Boat Rental — 23%</div>
         </div>
       </div>
@@ -327,50 +314,6 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="crm-grid" id="crm-grid"></div>
 </div>
 
-<!-- ═══ MARGINS ═══ -->
-<div class="page" id="page-margins">
-  <div class="section-head"><h2>Profit Margins</h2></div>
-  <div class="margin-row">
-    <div class="margin-card"><h4>Revenue</h4><div class="margin-value" style="color:var(--wave);">$53,419</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:100%;background:var(--sky);"></div></div></div></div>
-    <div class="margin-card"><h4>Fuel costs</h4><div class="margin-value" style="color:var(--amber);">$412</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:9.6%;background:var(--amber);"></div></div></div></div>
-    <div class="margin-card"><h4>Other costs</h4><div class="margin-value" style="color:var(--red);">$256</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:6%;background:var(--red);"></div></div></div></div>
-    <div class="margin-card"><h4>Net profit</h4><div class="margin-value" style="color:var(--green);">$44,838</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:84.4%;background:var(--green);"></div></div></div></div>
-  </div>
-
-  <div class="table-wrap" style="margin-bottom:1.5rem;">
-    <div class="table-header"><div class="table-title">Profit by rental type</div></div>
-    <div class="profit-table">
-      <div class="profit-row profit-head"><span>Rental</span><span>Avg revenue</span><span>Avg fuel</span><span>Net/rental</span><span>Margin</span></div>
-      <div class="profit-row"><span>Yamaha VX — 2hr</span><span style="color:var(--wave);">$300</span><span style="color:var(--amber);">$18</span><span style="color:var(--green);">$282</span><span><span class="badge badge-confirmed">94%</span></span></div>
-      <div class="profit-row"><span>Yamaha VX — Full day</span><span style="color:var(--wave);">$800</span><span style="color:var(--amber);">$72</span><span style="color:var(--green);">$728</span><span><span class="badge badge-confirmed">91%</span></span></div>
-      <div class="profit-row"><span>SeaDoo TRIXX — 2hr</span><span style="color:var(--wave);">$600</span><span style="color:var(--amber);">$36</span><span style="color:var(--green);">$564</span><span><span class="badge badge-confirmed">94%</span></span></div>
-      <div class="profit-row"><span>SeaDoo TRIXX — Full day</span><span style="color:var(--wave);">$1,600</span><span style="color:var(--amber);">$145</span><span style="color:var(--green);">$1,455</span><span><span class="badge badge-confirmed">91%</span></span></div>
-      <div class="profit-row"><span>Boat Rental — 4hr</span><span style="color:var(--wave);">$500</span><span style="color:var(--amber);">$48</span><span style="color:var(--green);">$452</span><span><span class="badge badge-pending">90%</span></span></div>
-      <div class="profit-row"><span style="font-weight:500;">No-show (no deposit)</span><span style="color:var(--red);">$0</span><span style="color:var(--amber);">$0</span><span style="color:var(--red);">-$150</span><span><span class="badge badge-noshow">-100%</span></span></div>
-    </div>
-  </div>
-
-  <div class="table-wrap">
-    <div class="table-header">
-      <div class="table-title">💡 Pricing recommendations</div>
-    </div>
-    <div style="padding:1rem 1.2rem;display:flex;flex-direction:column;gap:0.8rem;">
-      <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.8rem;background:rgba(245,158,11,0.08);border-radius:8px;border:1px solid rgba(245,158,11,0.2);">
-        <span style="font-size:1.2rem;">💡</span>
-        <div><div style="font-size:0.86rem;font-weight:500;margin-bottom:3px;">Weekend surge pricing</div><div style="font-size:0.8rem;color:var(--muted);">Fri–Sun demand is 40% higher. Raise weekend rates 15% — Yamaha VX 2hr to $345, SeaDoo TRIXX 2hr to $690. Estimated +$340/month.</div></div>
-      </div>
-      <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.8rem;background:rgba(16,185,129,0.08);border-radius:8px;border:1px solid rgba(16,185,129,0.2);">
-        <span style="font-size:1.2rem;">📈</span>
-        <div><div style="font-size:0.86rem;font-weight:500;margin-bottom:3px;">Mandatory deposit = +$150/no-show recovered</div><div style="font-size:0.8rem;color:var(--muted);">At 14% no-show rate across 18 bookings = ~2.5 no-shows/month. Deposit policy recovers ~$375/month instantly.</div></div>
-      </div>
-      <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.8rem;background:rgba(26,158,212,0.08);border-radius:8px;border:1px solid rgba(26,158,212,0.2);">
-        <span style="font-size:1.2rem;">🎯</span>
-        <div><div style="font-size:0.86rem;font-weight:500;margin-bottom:3px;">Upsell drone on every booking</div><div style="font-size:0.8rem;color:var(--muted);">Only 30% of bookings currently add drone. If you mention it at booking time, est. 60% uptake = +$50 × 10 extra bookings = +$500/month.</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ═══ FUEL LOG ═══ -->
 <div class="page" id="page-fuel">
   <div class="section-head">
@@ -378,7 +321,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <button class="btn btn-primary btn-sm" onclick="openModal('fuel-modal')">+ Log Fuel</button>
   </div>
   <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
-    <div class="kpi-card"><div class="label">Fuel cost this month</div><div class="value" style="color:var(--amber);">$412</div><div class="delta warn">9.6% of revenue</div></div>
+    <div class="kpi-card"><div class="label">Fuel cost this month</div><div class="value" style="color:var(--amber);">$412</div><div class="delta warn">45.3 rental hours logged</div></div>
     <div class="kpi-card"><div class="label">Cost per rental hour</div><div class="value" style="color:var(--amber);">$9.10</div><div class="delta up">↓ $1.20 vs last month</div></div>
     <div class="kpi-card"><div class="label">Total hours logged</div><div class="value">45.3</div><div class="delta up">This month</div></div>
   </div>
@@ -418,7 +361,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div id="upcoming-reminders"></div>
   </div>
   <div id="reminder-campaigns" style="display:none;">
-    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Seasonal campaigns to maximize peak season revenue.</p>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Seasonal campaigns to fill peak weekends.</p>
     <div id="campaigns-list"></div>
   </div>
 </div>
@@ -443,8 +386,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Craft</label>
           <select id="b-craft" onchange="calcBookingPrice()">
             <option value="">Select craft</option>
-            <option value="yamaha">Yamaha VX (2 skis)</option>
-            <option value="seadoo">SeaDoo TRIXX (4 skis)</option>
+            <option value="yamaha">2 Jet Skis</option>
+            <option value="seadoo">4 Jet Skis</option>
             <option value="boat">Boat Rental</option>
           </select>
         </div>
@@ -589,7 +532,7 @@ const PRICING = {
   seadoo:{2:600,3:900,4:1120,6:1360,8:1600},
   boat:{1:150,2:220,3:330,4:500,6:750,8:1000}
 };
-const CRAFT_NAMES = {yamaha:'Yamaha VX',seadoo:'SeaDoo TRIXX',boat:'Boat Rental'};
+const CRAFT_NAMES = {yamaha:'2 Jet Skis',seadoo:'4 Jet Skis',boat:'Boat Rental'};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
 let bookings = [
@@ -642,7 +585,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',crm:'Customers',margins:'Profit Margins',fuel:'Fuel Log',maintenance:'Maintenance',reminders:'Re-engagement'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',crm:'Customers',fuel:'Fuel Log',maintenance:'Maintenance',reminders:'Re-engagement'};
   document.getElementById('page-title').textContent = titles[id]||id;
   if(id==='bookings') renderBookings();
   if(id==='crm') renderCRM();
@@ -894,7 +837,7 @@ function renderReminders() {
       <div class="reminder-icon">📅</div>
       <div class="reminder-body">
         <div class="name">Reminder: ${b.name}</div>
-        <div class="detail">${b.craft==='yamaha'?'Yamaha VX':b.craft==='seadoo'?'SeaDoo TRIXX':'Boat'} · ${b.date} at ${b.time}</div>
+        <div class="detail">${b.craft==='yamaha'?'2 Jet Skis':b.craft==='seadoo'?'4 Jet Skis':'Boat Rental'} · ${b.date} at ${b.time}</div>
       </div>
       <div class="reminder-action">
         <a href="sms:${b.phone}?body=Hey ${b.name.split(' ')[0]}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${b.time}. Don't forget your ID! Questions? (469) 693-7164 🌊" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>
@@ -929,13 +872,13 @@ function switchReminderTab(tab, btn) {
 }
 
 // ── DASHBOARD BARS ──
-function renderRevenueBars() {
-  const weeks = [{w:'Week 1',v:820},{w:'Week 2',v:1140},{w:'Week 3',v:980},{w:'Week 4',v:1340}];
+function renderBookingBars() {
+  const weeks = [{w:'Week 1',v:3},{w:'Week 2',v:5},{w:'Week 3',v:4},{w:'Week 4',v:6}];
   const max = Math.max(...weeks.map(w=>w.v));
-  document.getElementById('revenue-bars').innerHTML = weeks.map(w=>`
+  document.getElementById('booking-bars').innerHTML = weeks.map(w=>`
     <div class="bar-col">
-      <div class="bar-val">$${w.v.toLocaleString()}</div>
-      <div class="bar" style="height:${Math.round((w.v/max)*100)}px;" title="$${w.v}"></div>
+      <div class="bar-val">${w.v}</div>
+      <div class="bar" style="height:${Math.round((w.v/max)*100)}px;" title="${w.v} bookings"></div>
       <div class="bar-label">${w.w}</div>
     </div>`).join('');
 }
@@ -962,7 +905,7 @@ try {
 } catch(e){}
 loadData();
 renderUpcoming();
-renderRevenueBars();
+renderBookingBars();
 document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
 document.getElementById('b-date').value = today();
 document.getElementById('f-date').value = today();
