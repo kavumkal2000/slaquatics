@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Review and send your Shoreline Aquatics booking request.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://slaquatics.com/jetski-booking-confirmation/">
+<title>Booking Confirmation | Shoreline Aquatics</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(15, 184, 224, 0.16), transparent 24%),
+    linear-gradient(180deg, #08111f 0%, #0b1930 48%, #102642 100%);
+  color: #ffffff;
+}
+:root {
+  --gold: #f5a623;
+  --orange: #e8841a;
+  --line: rgba(255, 255, 255, 0.1);
+  --panel: rgba(12, 27, 48, 0.92);
+  --muted: rgba(255, 255, 255, 0.68);
+}
+.shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 36px 20px 64px;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 32px;
+}
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  color: #08111f;
+  display: grid;
+  place-items: center;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.55rem;
+  letter-spacing: 0.08em;
+}
+.brand-copy strong {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.brand-copy span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.28);
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+}
+h1, h2 {
+  margin: 0;
+  font-family: 'Bebas Neue', cursive;
+  letter-spacing: 0.04em;
+  line-height: 0.95;
+}
+h1 {
+  margin-top: 16px;
+  font-size: clamp(3rem, 6vw, 4.8rem);
+}
+p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.status {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.92rem;
+}
+.summary-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.summary-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.summary-row span { color: var(--muted); }
+.summary-row strong { text-align: right; }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.82rem 1.18rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-primary {
+  background: var(--gold);
+  color: #08111f;
+}
+.btn-primary:hover { background: var(--orange); }
+.btn-ghost {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+.btn-ghost:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.empty {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+@media (max-width: 720px) {
+  .card {
+    padding: 22px;
+    border-radius: 22px;
+  }
+  .summary-row {
+    flex-direction: column;
+  }
+  .summary-row strong {
+    text-align: left;
+  }
+}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <a class="brand" href="../">
+      <div class="brand-mark">SA</div>
+      <div class="brand-copy">
+        <strong>Shoreline Aquatics</strong>
+        <span>Lake Lewisville jet ski and boat rentals</span>
+      </div>
+    </a>
+
+    <div class="card">
+      <div class="eyebrow">Confirmation</div>
+      <h1>Send The <span style="color: var(--gold);">Booking Request</span></h1>
+      <p>
+        Your rental details are ready. Use the buttons below to open a pre-filled text message or email draft, or call Shoreline directly if you want to lock in the reservation right away.
+      </p>
+
+      <div id="empty-state" class="empty" hidden>
+        No booking request is saved yet. Go back to the booking page, choose your package, and we will prepare the confirmation details here.
+      </div>
+
+      <div id="request-wrap" hidden>
+        <div class="status" id="copy-status">We prepared your request summary below.</div>
+
+        <div class="summary-grid">
+          <div class="summary-row"><span>Package</span><strong id="summary-package"></strong></div>
+          <div class="summary-row"><span>Date</span><strong id="summary-date"></strong></div>
+          <div class="summary-row"><span>Start time</span><strong id="summary-time"></strong></div>
+          <div class="summary-row"><span>Meeting spot</span><strong id="summary-location"></strong></div>
+          <div class="summary-row"><span>Party size</span><strong id="summary-party"></strong></div>
+          <div class="summary-row"><span>Total quote</span><strong id="summary-total"></strong></div>
+          <div class="summary-row"><span>Customer</span><strong id="summary-customer"></strong></div>
+          <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact"></strong></div>
+        </div>
+
+        <div class="actions">
+          <a class="btn btn-primary" id="sms-link" href="#">Text booking request</a>
+          <a class="btn btn-ghost" id="email-link" href="#">Email booking request</a>
+          <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
+          <a class="btn btn-ghost" id="copy-link" href="#">Copy request text</a>
+          <a class="btn btn-ghost" href="../jetski-booking/">Edit request</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const CONTACT_PHONE = "4696937164";
+const CONTACT_EMAIL = "shorelinerentals3@gmail.com";
+
+function readBooking() {
+  try {
+    return JSON.parse(localStorage.getItem("sla_booking_request") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function buildMessage(booking) {
+  return [
+    `Hi Shoreline Aquatics, I want to request a booking.`,
+    ``,
+    `Name: ${booking.name}`,
+    `Phone: ${booking.phone}`,
+    `Email: ${booking.email || "Not provided"}`,
+    `Package: ${booking.craftLabel}`,
+    `Duration: ${booking.durationLabel}`,
+    `Date: ${booking.date}`,
+    `Time: ${booking.time}`,
+    `Party size: ${booking.partySize || "Not provided"}`,
+    `Drone coverage: ${booking.drone ? "Yes" : "No"}`,
+    `Meeting spot: ${booking.location || "To be confirmed"}`,
+    `Preferred contact: ${booking.contactMethod}`,
+    `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
+    `Notes: ${booking.notes || "None"}`
+  ].join("\n");
+}
+
+function setText(id, value) {
+  document.getElementById(id).textContent = value;
+}
+
+function showBooking(booking) {
+  const message = buildMessage(booking);
+  const smsHref = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(message)}`;
+  const emailSubject = encodeURIComponent(`Booking request from ${booking.name}`);
+  const emailBody = encodeURIComponent(message);
+
+  setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
+  setText("summary-date", booking.date);
+  setText("summary-time", booking.time);
+  setText("summary-location", booking.location || "To be confirmed");
+  setText("summary-party", booking.partySize || "Not provided");
+  setText("summary-total", `$${Number(booking.total || 0).toLocaleString()}`);
+  setText("summary-customer", `${booking.name} · ${booking.phone}`);
+  setText("summary-contact", booking.contactMethod);
+
+  document.getElementById("sms-link").href = smsHref;
+  document.getElementById("email-link").href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
+  document.getElementById("copy-link").addEventListener("click", async (event) => {
+    event.preventDefault();
+    try {
+      await navigator.clipboard.writeText(message);
+      document.getElementById("copy-status").textContent = "Request copied. Paste it into any message app if SMS or email does not open automatically.";
+    } catch {
+      document.getElementById("copy-status").textContent = "Copy failed in this browser. Use the email or text buttons instead.";
+    }
+  });
+
+  document.getElementById("request-wrap").hidden = false;
+}
+
+const booking = readBooking();
+if (!booking) {
+  document.getElementById("empty-state").hidden = false;
+} else {
+  showBooking(booking);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: shoreline-aquatics
+    runtime: static
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=3600
+      - path: /ops.html
+        name: X-Robots-Tag
+        value: noindex
