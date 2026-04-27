@@ -18,6 +18,19 @@
 }
 html{scroll-behavior:smooth;}
 body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);min-height:100vh;display:flex;}
+body[data-app-ready="false"] .app-loading{opacity:1;pointer-events:auto;}
+body[data-app-ready="true"] .app-loading{opacity:0;pointer-events:none;}
+.app-loading{
+  position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg, rgba(8,17,31,0.92), rgba(12,27,48,0.96));
+  transition:opacity 0.25s ease;opacity:0;pointer-events:none;padding:1.5rem;
+}
+.app-loading-card{
+  width:min(420px,100%);border-radius:22px;border:1px solid var(--border);
+  background:rgba(12,27,48,0.9);padding:1.4rem 1.5rem 1.3rem;box-shadow:0 24px 70px rgba(0,0,0,0.35)
+}
+.app-loading-card h2{font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:0.06em;margin-bottom:0.45rem}
+.app-loading-card p{font-size:0.9rem;color:var(--muted);line-height:1.65}
 
 /* SIDEBAR */
 .sidebar{width:220px;background:var(--deep);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;}
@@ -38,6 +51,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);
 .topbar{background:var(--deep);border-bottom:1px solid var(--border);padding:0.9rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
 .topbar-title{font-family:'Bebas Neue',cursive;font-size:1.5rem;letter-spacing:0.06em;}
 .topbar-right{display:flex;align-items:center;gap:0.8rem;}
+.ops-mode-pill{
+  display:inline-flex;align-items:center;gap:0.45rem;padding:0.36rem 0.72rem;border-radius:999px;
+  border:1px solid rgba(26,158,212,0.24);background:rgba(26,158,212,0.1);font-size:0.72rem;
+  letter-spacing:0.12em;text-transform:uppercase;color:var(--white);white-space:nowrap
+}
+.ops-mode-pill.browser{border-color:rgba(245,158,11,0.28);background:rgba(245,158,11,0.12)}
+.ops-mode-pill.server{border-color:rgba(16,185,129,0.28);background:rgba(16,185,129,0.12)}
 .btn{padding:0.55rem 1.2rem;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;letter-spacing:0.05em;text-transform:uppercase;transition:all 0.18s;border:none;}
 .btn-primary{background:var(--sky);color:#fff;}
 .btn-primary:hover{background:var(--wave);}
@@ -197,7 +217,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .toast.show{transform:translateY(0);opacity:1;}
 
 /* RESPONSIVE */
-@media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.crm-grid{grid-template-columns:1fr 1fr;}.maint-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.crm-grid{grid-template-columns:1fr 1fr;}.maint-grid{grid-template-columns:1fr 1fr;}.topbar{padding:0.9rem 1rem;align-items:flex-start;gap:0.75rem;}.topbar-right{flex-wrap:wrap;justify-content:flex-end;}.ops-mode-pill{font-size:0.66rem;}}
 </style>
 <meta name="theme-color" content="#08111f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -205,7 +225,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <meta name="apple-mobile-web-app-title" content="SLA Ops">
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2hvcmVsaW5lIE9wcyIsInNob3J0X25hbWUiOiJTTEEgT3BzIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiMwODExMWYiLCJ0aGVtZV9jb2xvciI6IiMwODExMWYifQ==">
 </head>
-<body>
+<body data-app-ready="false">
+<div class="app-loading" id="app-loading">
+  <div class="app-loading-card">
+    <h2>Launching Ops</h2>
+    <p>Connecting Shoreline bookings, customer records, and fleet logs. If the private server is available, this dashboard will switch into authenticated shared-storage mode automatically.</p>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -231,6 +257,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="topbar-title" id="page-title">Dashboard</div>
   <div class="topbar-right">
     <span style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
+    <span class="ops-mode-pill browser" id="ops-mode-pill">Browser-only</span>
+    <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
     <button class="btn btn-primary" onclick="openModal('booking-modal')">+ New Booking</button>
   </div>
 </div>
@@ -321,7 +349,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <input type="file" id="crm-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleCRMImport(event)">
   <div class="import-panel">
     <div>
-      <div class="title">Secure Browser-Only Import</div>
+      <div class="title" id="crm-import-title">Secure Browser-Only Import</div>
       <div class="copy" id="crm-import-summary">Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser's local storage and are not published into the live website code.</div>
     </div>
     <div class="import-pill" id="crm-import-pill">No CRM import yet</div>
@@ -544,25 +572,166 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 <script>
 
-function saveData() {
-  try {
-    dedupeCustomers();
-    localStorage.setItem('sla_bookings', JSON.stringify(bookings));
-    localStorage.setItem('sla_customers', JSON.stringify(customers));
-    localStorage.setItem('sla_fuel', JSON.stringify(fuelLog));
-    localStorage.setItem('sla_maint', JSON.stringify(maintLog));
-    localStorage.setItem('sla_import_meta', JSON.stringify(importMeta));
-  } catch(e) { console.warn('localStorage unavailable'); }
+const LOCAL_KEYS = {
+  bookings: 'sla_bookings',
+  customers: 'sla_customers',
+  fuelLog: 'sla_fuel',
+  maintLog: 'sla_maint',
+  importMeta: 'sla_import_meta'
+};
+let backendAvailable = false;
+
+function snapshotState() {
+  return {
+    bookings,
+    customers,
+    fuelLog,
+    maintLog,
+    importMeta
+  };
 }
-function loadData() {
+function applyState(nextState = {}) {
+  if (Array.isArray(nextState.bookings)) bookings = nextState.bookings;
+  if (Array.isArray(nextState.customers)) customers = nextState.customers;
+  if (Array.isArray(nextState.fuelLog)) fuelLog = nextState.fuelLog;
+  if (Array.isArray(nextState.maintLog)) maintLog = nextState.maintLog;
+  if (nextState.importMeta && typeof nextState.importMeta === 'object') {
+    importMeta = {...importMeta, ...nextState.importMeta};
+  }
+}
+function updateModeBadge() {
+  const pill = document.getElementById('ops-mode-pill');
+  const logoutBtn = document.getElementById('logout-btn');
+  if (!pill || !logoutBtn) return;
+  if (backendAvailable) {
+    pill.textContent = 'Private sync';
+    pill.className = 'ops-mode-pill server';
+    logoutBtn.style.display = 'inline-flex';
+  } else {
+    pill.textContent = 'Browser-only';
+    pill.className = 'ops-mode-pill browser';
+    logoutBtn.style.display = 'none';
+  }
+}
+function readLocalBackup() {
   try {
-    const b = localStorage.getItem('sla_bookings'); if(b) { const p=JSON.parse(b); if(p&&p.length>0) bookings=p; }
-    const c = localStorage.getItem('sla_customers'); if(c) { const p=JSON.parse(c); if(p&&p.length>0) customers=p; }
-    const f = localStorage.getItem('sla_fuel'); if(f) { const p=JSON.parse(f); if(p&&p.length>0) fuelLog=p; }
-    const m = localStorage.getItem('sla_maint'); if(m) { const p=JSON.parse(m); if(p&&p.length>0) maintLog=p; }
-    const i = localStorage.getItem('sla_import_meta'); if(i) { const p=JSON.parse(i); if(p&&typeof p==='object') importMeta={...importMeta,...p}; }
+    const next = {};
+    const b = localStorage.getItem(LOCAL_KEYS.bookings); if (b) next.bookings = JSON.parse(b);
+    const c = localStorage.getItem(LOCAL_KEYS.customers); if (c) next.customers = JSON.parse(c);
+    const f = localStorage.getItem(LOCAL_KEYS.fuelLog); if (f) next.fuelLog = JSON.parse(f);
+    const m = localStorage.getItem(LOCAL_KEYS.maintLog); if (m) next.maintLog = JSON.parse(m);
+    const i = localStorage.getItem(LOCAL_KEYS.importMeta); if (i) next.importMeta = JSON.parse(i);
+    return next;
+  } catch (error) {
+    console.warn('localStorage unavailable', error);
+    return {};
+  }
+}
+function writeLocalBackup() {
+  try {
     dedupeCustomers();
-  } catch(e) { console.warn('localStorage unavailable'); }
+    localStorage.setItem(LOCAL_KEYS.bookings, JSON.stringify(bookings));
+    localStorage.setItem(LOCAL_KEYS.customers, JSON.stringify(customers));
+    localStorage.setItem(LOCAL_KEYS.fuelLog, JSON.stringify(fuelLog));
+    localStorage.setItem(LOCAL_KEYS.maintLog, JSON.stringify(maintLog));
+    localStorage.setItem(LOCAL_KEYS.importMeta, JSON.stringify(importMeta));
+  } catch (error) {
+    console.warn('localStorage unavailable', error);
+  }
+}
+function shouldPromoteBackup(serverState, backupState) {
+  const backupCustomers = Array.isArray(backupState?.customers) ? backupState.customers.length : 0;
+  const serverCustomers = Array.isArray(serverState?.customers) ? serverState.customers.length : 0;
+  return Boolean(backupState?.importMeta?.importedAt) && (!serverState?.importMeta?.importedAt || backupCustomers > serverCustomers);
+}
+async function requestJson(path, options = {}) {
+  const headers = { Accept: 'application/json', ...(options.headers || {}) };
+  const response = await fetch(path, {
+    credentials: 'same-origin',
+    ...options,
+    headers
+  });
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json')
+    ? await response.json().catch(() => ({}))
+    : await response.text().catch(() => '');
+  if (!response.ok) {
+    const message = typeof payload === 'object' && payload ? payload.error : '';
+    const error = new Error(message || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+async function detectBackendSession() {
+  try {
+    const response = await fetch('/api/auth/session', {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return {available:false, authenticated:false};
+    const payload = await response.json().catch(() => ({}));
+    return {available:true, authenticated:Boolean(payload.authenticated)};
+  } catch (error) {
+    return {available:false, authenticated:false};
+  }
+}
+async function saveData(options = {}) {
+  dedupeCustomers();
+  writeLocalBackup();
+  if (!backendAvailable) return;
+  try {
+    await requestJson('/api/ops/state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(snapshotState())
+    });
+  } catch (error) {
+    console.error('Remote save failed:', error);
+    if (!options.silent) showToast(`⚠️ ${error.message || 'Could not save to the private ops service'}`);
+  }
+}
+async function loadData() {
+  const backupState = readLocalBackup();
+  const session = await detectBackendSession();
+  if (!session.available) {
+    backendAvailable = false;
+    updateModeBadge();
+    applyState(backupState);
+    dedupeCustomers();
+    return true;
+  }
+  if (!session.authenticated) {
+    window.location.href = '/ops-login.html';
+    return false;
+  }
+  backendAvailable = true;
+  updateModeBadge();
+  const payload = await requestJson('/api/ops/state');
+  const serverState = payload?.state || {};
+  applyState(serverState);
+  dedupeCustomers();
+  if (shouldPromoteBackup(serverState, backupState)) {
+    applyState(backupState);
+    dedupeCustomers();
+    await saveData({silent:true});
+    showToast('✅ Migrated browser-only ops data into the private synced app');
+  }
+  writeLocalBackup();
+  return true;
+}
+async function logout() {
+  if (!backendAvailable) {
+    showToast('ℹ️ Browser-only mode has no server session to log out of');
+    return;
+  }
+  try {
+    await requestJson('/api/auth/logout', { method: 'POST' });
+  } catch (error) {
+    console.error('Logout failed:', error);
+  } finally {
+    window.location.href = '/ops-login.html';
+  }
 }
 // ── DATA ──
 const PRICING = {
@@ -919,15 +1088,19 @@ function detectImportType(headers) {
 function renderImportSummary() {
   const summary = document.getElementById('crm-import-summary');
   const pill = document.getElementById('crm-import-pill');
-  if (!summary || !pill) return;
+  const title = document.getElementById('crm-import-title');
+  if (!summary || !pill || !title) return;
+  title.textContent = backendAvailable ? 'Secure Synced Import' : 'Secure Browser-Only Import';
   if (!importMeta.importedAt) {
-    summary.textContent = 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser\'s local storage and are not published into the live website code.';
+    summary.textContent = backendAvailable
+      ? 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records are saved into the private Shoreline ops service and synced across signed-in sessions.'
+      : 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser\'s local storage and are not published into the live website code.';
     pill.textContent = 'No CRM import yet';
     return;
   }
   const importedAt = new Date(importMeta.importedAt).toLocaleString();
   const typeLabel = importMeta.lastType === 'opportunities' ? 'Bookings import' : 'Customers import';
-  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} Data is stored only in this browser.`;
+  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} ${backendAvailable ? 'Data is stored in the private Shoreline ops service.' : 'Data is stored only in this browser.'}`;
   pill.textContent = `${importMeta.recordCount} rows imported`;
 }
 function filterCRM(input) {
@@ -1479,14 +1652,26 @@ try {
   }
   localStorage.setItem(versionKey, 'v4');
 } catch(e){}
-loadData();
-renderImportSummary();
-renderUpcoming();
-renderBookingBars();
-document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
-document.getElementById('b-date').value = today();
-document.getElementById('f-date').value = today();
-document.getElementById('m-date').value = today();
+async function bootApp() {
+  try {
+    const ready = await loadData();
+    if (!ready) return;
+  } catch (error) {
+    console.error('Ops boot failed:', error);
+    showToast(`⚠️ ${error.message || 'Could not connect to operations storage'}`);
+  } finally {
+    updateModeBadge();
+    renderImportSummary();
+    renderUpcoming();
+    renderBookingBars();
+    document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
+    document.getElementById('b-date').value = today();
+    document.getElementById('f-date').value = today();
+    document.getElementById('m-date').value = today();
+    document.body.dataset.appReady = 'true';
+  }
+}
+bootApp();
 </script>
 </body>
 </html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Shoreline Ops Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#08111f;--deep:#0c1b30;--panel:#0f2040;--panel-strong:#132746;
+  --sky:#1a9ed4;--wave:#0fb8e0;--white:#fff;--muted:rgba(255,255,255,0.62);
+  --border:rgba(26,158,212,0.18);--danger:#ff8d8d;
+}
+body{
+  min-height:100vh;
+  font-family:'DM Sans',sans-serif;
+  color:var(--white);
+  background:
+    radial-gradient(circle at top left, rgba(15,184,224,0.18), transparent 34%),
+    radial-gradient(circle at right, rgba(26,158,212,0.12), transparent 28%),
+    linear-gradient(180deg, #07101d 0%, #08111f 44%, #0a1830 100%);
+  display:grid;
+  place-items:center;
+  padding:1.5rem;
+}
+.shell{
+  width:min(960px,100%);
+  display:grid;
+  grid-template-columns:1.05fr 0.95fr;
+  border:1px solid var(--border);
+  border-radius:28px;
+  overflow:hidden;
+  background:rgba(9,19,35,0.8);
+  box-shadow:0 30px 80px rgba(0,0,0,0.35);
+  backdrop-filter:blur(20px);
+}
+.hero{
+  padding:3.25rem 2.5rem;
+  background:
+    linear-gradient(160deg, rgba(26,158,212,0.16), rgba(11,19,35,0) 44%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0) 30%);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:2.5rem;
+}
+.brand{font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:0.08em;color:var(--wave)}
+.eyeline{
+  display:inline-flex;align-items:center;gap:0.55rem;
+  width:fit-content;padding:0.4rem 0.8rem;border-radius:999px;
+  border:1px solid rgba(26,158,212,0.28);background:rgba(26,158,212,0.1);
+  color:var(--white);font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase
+}
+.hero h1{
+  font-family:'Bebas Neue',cursive;font-size:clamp(3rem,6vw,4.6rem);line-height:0.92;
+  letter-spacing:0.03em;margin-top:1rem;
+}
+.hero p{max-width:32rem;color:var(--muted);font-size:1rem;line-height:1.7;margin-top:1rem}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.85rem}
+.stat{
+  padding:1rem 1rem 0.95rem;border-radius:18px;background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.05)
+}
+.stat .value{font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:0.04em}
+.stat .label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted)}
+.panel{
+  padding:2.6rem 2.1rem;
+  background:linear-gradient(180deg, rgba(15,32,64,0.95), rgba(8,17,31,0.98));
+  display:flex;align-items:center
+}
+.card{
+  width:100%;
+  background:rgba(7,16,29,0.68);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:2rem 1.4rem 1.4rem;
+}
+.card h2{font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:0.05em}
+.card p{margin-top:0.35rem;color:var(--muted);font-size:0.94rem;line-height:1.6}
+form{margin-top:1.5rem}
+label{
+  display:block;margin-bottom:0.45rem;font-size:0.74rem;
+  text-transform:uppercase;letter-spacing:0.12em;color:var(--muted)
+}
+input{
+  width:100%;padding:0.95rem 1rem;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05);color:var(--white);font:inherit
+}
+input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(26,158,212,0.12)}
+.field{margin-bottom:1rem}
+.submit{
+  width:100%;margin-top:0.35rem;padding:0.95rem 1rem;border:none;border-radius:14px;
+  background:linear-gradient(135deg, var(--sky), var(--wave));color:#fff;font:inherit;
+  font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer
+}
+.submit:disabled{opacity:0.65;cursor:wait}
+.status{
+  margin-top:1rem;min-height:1.35rem;font-size:0.88rem;color:var(--muted)
+}
+.status.error{color:var(--danger)}
+.status.success{color:#7fe6ff}
+.support{
+  margin-top:1.3rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);
+  color:var(--muted);font-size:0.82rem;line-height:1.6
+}
+code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:rgba(255,255,255,0.06);
+  padding:0.1rem 0.35rem;border-radius:6px;color:var(--white)
+}
+@media(max-width:840px){
+  .shell{grid-template-columns:1fr}
+  .hero{padding:2rem 1.4rem 1.2rem}
+  .panel{padding:1.2rem}
+  .stats{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div>
+        <div class="brand">Shoreline Ops</div>
+        <div class="eyeline">Private operations access</div>
+        <h1>Secure bookings, customers, and fleet control.</h1>
+        <p>This private ops app keeps Shoreline customer records, bookings, notes, imports, and maintenance data behind a password-protected server session instead of browser-only storage.</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="value">CRM</div><div class="label">Shared server data</div></div>
+        <div class="stat"><div class="value">Auth</div><div class="label">Password protected</div></div>
+        <div class="stat"><div class="value">Sync</div><div class="label">Across devices</div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="card">
+        <h2>Sign In</h2>
+        <p>Use the private operations password configured for the Render ops service.</p>
+        <form id="login-form">
+          <div class="field">
+            <label for="password">Operations Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your Shoreline ops password" required>
+          </div>
+          <button class="submit" id="submit-btn" type="submit">Unlock Ops</button>
+          <div class="status" id="status">Checking private service status...</div>
+        </form>
+        <div class="support">
+          If this page says the private service is not ready yet, deploy the Node ops service from this repo and set <code>OPS_PASSWORD</code> in Render.
+        </div>
+      </div>
+    </section>
+  </div>
+<script>
+const form = document.getElementById('login-form');
+const statusEl = document.getElementById('status');
+const submitBtn = document.getElementById('submit-btn');
+const passwordInput = document.getElementById('password');
+
+function setStatus(message, type = '') {
+  statusEl.textContent = message;
+  statusEl.className = `status${type ? ` ${type}` : ''}`;
+}
+
+async function checkSession() {
+  try {
+    const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
+    if (!response.ok) {
+      setStatus('This sign-in page becomes active after the private Render ops service is deployed.', 'error');
+      submitBtn.disabled = true;
+      return;
+    }
+    const data = await response.json();
+    if (data.authenticated) {
+      window.location.replace('/ops.html');
+      return;
+    }
+    setStatus('Private service ready. Enter the Shoreline ops password.', 'success');
+  } catch (error) {
+    setStatus('Could not reach the private ops service yet. Finish the Render deployment first.', 'error');
+    submitBtn.disabled = true;
+  }
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  submitBtn.disabled = true;
+  setStatus('Signing in...');
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: passwordInput.value })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || 'Sign-in failed');
+    }
+    setStatus('Access granted. Opening Shoreline ops...', 'success');
+    window.location.replace('/ops.html');
+  } catch (error) {
+    setStatus(error.message || 'Sign-in failed', 'error');
+    submitBtn.disabled = false;
+    passwordInput.select();
+  }
+});
+
+checkSession();
+</script>
+</body>
+</html>
