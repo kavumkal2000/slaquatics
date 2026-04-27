@@ -197,18 +197,47 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .perk { background: rgba(26,158,212,0.1); color: #7dd3fc; border: 1px solid rgba(26,158,212,0.2); font-size: 0.69rem; padding: 0.26rem 0.65rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.07em; }
 
 /* ── ADD-ONS ── */
-.addons-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.2rem; margin-top: 0.5rem; }
+.addons-grid { display: grid; grid-template-columns: minmax(0, 980px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
 .addon-card {
   background: var(--deep); border-radius: 14px; border: 1px solid var(--border);
   padding: 1.8rem; display: flex; flex-direction: column; gap: 0.8rem;
   transition: border-color 0.2s, transform 0.2s;
 }
 .addon-card:hover { border-color: rgba(245,166,35,0.4); transform: translateY(-3px); }
+.addon-card-feature {
+  padding: 0; overflow: hidden; display: grid; grid-template-columns: 1.1fr 1fr; gap: 0;
+  background:
+    radial-gradient(circle at top left, rgba(245,166,35,0.18), transparent 44%),
+    linear-gradient(140deg, #09172b 0%, #0b1f39 100%);
+}
+.addon-media {
+  position: relative; min-height: 360px; border-right: 1px solid rgba(255,255,255,0.06);
+}
+.addon-media::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(6,12,22,0.08) 0%, rgba(6,12,22,0.52) 100%);
+}
+.addon-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.addon-content { padding: 2rem 2.1rem; display: flex; flex-direction: column; gap: 1rem; justify-content: center; }
+.addon-topline { display: flex; flex-wrap: wrap; gap: 0.55rem; }
 .addon-icon { font-size: 2.2rem; width: 52px; height: 52px; border-radius: 12px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.2); display: flex; align-items: center; justify-content: center; }
-.addon-name { font-size: 1rem; font-weight: 500; color: var(--white); }
-.addon-desc { font-size: 0.85rem; color: rgba(255,255,255,0.75); line-height: 1.65; }
+.addon-name { font-size: 1.2rem; font-weight: 500; color: var(--white); letter-spacing: 0.01em; }
+.addon-desc { font-size: 0.92rem; color: rgba(255,255,255,0.78); line-height: 1.75; max-width: 42ch; }
 .addon-price { font-family: 'Bebas Neue', cursive; font-size: 1.6rem; color: var(--gold); letter-spacing: 0.04em; }
 .addon-tag { display: inline-block; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.2); color: var(--gold); font-size: 0.68rem; padding: 0.22rem 0.65rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.08em; }
+.addon-tag-soft { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.72); }
+.addon-points { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.addon-point {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.78); font-size: 0.72rem; padding: 0.32rem 0.7rem; border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+.addon-foot { display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 0.3rem; }
+.addon-price-wrap { display: flex; flex-direction: column; gap: 0.2rem; }
+.addon-price-note { font-size: 0.74rem; color: rgba(255,255,255,0.58); letter-spacing: 0.04em; text-transform: uppercase; }
+.addon-cta { color: var(--white); text-decoration: none; font-size: 0.82rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
+.addon-cta:hover { color: var(--gold); }
 
 /* ── GROUP EVENTS ── */
 .events-section { background: var(--deep); }
@@ -338,6 +367,9 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .rental-grid { grid-template-columns: 1fr; gap: 2.5rem; }
   .rental-grid.reverse { direction: ltr; }
   .addons-grid { grid-template-columns: 1fr; }
+  .addon-card-feature { grid-template-columns: 1fr; }
+  .addon-media { min-height: 250px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .addon-content { padding: 1.5rem; }
   .events-grid { grid-template-columns: 1fr; }
   .drone-inner { grid-template-columns: 1fr; gap: 2.5rem; }
   .why-grid { grid-template-columns: repeat(2,1fr); }
@@ -656,12 +688,31 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <h2>Upgrade Your Experience</h2>
     <p class="section-sub">Make your day on the water unforgettable with aerial drone coverage.</p>
     <div class="addons-grid">
-      <div class="addon-card">
-        <div class="addon-icon">🎬</div>
-        <div class="addon-name">Aerial Drone Coverage</div>
-        <p class="addon-desc">We fly a drone over your rental and capture everything from above. Free shoot — only pay if you love it.</p>
-        <div class="addon-price">$50 <span style="font-size:0.8rem;font-weight:400;color:rgba(255,255,255,0.6);">full video</span></div>
-        <span class="addon-tag">Free to try</span>
+      <div class="addon-card addon-card-feature">
+        <div class="addon-media">
+          <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Aerial drone footage over Lake Lewisville">
+        </div>
+        <div class="addon-content">
+          <div class="addon-topline">
+            <span class="addon-tag">Free to try</span>
+            <span class="addon-tag addon-tag-soft">Only pay if you keep it</span>
+          </div>
+          <div class="addon-icon">🎬</div>
+          <div class="addon-name">Aerial Drone Coverage</div>
+          <p class="addon-desc">Add a clean overhead video of your day on the lake with sweeping launch footage, ride highlights, and a polished edit your whole group can share after the rental.</p>
+          <div class="addon-points">
+            <span class="addon-point">Launch + ride footage</span>
+            <span class="addon-point">Group-friendly angles</span>
+            <span class="addon-point">Delivered as a highlight video</span>
+          </div>
+          <div class="addon-foot">
+            <div class="addon-price-wrap">
+              <div class="addon-price">$50 <span style="font-size:0.8rem;font-weight:400;color:rgba(255,255,255,0.6);">full video</span></div>
+              <div class="addon-price-note">Preview first, pay only if you love it</div>
+            </div>
+            <a href="#booking" class="addon-cta">Add it to your booking →</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
