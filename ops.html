@@ -132,6 +132,11 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .customer-stats{display:flex;gap:1rem;}
 .customer-stat .num{font-size:1rem;font-weight:500;color:var(--wave);}
 .customer-stat .lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.crm-toolbar{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;}
+.import-panel{background:rgba(15,32,64,0.72);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1.1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.import-panel .title{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--wave);margin-bottom:0.35rem;}
+.import-panel .copy{font-size:0.82rem;color:var(--muted);max-width:760px;line-height:1.55;}
+.import-pill{padding:0.38rem 0.72rem;border-radius:999px;background:rgba(26,158,212,0.12);border:1px solid rgba(26,158,212,0.22);font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--white);white-space:nowrap;}
 
 /* FUEL TRACKER */
 .fuel-log{display:flex;flex-direction:column;gap:0.5rem;}
@@ -306,10 +311,19 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="page" id="page-crm">
   <div class="section-head">
     <h2>Customers</h2>
-    <div style="display:flex;gap:0.6rem;">
-      <input class="search-input" placeholder="Search customers...">
+    <div class="crm-toolbar">
+      <input class="search-input" placeholder="Search customers..." oninput="filterCRM(this)">
+      <button class="btn btn-ghost btn-sm" onclick="triggerCRMImport()">Import Admin Tribe CSV</button>
       <button class="btn btn-primary btn-sm" onclick="openModal('customer-modal')">+ Add Customer</button>
     </div>
+  </div>
+  <input type="file" id="crm-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleCRMImport(event)">
+  <div class="import-panel">
+    <div>
+      <div class="title">Secure Browser-Only Import</div>
+      <div class="copy" id="crm-import-summary">Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser's local storage and are not published into the live website code.</div>
+    </div>
+    <div class="import-pill" id="crm-import-pill">No CRM import yet</div>
   </div>
   <div class="crm-grid" id="crm-grid"></div>
 </div>
@@ -516,6 +530,7 @@ function saveData() {
     localStorage.setItem('sla_customers', JSON.stringify(customers));
     localStorage.setItem('sla_fuel', JSON.stringify(fuelLog));
     localStorage.setItem('sla_maint', JSON.stringify(maintLog));
+    localStorage.setItem('sla_import_meta', JSON.stringify(importMeta));
   } catch(e) { console.warn('localStorage unavailable'); }
 }
 function loadData() {
@@ -524,6 +539,7 @@ function loadData() {
     const c = localStorage.getItem('sla_customers'); if(c) { const p=JSON.parse(c); if(p&&p.length>0) customers=p; }
     const f = localStorage.getItem('sla_fuel'); if(f) { const p=JSON.parse(f); if(p&&p.length>0) fuelLog=p; }
     const m = localStorage.getItem('sla_maint'); if(m) { const p=JSON.parse(m); if(p&&p.length>0) maintLog=p; }
+    const i = localStorage.getItem('sla_import_meta'); if(i) { const p=JSON.parse(i); if(p&&typeof p==='object') importMeta={...importMeta,...p}; }
   } catch(e) { console.warn('localStorage unavailable'); }
 }
 // ── DATA ──
@@ -532,7 +548,7 @@ const PRICING = {
   seadoo:{2:600,3:900,4:1120,6:1360,8:1600},
   boat:{1:150,2:220,3:330,4:500,6:750,8:1000}
 };
-const CRAFT_NAMES = {yamaha:'2 Jet Skis',seadoo:'4 Jet Skis',boat:'Boat Rental'};
+const CRAFT_NAMES = {yamaha:'2 Jet Skis',seadoo:'4 Jet Skis',boat:'Boat Rental',imported:'Imported booking'};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
 let bookings = [
@@ -554,6 +570,8 @@ let customers = [
   {id:7,name:'Morgan Hayes',phone:'(254) 555-0176',email:'morgan@example.com',bookings:2,totalSpent:1100,lastBooking:'2026-03-20',source:'Referral',tag:'repeat'},
   {id:8,name:'Avery Collins',phone:'(210) 555-0153',email:'avery@example.com',bookings:2,totalSpent:1600,lastBooking:'2026-03-18',source:'Direct',tag:'vip'},
 ];
+let importMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
+let crmSearchQuery = '';
 
 let fuelLog = [
   {craft:'SeaDoo TRIXX #1',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
@@ -577,6 +595,408 @@ const equipment = [
   {name:'SeaDoo TRIXX #4',hours:71,serviceInterval:100,lastService:'2026-03-15'},
   {name:'Boat',hours:115,serviceInterval:150,lastService:'2026-04-01'},
 ];
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function phoneHref(phone) {
+  return String(phone ?? '').replace(/[^\d+]/g, '');
+}
+function firstName(name) {
+  return String(name || 'there').trim().split(/\s+/)[0] || 'there';
+}
+function initials(name) {
+  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0] || '?') + (parts[1]?.[0] || '');
+}
+function nextId(list) {
+  return list.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+}
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '').slice(-10);
+}
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+function normalizeHeader(name) {
+  return String(name || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function rowValue(row, candidates) {
+  const entries = Object.entries(row || {});
+  for (const candidate of candidates) {
+    const normalizedCandidate = normalizeHeader(candidate);
+    for (const [key, rawValue] of entries) {
+      const normalizedKey = normalizeHeader(key);
+      if ((normalizedKey === normalizedCandidate || normalizedKey.includes(normalizedCandidate)) && String(rawValue || '').trim()) {
+        return String(rawValue).trim();
+      }
+    }
+  }
+  return '';
+}
+function parseMoney(value) {
+  const parsed = parseFloat(String(value || '').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function parseFlexibleDate(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([AP]M))?)?$/i);
+  if (!match) return null;
+  let [, month, day, year, hour = '0', minute = '0', meridiem = ''] = match;
+  let hourNum = Number(hour);
+  if (meridiem) {
+    const upper = meridiem.toUpperCase();
+    if (upper === 'PM' && hourNum < 12) hourNum += 12;
+    if (upper === 'AM' && hourNum === 12) hourNum = 0;
+  }
+  const parsed = new Date(Number(year), Number(month) - 1, Number(day), hourNum, Number(minute));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+function isoDate(value) {
+  const parsed = value instanceof Date ? value : parseFlexibleDate(value);
+  return parsed ? parsed.toISOString().split('T')[0] : 'N/A';
+}
+function formatTime(value) {
+  const parsed = value instanceof Date ? value : parseFlexibleDate(value);
+  if (parsed) return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
+  const direct = String(value || '').trim();
+  return /^\d{1,2}:\d{2}$/.test(direct) ? direct.padStart(5, '0') : '09:00';
+}
+function bookingCraftLabel(booking) {
+  return booking.craftLabel || CRAFT_NAMES[booking.craft] || 'Imported booking';
+}
+function bookingDurationLabel(booking) {
+  if (booking.durationLabel) return booking.durationLabel;
+  const duration = Number(booking.duration);
+  if (duration === 8) return 'Full Day';
+  return duration > 0 ? `${duration}hrs` : 'Imported';
+}
+function bookingTotalValue(booking) {
+  const explicit = Number(booking.total);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  return (PRICING[booking.craft]?.[booking.duration] || 0) + (booking.drone ? 50 : 0);
+}
+function bookingTotalLabel(booking) {
+  return `$${bookingTotalValue(booking).toLocaleString()}`;
+}
+function mapImportedStatus(stage, status) {
+  const raw = `${stage || ''} ${status || ''}`.toLowerCase();
+  if (/cancel/.test(raw)) return 'cancelled';
+  if (/no[\s-]?show|lost/.test(raw)) return 'noshow';
+  if (/complete|fulfilled|delivered/.test(raw)) return 'completed';
+  if (/won|booked|confirm|paid|closed/.test(raw)) return 'confirmed';
+  return 'pending';
+}
+function guessCraftFromText(text) {
+  const raw = String(text || '').toLowerCase();
+  if (raw.includes('boat')) return 'boat';
+  if (/4\s*(jet|ski)|4\s*skis|seadoo/.test(raw)) return 'seadoo';
+  if (/2\s*(jet|ski)|2\s*skis|yamaha/.test(raw)) return 'yamaha';
+  return 'imported';
+}
+function guessDurationFromText(text) {
+  const match = String(text || '').match(/\b(2|3|4|6|8)\s*(hour|hr)/i);
+  return match ? Number(match[1]) : 0;
+}
+function guessDroneFromText(text) {
+  const raw = String(text || '').toLowerCase();
+  return raw.includes('drone') && !raw.includes('no drone');
+}
+function deriveCustomerTag(rawTags) {
+  const raw = String(rawTags || '').toLowerCase();
+  if (raw.includes('vip')) return 'vip';
+  if (raw.includes('repeat')) return 'repeat';
+  if (raw.includes('group')) return 'group';
+  return '';
+}
+function looksLikeSeedCustomers() {
+  return customers.length === 8 && customers.every((customer) => /@example\.com$/i.test(String(customer.email || '')));
+}
+function updateLatestDate(currentValue, incomingValue) {
+  if (!incomingValue || incomingValue === 'N/A') return currentValue || 'N/A';
+  if (!currentValue || currentValue === 'N/A') return incomingValue;
+  return new Date(incomingValue) > new Date(currentValue) ? incomingValue : currentValue;
+}
+function upsertImportedCustomer(data) {
+  const phoneKey = normalizePhone(data.phone);
+  const emailKey = normalizeEmail(data.email);
+  const existing = customers.find((customer) => (
+    (phoneKey && normalizePhone(customer.phone) === phoneKey) ||
+    (emailKey && normalizeEmail(customer.email) === emailKey)
+  ));
+  if (existing) {
+    existing.name = data.name || existing.name;
+    existing.phone = data.phone || existing.phone;
+    existing.email = data.email || existing.email;
+    existing.bookings = Math.max(Number(existing.bookings) || 0, Number(data.bookings) || 0);
+    existing.totalSpent = Math.max(Number(existing.totalSpent) || 0, Number(data.totalSpent) || 0);
+    existing.lastBooking = updateLatestDate(existing.lastBooking, data.lastBooking);
+    existing.source = data.source || existing.source;
+    existing.tag = existing.tag || data.tag || '';
+    existing.crmTags = data.crmTags || existing.crmTags || '';
+    return 'updated';
+  }
+  customers.push({
+    id: nextId(customers),
+    name: data.name || 'Imported customer',
+    phone: data.phone || '',
+    email: data.email || '',
+    bookings: Number(data.bookings) || 0,
+    totalSpent: Number(data.totalSpent) || 0,
+    lastBooking: data.lastBooking || 'N/A',
+    source: data.source || 'Admin Tribe',
+    tag: data.tag || '',
+    crmTags: data.crmTags || '',
+    importSource: 'admintribe'
+  });
+  return 'added';
+}
+function buildOpportunityNotes(row) {
+  const details = [
+    ['Pipeline', rowValue(row, ['pipeline', 'pipeline name'])],
+    ['Stage', rowValue(row, ['stage', 'pipeline stage'])],
+    ['Status', rowValue(row, ['status', 'opportunity status'])],
+    ['Opportunity', rowValue(row, ['opportunity name', 'name'])],
+    ['Tags', rowValue(row, ['tags', 'tag'])],
+    ['Source', rowValue(row, ['source'])]
+  ].filter(([, value]) => value);
+  return details.map(([label, value]) => `${label}: ${value}`).join(' · ');
+}
+function parseCsvObjects(text) {
+  const rows = [];
+  const source = String(text || '').replace(/^\uFEFF/, '');
+  let currentCell = '';
+  let currentRow = [];
+  let inQuotes = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const next = source[index + 1];
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentCell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      currentRow.push(currentCell);
+      currentCell = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') index += 1;
+      currentRow.push(currentCell);
+      rows.push(currentRow);
+      currentCell = '';
+      currentRow = [];
+    } else {
+      currentCell += char;
+    }
+  }
+  if (currentCell.length || currentRow.length) {
+    currentRow.push(currentCell);
+    rows.push(currentRow);
+  }
+  const nonEmptyRows = rows.filter((row) => row.some((cell) => String(cell || '').trim()));
+  if (!nonEmptyRows.length) return {headers: [], rows: []};
+  const headers = nonEmptyRows.shift().map((header) => String(header || '').trim());
+  return {
+    headers,
+    rows: nonEmptyRows.map((row) => Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? '').trim()])))
+  };
+}
+function detectImportType(headers) {
+  const normalized = headers.map((header) => normalizeHeader(header));
+  if (normalized.some((header) => header.includes('pipeline') || header.includes('opportunity') || header.includes('monetary value') || header === 'stage')) {
+    return 'opportunities';
+  }
+  if (normalized.some((header) => header === 'contact name' || header === 'phone' || header === 'email' || header === 'tags')) {
+    return 'contacts';
+  }
+  return 'unknown';
+}
+function renderImportSummary() {
+  const summary = document.getElementById('crm-import-summary');
+  const pill = document.getElementById('crm-import-pill');
+  if (!summary || !pill) return;
+  if (!importMeta.importedAt) {
+    summary.textContent = 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser\'s local storage and are not published into the live website code.';
+    pill.textContent = 'No CRM import yet';
+    return;
+  }
+  const importedAt = new Date(importMeta.importedAt).toLocaleString();
+  const typeLabel = importMeta.lastType === 'opportunities' ? 'Bookings import' : 'Customers import';
+  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} Data is stored only in this browser.`;
+  pill.textContent = `${importMeta.recordCount} rows imported`;
+}
+function filterCRM(input) {
+  crmSearchQuery = String(input?.value || '').trim().toLowerCase();
+  renderCRM();
+}
+function triggerCRMImport() {
+  const fileInput = document.getElementById('crm-import-input');
+  if (fileInput) fileInput.click();
+}
+function importContactsFromCsv(rows, fileName) {
+  let added = 0;
+  let updated = 0;
+  const replaceSeed = looksLikeSeedCustomers() && !importMeta.importedAt;
+  const importedCustomers = [];
+  for (const row of rows) {
+    const first = rowValue(row, ['first name']);
+    const last = rowValue(row, ['last name']);
+    const name = rowValue(row, ['contact name', 'full name', 'name']) || [first, last].filter(Boolean).join(' ');
+    const phone = rowValue(row, ['phone', 'phone number', 'mobile']);
+    const email = rowValue(row, ['email', 'email address']);
+    if (!name && !phone && !email) continue;
+    const customer = {
+      name: name || email || phone || 'Imported customer',
+      phone,
+      email,
+      bookings: parseInt(rowValue(row, ['bookings', 'total bookings']), 10) || 0,
+      totalSpent: parseMoney(rowValue(row, ['total spent', 'lifetime value'])),
+      lastBooking: isoDate(rowValue(row, ['last booking', 'last activity cdt', 'last activity', 'created cdt', 'created'])),
+      source: rowValue(row, ['source', 'business name', 'company']) || 'Admin Tribe',
+      tag: deriveCustomerTag(rowValue(row, ['tags', 'tag'])),
+      crmTags: rowValue(row, ['tags', 'tag'])
+    };
+    if (replaceSeed) {
+      importedCustomers.push({id: importedCustomers.length + 1, ...customer});
+    } else {
+      const action = upsertImportedCustomer(customer);
+      if (action === 'added') added += 1;
+      if (action === 'updated') updated += 1;
+    }
+  }
+  if (replaceSeed) {
+    customers = importedCustomers;
+    added = importedCustomers.length;
+    updated = 0;
+  }
+  importMeta = {
+    lastType: 'contacts',
+    fileName,
+    importedAt: new Date().toISOString(),
+    added,
+    updated,
+    recordCount: rows.length,
+    replacedSeed: replaceSeed
+  };
+  return {added, updated};
+}
+function importOpportunitiesFromCsv(rows, fileName) {
+  let added = 0;
+  let updated = 0;
+  const seen = new Set(bookings.map((booking) => [
+    normalizePhone(booking.phone),
+    normalizeEmail(booking.email),
+    booking.date,
+    bookingTotalValue(booking),
+    bookingCraftLabel(booking)
+  ].join('|')));
+  for (const row of rows) {
+    const contactName = rowValue(row, ['contact name', 'full name', 'first name', 'name']);
+    const opportunityName = rowValue(row, ['opportunity name', 'service', 'package']);
+    const name = contactName || opportunityName || 'Imported booking';
+    const phone = rowValue(row, ['phone', 'phone number', 'contact phone', 'mobile']);
+    const email = rowValue(row, ['email', 'email address']);
+    const stage = rowValue(row, ['stage', 'pipeline stage']);
+    const status = rowValue(row, ['status', 'opportunity status']);
+    const pipeline = rowValue(row, ['pipeline', 'pipeline name']);
+    const tags = rowValue(row, ['tags', 'tag']);
+    const scheduleValue = rowValue(row, ['booking date', 'appointment date', 'created cdt', 'created', 'date']);
+    const opportunityText = [opportunityName, stage, pipeline, rowValue(row, ['service', 'package'])].filter(Boolean).join(' ');
+    const craft = guessCraftFromText(opportunityText);
+    const duration = guessDurationFromText(`${opportunityText} ${rowValue(row, ['duration'])}`);
+    const total = parseMoney(rowValue(row, ['monetary value', 'opportunity value', 'amount', 'value', 'price']));
+    const date = isoDate(scheduleValue);
+    const booking = {
+      id: nextId(bookings),
+      name,
+      phone,
+      email,
+      craft,
+      craftLabel: craft === 'imported' ? (opportunityName || 'Imported booking') : '',
+      duration,
+      durationLabel: duration ? '' : (rowValue(row, ['duration']) || 'Imported'),
+      total,
+      date: date === 'N/A' ? 'TBD' : date,
+      time: formatTime(scheduleValue),
+      drone: guessDroneFromText(`${opportunityText} ${tags}`),
+      status: mapImportedStatus(stage, status),
+      deposit: /deposit|paid|won|closed/i.test(`${stage} ${status}`),
+      notes: buildOpportunityNotes(row),
+      importSource: 'admintribe'
+    };
+    const dedupeKey = [
+      normalizePhone(phone),
+      normalizeEmail(email),
+      booking.date,
+      bookingTotalValue(booking),
+      bookingCraftLabel(booking)
+    ].join('|');
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    bookings.unshift(booking);
+    added += 1;
+    const action = upsertImportedCustomer({
+      name,
+      phone,
+      email,
+      bookings: 1,
+      totalSpent: total,
+      lastBooking: booking.date === 'TBD' ? 'N/A' : booking.date,
+      source: pipeline || 'Admin Tribe',
+      tag: deriveCustomerTag(tags),
+      crmTags: tags
+    });
+    if (action === 'updated') updated += 1;
+  }
+  importMeta = {
+    lastType: 'opportunities',
+    fileName,
+    importedAt: new Date().toISOString(),
+    added,
+    updated,
+    recordCount: rows.length,
+    replacedSeed: false
+  };
+  return {added, updated};
+}
+function handleCRMImport(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = parseCsvObjects(reader.result);
+      if (!parsed.rows.length) throw new Error('No records were found in that CSV.');
+      const type = detectImportType(parsed.headers);
+      if (type === 'unknown') {
+        throw new Error('Could not identify that CSV. Export Contacts or Opportunities from Admin Tribe and try again.');
+      }
+      const summary = type === 'contacts'
+        ? importContactsFromCsv(parsed.rows, file.name)
+        : importOpportunitiesFromCsv(parsed.rows, file.name);
+      saveData();
+      renderImportSummary();
+      renderUpcoming();
+      if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
+      renderCRM();
+      renderReminders();
+      document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
+      showToast(`✅ Imported ${type === 'contacts' ? 'customers' : 'bookings'} — ${summary.added} added, ${summary.updated} updated`);
+    } catch (error) {
+      console.error('CRM import failed:', error);
+      showToast(`⚠️ ${error.message}`);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
 
 // ── NAVIGATION ──
 function showPage(id, btn) {
@@ -626,8 +1046,9 @@ function saveBooking() {
   const craft = document.getElementById('b-craft').value;
   const dur = parseInt(document.getElementById('b-duration').value);
   if(!name||!craft||!dur) { showToast('⚠️ Fill in name, craft, and duration'); return; }
+  const bookingValue = (PRICING[craft]?.[dur] || 0) + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
   const b = {
-    id: bookings.length+1,
+    id: nextId(bookings),
     name, phone: document.getElementById('b-phone').value,
     email: document.getElementById('b-email').value,
     craft, duration: dur,
@@ -635,11 +1056,14 @@ function saveBooking() {
     time: document.getElementById('b-time').value || '09:00',
     drone: document.getElementById('b-drone').value==='yes',
     status:'pending', deposit:false,
-    notes: document.getElementById('b-notes').value
+    notes: document.getElementById('b-notes').value,
+    total: bookingValue
   };
-  const bookingValue = (PRICING[craft]?.[dur] || 0) + (b.drone ? 50 : 0);
   bookings.unshift(b);
-  const existingCustomer = customers.find(c=>c.phone===b.phone);
+  const existingCustomer = customers.find((customer) => (
+    (normalizePhone(customer.phone) && normalizePhone(customer.phone) === normalizePhone(b.phone)) ||
+    (normalizeEmail(customer.email) && normalizeEmail(customer.email) === normalizeEmail(b.email))
+  ));
   if(existingCustomer) {
     existingCustomer.name = b.name;
     existingCustomer.email = b.email || existingCustomer.email;
@@ -647,7 +1071,7 @@ function saveBooking() {
     existingCustomer.totalSpent += bookingValue;
     existingCustomer.lastBooking = b.date;
   } else {
-    customers.push({id:customers.length+1,name:b.name,phone:b.phone,email:b.email,bookings:1,totalSpent:bookingValue,lastBooking:b.date,source:'Direct',tag:''});
+    customers.push({id:nextId(customers),name:b.name,phone:b.phone,email:b.email,bookings:1,totalSpent:bookingValue,lastBooking:b.date,source:'Direct',tag:''});
   }
   saveData();
   document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
@@ -667,11 +1091,11 @@ function renderUpcoming() {
   const rows = bookings.filter(b=>b.status!=='completed'&&b.status!=='noshow').slice(0,5);
   document.getElementById('upcoming-bookings-table').innerHTML = rows.map(b => `
     <tr>
-      <td><strong>${b.name}</strong></td>
-      <td>${CRAFT_NAMES[b.craft]||b.craft}</td>
-      <td>${b.date} ${b.time}</td>
-      <td>${b.duration==='8'||b.duration===8?'Full Day':b.duration+'hrs'}</td>
-      <td style="color:var(--wave);font-weight:500;">$${(PRICING[b.craft]?.[b.duration]||(b.duration*125)).toLocaleString()}${b.drone?' +$50':''}</td>
+      <td><strong>${escapeHtml(b.name)}</strong></td>
+      <td>${escapeHtml(bookingCraftLabel(b))}</td>
+      <td>${escapeHtml(b.date)} ${escapeHtml(b.time)}</td>
+      <td>${escapeHtml(bookingDurationLabel(b))}</td>
+      <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">Dep ✓</button></td>
@@ -685,12 +1109,12 @@ function renderBookings(filter) {
   const list = currentFilter==='all' ? bookings : bookings.filter(b=>b.status===currentFilter);
   document.getElementById('bookings-table').innerHTML = list.map(b => `
     <tr data-status="${b.status}">
-      <td><strong>${b.name}</strong></td>
-      <td><a href="tel:${b.phone}" style="color:var(--wave);text-decoration:none;">${b.phone}</a></td>
-      <td>${CRAFT_NAMES[b.craft]||b.craft}</td>
-      <td>${b.date} ${b.time}</td>
-      <td>${b.duration==='8'||b.duration===8?'Full Day':b.duration+'hrs'}</td>
-      <td style="color:var(--wave);font-weight:500;">$${(PRICING[b.craft]?.[b.duration]||(b.duration*125)).toLocaleString()}${b.drone?' +$50':''}</td>
+      <td><strong>${escapeHtml(b.name)}</strong></td>
+      <td>${b.phone ? `<a href="tel:${phoneHref(b.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(b.phone)}</a>` : '<span style="color:var(--muted);">—</span>'}</td>
+      <td>${escapeHtml(bookingCraftLabel(b))}</td>
+      <td>${escapeHtml(b.date)} ${escapeHtml(b.time)}</td>
+      <td>${escapeHtml(bookingDurationLabel(b))}</td>
+      <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
@@ -733,32 +1157,39 @@ function filterTable(input, tableId) {
 
 // ── CRM ──
 function renderCRM() {
-  document.getElementById('crm-grid').innerHTML = customers.map((c,i) => `
+  const filteredCustomers = customers.filter((customer) => {
+    if (!crmSearchQuery) return true;
+    return [customer.name, customer.phone, customer.email, customer.source, customer.crmTags]
+      .join(' ')
+      .toLowerCase()
+      .includes(crmSearchQuery);
+  });
+  document.getElementById('crm-grid').innerHTML = filteredCustomers.map((c,i) => `
     <div class="customer-card">
       <div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.8rem;">
-        <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${c.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>
+        <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
         <div>
-          <div class="customer-name">${c.name}</div>
-          <div class="customer-meta"><a href="tel:${c.phone}" style="color:var(--wave);text-decoration:none;">${c.phone}</a></div>
+          <div class="customer-name">${escapeHtml(c.name)}</div>
+          <div class="customer-meta">${c.phone ? `<a href="tel:${phoneHref(c.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(c.phone)}</a>` : 'No phone on file'}${c.source ? ` · ${escapeHtml(c.source)}` : ''}</div>
         </div>
         ${c.tag==='vip'?'<span class="badge badge-vip" style="margin-left:auto;">VIP</span>':c.tag==='repeat'?'<span class="badge badge-completed" style="margin-left:auto;">Repeat</span>':''}
       </div>
       <div class="customer-stats">
         <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>
         <div class="customer-stat"><div class="num">$${c.totalSpent.toLocaleString()}</div><div class="lbl">Total spent</div></div>
-        <div class="customer-stat"><div class="num">${daysSince(c.lastBooking)}d</div><div class="lbl">Since last</div></div>
+        <div class="customer-stat"><div class="num">${c.lastBooking==='N/A'?'—':`${daysSince(c.lastBooking)}d`}</div><div class="lbl">Since last</div></div>
       </div>
       <div style="margin-top:0.8rem;display:flex;gap:0.5rem;">
-        <a href="tel:${c.phone}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>
-        <a href="sms:${c.phone}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>
+        ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">📞 Call</span>'}
+        ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">💬 Text</span>'}
       </div>
-    </div>`).join('');
+    </div>`).join('') || '<div class="empty"><div class="icon">🔎</div><p>No customers match this search.</p></div>';
 }
 
 function saveCustomer() {
   const name = document.getElementById('c-name').value.trim();
   if(!name) { showToast('⚠️ Enter a name'); return; }
-  customers.push({id:customers.length+1,name,phone:document.getElementById('c-phone').value,email:document.getElementById('c-email').value,bookings:0,totalSpent:0,lastBooking:'N/A',source:document.getElementById('c-source').value,tag:document.getElementById('c-tag').value});
+  customers.push({id:nextId(customers),name,phone:document.getElementById('c-phone').value,email:document.getElementById('c-email').value,bookings:0,totalSpent:0,lastBooking:'N/A',source:document.getElementById('c-source').value,tag:document.getElementById('c-tag').value});
   saveData();
   closeModal('customer-modal');
   showToast('✅ Customer added');
@@ -822,12 +1253,12 @@ function renderReminders() {
     <div class="reminder-card">
       <div class="reminder-icon">👤</div>
       <div class="reminder-body">
-        <div class="name">${c.name} <span style="color:var(--muted);font-weight:400;">· ${daysSince(c.lastBooking)} days ago</span></div>
-        <div class="detail">${c.phone} · ${c.bookings} prev booking${c.bookings!==1?'s':''} · $${c.totalSpent.toLocaleString()} total spent</div>
+        <div class="name">${escapeHtml(c.name)} <span style="color:var(--muted);font-weight:400;">· ${daysSince(c.lastBooking)} days ago</span></div>
+        <div class="detail">${escapeHtml(c.phone || 'No phone on file')} · ${c.bookings} prev booking${c.bookings!==1?'s':''} · $${c.totalSpent.toLocaleString()} total spent</div>
       </div>
       <div class="reminder-action">
-        <a href="sms:${c.phone}?body=Hey ${c.name.split(' ')[0]}! It's Shoreline Aquatics — miss you on the lake! Book again this week and get 10% off. Reply YES to claim. 🌊" class="btn btn-primary btn-sm" style="text-decoration:none;">💬 Text offer</a>
-        <a href="tel:${c.phone}" class="btn btn-ghost btn-sm" style="text-decoration:none;">📞 Call</a>
+        ${c.phone ? `<a href="sms:${phoneHref(c.phone)}?body=${encodeURIComponent(`Hey ${firstName(c.name)}! It's Shoreline Aquatics — miss you on the lake! Book again this week and get 10% off. Reply YES to claim.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">💬 Text offer</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">💬 Text offer</span>'}
+        ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;">📞 Call</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">📞 Call</span>'}
       </div>
     </div>`).join('') : '<div class="empty"><div class="icon">🎉</div><p>No customers overdue for re-engagement!</p></div>';
 
@@ -836,11 +1267,11 @@ function renderReminders() {
     <div class="reminder-card">
       <div class="reminder-icon">📅</div>
       <div class="reminder-body">
-        <div class="name">Reminder: ${b.name}</div>
-        <div class="detail">${b.craft==='yamaha'?'2 Jet Skis':b.craft==='seadoo'?'4 Jet Skis':'Boat Rental'} · ${b.date} at ${b.time}</div>
+        <div class="name">Reminder: ${escapeHtml(b.name)}</div>
+        <div class="detail">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(b.date)} at ${escapeHtml(b.time)}</div>
       </div>
       <div class="reminder-action">
-        <a href="sms:${b.phone}?body=Hey ${b.name.split(' ')[0]}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${b.time}. Don't forget your ID! Questions? (469) 693-7164 🌊" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>
+        ${b.phone ? `<a href="sms:${phoneHref(b.phone)}?body=${encodeURIComponent(`Hey ${firstName(b.name)}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${b.time}. Don't forget your ID! Questions? (469) 693-7164.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">Send reminder</span>'}
       </div>
     </div>`).join('')}`;
 
@@ -896,14 +1327,15 @@ function today() { return new Date().toISOString().split('T')[0]; }
 try {
   const versionKey = 'sla_version';
   const storedVersion = localStorage.getItem(versionKey);
-  if (storedVersion && storedVersion !== 'v3') {
-    ['sla_bookings', 'sla_customers', 'sla_fuel', 'sla_maint'].forEach((key) => {
+  if (storedVersion && storedVersion !== 'v4') {
+    ['sla_bookings', 'sla_customers', 'sla_fuel', 'sla_maint', 'sla_import_meta'].forEach((key) => {
       if (localStorage.getItem(key) === '[]') localStorage.removeItem(key);
     });
   }
-  localStorage.setItem(versionKey, 'v3');
+  localStorage.setItem(versionKey, 'v4');
 } catch(e){}
 loadData();
+renderImportSummary();
 renderUpcoming();
 renderBookingBars();
 document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
