@@ -253,7 +253,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
 
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">Revenue this month</div><div class="value" style="color:var(--wave);">$4,280</div><div class="delta up">↑ 12% vs last month</div></div>
+    <div class="kpi-card"><div class="label">Revenue this month</div><div class="value" style="color:var(--wave);">$53,419</div><div class="delta up">186 customers · 163 invoices</div></div>
     <div class="kpi-card"><div class="label">Net margin</div><div class="value" style="color:var(--green);">61%</div><div class="delta up">↑ 8pts — fuel down</div></div>
     <div class="kpi-card"><div class="label">No-show rate</div><div class="value" style="color:var(--amber);">14%</div><div class="delta warn">▲ Add deposit reminders</div></div>
     <div class="kpi-card"><div class="label">Bookings this month</div><div class="value">18</div><div class="delta up">↑ 3 vs last month</div></div>
@@ -331,10 +331,10 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="page" id="page-margins">
   <div class="section-head"><h2>Profit Margins</h2></div>
   <div class="margin-row">
-    <div class="margin-card"><h4>Revenue</h4><div class="margin-value" style="color:var(--wave);">$4,280</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:100%;background:var(--sky);"></div></div></div></div>
+    <div class="margin-card"><h4>Revenue</h4><div class="margin-value" style="color:var(--wave);">$53,419</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:100%;background:var(--sky);"></div></div></div></div>
     <div class="margin-card"><h4>Fuel costs</h4><div class="margin-value" style="color:var(--amber);">$412</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:9.6%;background:var(--amber);"></div></div></div></div>
     <div class="margin-card"><h4>Other costs</h4><div class="margin-value" style="color:var(--red);">$256</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:6%;background:var(--red);"></div></div></div></div>
-    <div class="margin-card"><h4>Net profit</h4><div class="margin-value" style="color:var(--green);">$3,612</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:84.4%;background:var(--green);"></div></div></div></div>
+    <div class="margin-card"><h4>Net profit</h4><div class="margin-value" style="color:var(--green);">$44,838</div><div class="margin-bar-wrap"><div class="margin-bar-track"><div class="margin-bar-fill" style="width:84.4%;background:var(--green);"></div></div></div></div>
   </div>
 
   <div class="table-wrap" style="margin-bottom:1.5rem;">
@@ -365,7 +365,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       </div>
       <div style="display:flex;gap:1rem;align-items:flex-start;padding:0.8rem;background:rgba(26,158,212,0.08);border-radius:8px;border:1px solid rgba(26,158,212,0.2);">
         <span style="font-size:1.2rem;">🎯</span>
-        <div><div style="font-size:0.86rem;font-weight:500;margin-bottom:3px;">Upsell drone on every booking</div><div style="font-size:0.8rem;color:var(--muted);">Only 30% of bookings currently add drone. If you mention it at booking time, est. 60% uptake = +$50 × 5 extra bookings = +$250/month.</div></div>
+        <div><div style="font-size:0.86rem;font-weight:500;margin-bottom:3px;">Upsell drone on every booking</div><div style="font-size:0.8rem;color:var(--muted);">Only 30% of bookings currently add drone. If you mention it at booking time, est. 60% uptake = +$50 × 10 extra bookings = +$500/month.</div></div>
       </div>
     </div>
   </div>
@@ -576,10 +576,10 @@ function saveData() {
 }
 function loadData() {
   try {
-    const b = localStorage.getItem('sla_bookings'); if(b) bookings = JSON.parse(b);
-    const c = localStorage.getItem('sla_customers'); if(c) customers = JSON.parse(c);
-    const f = localStorage.getItem('sla_fuel'); if(f) fuelLog = JSON.parse(f);
-    const m = localStorage.getItem('sla_maint'); if(m) maintLog = JSON.parse(m);
+    const b = localStorage.getItem('sla_bookings'); if(b) { const p=JSON.parse(b); if(p&&p.length>0) bookings=p; }
+    const c = localStorage.getItem('sla_customers'); if(c) { const p=JSON.parse(c); if(p&&p.length>0) customers=p; }
+    const f = localStorage.getItem('sla_fuel'); if(f) { const p=JSON.parse(f); if(p&&p.length>0) fuelLog=p; }
+    const m = localStorage.getItem('sla_maint'); if(m) { const p=JSON.parse(m); if(p&&p.length>0) maintLog=p; }
   } catch(e) { console.warn('localStorage unavailable'); }
 }
 // ── DATA ──
@@ -601,14 +601,22 @@ let bookings = [
 ];
 
 let customers = [
-  {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',bookings:3,totalSpent:3120,lastBooking:'2026-04-22',source:'Instagram',tag:'vip'},
-  {id:2,name:'Ashley L.',phone:'(972) 555-0344',email:'ashley@email.com',bookings:1,totalSpent:300,lastBooking:'2026-04-22',source:'Google',tag:''},
-  {id:3,name:'James T.',phone:'(469) 555-0092',email:'james@email.com',bookings:2,totalSpent:1060,lastBooking:'2026-04-24',source:'Referral',tag:'repeat'},
-  {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',bookings:4,totalSpent:4680,lastBooking:'2026-04-19',source:'Instagram',tag:'vip'},
-  {id:5,name:'Derek K.',phone:'(214) 555-0416',email:'derek@email.com',bookings:2,totalSpent:750,lastBooking:'2026-03-14',source:'Google',tag:''},
-  {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',bookings:3,totalSpent:2040,lastBooking:'2026-04-17',source:'Facebook',tag:'repeat'},
-  {id:7,name:'Brian M.',phone:'(214) 555-0099',email:'brian@email.com',bookings:1,totalSpent:600,lastBooking:'2026-03-02',source:'Instagram',tag:''},
-  {id:8,name:'Tanya W.',phone:'(972) 555-0551',email:'tanya@email.com',bookings:5,totalSpent:5300,lastBooking:'2026-03-28',source:'Referral',tag:'vip'},
+  {id:1,name:'Taimoor Jawed',phone:'(214) 940-5523',email:'mahekhabib78@gmail.com',bookings:1,totalSpent:300,lastBooking:'2026-04-09',source:'Direct',tag:'repeat'},
+  {id:2,name:'Shilpa Jaiswal',phone:'(225) 388-8953',email:'j.shilpajaiswal@gmail.com',bookings:1,totalSpent:300,lastBooking:'2026-04-05',source:'Direct',tag:'repeat'},
+  {id:3,name:'Marifer Gonzalez',phone:'(561) 524-5803',email:'marifergonzalez1515@gmail.com',bookings:1,totalSpent:600,lastBooking:'2026-04-05',source:'Direct',tag:'repeat'},
+  {id:4,name:'Mohammed Hamfi',phone:'(850) 570-0326',email:'mohammedhamdiabonamir2002@gmail.com',bookings:1,totalSpent:300,lastBooking:'2026-03-31',source:'Direct',tag:''},
+  {id:5,name:'Spencer Latterman',phone:'(412) 359-9205',email:'spencerlatterman@gmail.com',bookings:1,totalSpent:800,lastBooking:'2026-03-26',source:'Direct',tag:'vip'},
+  {id:6,name:'Emaan Talukdar',phone:'(408) 833-9562',email:'farhanaafroz@gmail.com',bookings:1,totalSpent:300,lastBooking:'2026-03-25',source:'Direct',tag:''},
+  {id:7,name:'Jaylen Jenkins',phone:'(469) 891-6906',email:'5eagleskittles@gmail.com',bookings:1,totalSpent:600,lastBooking:'2026-03-20',source:'Direct',tag:'repeat'},
+  {id:8,name:'Micheshalae Eldridge',phone:'(512) 203-4870',email:'micheshalae.eldridge@yahoo.com',bookings:2,totalSpent:900,lastBooking:'2026-03-18',source:'Direct',tag:'repeat'},
+  {id:9,name:'Bryce Gurr',phone:'(602) 622-6787',email:'bryce@gurrbrothers.com',bookings:2,totalSpent:1600,lastBooking:'2025-10-14',source:'Direct',tag:'vip'},
+  {id:10,name:'Veronica Campos',phone:'(210) 508-4282',email:'veronica@gurrbrothers.com',bookings:1,totalSpent:800,lastBooking:'2025-10-14',source:'Direct',tag:''},
+  {id:11,name:'Preston Bockman',phone:'(254) 644-7172',email:'pbockman0211@icloud.com',bookings:2,totalSpent:1120,lastBooking:'2025-10-12',source:'Direct',tag:'repeat'},
+  {id:12,name:'Debra Walker',phone:'(513) 716-8808',email:'debra.rueter@gmail.com',bookings:1,totalSpent:600,lastBooking:'2025-10-11',source:'Direct',tag:'repeat'},
+  {id:13,name:'Mohammad Alnasser',phone:'(414) 426-8405',email:'alnaserm13@hotmail.com',bookings:2,totalSpent:1360,lastBooking:'2025-10-11',source:'Direct',tag:'vip'},
+  {id:14,name:'Junior Junior',phone:'(903) 952-5020',email:'bigboyjunior46@gmail.com',bookings:1,totalSpent:300,lastBooking:'2025-10-09',source:'Direct',tag:''},
+  {id:15,name:'Mohammed Alwan',phone:'(817) 566-3528',email:'wissamalwan2004@gmail.com',bookings:1,totalSpent:800,lastBooking:'2025-10-07',source:'Direct',tag:'repeat'},
+  {id:16,name:'Kirk Choate',phone:'(916) 870-3025',email:'kdc@indian-electric.com',bookings:1,totalSpent:1000,lastBooking:'2025-10-04',source:'Direct',tag:'vip'},
 ];
 
 let fuelLog = [
@@ -636,6 +644,7 @@ const equipment = [
 
 // ── NAVIGATION ──
 function showPage(id, btn) {
+  try {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
@@ -647,6 +656,7 @@ function showPage(id, btn) {
   if(id==='fuel') renderFuel();
   if(id==='maintenance') renderMaint();
   if(id==='reminders') renderReminders();
+  } catch(e) { console.error('showPage error:', e); }
 }
 
 // ── MODALS ──
@@ -928,6 +938,8 @@ function daysSince(dateStr) {
 function today() { return new Date().toISOString().split('T')[0]; }
 
 // ── INIT ──
+// Clear old empty localStorage on version update
+try { if(!localStorage.getItem('sla_version') || localStorage.getItem('sla_version') !== 'v2') { localStorage.clear(); localStorage.setItem('sla_version','v2'); } } catch(e){}
 loadData();
 renderUpcoming();
 renderRevenueBars();
