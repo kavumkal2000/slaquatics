@@ -416,7 +416,7 @@ textarea:focus {
           <div class="info-list">
             <div class="info-item">We come to your access point anywhere on Lake Lewisville.</div>
             <div class="info-item">Jet ski packages include life jackets, cooler, fuel, and briefing.</div>
-            <div class="info-item">Boat rentals include the captain plus wakeboard and tube gear.</div>
+            <div class="info-item">Boat rentals include the captain, life jackets, and a full tank.</div>
           </div>
         </div>
       </div>
@@ -438,7 +438,7 @@ textarea:focus {
         <form id="booking-form">
           <div class="field-grid">
             <div class="field">
-              <label for="craft">Craft</label>
+              <label for="craft" id="craft-label">Number of jet skis needed</label>
               <select id="craft" name="craft" required></select>
             </div>
             <div class="field">
@@ -478,10 +478,10 @@ textarea:focus {
               <input id="location" name="location" type="text" placeholder="Example: Hidden Cove Marina or Little Elm Beach">
             </div>
             <div class="field">
-              <label for="drone">Drone coverage</label>
+              <label for="drone">Aerial drone coverage</label>
               <select id="drone" name="drone">
-                <option value="no">No drone coverage</option>
-                <option value="yes">Add drone video (+$50)</option>
+                <option value="no">No aerial drone coverage</option>
+                <option value="yes">Add aerial drone video (+$50)</option>
               </select>
             </div>
             <div class="field">
@@ -524,9 +524,9 @@ const PRICING = {
 };
 
 const CRAFT_LABELS = {
-  yamaha: "Yamaha VX (2 skis)",
-  seadoo2: "SeaDoo (2 skis)",
-  seadoo4: "SeaDoo TRIXX (4 skis)",
+  yamaha: "2 Jet Skis · Yamaha VX",
+  seadoo2: "2 Jet Skis · SeaDoo",
+  seadoo4: "4 Jet Skis · SeaDoo TRIXX",
   boat: "Boat Rental"
 };
 
@@ -547,6 +547,7 @@ function formatCurrency(value) {
 
 function setType(type) {
   currentType = type;
+  qs("craft-label").textContent = type === "boat" ? "Boat rental option" : "Number of jet skis needed";
   document.querySelectorAll(".type-btn").forEach((button) => {
     button.classList.toggle("active", button.dataset.type === type);
   });
@@ -598,8 +599,8 @@ function updateSummary() {
   qs("summary-title").textContent = CRAFT_LABELS[craft];
   qs("summary-duration").textContent = durationLabel;
   qs("summary-note").textContent = craft === "boat"
-    ? `Boat rental with captain included. ${droneEnabled ? "Drone coverage is added to this request." : "Wakeboard and tube gear stay included."}`
-    : `${durationLabel} rental with free delivery, life jackets, a full tank, and safety briefing included.${droneEnabled ? " Drone coverage is added to this request." : ""}`;
+    ? `Boat rental with captain included. ${droneEnabled ? "Aerial drone coverage is added to this request." : "Life jackets and a full tank are included."}`
+    : `${durationLabel} rental with free delivery, life jackets, a full tank, and safety briefing included.${droneEnabled ? " Aerial drone coverage is added to this request." : ""}`;
 
   if (craft === "boat") {
     qs("summary-extra-label").textContent = "Captain";

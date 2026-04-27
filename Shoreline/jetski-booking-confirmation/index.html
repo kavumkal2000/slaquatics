@@ -245,7 +245,7 @@ function buildMessage(booking) {
     `Date: ${booking.date}`,
     `Time: ${booking.time}`,
     `Party size: ${booking.partySize || "Not provided"}`,
-    `Drone coverage: ${booking.drone ? "Yes" : "No"}`,
+    `Aerial drone coverage: ${booking.drone ? "Yes" : "No"}`,
     `Meeting spot: ${booking.location || "To be confirmed"}`,
     `Preferred contact: ${booking.contactMethod}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
