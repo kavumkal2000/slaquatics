@@ -546,6 +546,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 function saveData() {
   try {
+    dedupeCustomers();
     localStorage.setItem('sla_bookings', JSON.stringify(bookings));
     localStorage.setItem('sla_customers', JSON.stringify(customers));
     localStorage.setItem('sla_fuel', JSON.stringify(fuelLog));
@@ -560,6 +561,7 @@ function loadData() {
     const f = localStorage.getItem('sla_fuel'); if(f) { const p=JSON.parse(f); if(p&&p.length>0) fuelLog=p; }
     const m = localStorage.getItem('sla_maint'); if(m) { const p=JSON.parse(m); if(p&&p.length>0) maintLog=p; }
     const i = localStorage.getItem('sla_import_meta'); if(i) { const p=JSON.parse(i); if(p&&typeof p==='object') importMeta={...importMeta,...p}; }
+    dedupeCustomers();
   } catch(e) { console.warn('localStorage unavailable'); }
 }
 // ── DATA ──
@@ -641,6 +643,9 @@ function normalizePhone(phone) {
 }
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
+}
+function normalizeName(name) {
+  return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
 function normalizeHeader(name) {
   return String(name || '').replace(/^\uFEFF/, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -750,6 +755,56 @@ function deriveCustomerTag(rawTags) {
 function looksLikeSeedCustomers() {
   return customers.length === 8 && customers.every((customer) => /@example\.com$/i.test(String(customer.email || '')));
 }
+function mergeCustomerRecord(target, incoming = {}) {
+  target.name = incoming.name || target.name;
+  target.phone = incoming.phone || target.phone;
+  target.email = incoming.email || target.email;
+  target.bookings = Math.max(Number(target.bookings) || 0, Number(incoming.bookings) || 0);
+  target.totalSpent = Math.max(Number(target.totalSpent) || 0, Number(incoming.totalSpent) || 0);
+  target.lastBooking = updateLatestDate(target.lastBooking, incoming.lastBooking);
+  target.source = incoming.source || target.source;
+  target.tag = target.tag || incoming.tag || '';
+  target.crmTags = incoming.crmTags || target.crmTags || '';
+  target.company = incoming.company || target.company || '';
+  target.createdAt = incoming.createdAt || target.createdAt || '';
+  target.lastActivity = incoming.lastActivity || target.lastActivity || '';
+  target.crmNotes = incoming.crmNotes || target.crmNotes || '';
+  target.crmFields = mergeCrmFields(target.crmFields, incoming.crmFields);
+  target.importSource = target.importSource || incoming.importSource || '';
+}
+function customerImportKey(customer) {
+  const emailKey = normalizeEmail(customer.email);
+  if (emailKey) return `email:${emailKey}`;
+  const phoneKey = normalizePhone(customer.phone);
+  if (phoneKey) return `phone:${phoneKey}`;
+  const nameKey = normalizeName(customer.name);
+  if (!nameKey) return '';
+  const createdKey = String(customer.createdAt || customer.lastBooking || '').trim();
+  const companyKey = String(customer.company || customer.source || '').trim().toLowerCase();
+  if (customer.importSource === 'admintribe' || customer.source === 'Admin Tribe') {
+    return `crm:${nameKey}|${createdKey}|${companyKey}`;
+  }
+  return `name:${nameKey}|${companyKey}`;
+}
+function dedupeCustomers() {
+  const seen = new Map();
+  const deduped = [];
+  customers.forEach((customer) => {
+    const key = customerImportKey(customer);
+    if (!key) {
+      deduped.push(customer);
+      return;
+    }
+    const existing = seen.get(key);
+    if (existing) {
+      mergeCustomerRecord(existing, customer);
+      return;
+    }
+    seen.set(key, customer);
+    deduped.push(customer);
+  });
+  customers = deduped.map((customer, index) => ({...customer, id: index + 1}));
+}
 function updateLatestDate(currentValue, incomingValue) {
   if (!incomingValue || incomingValue === 'N/A') return currentValue || 'N/A';
   if (!currentValue || currentValue === 'N/A') return incomingValue;
@@ -758,25 +813,24 @@ function updateLatestDate(currentValue, incomingValue) {
 function upsertImportedCustomer(data) {
   const phoneKey = normalizePhone(data.phone);
   const emailKey = normalizeEmail(data.email);
+  const nameKey = normalizeName(data.name);
+  const createdKey = String(data.createdAt || '').trim();
   const existing = customers.find((customer) => (
     (phoneKey && normalizePhone(customer.phone) === phoneKey) ||
-    (emailKey && normalizeEmail(customer.email) === emailKey)
+    (emailKey && normalizeEmail(customer.email) === emailKey) ||
+    (
+      nameKey &&
+      normalizeName(customer.name) === nameKey &&
+      (
+        (!phoneKey && !emailKey) ||
+        customer.importSource === 'admintribe' ||
+        customer.source === 'Admin Tribe'
+      ) &&
+      (!createdKey || String(customer.createdAt || '').trim() === createdKey)
+    )
   ));
   if (existing) {
-    existing.name = data.name || existing.name;
-    existing.phone = data.phone || existing.phone;
-    existing.email = data.email || existing.email;
-    existing.bookings = Math.max(Number(existing.bookings) || 0, Number(data.bookings) || 0);
-    existing.totalSpent = Math.max(Number(existing.totalSpent) || 0, Number(data.totalSpent) || 0);
-    existing.lastBooking = updateLatestDate(existing.lastBooking, data.lastBooking);
-    existing.source = data.source || existing.source;
-    existing.tag = existing.tag || data.tag || '';
-    existing.crmTags = data.crmTags || existing.crmTags || '';
-    existing.company = data.company || existing.company || '';
-    existing.createdAt = data.createdAt || existing.createdAt || '';
-    existing.lastActivity = data.lastActivity || existing.lastActivity || '';
-    existing.crmNotes = data.crmNotes || existing.crmNotes || '';
-    existing.crmFields = mergeCrmFields(existing.crmFields, data.crmFields);
+    mergeCustomerRecord(existing, data);
     return 'updated';
   }
   customers.push({
@@ -797,6 +851,7 @@ function upsertImportedCustomer(data) {
     crmFields: data.crmFields || {},
     importSource: 'admintribe'
   });
+  dedupeCustomers();
   return 'added';
 }
 function buildOpportunityNotes(row) {
@@ -924,6 +979,7 @@ function importContactsFromCsv(rows, fileName) {
     added = importedCustomers.length;
     updated = 0;
   }
+  dedupeCustomers();
   importMeta = {
     lastType: 'contacts',
     fileName,
@@ -1007,6 +1063,7 @@ function importOpportunitiesFromCsv(rows, fileName) {
     });
     if (action === 'updated') updated += 1;
   }
+  dedupeCustomers();
   importMeta = {
     lastType: 'opportunities',
     fileName,
