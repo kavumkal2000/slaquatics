@@ -16,6 +16,21 @@ const COOKIE_NAME = 'sla_ops_session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
+const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
+const GOOGLE_REVIEW_URL = process.env.GOOGLE_REVIEW_URL || '';
+const FACEBOOK_REVIEW_URL = process.env.FACEBOOK_REVIEW_URL || '';
+const AUTO_SEND_REVIEW_REQUESTS = /^true$/i.test(process.env.AUTO_SEND_REVIEW_REQUESTS || 'false');
+const REVIEW_REQUEST_CHANNEL = String(process.env.REVIEW_REQUEST_CHANNEL || 'sms').toLowerCase();
+const SOCIAL_AUTOMATION_WEBHOOK_URL = process.env.SOCIAL_AUTOMATION_WEBHOOK_URL || '';
+const SOCIAL_AUTOMATION_WEBHOOK_SECRET = process.env.SOCIAL_AUTOMATION_WEBHOOK_SECRET || '';
+const SOCIAL_FACEBOOK_WEBHOOK_URL = process.env.SOCIAL_FACEBOOK_WEBHOOK_URL || '';
+const SOCIAL_INSTAGRAM_WEBHOOK_URL = process.env.SOCIAL_INSTAGRAM_WEBHOOK_URL || '';
+const SOCIAL_X_WEBHOOK_URL = process.env.SOCIAL_X_WEBHOOK_URL || '';
+const SOCIAL_TIKTOK_WEBHOOK_URL = process.env.SOCIAL_TIKTOK_WEBHOOK_URL || '';
 
 const DEFAULT_STATE = {
   bookings: [
@@ -265,6 +280,181 @@ async function readRequestBody(request) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+function normalizePhone(value = '') {
+  const digits = String(value).replace(/[^\d+]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('+')) return digits;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function htmlEscape(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function firstName(value = '') {
+  return String(value || '').trim().split(/\s+/)[0] || 'there';
+}
+
+function integrationStatus() {
+  const socialPlatforms = [
+    SOCIAL_FACEBOOK_WEBHOOK_URL ? 'facebook' : '',
+    SOCIAL_INSTAGRAM_WEBHOOK_URL ? 'instagram' : '',
+    SOCIAL_X_WEBHOOK_URL ? 'x' : '',
+    SOCIAL_TIKTOK_WEBHOOK_URL ? 'tiktok' : ''
+  ].filter(Boolean);
+  return {
+    smsConfigured: Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER),
+    emailConfigured: Boolean(RESEND_API_KEY && RESEND_FROM_EMAIL),
+    reviewLinksConfigured: Boolean(GOOGLE_REVIEW_URL || FACEBOOK_REVIEW_URL),
+    reviewAutomationEnabled: AUTO_SEND_REVIEW_REQUESTS,
+    reviewChannel: REVIEW_REQUEST_CHANNEL,
+    socialConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL || socialPlatforms.length),
+    socialAutomationConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL),
+    socialPlatforms
+  };
+}
+
+function reviewLinksText() {
+  const links = [];
+  if (GOOGLE_REVIEW_URL) links.push(`Google: ${GOOGLE_REVIEW_URL}`);
+  if (FACEBOOK_REVIEW_URL) links.push(`Facebook: ${FACEBOOK_REVIEW_URL}`);
+  return links.join('\n');
+}
+
+function reviewLinksHtml() {
+  const links = [];
+  if (GOOGLE_REVIEW_URL) links.push(`<a href="${htmlEscape(GOOGLE_REVIEW_URL)}">Leave a Google review</a>`);
+  if (FACEBOOK_REVIEW_URL) links.push(`<a href="${htmlEscape(FACEBOOK_REVIEW_URL)}">Leave a Facebook review</a>`);
+  return links.join('<br>');
+}
+
+async function sendTwilioSms({ to, body }) {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
+    throw new Error('Twilio SMS is not configured yet.');
+  }
+  const destination = normalizePhone(to);
+  if (!destination) {
+    throw new Error('A valid destination phone number is required.');
+  }
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+  const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+  const payload = new URLSearchParams({
+    To: destination,
+    From: TWILIO_FROM_NUMBER,
+    Body: String(body || '')
+  });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: payload
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(json.message || 'Twilio rejected the message request.');
+  }
+  return json;
+}
+
+async function sendResendEmail({ to, subject, text, html, bcc = [] }) {
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    throw new Error('Resend email is not configured yet.');
+  }
+  const recipients = Array.isArray(to) ? to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(to)].filter(Boolean);
+  const bccRecipients = Array.isArray(bcc) ? bcc.map(normalizeEmail).filter(Boolean) : [normalizeEmail(bcc)].filter(Boolean);
+  if (!recipients.length) {
+    throw new Error('At least one valid recipient email is required.');
+  }
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: RESEND_FROM_EMAIL,
+      to: recipients,
+      bcc: bccRecipients.length ? bccRecipients : undefined,
+      subject: subject || 'Shoreline Aquatics',
+      text: text || '',
+      html: html || `<p>${htmlEscape(text || '')}</p>`
+    })
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = json?.message || json?.error?.message || 'Resend rejected the email request.';
+    throw new Error(message);
+  }
+  return json;
+}
+
+async function postWebhook(url, payload, extraHeaders = {}) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...extraHeaders
+    },
+    body: JSON.stringify(payload)
+  });
+  const text = await response.text().catch(() => '');
+  if (!response.ok) {
+    throw new Error(text || `Webhook request failed (${response.status})`);
+  }
+  return { status: response.status, body: text };
+}
+
+async function dispatchSocialPost(payload) {
+  const selected = Array.isArray(payload.platforms) ? payload.platforms : [];
+  const platformMap = {
+    facebook: SOCIAL_FACEBOOK_WEBHOOK_URL,
+    instagram: SOCIAL_INSTAGRAM_WEBHOOK_URL,
+    x: SOCIAL_X_WEBHOOK_URL,
+    tiktok: SOCIAL_TIKTOK_WEBHOOK_URL
+  };
+  const secretHeaders = SOCIAL_AUTOMATION_WEBHOOK_SECRET
+    ? { 'X-Shoreline-Webhook-Secret': SOCIAL_AUTOMATION_WEBHOOK_SECRET }
+    : {};
+
+  const results = [];
+  const unmatched = [];
+
+  for (const platform of selected) {
+    const targetUrl = platformMap[platform];
+    if (!targetUrl) {
+      unmatched.push(platform);
+      continue;
+    }
+    const response = await postWebhook(targetUrl, { ...payload, platform }, secretHeaders);
+    results.push({ platform, ...response });
+  }
+
+  if (SOCIAL_AUTOMATION_WEBHOOK_URL) {
+    const response = await postWebhook(SOCIAL_AUTOMATION_WEBHOOK_URL, payload, secretHeaders);
+    results.push({ platform: 'automation', ...response });
+  } else if (unmatched.length) {
+    throw new Error(`No social webhook configured for: ${unmatched.join(', ')}`);
+  }
+
+  if (!results.length) {
+    throw new Error('No social webhook is configured yet.');
+  }
+  return results;
+}
+
 function contentTypeFor(filePath) {
   const extension = path.extname(filePath).toLowerCase();
   return {
@@ -366,6 +556,11 @@ async function handleApi(request, response, pathname) {
     return true;
   }
 
+  if (pathname === '/api/ops/integrations/status' && request.method === 'GET') {
+    sendJson(response, 200, { ok: true, integrations: integrationStatus() });
+    return true;
+  }
+
   if (pathname === '/api/ops/state' && request.method === 'GET') {
     const state = await stateStore.read();
     sendJson(response, 200, { state, storage: stateStore.kind });
@@ -381,6 +576,98 @@ async function handleApi(request, response, pathname) {
     } catch (error) {
       console.error('State write failed:', error);
       sendJson(response, 400, { error: 'Could not save operations state.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/messages/send' && request.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const channel = String(body.channel || '').toLowerCase();
+      if (channel === 'sms') {
+        const result = await sendTwilioSms({ to: body.to, body: body.body });
+        sendJson(response, 200, { ok: true, channel, result });
+        return true;
+      }
+      if (channel === 'email') {
+        const result = await sendResendEmail({
+          to: body.to,
+          subject: body.subject,
+          text: body.body,
+          html: body.html
+        });
+        sendJson(response, 200, { ok: true, channel, result });
+        return true;
+      }
+      if (channel === 'mass-email') {
+        const toRecipients = Array.isArray(body.to) && body.to.length ? body.to : [RESEND_FROM_EMAIL];
+        const result = await sendResendEmail({
+          to: toRecipients,
+          bcc: body.bcc || [],
+          subject: body.subject,
+          text: body.body,
+          html: body.html
+        });
+        sendJson(response, 200, { ok: true, channel, result });
+        return true;
+      }
+      sendJson(response, 400, { error: 'Unsupported messaging channel.' });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send message.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/reviews/send' && request.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      if (!GOOGLE_REVIEW_URL && !FACEBOOK_REVIEW_URL) {
+        throw new Error('Review links are not configured yet.');
+      }
+      const channel = String(body.channel || REVIEW_REQUEST_CHANNEL || 'sms').toLowerCase();
+      const customerName = body.customerName || 'there';
+      const subject = 'Thanks for riding with Shoreline Aquatics';
+      const text = [
+        `Hey ${firstName(customerName)}! Thanks again for riding with Shoreline Aquatics.`,
+        'If you had a great time, we would really appreciate a quick review:',
+        reviewLinksText()
+      ].filter(Boolean).join('\n\n');
+      const html = `<p>Hey ${htmlEscape(firstName(customerName))}! Thanks again for riding with Shoreline Aquatics.</p><p>If you had a great time, we would really appreciate a quick review:</p><p>${reviewLinksHtml()}</p>`;
+
+      let result;
+      if (channel === 'email') {
+        result = await sendResendEmail({ to: body.email, subject, text, html });
+      } else {
+        result = await sendTwilioSms({ to: body.phone, body: text });
+      }
+      sendJson(response, 200, { ok: true, channel, result });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send review request.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/social/publish' && request.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const caption = String(body.caption || '').trim();
+      if (!caption) {
+        throw new Error('A caption is required before publishing.');
+      }
+      const payload = {
+        source: 'shoreline-ops',
+        caption,
+        link: String(body.link || '').trim(),
+        platforms: Array.isArray(body.platforms) ? body.platforms : [],
+        createdAt: new Date().toISOString()
+      };
+      const result = await dispatchSocialPost(payload);
+      sendJson(response, 200, { ok: true, result });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not dispatch the social post.' });
       return true;
     }
   }

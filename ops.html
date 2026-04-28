@@ -601,7 +601,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="compose-grid">
     <div class="compose-card">
       <h3>1-to-1 follow-up</h3>
-      <p>Pick a customer, draft the message once, then open a text or email draft with the same copy.</p>
+      <p id="comm-provider-note">Pick a customer, draft the message once, then send it from the connected provider.</p>
       <div style="margin-top:1rem;">
         <label for="comm-customer">Customer</label>
         <select id="comm-customer" onchange="renderCommsPanel()"></select>
@@ -612,14 +612,14 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <textarea id="comm-message" oninput="renderCommsPanel()">Hi! This is Shoreline Aquatics checking in about your rental. Let us know if you want to lock in your next lake day.</textarea>
       </div>
       <div class="compose-actions">
-        <a class="btn btn-primary btn-sm" id="comm-text-link" href="#">Text customer</a>
-        <a class="btn btn-ghost btn-sm" id="comm-email-link" href="#">Email customer</a>
+        <button class="btn btn-primary btn-sm" id="comm-text-link" onclick="sendDirectMessage('sms')">Text customer</button>
+        <button class="btn btn-ghost btn-sm" id="comm-email-link" onclick="sendDirectMessage('email')">Email customer</button>
         <button class="btn btn-ghost btn-sm" onclick="logCommunication()">Log note</button>
       </div>
     </div>
     <div class="compose-card">
       <h3>Mass email</h3>
-      <p>Draft one campaign and open it with all customer emails already loaded in BCC.</p>
+      <p id="mass-provider-note">Draft one campaign and send it through the connected email provider.</p>
       <div style="margin-top:1rem;">
         <label for="mass-email-subject">Subject</label>
         <input id="mass-email-subject" type="text" value="Shoreline Aquatics availability this week" oninput="renderMassEmailDraft()">
@@ -634,9 +634,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="mini-kpi"><strong id="mass-repeat-count">0</strong><span>repeat or VIP</span></div>
       </div>
       <div class="compose-actions">
-        <a class="btn btn-primary btn-sm" id="mass-email-link" href="#">Open email draft</a>
+        <button class="btn btn-primary btn-sm" id="mass-email-link" onclick="sendMassEmail()">Send mass email</button>
       </div>
-      <p class="note-soft" style="margin-top:0.75rem;">Two-way texting and automated outbound email still need a connected messaging provider. This keeps the campaigns organized and ready to send now.</p>
+      <p class="note-soft" id="mass-provider-detail" style="margin-top:0.75rem;">Two-way texting and automated outbound email need connected provider credentials.</p>
     </div>
   </div>
   <div class="table-wrap">
@@ -659,7 +659,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="compose-grid">
     <div class="list-card">
       <h3>Review drop queue</h3>
-      <p>When a rental is marked complete, it appears here so you can send the follow-up review request right away.</p>
+      <p id="review-provider-note">When a rental is marked complete, it appears here so you can send or auto-send the review request right away.</p>
       <div class="list-stack" id="review-request-list" style="margin-top:1rem;"></div>
     </div>
     <div class="list-card">
@@ -676,7 +676,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="compose-grid">
     <div class="compose-card">
       <h3>One post, all channels</h3>
-      <p>Write the post once here, then reuse the same caption everywhere from a single draft.</p>
+      <p id="social-provider-note">Write the post once here, then send it to the connected social automation webhook.</p>
       <div style="margin-top:1rem;">
         <label for="social-caption">Caption</label>
         <textarea id="social-caption">Lake Lewisville is looking perfect this week. DM Shoreline Aquatics to lock in your jet ski or boat rental.</textarea>
@@ -693,9 +693,10 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       </div>
       <div class="compose-actions">
         <button class="btn btn-primary btn-sm" onclick="saveSocialDraft()">Save draft</button>
+        <button class="btn btn-ghost btn-sm" id="social-publish-button" onclick="publishSocialNow()">Publish now</button>
         <button class="btn btn-ghost btn-sm" onclick="copySocialCaption()">Copy caption</button>
       </div>
-      <p class="note-soft" style="margin-top:0.75rem;">True one-click cross-posting still needs each social account connected through its API. This page keeps one clean master post ready for every network right now.</p>
+      <p class="note-soft" id="social-provider-detail" style="margin-top:0.75rem;">True cross-posting needs connected webhook credentials for your automation stack or each social API.</p>
     </div>
     <div class="list-card">
       <h3>Saved post queue</h3>
@@ -926,6 +927,16 @@ const LOCAL_KEYS = {
   invoiceImportMeta: 'sla_invoice_import_meta'
 };
 let backendAvailable = false;
+let integrations = {
+  smsConfigured: false,
+  emailConfigured: false,
+  reviewLinksConfigured: false,
+  reviewAutomationEnabled: false,
+  reviewChannel: 'sms',
+  socialConfigured: false,
+  socialAutomationConfigured: false,
+  socialPlatforms: []
+};
 
 function snapshotState() {
   return {
@@ -1099,6 +1110,16 @@ async function loadData() {
   }
   writeLocalBackup();
   return true;
+}
+async function loadIntegrationStatus() {
+  if (!backendAvailable) return integrations;
+  try {
+    const payload = await requestJson('/api/ops/integrations/status');
+    integrations = {...integrations, ...(payload.integrations || {})};
+  } catch (error) {
+    console.error('Integration status load failed:', error);
+  }
+  return integrations;
 }
 async function logout() {
   if (!backendAvailable) {
@@ -2384,10 +2405,28 @@ function statusBadge(s) {
   return `<span class="badge ${map[s]||''}">${s}</span>`;
 }
 
-function updateStatus(id, status) {
-  const b = bookings.find(b=>b.id===id);
-  if(b) { b.status=status; saveData(); renderBookings(); renderUpcoming(); renderDashboardMetrics(); renderBookingBars(); renderReviewHub(); renderReminders(); showToast('✅ Updated to '+status); }
-  document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
+async function updateStatus(id, status) {
+  const booking = bookings.find((item) => item.id === id);
+  if (!booking) return;
+  const previousStatus = booking.status;
+  booking.status = status;
+  try {
+    await saveData();
+    const reviewAutoSent = status === 'completed' && previousStatus !== 'completed'
+      ? await autoSendReviewForBooking(booking)
+      : false;
+    renderBookings();
+    renderUpcoming();
+    renderDashboardMetrics();
+    renderBookingBars();
+    renderReviewHub();
+    renderReminders();
+    document.getElementById('pending-badge').textContent = bookings.filter((item) => item.status === 'pending').length;
+    showToast(reviewAutoSent ? '✅ Updated to completed and sent the review request' : `✅ Updated to ${status}`);
+  } catch (error) {
+    booking.status = previousStatus;
+    showToast(`⚠️ ${error.message || 'Could not update booking status'}`);
+  }
 }
 
 function confirmDeposit(id) {
@@ -2618,20 +2657,23 @@ function renderMassEmailDraft() {
   const emails = customers.map((customer) => normalizeEmail(customer.email)).filter(Boolean);
   const phones = customers.map((customer) => normalizePhone(customer.phone)).filter(Boolean);
   const repeatCount = customers.filter((customer) => ['repeat', 'vip'].includes(customer.tag)).length;
-  const subject = document.getElementById('mass-email-subject')?.value || '';
-  const body = document.getElementById('mass-email-body')?.value || '';
   document.getElementById('mass-email-count').textContent = emails.length.toLocaleString();
   document.getElementById('mass-text-count').textContent = phones.length.toLocaleString();
   document.getElementById('mass-repeat-count').textContent = repeatCount.toLocaleString();
-  const draftLink = document.getElementById('mass-email-link');
-  if (draftLink) {
-    draftLink.href = `mailto:?bcc=${encodeURIComponent(emails.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }
+  const note = document.getElementById('mass-provider-note');
+  const detail = document.getElementById('mass-provider-detail');
+  const button = document.getElementById('mass-email-link');
+  if (note) note.textContent = integrations.emailConfigured
+    ? 'Draft one campaign and send it through Resend from inside Shoreline Ops.'
+    : 'Draft one campaign now. Add Resend credentials to send it directly from Shoreline Ops.';
+  if (detail) detail.textContent = integrations.emailConfigured
+    ? 'Resend is configured. This will send one campaign with everyone on BCC.'
+    : 'Resend is not configured yet, so the email provider send button will stay disabled.';
+  if (button) button.disabled = !integrations.emailConfigured || !emails.length;
 }
 function renderCommsPanel() {
   const select = document.getElementById('comm-customer');
   const customerCard = document.getElementById('comm-customer-card');
-  const message = document.getElementById('comm-message')?.value || '';
   if (!select || !customerCard) return;
 
   const ordered = [...customers].sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
@@ -2657,18 +2699,103 @@ function renderCommsPanel() {
   `;
   const textLink = document.getElementById('comm-text-link');
   const emailLink = document.getElementById('comm-email-link');
+  const providerNote = document.getElementById('comm-provider-note');
+  if (providerNote) {
+    providerNote.textContent = integrations.smsConfigured || integrations.emailConfigured
+      ? 'Pick a customer, draft the message once, then send it through the connected provider.'
+      : 'Provider keys are not configured yet, so this section is still in draft-only mode.';
+  }
   if (textLink) {
-    textLink.href = current.phone ? `sms:${phoneHref(current.phone)}?body=${encodeURIComponent(message)}` : '#';
-    textLink.style.pointerEvents = current.phone ? 'auto' : 'none';
-    textLink.style.opacity = current.phone ? '1' : '0.45';
+    textLink.disabled = !(integrations.smsConfigured && current.phone);
+    textLink.style.opacity = textLink.disabled ? '0.45' : '1';
   }
   if (emailLink) {
-    emailLink.href = current.email ? `mailto:${encodeURIComponent(current.email)}?subject=${encodeURIComponent('Shoreline Aquatics follow-up')}&body=${encodeURIComponent(message)}` : '#';
-    emailLink.style.pointerEvents = current.email ? 'auto' : 'none';
-    emailLink.style.opacity = current.email ? '1' : '0.45';
+    emailLink.disabled = !(integrations.emailConfigured && current.email);
+    emailLink.style.opacity = emailLink.disabled ? '0.45' : '1';
   }
   renderMassEmailDraft();
   renderCommunications();
+}
+async function sendDirectMessage(channel) {
+  const select = document.getElementById('comm-customer');
+  const message = document.getElementById('comm-message')?.value.trim();
+  const customer = customers.find((item) => String(item.id) === String(select?.value));
+  if (!customer || !message) {
+    showToast('⚠️ Choose a customer and add your message first');
+    return;
+  }
+  try {
+    if (channel === 'sms') {
+      if (!integrations.smsConfigured || !customer.phone) throw new Error('SMS is not configured or this customer has no phone number.');
+      await requestJson('/api/ops/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel: 'sms', to: customer.phone, body: message })
+      });
+    } else {
+      if (!integrations.emailConfigured || !customer.email) throw new Error('Email is not configured or this customer has no email address.');
+      await requestJson('/api/ops/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: 'email',
+          to: customer.email,
+          subject: 'Shoreline Aquatics follow-up',
+          body: message
+        })
+      });
+    }
+    communicationsLog.unshift({
+      id: nextId(communicationsLog),
+      date: new Date().toISOString(),
+      customerId: customer.id,
+      customerName: customer.name,
+      channel,
+      message
+    });
+    saveData();
+    renderCommunications();
+    showToast(channel === 'sms' ? '📲 Text sent' : '✉️ Email sent');
+  } catch (error) {
+    showToast(`⚠️ ${error.message}`);
+  }
+}
+async function sendMassEmail() {
+  const bcc = customers.map((customer) => normalizeEmail(customer.email)).filter(Boolean);
+  const subject = document.getElementById('mass-email-subject')?.value.trim() || '';
+  const body = document.getElementById('mass-email-body')?.value.trim() || '';
+  if (!integrations.emailConfigured) {
+    showToast('⚠️ Resend is not configured yet');
+    return;
+  }
+  if (!bcc.length || !subject || !body) {
+    showToast('⚠️ Add a subject, body, and make sure customers have emails on file');
+    return;
+  }
+  try {
+    await requestJson('/api/ops/messages/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: 'mass-email',
+        bcc,
+        subject,
+        body
+      })
+    });
+    communicationsLog.unshift({
+      id: nextId(communicationsLog),
+      date: new Date().toISOString(),
+      customerName: 'Mass campaign',
+      channel: 'mass-email',
+      message: `${subject} — ${body}`
+    });
+    saveData();
+    renderCommunications();
+    showToast(`✉️ Mass email sent to ${bcc.length} recipients`);
+  } catch (error) {
+    showToast(`⚠️ ${error.message}`);
+  }
 }
 function logCommunication() {
   const select = document.getElementById('comm-customer');
@@ -2692,41 +2819,82 @@ function logCommunication() {
 }
 
 // ── REVIEWS ──
+function ensureReviewRequestForBooking(booking) {
+  if (!booking || booking.status !== 'completed') return { request: null, created: false };
+  const existing = reviewRequests.find((request) => request.bookingId === booking.id);
+  if (existing) return { request: existing, created: false };
+  if (reviews.some((review) => review.bookingId === booking.id)) return { request: null, created: false };
+  const request = {
+    id: nextId(reviewRequests),
+    bookingId: booking.id,
+    customerName: booking.name,
+    phone: booking.phone,
+    email: booking.email,
+    sentAt: '',
+    status: 'pending'
+  };
+  reviewRequests.unshift(request);
+  return { request, created: true };
+}
 function ensureReviewRequestsForCompletedBookings() {
+  let created = false;
   bookings.filter((booking) => booking.status === 'completed').forEach((booking) => {
-    const exists = reviewRequests.some((request) => request.bookingId === booking.id) || reviews.some((review) => review.bookingId === booking.id);
-    if (!exists) {
-      reviewRequests.unshift({
-        id: nextId(reviewRequests),
-        bookingId: booking.id,
-        customerName: booking.name,
-        phone: booking.phone,
-        email: booking.email,
-        sentAt: '',
-        status: 'pending'
-      });
-    }
+    const result = ensureReviewRequestForBooking(booking);
+    if (result.created) created = true;
   });
+  return created;
 }
 function reviewMessage(name) {
   return `Hey ${firstName(name)}! Thanks again for riding with Shoreline Aquatics. If you had a great time, we'd really appreciate a quick review about your experience on the lake.`;
 }
-function sendReviewDrop(requestId, channel) {
+async function autoSendReviewForBooking(booking) {
+  if (!backendAvailable || !integrations.reviewAutomationEnabled || !integrations.reviewLinksConfigured) return false;
+  const { request, created } = ensureReviewRequestForBooking(booking);
+  if (created) {
+    await saveData({silent:true});
+  }
+  if (!request || request.status === 'reviewed' || request.sentAt) return false;
+  const canText = Boolean(integrations.smsConfigured && request.phone);
+  const canEmail = Boolean(integrations.emailConfigured && request.email);
+  const preferred = integrations.reviewChannel === 'email' ? 'email' : 'text';
+  const channel = preferred === 'email'
+    ? (canEmail ? 'email' : canText ? 'text' : '')
+    : (canText ? 'text' : canEmail ? 'email' : '');
+  if (!channel) return false;
+  try {
+    await sendReviewDrop(request.id, channel, { silent: true, preserveRender: true });
+    return true;
+  } catch (error) {
+    console.error('Automatic review request failed:', error);
+    return false;
+  }
+}
+async function sendReviewDrop(requestId, channel, options = {}) {
   const request = reviewRequests.find((item) => item.id === requestId);
-  if (!request) return;
-  request.sentAt = new Date().toISOString();
-  request.channel = channel;
-  saveData();
-  renderReviewHub();
-  if (channel === 'text' && request.phone) {
-    window.location.href = `sms:${phoneHref(request.phone)}?body=${encodeURIComponent(reviewMessage(request.customerName))}`;
-    return;
+  if (!request) return false;
+  const apiChannel = channel === 'text' ? 'sms' : 'email';
+  try {
+    await requestJson('/api/ops/reviews/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: apiChannel,
+        customerName: request.customerName,
+        phone: request.phone,
+        email: request.email
+      })
+    });
+    request.sentAt = new Date().toISOString();
+    request.channel = apiChannel;
+    request.status = 'sent';
+    await saveData({silent:true});
+    if (!options.preserveRender) renderReviewHub();
+    if (!options.silent) showToast(apiChannel === 'sms' ? '⭐ Review text sent' : '⭐ Review email sent');
+    return true;
+  } catch (error) {
+    if (!options.silent) showToast(`⚠️ ${error.message}`);
+    throw error;
   }
-  if (channel === 'email' && request.email) {
-    window.location.href = `mailto:${encodeURIComponent(request.email)}?subject=${encodeURIComponent('Quick favor from Shoreline Aquatics')}&body=${encodeURIComponent(reviewMessage(request.customerName))}`;
-    return;
-  }
-  showToast('⚠️ No contact info on file for that review request');
 }
 function markReviewCompleted(requestId) {
   const request = reviewRequests.find((item) => item.id === requestId);
@@ -2755,7 +2923,10 @@ function toggleReviewResponded(reviewId) {
   renderReviewHub();
 }
 function renderReviewHub() {
-  ensureReviewRequestsForCompletedBookings();
+  const queueChanged = ensureReviewRequestsForCompletedBookings();
+  if (queueChanged) {
+    saveData({silent:true}).catch((error) => console.error('Review queue sync failed:', error));
+  }
   const pending = reviewRequests.filter((request) => request.status !== 'reviewed');
   const completedRentals = bookings.filter((booking) => booking.status === 'completed').length;
   const reviewRate = completedRentals ? Math.round((reviews.length / completedRentals) * 100) : 0;
@@ -2766,6 +2937,12 @@ function renderReviewHub() {
 
   const requestList = document.getElementById('review-request-list');
   const logList = document.getElementById('review-log-list');
+  const providerNote = document.getElementById('review-provider-note');
+  if (providerNote) {
+    providerNote.textContent = integrations.reviewLinksConfigured
+      ? `Completed rentals queue up here. Auto-send is ${integrations.reviewAutomationEnabled ? 'enabled' : 'disabled'} and the default channel is ${integrations.reviewChannel}.`
+      : 'Add Google and/or Facebook review links in the backend env vars before sending automated review requests.';
+  }
   if (requestList) {
     requestList.innerHTML = pending.length ? sortNewestFirst(pending, (item) => item.sentAt || '').map((request) => `
       <div class="list-row">
@@ -2774,8 +2951,8 @@ function renderReviewHub() {
           <div class="sub">${escapeHtml(request.sentAt ? `Last sent ${request.sentAt.slice(0, 10)}` : 'Ready to send now')}</div>
         </div>
         <div class="list-row-actions">
-          <button class="btn btn-primary btn-sm" onclick="sendReviewDrop(${request.id}, 'text')">Text request</button>
-          <button class="btn btn-ghost btn-sm" onclick="sendReviewDrop(${request.id}, 'email')">Email request</button>
+          <button class="btn btn-primary btn-sm" ${integrations.reviewLinksConfigured && integrations.smsConfigured && request.phone ? '' : 'disabled style="opacity:0.45"'} onclick="sendReviewDrop(${request.id}, 'text')">Text request</button>
+          <button class="btn btn-ghost btn-sm" ${integrations.reviewLinksConfigured && integrations.emailConfigured && request.email ? '' : 'disabled style="opacity:0.45"'} onclick="sendReviewDrop(${request.id}, 'email')">Email request</button>
           <button class="btn btn-ghost btn-sm" onclick="markReviewCompleted(${request.id})">Log review</button>
         </div>
       </div>
@@ -2816,6 +2993,32 @@ function saveSocialDraft() {
   renderSocialQueue();
   showToast('📣 Social draft saved');
 }
+async function publishSocialNow() {
+  const caption = document.getElementById('social-caption')?.value.trim();
+  const link = document.getElementById('social-link')?.value.trim();
+  if (!integrations.socialConfigured) {
+    showToast('⚠️ Social automation webhook is not configured yet');
+    return;
+  }
+  if (!caption) {
+    showToast('⚠️ Add a caption first');
+    return;
+  }
+  try {
+    await requestJson('/api/ops/social/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        caption,
+        link,
+        platforms: Array.isArray(integrations.socialPlatforms) ? integrations.socialPlatforms : []
+      })
+    });
+    showToast('📣 Social post dispatched');
+  } catch (error) {
+    showToast(`⚠️ ${error.message}`);
+  }
+}
 function copySocialCaption() {
   const caption = document.getElementById('social-caption')?.value.trim() || '';
   const link = document.getElementById('social-link')?.value.trim() || '';
@@ -2832,6 +3035,25 @@ function copySavedSocial(postId) {
 }
 function renderSocialQueue() {
   const list = document.getElementById('social-post-list');
+  const providerNote = document.getElementById('social-provider-note');
+  const providerDetail = document.getElementById('social-provider-detail');
+  const publishButton = document.getElementById('social-publish-button');
+  if (providerNote) {
+    providerNote.textContent = integrations.socialConfigured
+      ? 'Write the post once here, then dispatch it through the connected social automation or platform webhooks.'
+      : 'Add a social automation webhook or platform webhook to dispatch one post across your channels.';
+  }
+  if (providerDetail) {
+    providerDetail.textContent = integrations.socialConfigured
+      ? (integrations.socialAutomationConfigured
+        ? 'The publish button will send your caption and link payload to the automation webhook, which can fan it out to every connected platform.'
+        : `The publish button will send to these configured platforms: ${(integrations.socialPlatforms || []).join(', ') || 'none'}.`)
+      : 'No social webhook is configured yet, so drafts can only be saved or copied for now.';
+  }
+  if (publishButton) {
+    publishButton.disabled = !integrations.socialConfigured;
+    publishButton.style.opacity = publishButton.disabled ? '0.45' : '1';
+  }
   if (!list) return;
   const ordered = sortNewestFirst(socialPosts, (item) => item.createdAt);
   list.innerHTML = ordered.length ? ordered.map((post) => `
@@ -2994,14 +3216,17 @@ try {
   localStorage.setItem(versionKey, 'v6');
 } catch(e){}
 async function bootApp() {
+  let ready = false;
   try {
-    const ready = await loadData();
+    ready = await loadData();
     if (!ready) return;
+    await loadIntegrationStatus();
   } catch (error) {
     console.error('Ops boot failed:', error);
     showToast(`⚠️ ${error.message || 'Could not connect to operations storage'}`);
   } finally {
     updateModeBadge();
+    if (!ready) return;
     renderImportSummary();
     renderInvoiceImportSummary();
     renderUpcoming();
