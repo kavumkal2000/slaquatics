@@ -400,12 +400,12 @@ textarea:focus {
         <div class="summary-card">
           <div class="summary-kicker">Live package summary</div>
           <div class="summary-total" id="summary-total">$300</div>
-          <div class="summary-title" id="summary-title">2 Jet Skis</div>
-          <div class="summary-note" id="summary-note">2 hour rental with free delivery, life jackets, a full tank, and safety briefing included.</div>
+          <div class="summary-title" id="summary-title">2 Yamaha Jet Skis</div>
+          <div class="summary-note" id="summary-note">2 hour rental with 2 Yamaha jet skis, life jackets, a full tank, and safety briefing included.</div>
           <div class="summary-grid">
             <div class="summary-row"><span>Duration</span><strong id="summary-duration">2 hours</strong></div>
             <div class="summary-row"><span>Booking deposit</span><strong>$50</strong></div>
-            <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$250 per ski</strong></div>
+            <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
           </div>
         </div>
         <div class="info-card">
@@ -506,30 +506,24 @@ textarea:focus {
 
 <script>
 const PRICING = {
-  jetski1: { 2: 150, 3: 225, 4: 280, 6: 340, 8: 400 },
-  jetski2: { 2: 300, 3: 450, 4: 560, 6: 680, 8: 800 },
-  jetski3: { 2: 450, 3: 675, 4: 840, 6: 1020, 8: 1200 },
-  jetski4: { 2: 600, 3: 900, 4: 1120, 6: 1360, 8: 1600 },
-  boat: { 1: 150, 2: 220, 3: 330, 4: 500, 6: 750, 8: 1000 }
+  jetski2: { 2: 300, 3: 450, 4: 560, 6: 720, 8: 900 },
+  boat: { 1: 120, 2: 240, 3: 360, 4: 480, 6: 720, 8: 960 }
 };
 
 const CRAFT_LABELS = {
-  jetski1: "1 Jet Ski",
-  jetski2: "2 Jet Skis",
-  jetski3: "3 Jet Skis",
-  jetski4: "4 Jet Skis",
+  jetski2: "2 Yamaha Jet Skis",
   boat: "Boat Rental"
 };
 
 const TYPE_TO_CRAFTS = {
-  jetski: ["jetski1", "jetski2", "jetski3", "jetski4"],
+  jetski: ["jetski2"],
   boat: ["boat"]
 };
 
 const LEGACY_CRAFT_MAP = {
   yamaha: "jetski2",
   seadoo2: "jetski2",
-  seadoo4: "jetski4"
+  seadoo4: "jetski2"
 };
 
 let currentType = "jetski";
@@ -548,7 +542,7 @@ function normalizeCraft(craft) {
 
 function setType(type) {
   currentType = type;
-  qs("craft-label").textContent = type === "boat" ? "Boat rental option" : "Number of jet skis needed";
+  qs("craft-label").textContent = type === "boat" ? "Boat rental option" : "Jet ski package";
   document.querySelectorAll(".type-btn").forEach((button) => {
     button.classList.toggle("active", button.dataset.type === type);
   });
@@ -601,14 +595,14 @@ function updateSummary() {
   qs("summary-duration").textContent = durationLabel;
   qs("summary-note").textContent = craft === "boat"
     ? `Boat rental with captain included. ${droneEnabled ? "Aerial drone coverage is added to this request." : "Life jackets and a full tank are included."}`
-    : `${durationLabel} rental with free delivery, life jackets, a full tank, and safety briefing included.${droneEnabled ? " Aerial drone coverage is added to this request." : ""}`;
+    : `${durationLabel} rental with 2 Yamaha jet skis, life jackets, a full tank, and a safety briefing included.${droneEnabled ? " Aerial drone coverage is added to this request." : ""}`;
 
   if (craft === "boat") {
     qs("summary-extra-label").textContent = "Captain";
     qs("summary-extra-value").textContent = "Included";
   } else {
     qs("summary-extra-label").textContent = "Damage deposit";
-    qs("summary-extra-value").textContent = "$250 per ski";
+    qs("summary-extra-value").textContent = "$200 per ski";
   }
 }
 

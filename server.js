@@ -19,12 +19,12 @@ const OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'prod
 
 const DEFAULT_STATE = {
   bookings: [
-    {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',craft:'seadoo',duration:4,date:'2026-04-22',time:'09:00',drone:true,status:'confirmed',deposit:true,notes:'Group of 6, birthday'},
+    {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',craft:'yamaha',duration:4,date:'2026-04-22',time:'09:00',drone:true,status:'confirmed',deposit:true,notes:'Group of 4, birthday'},
     {id:2,name:'Ashley L.',phone:'(972) 555-0344',email:'ashley@email.com',craft:'yamaha',duration:2,date:'2026-04-22',time:'13:00',drone:false,status:'pending',deposit:false,notes:''},
     {id:3,name:'James T.',phone:'(469) 555-0092',email:'james@email.com',craft:'boat',duration:4,date:'2026-04-24',time:'10:00',drone:true,status:'confirmed',deposit:true,notes:'Family of 8'},
-    {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',craft:'seadoo',duration:8,date:'2026-04-19',time:'08:30',drone:true,status:'completed',deposit:true,notes:''},
+    {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',craft:'yamaha',duration:8,date:'2026-04-19',time:'08:30',drone:true,status:'completed',deposit:true,notes:''},
     {id:5,name:'Derek K.',phone:'(214) 555-0416',email:'derek@email.com',craft:'yamaha',duration:3,date:'2026-04-18',time:'11:00',drone:false,status:'noshow',deposit:false,notes:'No answer on day-of call'},
-    {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',craft:'seadoo',duration:6,date:'2026-04-17',time:'09:00',drone:false,status:'completed',deposit:true,notes:''}
+    {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',craft:'boat',duration:6,date:'2026-04-17',time:'09:00',drone:false,status:'completed',deposit:true,notes:''}
   ],
   customers: [
     {id:1,name:'Alex Harper',phone:'(214) 555-0180',email:'alex@example.com',bookings:2,totalSpent:860,lastBooking:'2026-04-09',source:'Google',tag:'repeat'},
@@ -36,18 +36,27 @@ const DEFAULT_STATE = {
     {id:7,name:'Morgan Hayes',phone:'(254) 555-0176',email:'morgan@example.com',bookings:2,totalSpent:1100,lastBooking:'2026-03-20',source:'Referral',tag:'repeat'},
     {id:8,name:'Avery Collins',phone:'(210) 555-0153',email:'avery@example.com',bookings:2,totalSpent:1600,lastBooking:'2026-03-18',source:'Direct',tag:'vip'}
   ],
+  expenses: [
+    {id:1,date:'2026-04-07',category:'delivery',name:'Trailer fuel and launch run',amount:65,notes:'Little Elm pickup'},
+    {id:2,date:'2026-04-10',category:'marketing',name:'Instagram promotion',amount:85,notes:'Weekend promo push'},
+    {id:3,date:'2026-04-14',category:'maintenance',name:'Life jacket replacements',amount:120,notes:'Two adult vests'}
+  ],
   fuelLog: [
-    {craft:'SeaDoo TRIXX #1',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
+    {craft:'Yamaha VX #2',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
     {craft:'Yamaha VX #1',date:'2026-04-18',gallons:1.8,ppg:3.89,hours:3,ref:'Derek K.'},
-    {craft:'SeaDoo TRIXX #2',date:'2026-04-17',gallons:3.5,ppg:3.89,hours:6,ref:'Christina N.'},
+    {craft:'Boat',date:'2026-04-17',gallons:3.5,ppg:3.89,hours:6,ref:'Christina N.'},
     {craft:'Boat',date:'2026-04-15',gallons:6.1,ppg:3.89,hours:4,ref:'James T.'}
   ],
   maintLog: [
     {craft:'Yamaha VX #1',type:'Oil change',date:'2026-03-10',hours:80,cost:45,notes:'Mobil 1 10W-30'},
-    {craft:'SeaDoo TRIXX #1',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
+    {craft:'Yamaha VX #2',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
     {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'}
   ],
   invoices: [],
+  communicationsLog: [],
+  reviewRequests: [],
+  reviews: [],
+  socialPosts: [],
   importMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false},
   invoiceImportMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false}
 };
@@ -78,9 +87,14 @@ function sanitizeState(value = {}) {
   return {
     bookings: normalizeArray(value.bookings, DEFAULT_STATE.bookings),
     customers: normalizeArray(value.customers, DEFAULT_STATE.customers),
+    expenses: normalizeArray(value.expenses, DEFAULT_STATE.expenses),
     fuelLog: normalizeArray(value.fuelLog, DEFAULT_STATE.fuelLog),
     maintLog: normalizeArray(value.maintLog, DEFAULT_STATE.maintLog),
     invoices: normalizeArray(value.invoices, DEFAULT_STATE.invoices),
+    communicationsLog: normalizeArray(value.communicationsLog, DEFAULT_STATE.communicationsLog),
+    reviewRequests: normalizeArray(value.reviewRequests, DEFAULT_STATE.reviewRequests),
+    reviews: normalizeArray(value.reviews, DEFAULT_STATE.reviews),
+    socialPosts: normalizeArray(value.socialPosts, DEFAULT_STATE.socialPosts),
     importMeta: normalizeImportMeta(value.importMeta),
     invoiceImportMeta: normalizeImportMeta(value.invoiceImportMeta)
   };

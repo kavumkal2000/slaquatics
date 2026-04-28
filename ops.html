@@ -214,20 +214,50 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
 /* CRM */
-.crm-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
-.customer-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.3rem;cursor:pointer;transition:all 0.2s;}
+.crm-grid{display:flex;flex-direction:column;gap:1rem;}
+.customer-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.2rem 1.25rem;transition:all 0.2s;display:grid;grid-template-columns:minmax(0,1.7fr) auto;gap:1rem;align-items:center;}
 .customer-card:hover{border-color:rgba(26,158,212,0.4);transform:translateY(-2px);}
-.customer-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:500;margin-bottom:0.8rem;}
+.customer-main{display:flex;align-items:flex-start;gap:0.85rem;min-width:0;}
+.customer-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:500;flex-shrink:0;}
 .customer-name{font-size:0.95rem;font-weight:500;margin-bottom:0.2rem;}
-.customer-meta{font-size:0.78rem;color:var(--muted);margin-bottom:0.8rem;}
-.customer-stats{display:flex;gap:1rem;}
+.customer-meta{font-size:0.78rem;color:var(--muted);margin-bottom:0.45rem;line-height:1.55;}
+.customer-stats{display:flex;gap:1rem;flex-wrap:wrap;}
 .customer-stat .num{font-size:1rem;font-weight:500;color:var(--wave);}
 .customer-stat .lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.customer-actions{display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end;}
 .crm-toolbar{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;}
 .import-panel{background:rgba(15,32,64,0.72);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1.1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
 .import-panel .title{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--wave);margin-bottom:0.35rem;}
 .import-panel .copy{font-size:0.82rem;color:var(--muted);max-width:760px;line-height:1.55;}
 .import-pill{padding:0.38rem 0.72rem;border-radius:999px;background:rgba(26,158,212,0.12);border:1px solid rgba(26,158,212,0.22);font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--white);white-space:nowrap;}
+.filter-row{display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;}
+.filter-row select,.filter-row input,.compose-card input,.compose-card textarea,.compose-card select{
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;
+  padding:0.6rem 0.8rem;color:var(--white);font-family:'DM Sans',sans-serif;font-size:0.84rem;
+}
+.filter-row select:focus,.filter-row input:focus,.compose-card input:focus,.compose-card textarea:focus,.compose-card select:focus{outline:none;border-color:var(--sky);}
+.filter-row select option,.compose-card select option{background:var(--deep);}
+.filter-summary{font-size:0.76rem;color:var(--muted);}
+.compose-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-bottom:1rem;}
+.compose-card,.list-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.1rem 1.15rem;}
+.compose-card h3,.list-card h3{font-size:0.9rem;font-weight:500;margin-bottom:0.35rem;}
+.compose-card p,.list-card p,.note-soft{font-size:0.78rem;color:var(--muted);line-height:1.6;}
+.compose-card textarea{width:100%;min-height:120px;resize:vertical;}
+.compose-card label{display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.35rem;}
+.compose-actions{display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:0.9rem;}
+.mini-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.75rem;margin:1rem 0;}
+.mini-kpi{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem 0.8rem;}
+.mini-kpi strong{display:block;font-size:1rem;color:var(--wave);}
+.mini-kpi span{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.list-stack{display:flex;flex-direction:column;gap:0.75rem;}
+.list-row{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:0.9rem 1rem;display:flex;justify-content:space-between;gap:0.8rem;align-items:flex-start;flex-wrap:wrap;}
+.list-row-main{display:flex;flex-direction:column;gap:0.25rem;min-width:0;}
+.list-row-main strong{font-size:0.86rem;}
+.list-row-main .sub{font-size:0.76rem;color:var(--muted);line-height:1.55;}
+.list-row-actions{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
+.network-pills{display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.85rem 0;}
+.network-pill{padding:0.35rem 0.7rem;border-radius:999px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);font-size:0.72rem;color:var(--white);}
+.table-note{font-size:0.76rem;color:var(--muted);}
 
 /* FUEL TRACKER */
 .fuel-log{display:flex;flex-direction:column;gap:0.5rem;}
@@ -288,7 +318,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .toast.show{transform:translateY(0);opacity:1;}
 
 /* RESPONSIVE */
-@media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.crm-grid{grid-template-columns:1fr 1fr;}.maint-grid{grid-template-columns:1fr 1fr;}.topbar{padding:0.9rem 1rem;align-items:flex-start;gap:0.75rem;}.topbar-right{flex-wrap:wrap;justify-content:flex-end;}.ops-mode-pill{font-size:0.66rem;}}
+@media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.maint-grid{grid-template-columns:1fr 1fr;}.topbar{padding:0.9rem 1rem;align-items:flex-start;gap:0.75rem;}.topbar-right{flex-wrap:wrap;justify-content:flex-end;}.ops-mode-pill{font-size:0.66rem;}.customer-card{grid-template-columns:1fr;}.customer-actions{justify-content:flex-start;}.compose-grid{grid-template-columns:1fr;}.mini-kpis{grid-template-columns:1fr;}}
 @media(max-width:1100px){.calendar-shell{grid-template-columns:1fr;}.agenda-item{flex-direction:column;}.agenda-item-right{align-items:flex-start;}}
 @media(max-width:900px){.calendar-day{min-height:92px;padding:0.65rem 0.55rem 0.55rem;}.calendar-month-label{min-width:auto;}}
 @media(max-width:640px){.calendar-head,.agenda-head{align-items:flex-start;}.calendar-nav{width:100%;justify-content:space-between;}.calendar-weekdays,.calendar-grid{gap:0.3rem;}.calendar-day{min-height:84px;padding:0.55rem 0.45rem;}.calendar-day-num{font-size:0.84rem;}.calendar-day-meta{font-size:0.66rem;}.calendar-pill{padding:0.2rem 0.42rem;font-size:0.62rem;}.calendar-day-count{min-width:20px;height:20px;font-size:0.68rem;}}
@@ -319,9 +349,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="nav-section">Business</div>
   <button class="nav-item" onclick="showPage('invoices',this)"><span class="icon">🧾</span><span>Invoices</span></button>
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
+  <button class="nav-item" onclick="showPage('expenses',this)"><span class="icon">💸</span><span>Expenses</span></button>
   <button class="nav-item" onclick="showPage('fuel',this)"><span class="icon">⛽</span><span>Fuel Log</span></button>
   <button class="nav-item" onclick="showPage('maintenance',this)"><span class="icon">🔧</span><span>Maintenance</span></button>
   <div class="nav-section">Growth</div>
+  <button class="nav-item" onclick="showPage('comms',this)"><span class="icon">💬</span><span>Comms</span></button>
+  <button class="nav-item" onclick="showPage('reviews',this)"><span class="icon">⭐</span><span>Reviews</span></button>
+  <button class="nav-item" onclick="showPage('social',this)"><span class="icon">📣</span><span>Social</span></button>
   <button class="nav-item" onclick="showPage('reminders',this)"><span class="icon">🔔</span><span>Re-engage</span></button>
   <div class="sidebar-bottom"><div class="version">Shoreline Ops v1.0</div></div>
 </aside>
@@ -343,15 +377,15 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="page active" id="page-dashboard">
   <div class="alerts" id="dashboard-alerts">
     <div class="alert danger"><span class="alert-icon">🚨</span><div class="alert-text"><strong>2 bookings tomorrow</strong> — $50 deposits not yet confirmed. Call to verify.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
-    <div class="alert warn"><span class="alert-icon">⚠️</span><div class="alert-text"><strong>SeaDoo TRIXX #2</strong> is due for service in ~8 hours of rental time. Schedule before weekend.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
+    <div class="alert warn"><span class="alert-icon">⚠️</span><div class="alert-text"><strong>Yamaha VX #2</strong> is nearing its next service window. Knock it out before the next packed weekend.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
     <div class="alert info"><span class="alert-icon">💡</span><div class="alert-text"><strong>Memorial Day weekend</strong> in 18 days — consider raising weekend rates 15–20% and promoting group packages now.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
   </div>
 
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);">2</div><div class="delta warn">Tomorrow's bookings need follow-up</div></div>
-    <div class="kpi-card"><div class="label">Equipment due soon</div><div class="value" style="color:var(--green);">1</div><div class="delta up">SeaDoo TRIXX #2 before weekend</div></div>
-    <div class="kpi-card"><div class="label">No-show rate</div><div class="value" style="color:var(--amber);">14%</div><div class="delta warn">▲ Add deposit reminders</div></div>
-    <div class="kpi-card"><div class="label">Bookings this month</div><div class="value">18</div><div class="delta up">↑ 3 vs last month</div></div>
+    <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);" id="dashboard-kpi-pending">0</div><div class="delta warn" id="dashboard-kpi-pending-meta">Waiting on follow-up</div></div>
+    <div class="kpi-card"><div class="label">Monthly revenue</div><div class="value" style="color:var(--green);" id="dashboard-kpi-revenue">$0</div><div class="delta up" id="dashboard-kpi-revenue-meta">Current month revenue</div></div>
+    <div class="kpi-card"><div class="label">Net profit after fuel/delivery</div><div class="value" style="color:var(--amber);" id="dashboard-kpi-profit">$0</div><div class="delta warn" id="dashboard-kpi-profit-meta">Revenue minus direct costs</div></div>
+    <div class="kpi-card"><div class="label">Bookings this month</div><div class="value" id="dashboard-kpi-bookings">0</div><div class="delta up" id="dashboard-kpi-bookings-meta">0 scheduled this month</div></div>
   </div>
 
   <div class="charts-grid">
@@ -368,16 +402,16 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
           <circle cx="50" cy="50" r="38" fill="none" stroke="#0fb8e0" stroke-width="14" stroke-dasharray="76 162" stroke-dashoffset="-107" transform="rotate(-90 50 50)"/>
           <circle cx="50" cy="50" r="38" fill="none" stroke="#10b981" stroke-width="14" stroke-dasharray="55 183" stroke-dashoffset="-183" transform="rotate(-90 50 50)"/>
         </svg>
-        <div class="donut-legend">
-          <div class="legend-item"><div class="legend-dot" style="background:#1a9ed4"></div>4 Jet Skis — 45%</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#0fb8e0"></div>2 Jet Skis — 32%</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Boat Rental — 23%</div>
+        <div class="donut-legend" id="fleet-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#1a9ed4"></div>2 Yamaha Jet Skis — 0</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#0fb8e0"></div>Boat Rental — 0</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Legacy jet ski packages — 0</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="section-head"><h2>Upcoming bookings</h2><button class="btn btn-ghost btn-sm" onclick="showPage('bookings', document.querySelector('.nav-item.active'))">View all</button></div>
+  <div class="section-head"><h2>Upcoming bookings</h2><button class="btn btn-ghost btn-sm" onclick="showPage('bookings', document.querySelector('.nav-item[onclick*=&quot;bookings&quot;]'))">View all</button></div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Customer</th><th>Craft</th><th>Date</th><th>Duration</th><th>Total</th><th>Deposit</th><th>Status</th><th></th></tr></thead>
@@ -455,6 +489,18 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       <button class="btn btn-ghost btn-sm" onclick="triggerInvoiceImport()">Import Admin Tribe Invoice CSV</button>
     </div>
   </div>
+  <div class="filter-row">
+    <select id="invoice-period-filter" onchange="updateInvoiceFilters()">
+      <option value="all">All time</option>
+      <option value="week">This week</option>
+      <option value="month" selected>This month</option>
+      <option value="year">This year</option>
+      <option value="custom">Custom range</option>
+    </select>
+    <input type="date" id="invoice-date-from" onchange="updateInvoiceFilters()">
+    <input type="date" id="invoice-date-to" onchange="updateInvoiceFilters()">
+    <div class="filter-summary" id="invoice-filter-summary">Showing this month's revenue</div>
+  </div>
   <input type="file" id="invoice-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleInvoiceImport(event)">
   <div class="import-panel">
     <div>
@@ -464,9 +510,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="import-pill" id="invoice-import-pill">No invoice import yet</div>
   </div>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">Imported invoices</div><div class="value" id="invoice-kpi-count">0</div><div class="delta up" id="invoice-kpi-updated">0 rows synced</div></div>
-    <div class="kpi-card"><div class="label">Paid total</div><div class="value" style="color:var(--green);" id="invoice-kpi-paid">$0</div><div class="delta up" id="invoice-kpi-paid-count">0 paid invoices</div></div>
-    <div class="kpi-card"><div class="label">Open total</div><div class="value" style="color:var(--amber);" id="invoice-kpi-open">$0</div><div class="delta warn" id="invoice-kpi-open-count">0 open invoices</div></div>
+    <div class="kpi-card"><div class="label">Invoices in view</div><div class="value" id="invoice-kpi-count">0</div><div class="delta up" id="invoice-kpi-updated">0 rows synced</div></div>
+    <div class="kpi-card"><div class="label">Collected revenue</div><div class="value" style="color:var(--green);" id="invoice-kpi-paid">$0</div><div class="delta up" id="invoice-kpi-paid-count">0 paid invoices</div></div>
+    <div class="kpi-card"><div class="label">Open balance</div><div class="value" style="color:var(--amber);" id="invoice-kpi-open">$0</div><div class="delta warn" id="invoice-kpi-open-count">0 open invoices</div></div>
     <div class="kpi-card"><div class="label">Unknown customers</div><div class="value" style="color:var(--wave);" id="invoice-kpi-unknown">0</div><div class="delta warn">Auto-generated POS invoices</div></div>
   </div>
   <div class="table-wrap">
@@ -499,6 +545,26 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="crm-grid" id="crm-grid"></div>
 </div>
 
+<!-- ═══ EXPENSES ═══ -->
+<div class="page" id="page-expenses">
+  <div class="section-head">
+    <h2>Expenses</h2>
+    <button class="btn btn-primary btn-sm" onclick="openModal('expense-modal')">+ Add Expense</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">This month</div><div class="value" id="expense-kpi-month">$0</div><div class="delta warn" id="expense-kpi-month-meta">0 expenses logged</div></div>
+    <div class="kpi-card"><div class="label">Delivery costs</div><div class="value" style="color:var(--amber);" id="expense-kpi-delivery">$0</div><div class="delta warn" id="expense-kpi-delivery-meta">Current month delivery spend</div></div>
+    <div class="kpi-card"><div class="label">Fuel + delivery</div><div class="value" style="color:var(--wave);" id="expense-kpi-direct">$0</div><div class="delta up" id="expense-kpi-direct-meta">Direct operating costs</div></div>
+    <div class="kpi-card"><div class="label">Year to date</div><div class="value" id="expense-kpi-ytd">$0</div><div class="delta up" id="expense-kpi-ytd-meta">All tracked business expenses</div></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Category</th><th>Expense</th><th>Notes</th><th>Amount</th></tr></thead>
+      <tbody id="expense-table"></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- ═══ FUEL LOG ═══ -->
 <div class="page" id="page-fuel">
   <div class="section-head">
@@ -526,6 +592,116 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       <thead><tr><th>Equipment</th><th>Service type</th><th>Date</th><th>Hours at service</th><th>Cost</th><th>Notes</th></tr></thead>
       <tbody id="maint-log"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- ═══ COMMUNICATIONS ═══ -->
+<div class="page" id="page-comms">
+  <div class="section-head"><h2>Client Communications</h2></div>
+  <div class="compose-grid">
+    <div class="compose-card">
+      <h3>1-to-1 follow-up</h3>
+      <p>Pick a customer, draft the message once, then open a text or email draft with the same copy.</p>
+      <div style="margin-top:1rem;">
+        <label for="comm-customer">Customer</label>
+        <select id="comm-customer" onchange="renderCommsPanel()"></select>
+      </div>
+      <div class="list-card" id="comm-customer-card" style="margin-top:1rem;"></div>
+      <div style="margin-top:1rem;">
+        <label for="comm-message">Message</label>
+        <textarea id="comm-message" oninput="renderCommsPanel()">Hi! This is Shoreline Aquatics checking in about your rental. Let us know if you want to lock in your next lake day.</textarea>
+      </div>
+      <div class="compose-actions">
+        <a class="btn btn-primary btn-sm" id="comm-text-link" href="#">Text customer</a>
+        <a class="btn btn-ghost btn-sm" id="comm-email-link" href="#">Email customer</a>
+        <button class="btn btn-ghost btn-sm" onclick="logCommunication()">Log note</button>
+      </div>
+    </div>
+    <div class="compose-card">
+      <h3>Mass email</h3>
+      <p>Draft one campaign and open it with all customer emails already loaded in BCC.</p>
+      <div style="margin-top:1rem;">
+        <label for="mass-email-subject">Subject</label>
+        <input id="mass-email-subject" type="text" value="Shoreline Aquatics availability this week" oninput="renderMassEmailDraft()">
+      </div>
+      <div style="margin-top:1rem;">
+        <label for="mass-email-body">Email body</label>
+        <textarea id="mass-email-body" oninput="renderMassEmailDraft()">We have jet ski and boat openings this week on Lake Lewisville. Reply if you want us to hold a time for your group.</textarea>
+      </div>
+      <div class="mini-kpis">
+        <div class="mini-kpi"><strong id="mass-email-count">0</strong><span>emails ready</span></div>
+        <div class="mini-kpi"><strong id="mass-text-count">0</strong><span>phones on file</span></div>
+        <div class="mini-kpi"><strong id="mass-repeat-count">0</strong><span>repeat or VIP</span></div>
+      </div>
+      <div class="compose-actions">
+        <a class="btn btn-primary btn-sm" id="mass-email-link" href="#">Open email draft</a>
+      </div>
+      <p class="note-soft" style="margin-top:0.75rem;">Two-way texting and automated outbound email still need a connected messaging provider. This keeps the campaigns organized and ready to send now.</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>When</th><th>Customer</th><th>Channel</th><th>Summary</th></tr></thead>
+      <tbody id="communications-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ REVIEWS ═══ -->
+<div class="page" id="page-reviews">
+  <div class="section-head"><h2>Reviews</h2></div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">Pending review drops</div><div class="value" id="reviews-kpi-pending">0</div><div class="delta warn" id="reviews-kpi-pending-meta">Completed rentals waiting for outreach</div></div>
+    <div class="kpi-card"><div class="label">Reviews logged</div><div class="value" style="color:var(--green);" id="reviews-kpi-complete">0</div><div class="delta up" id="reviews-kpi-complete-meta">Customer reviews tracked here</div></div>
+    <div class="kpi-card"><div class="label">Need response</div><div class="value" style="color:var(--amber);" id="reviews-kpi-response">0</div><div class="delta warn" id="reviews-kpi-response-meta">Unanswered reviews</div></div>
+    <div class="kpi-card"><div class="label">Review rate</div><div class="value" id="reviews-kpi-rate">0%</div><div class="delta up" id="reviews-kpi-rate-meta">Completed rentals with a review</div></div>
+  </div>
+  <div class="compose-grid">
+    <div class="list-card">
+      <h3>Review drop queue</h3>
+      <p>When a rental is marked complete, it appears here so you can send the follow-up review request right away.</p>
+      <div class="list-stack" id="review-request-list" style="margin-top:1rem;"></div>
+    </div>
+    <div class="list-card">
+      <h3>Review tracker</h3>
+      <p>Track who reviewed, what they said, and whether you responded on Google or Facebook.</p>
+      <div class="list-stack" id="review-log-list" style="margin-top:1rem;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SOCIAL ═══ -->
+<div class="page" id="page-social">
+  <div class="section-head"><h2>Social Posting</h2></div>
+  <div class="compose-grid">
+    <div class="compose-card">
+      <h3>One post, all channels</h3>
+      <p>Write the post once here, then reuse the same caption everywhere from a single draft.</p>
+      <div style="margin-top:1rem;">
+        <label for="social-caption">Caption</label>
+        <textarea id="social-caption">Lake Lewisville is looking perfect this week. DM Shoreline Aquatics to lock in your jet ski or boat rental.</textarea>
+      </div>
+      <div style="margin-top:1rem;">
+        <label for="social-link">Link</label>
+        <input id="social-link" type="text" value="https://slaquatics.onrender.com/" placeholder="https://...">
+      </div>
+      <div class="network-pills">
+        <span class="network-pill">Instagram</span>
+        <span class="network-pill">Facebook</span>
+        <span class="network-pill">X</span>
+        <span class="network-pill">TikTok</span>
+      </div>
+      <div class="compose-actions">
+        <button class="btn btn-primary btn-sm" onclick="saveSocialDraft()">Save draft</button>
+        <button class="btn btn-ghost btn-sm" onclick="copySocialCaption()">Copy caption</button>
+      </div>
+      <p class="note-soft" style="margin-top:0.75rem;">True one-click cross-posting still needs each social account connected through its API. This page keeps one clean master post ready for every network right now.</p>
+    </div>
+    <div class="list-card">
+      <h3>Saved post queue</h3>
+      <p>Drafts stay here so you can reuse them for launches, slow weekdays, and holiday weekends.</p>
+      <div class="list-stack" id="social-post-list" style="margin-top:1rem;"></div>
+    </div>
   </div>
 </div>
 
@@ -571,8 +747,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Craft</label>
           <select id="b-craft" onchange="calcBookingPrice()">
             <option value="">Select craft</option>
-            <option value="yamaha">2 Jet Skis</option>
-            <option value="seadoo">4 Jet Skis</option>
+            <option value="yamaha">2 Yamaha Jet Skis</option>
             <option value="boat">Boat Rental</option>
           </select>
         </div>
@@ -605,7 +780,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
             </div>
             <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.6rem 0.8rem;">
               <div style="font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;">Damage deposit/ski</div>
-              <div style="font-size:1.1rem;font-weight:500;color:var(--amber);margin-top:2px;">$250</div>
+              <div style="font-size:1.1rem;font-weight:500;color:var(--amber);margin-top:2px;">$200</div>
             </div>
           </div>
         </div>
@@ -626,7 +801,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Equipment</label>
-          <select id="f-craft"><option>Yamaha VX #1</option><option>Yamaha VX #2</option><option>SeaDoo TRIXX #1</option><option>SeaDoo TRIXX #2</option><option>SeaDoo TRIXX #3</option><option>SeaDoo TRIXX #4</option><option>Boat</option></select>
+          <select id="f-craft"><option>Yamaha VX #1</option><option>Yamaha VX #2</option><option>Boat</option></select>
         </div>
         <div class="form-group"><label>Date</label><input type="date" id="f-date"></div>
         <div class="form-group"><label>Gallons</label><input type="number" id="f-gallons" placeholder="0.0" step="0.1"></div>
@@ -649,7 +824,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Equipment</label>
-          <select id="m-craft"><option>Yamaha VX #1</option><option>Yamaha VX #2</option><option>SeaDoo TRIXX #1</option><option>SeaDoo TRIXX #2</option><option>SeaDoo TRIXX #3</option><option>SeaDoo TRIXX #4</option><option>Boat</option></select>
+          <select id="m-craft"><option>Yamaha VX #1</option><option>Yamaha VX #2</option><option>Boat</option></select>
         </div>
         <div class="form-group"><label>Service type</label>
           <select id="m-type"><option>Oil change</option><option>Spark plugs</option><option>Impeller check</option><option>Full service</option><option>Repair</option><option>Winterization</option><option>De-winterization</option></select>
@@ -691,6 +866,28 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
 </div>
 
+<!-- EXPENSE MODAL -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal" style="width:440px;">
+    <div class="modal-head"><h3>Add Expense</h3><button class="modal-close" onclick="closeModal('expense-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Date</label><input type="date" id="e-date"></div>
+        <div class="form-group"><label>Amount</label><input type="number" id="e-amount" placeholder="0" step="0.01"></div>
+        <div class="form-group"><label>Category</label>
+          <select id="e-category"><option value="delivery">Delivery</option><option value="maintenance">Maintenance</option><option value="marketing">Marketing</option><option value="supplies">Supplies</option><option value="other">Other</option></select>
+        </div>
+        <div class="form-group"><label>Expense</label><input type="text" id="e-name" placeholder="Trailer gas, launch fee, ad spend"></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="e-notes" placeholder="Any extra detail you want to keep with this expense"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('expense-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+    </div>
+  </div>
+</div>
+
 <!-- CRM PASTE MODAL -->
 <div class="modal-overlay" id="crm-paste-modal">
   <div class="modal" style="width:min(760px,92vw);">
@@ -717,9 +914,14 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 const LOCAL_KEYS = {
   bookings: 'sla_bookings',
   customers: 'sla_customers',
+  expenses: 'sla_expenses',
   fuelLog: 'sla_fuel',
   maintLog: 'sla_maint',
   invoices: 'sla_invoices',
+  communicationsLog: 'sla_comms',
+  reviewRequests: 'sla_review_requests',
+  reviews: 'sla_reviews',
+  socialPosts: 'sla_social_posts',
   importMeta: 'sla_import_meta',
   invoiceImportMeta: 'sla_invoice_import_meta'
 };
@@ -729,9 +931,14 @@ function snapshotState() {
   return {
     bookings,
     customers,
+    expenses,
     fuelLog,
     maintLog,
     invoices,
+    communicationsLog,
+    reviewRequests,
+    reviews,
+    socialPosts,
     importMeta,
     invoiceImportMeta
   };
@@ -739,9 +946,14 @@ function snapshotState() {
 function applyState(nextState = {}) {
   if (Array.isArray(nextState.bookings)) bookings = nextState.bookings;
   if (Array.isArray(nextState.customers)) customers = nextState.customers;
+  if (Array.isArray(nextState.expenses)) expenses = nextState.expenses;
   if (Array.isArray(nextState.fuelLog)) fuelLog = nextState.fuelLog;
   if (Array.isArray(nextState.maintLog)) maintLog = nextState.maintLog;
   if (Array.isArray(nextState.invoices)) invoices = nextState.invoices;
+  if (Array.isArray(nextState.communicationsLog)) communicationsLog = nextState.communicationsLog;
+  if (Array.isArray(nextState.reviewRequests)) reviewRequests = nextState.reviewRequests;
+  if (Array.isArray(nextState.reviews)) reviews = nextState.reviews;
+  if (Array.isArray(nextState.socialPosts)) socialPosts = nextState.socialPosts;
   if (nextState.importMeta && typeof nextState.importMeta === 'object') {
     importMeta = {...importMeta, ...nextState.importMeta};
   }
@@ -768,9 +980,14 @@ function readLocalBackup() {
     const next = {};
     const b = localStorage.getItem(LOCAL_KEYS.bookings); if (b) next.bookings = JSON.parse(b);
     const c = localStorage.getItem(LOCAL_KEYS.customers); if (c) next.customers = JSON.parse(c);
+    const e = localStorage.getItem(LOCAL_KEYS.expenses); if (e) next.expenses = JSON.parse(e);
     const f = localStorage.getItem(LOCAL_KEYS.fuelLog); if (f) next.fuelLog = JSON.parse(f);
     const m = localStorage.getItem(LOCAL_KEYS.maintLog); if (m) next.maintLog = JSON.parse(m);
     const iv = localStorage.getItem(LOCAL_KEYS.invoices); if (iv) next.invoices = JSON.parse(iv);
+    const cl = localStorage.getItem(LOCAL_KEYS.communicationsLog); if (cl) next.communicationsLog = JSON.parse(cl);
+    const rr = localStorage.getItem(LOCAL_KEYS.reviewRequests); if (rr) next.reviewRequests = JSON.parse(rr);
+    const rv = localStorage.getItem(LOCAL_KEYS.reviews); if (rv) next.reviews = JSON.parse(rv);
+    const sp = localStorage.getItem(LOCAL_KEYS.socialPosts); if (sp) next.socialPosts = JSON.parse(sp);
     const i = localStorage.getItem(LOCAL_KEYS.importMeta); if (i) next.importMeta = JSON.parse(i);
     const iim = localStorage.getItem(LOCAL_KEYS.invoiceImportMeta); if (iim) next.invoiceImportMeta = JSON.parse(iim);
     return next;
@@ -784,9 +1001,14 @@ function writeLocalBackup() {
     dedupeCustomers();
     localStorage.setItem(LOCAL_KEYS.bookings, JSON.stringify(bookings));
     localStorage.setItem(LOCAL_KEYS.customers, JSON.stringify(customers));
+    localStorage.setItem(LOCAL_KEYS.expenses, JSON.stringify(expenses));
     localStorage.setItem(LOCAL_KEYS.fuelLog, JSON.stringify(fuelLog));
     localStorage.setItem(LOCAL_KEYS.maintLog, JSON.stringify(maintLog));
     localStorage.setItem(LOCAL_KEYS.invoices, JSON.stringify(invoices));
+    localStorage.setItem(LOCAL_KEYS.communicationsLog, JSON.stringify(communicationsLog));
+    localStorage.setItem(LOCAL_KEYS.reviewRequests, JSON.stringify(reviewRequests));
+    localStorage.setItem(LOCAL_KEYS.reviews, JSON.stringify(reviews));
+    localStorage.setItem(LOCAL_KEYS.socialPosts, JSON.stringify(socialPosts));
     localStorage.setItem(LOCAL_KEYS.importMeta, JSON.stringify(importMeta));
     localStorage.setItem(LOCAL_KEYS.invoiceImportMeta, JSON.stringify(invoiceImportMeta));
   } catch (error) {
@@ -893,20 +1115,20 @@ async function logout() {
 }
 // ── DATA ──
 const PRICING = {
-  yamaha:{2:300,3:450,4:560,6:680,8:800},
+  yamaha:{2:300,3:450,4:560,6:720,8:900},
   seadoo:{2:600,3:900,4:1120,6:1360,8:1600},
-  boat:{1:150,2:220,3:330,4:500,6:750,8:1000}
+  boat:{1:120,2:240,3:360,4:480,6:720,8:960}
 };
-const CRAFT_NAMES = {yamaha:'2 Jet Skis',seadoo:'4 Jet Skis',boat:'Boat Rental',imported:'Imported booking'};
+const CRAFT_NAMES = {yamaha:'2 Yamaha Jet Skis',seadoo:'Legacy 4-Ski Package',boat:'Boat Rental',imported:'Imported booking'};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
 let bookings = [
-  {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',craft:'seadoo',duration:4,date:'2026-04-22',time:'09:00',drone:true,status:'confirmed',deposit:true,notes:'Group of 6, birthday'},
+  {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',craft:'yamaha',duration:4,date:'2026-04-22',time:'09:00',drone:true,status:'confirmed',deposit:true,notes:'Group of 4, birthday'},
   {id:2,name:'Ashley L.',phone:'(972) 555-0344',email:'ashley@email.com',craft:'yamaha',duration:2,date:'2026-04-22',time:'13:00',drone:false,status:'pending',deposit:false,notes:''},
   {id:3,name:'James T.',phone:'(469) 555-0092',email:'james@email.com',craft:'boat',duration:4,date:'2026-04-24',time:'10:00',drone:true,status:'confirmed',deposit:true,notes:'Family of 8'},
-  {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',craft:'seadoo',duration:8,date:'2026-04-19',time:'08:30',drone:true,status:'completed',deposit:true,notes:''},
+  {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',craft:'yamaha',duration:8,date:'2026-04-19',time:'08:30',drone:true,status:'completed',deposit:true,notes:''},
   {id:5,name:'Derek K.',phone:'(214) 555-0416',email:'derek@email.com',craft:'yamaha',duration:3,date:'2026-04-18',time:'11:00',drone:false,status:'noshow',deposit:false,notes:'No answer on day-of call'},
-  {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',craft:'seadoo',duration:6,date:'2026-04-17',time:'09:00',drone:false,status:'completed',deposit:true,notes:''},
+  {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',craft:'boat',duration:6,date:'2026-04-17',time:'09:00',drone:false,status:'completed',deposit:true,notes:''},
 ];
 
 let customers = [
@@ -923,29 +1145,38 @@ let importMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,record
 let invoiceImportMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let crmSearchQuery = '';
 let invoiceSearchQuery = '';
+let invoicePeriodFilter = 'month';
+let invoiceDateFrom = '';
+let invoiceDateTo = '';
+
+let expenses = [
+  {id:1,date:'2026-04-07',category:'delivery',name:'Trailer fuel and launch run',amount:65,notes:'Little Elm pickup'},
+  {id:2,date:'2026-04-10',category:'marketing',name:'Instagram promotion',amount:85,notes:'Weekend promo push'},
+  {id:3,date:'2026-04-14',category:'maintenance',name:'Life jacket replacements',amount:120,notes:'Two adult vests'}
+];
 
 let fuelLog = [
-  {craft:'SeaDoo TRIXX #1',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
+  {craft:'Yamaha VX #2',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
   {craft:'Yamaha VX #1',date:'2026-04-18',gallons:1.8,ppg:3.89,hours:3,ref:'Derek K.'},
-  {craft:'SeaDoo TRIXX #2',date:'2026-04-17',gallons:3.5,ppg:3.89,hours:6,ref:'Christina N.'},
+  {craft:'Boat',date:'2026-04-17',gallons:3.5,ppg:3.89,hours:6,ref:'Christina N.'},
   {craft:'Boat',date:'2026-04-15',gallons:6.1,ppg:3.89,hours:4,ref:'James T.'},
 ];
 
 let maintLog = [
   {craft:'Yamaha VX #1',type:'Oil change',date:'2026-03-10',hours:80,cost:45,notes:'Mobil 1 10W-30'},
-  {craft:'SeaDoo TRIXX #1',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
+  {craft:'Yamaha VX #2',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
   {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'},
 ];
 
 let invoices = [];
+let communicationsLog = [];
+let reviewRequests = [];
+let reviews = [];
+let socialPosts = [];
 
 const equipment = [
   {name:'Yamaha VX #1',hours:88,serviceInterval:100,lastService:'2026-03-10'},
   {name:'Yamaha VX #2',hours:76,serviceInterval:100,lastService:'2026-03-10'},
-  {name:'SeaDoo TRIXX #1',hours:103,serviceInterval:100,lastService:'2026-03-15'},
-  {name:'SeaDoo TRIXX #2',hours:92,serviceInterval:100,lastService:'2026-03-15'},
-  {name:'SeaDoo TRIXX #3',hours:67,serviceInterval:100,lastService:'2026-03-15'},
-  {name:'SeaDoo TRIXX #4',hours:71,serviceInterval:100,lastService:'2026-03-15'},
   {name:'Boat',hours:115,serviceInterval:150,lastService:'2026-04-01'},
 ];
 
@@ -1052,6 +1283,105 @@ function bookingTotalValue(booking) {
 }
 function bookingTotalLabel(booking) {
   return `$${bookingTotalValue(booking).toLocaleString()}`;
+}
+function dateValue(value) {
+  if (!value || value === 'N/A' || value === 'TBD') return null;
+  return parseFlexibleDate(value) || parseIsoDate(value);
+}
+function isSameMonth(date, reference = new Date()) {
+  return Boolean(date) && date.getFullYear() === reference.getFullYear() && date.getMonth() === reference.getMonth();
+}
+function isSameYear(date, reference = new Date()) {
+  return Boolean(date) && date.getFullYear() === reference.getFullYear();
+}
+function startOfWeek(date) {
+  const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  next.setDate(next.getDate() - next.getDay());
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+function endOfWeek(date) {
+  const next = startOfWeek(date);
+  next.setDate(next.getDate() + 6);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+function endOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+function startOfYear(date) {
+  return new Date(date.getFullYear(), 0, 1);
+}
+function endOfYear(date) {
+  return new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
+}
+function inRange(date, from, to) {
+  if (!date) return false;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
+}
+function invoiceDateValue(invoice) {
+  return dateValue(invoice.issueDate || invoice.dueDate);
+}
+function invoiceMatchesPeriod(invoice) {
+  const targetDate = invoiceDateValue(invoice);
+  const now = new Date();
+  if (!targetDate) return invoicePeriodFilter === 'all';
+  if (invoicePeriodFilter === 'week') return inRange(targetDate, startOfWeek(now), endOfWeek(now));
+  if (invoicePeriodFilter === 'month') return inRange(targetDate, startOfMonth(now), endOfMonth(now));
+  if (invoicePeriodFilter === 'year') return inRange(targetDate, startOfYear(now), endOfYear(now));
+  if (invoicePeriodFilter === 'custom') {
+    const from = invoiceDateFrom ? parseIsoDate(invoiceDateFrom) : null;
+    const to = invoiceDateTo ? new Date(parseIsoDate(invoiceDateTo).getFullYear(), parseIsoDate(invoiceDateTo).getMonth(), parseIsoDate(invoiceDateTo).getDate(), 23, 59, 59, 999) : null;
+    return inRange(targetDate, from, to);
+  }
+  return true;
+}
+function filteredInvoicesList() {
+  return invoices.filter((invoice) => (
+    (!invoiceSearchQuery || invoiceSearchText(invoice).includes(invoiceSearchQuery)) &&
+    invoiceMatchesPeriod(invoice)
+  ));
+}
+function sortNewestFirst(list, getValue) {
+  return [...list].sort((left, right) => {
+    const leftDate = dateValue(getValue(left));
+    const rightDate = dateValue(getValue(right));
+    const leftTime = leftDate ? leftDate.getTime() : 0;
+    const rightTime = rightDate ? rightDate.getTime() : 0;
+    return rightTime - leftTime;
+  });
+}
+function currentMonthFuelCost() {
+  return fuelLog.reduce((sum, entry) => {
+    const entryDate = dateValue(entry.date);
+    if (!isSameMonth(entryDate)) return sum;
+    return sum + (Number(entry.gallons || 0) * Number(entry.ppg || 0));
+  }, 0);
+}
+function expensesInPeriod(period = 'month', category = '') {
+  return expenses.filter((expense) => {
+    const expenseDate = dateValue(expense.date);
+    const periodMatch = period === 'month' ? isSameMonth(expenseDate) : period === 'year' ? isSameYear(expenseDate) : true;
+    const categoryMatch = category ? expense.category === category : true;
+    return periodMatch && categoryMatch;
+  });
+}
+function revenueThisMonth() {
+  const paidInvoices = invoices.filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid' && isSameMonth(invoiceDateValue(invoice)));
+  if (paidInvoices.length) {
+    return paidInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+  }
+  return bookings.reduce((sum, booking) => {
+    const bookingDate = dateValue(booking.date);
+    if (!isSameMonth(bookingDate)) return sum;
+    if (['pending', 'noshow', 'cancelled'].includes(String(booking.status || '').toLowerCase())) return sum;
+    return sum + bookingTotalValue(booking);
+  }, 0);
 }
 function mapImportedStatus(stage, status) {
   const raw = `${stage || ''} ${status || ''}`.toLowerCase();
@@ -1485,6 +1815,28 @@ function filterInvoices(input) {
   invoiceSearchQuery = String(input?.value || '').trim().toLowerCase();
   renderInvoices();
 }
+function updateInvoiceFilters() {
+  const periodEl = document.getElementById('invoice-period-filter');
+  const fromEl = document.getElementById('invoice-date-from');
+  const toEl = document.getElementById('invoice-date-to');
+  const summaryEl = document.getElementById('invoice-filter-summary');
+  invoicePeriodFilter = periodEl?.value || 'all';
+  invoiceDateFrom = fromEl?.value || '';
+  invoiceDateTo = toEl?.value || '';
+  if (summaryEl) {
+    const label = invoicePeriodFilter === 'week'
+      ? "Showing this week's invoices"
+      : invoicePeriodFilter === 'month'
+        ? "Showing this month's invoices"
+        : invoicePeriodFilter === 'year'
+          ? "Showing this year's invoices"
+          : invoicePeriodFilter === 'custom'
+            ? `Showing ${invoiceDateFrom || 'start'} to ${invoiceDateTo || 'today'}`
+            : 'Showing all invoices';
+    summaryEl.textContent = label;
+  }
+  renderInvoices();
+}
 function triggerCRMImport() {
   const fileInput = document.getElementById('crm-import-input');
   if (fileInput) fileInput.click();
@@ -1651,9 +2003,12 @@ function handleCRMImport(event) {
       renderImportSummary();
       renderInvoiceImportSummary();
       renderUpcoming();
+      renderDashboardMetrics();
       if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
       if (document.getElementById('page-invoices').classList.contains('active')) renderInvoices();
       renderCRM();
+      renderCommsPanel();
+      renderReviewHub();
       renderReminders();
       document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
       const label = type === 'contacts' ? 'customers' : type === 'opportunities' ? 'bookings' : 'invoices';
@@ -1683,9 +2038,12 @@ function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
   renderImportSummary();
   renderInvoiceImportSummary();
   renderUpcoming();
+  renderDashboardMetrics();
   if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
   if (document.getElementById('page-invoices').classList.contains('active')) renderInvoices();
   renderCRM();
+  renderCommsPanel();
+  renderReviewHub();
   renderReminders();
   document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
   return { type, summary };
@@ -1721,6 +2079,7 @@ function handleInvoiceImport(event) {
       renderInvoiceImportSummary();
       renderInvoices();
       renderCRM();
+      renderDashboardMetrics();
       showToast(`✅ Imported invoices — ${summary.added} added, ${summary.updated} updated`);
     } catch (error) {
       console.error('Invoice import failed:', error);
@@ -1739,13 +2098,17 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',fuel:'Fuel Log',maintenance:'Maintenance',reminders:'Re-engagement'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement'};
   document.getElementById('page-title').textContent = titles[id]||id;
   if(id==='bookings') renderBookings();
   if(id==='invoices') renderInvoices();
   if(id==='crm') renderCRM();
+  if(id==='expenses') renderExpenses();
   if(id==='fuel') renderFuel();
   if(id==='maintenance') renderMaint();
+  if(id==='comms') renderCommsPanel();
+  if(id==='reviews') renderReviewHub();
+  if(id==='social') renderSocialQueue();
   if(id==='reminders') renderReminders();
   } catch(e) { console.error('showPage error:', e); }
 }
@@ -1819,6 +2182,11 @@ function saveBooking() {
   if(document.getElementById('page-bookings').classList.contains('active')) renderBookings();
   else renderBookingCalendar();
   if(document.getElementById('page-crm').classList.contains('active')) renderCRM();
+  renderDashboardMetrics();
+  renderBookingBars();
+  renderCommsPanel();
+  renderReviewHub();
+  renderReminders();
   ['b-name','b-phone','b-email','b-date','b-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('b-craft').value=''; document.getElementById('b-duration').value=''; document.getElementById('b-drone').value='no';
   calcBookingPrice();
@@ -2018,13 +2386,13 @@ function statusBadge(s) {
 
 function updateStatus(id, status) {
   const b = bookings.find(b=>b.id===id);
-  if(b) { b.status=status; saveData(); renderBookings(); renderUpcoming(); showToast('✅ Updated to '+status); }
+  if(b) { b.status=status; saveData(); renderBookings(); renderUpcoming(); renderDashboardMetrics(); renderBookingBars(); renderReviewHub(); renderReminders(); showToast('✅ Updated to '+status); }
   document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
 }
 
 function confirmDeposit(id) {
   const b = bookings.find(b=>b.id===id);
-  if(b) { b.deposit=true; saveData(); renderBookings(); renderUpcoming(); showToast('💰 Deposit confirmed for '+b.name); }
+  if(b) { b.deposit=true; saveData(); renderBookings(); renderUpcoming(); renderDashboardMetrics(); showToast('💰 Deposit confirmed for '+b.name); }
 }
 
 function filterTable(input, tableId) {
@@ -2035,13 +2403,51 @@ function filterTable(input, tableId) {
 }
 
 // ── INVOICES ──
+function renderFleetLegend() {
+  const legend = document.getElementById('fleet-legend');
+  if (!legend) return;
+  const counts = {yamaha:0, boat:0, seadoo:0};
+  bookings.forEach((booking) => {
+    if (Object.prototype.hasOwnProperty.call(counts, booking.craft)) counts[booking.craft] += 1;
+  });
+  legend.innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:#1a9ed4"></div>2 Yamaha Jet Skis — ${counts.yamaha}</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0fb8e0"></div>Boat Rental — ${counts.boat}</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Legacy jet ski packages — ${counts.seadoo}</div>
+  `;
+}
+function renderDashboardMetrics() {
+  const pendingDeposits = bookings.filter((booking) => booking.status === 'pending' && !booking.deposit).length;
+  const deliverySpend = expensesInPeriod('month', 'delivery').reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const fuelSpend = currentMonthFuelCost();
+  const revenue = revenueThisMonth();
+  const profit = revenue - fuelSpend - deliverySpend;
+  const monthlyBookings = bookings.filter((booking) => isSameMonth(dateValue(booking.date))).length;
+
+  const pendingEl = document.getElementById('dashboard-kpi-pending');
+  const pendingMeta = document.getElementById('dashboard-kpi-pending-meta');
+  const revenueEl = document.getElementById('dashboard-kpi-revenue');
+  const revenueMeta = document.getElementById('dashboard-kpi-revenue-meta');
+  const profitEl = document.getElementById('dashboard-kpi-profit');
+  const profitMeta = document.getElementById('dashboard-kpi-profit-meta');
+  const bookingsEl = document.getElementById('dashboard-kpi-bookings');
+  const bookingsMeta = document.getElementById('dashboard-kpi-bookings-meta');
+
+  if (pendingEl) pendingEl.textContent = pendingDeposits.toLocaleString();
+  if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} bookings still need deposit follow-up` : 'All open bookings have deposit coverage';
+  if (revenueEl) revenueEl.textContent = `$${Math.round(revenue).toLocaleString()}`;
+  if (revenueMeta) revenueMeta.textContent = invoices.length ? 'Paid invoices collected this month' : 'Confirmed/completed bookings this month';
+  if (profitEl) profitEl.textContent = `$${Math.round(profit).toLocaleString()}`;
+  if (profitMeta) profitMeta.textContent = `$${Math.round(fuelSpend).toLocaleString()} fuel + $${Math.round(deliverySpend).toLocaleString()} delivery`;
+  if (bookingsEl) bookingsEl.textContent = monthlyBookings.toLocaleString();
+  if (bookingsMeta) bookingsMeta.textContent = `${monthlyBookings} rentals scheduled this month`;
+  renderFleetLegend();
+}
 function renderInvoices() {
-  const filteredInvoices = invoices.filter((invoice) => (
-    !invoiceSearchQuery || invoiceSearchText(invoice).includes(invoiceSearchQuery)
-  ));
-  const paidInvoices = invoices.filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid');
-  const openInvoices = invoices.filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
-  const unknownInvoices = invoices.filter((invoice) => !meaningfulInvoiceCustomer(invoice.customerName, invoice.customerEmail, invoice.customerPhone));
+  const filteredInvoices = sortNewestFirst(filteredInvoicesList(), (invoice) => invoice.issueDate || invoice.dueDate);
+  const paidInvoices = filteredInvoices.filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid');
+  const openInvoices = filteredInvoices.filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
+  const unknownInvoices = filteredInvoices.filter((invoice) => !meaningfulInvoiceCustomer(invoice.customerName, invoice.customerEmail, invoice.customerPhone));
   const paidTotal = paidInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
   const openTotal = openInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
 
@@ -2052,8 +2458,8 @@ function renderInvoices() {
   const openEl = document.getElementById('invoice-kpi-open');
   const openCountEl = document.getElementById('invoice-kpi-open-count');
   const unknownEl = document.getElementById('invoice-kpi-unknown');
-  if (countEl) countEl.textContent = invoices.length.toLocaleString();
-  if (updatedEl) updatedEl.textContent = invoiceImportMeta.importedAt ? `${invoiceImportMeta.recordCount} rows synced` : '0 rows synced';
+  if (countEl) countEl.textContent = filteredInvoices.length.toLocaleString();
+  if (updatedEl) updatedEl.textContent = invoiceImportMeta.importedAt ? `${invoiceImportMeta.recordCount} rows synced` : 'No invoice import yet';
   if (paidEl) paidEl.textContent = `$${paidTotal.toLocaleString()}`;
   if (paidCountEl) paidCountEl.textContent = `${paidInvoices.length} paid invoices`;
   if (openEl) openEl.textContent = `$${openTotal.toLocaleString()}`;
@@ -2093,27 +2499,31 @@ function renderCRM() {
       .toLowerCase()
       .includes(crmSearchQuery);
   });
-  document.getElementById('crm-grid').innerHTML = filteredCustomers.map((c,i) => `
+  const orderedCustomers = sortNewestFirst(filteredCustomers, (customer) => customer.lastActivity || customer.createdAt || customer.lastBooking);
+  document.getElementById('crm-grid').innerHTML = orderedCustomers.map((c,i) => `
     <div class="customer-card">
-      <div style="display:flex;align-items:center;gap:0.7rem;margin-bottom:0.8rem;">
+      <div class="customer-main">
         <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
         <div>
           <div class="customer-name">${escapeHtml(c.name)}</div>
           <div class="customer-meta">${c.phone ? `<a href="tel:${phoneHref(c.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(c.phone)}</a>` : 'No phone on file'}${c.email ? ` · ${escapeHtml(c.email)}` : ''}</div>
+      </div>
+        <div>
+          <div class="customer-meta">${[c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ') || 'Imported CRM profile'}</div>
+          ${(c.createdAt || c.lastActivity || c.lastBooking) ? `<div class="customer-meta">Newest activity ${escapeHtml(c.lastActivity || c.createdAt || c.lastBooking || '—')} · Last booking ${escapeHtml(c.lastBooking || '—')}</div>` : ''}
+          ${c.crmNotes ? `<div class="customer-meta">${escapeHtml(shortText(c.crmNotes))}</div>` : ''}
+          <div class="customer-stats">
+            <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>
+            <div class="customer-stat"><div class="num">$${c.totalSpent.toLocaleString()}</div><div class="lbl">Total spent</div></div>
+            <div class="customer-stat"><div class="num">${c.lastBooking==='N/A'?'—':`${daysSince(c.lastBooking)}d`}</div><div class="lbl">Since last</div></div>
+          </div>
         </div>
-        ${c.tag==='vip'?'<span class="badge badge-vip" style="margin-left:auto;">VIP</span>':c.tag==='repeat'?'<span class="badge badge-completed" style="margin-left:auto;">Repeat</span>':''}
       </div>
-      <div class="customer-meta">${[c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ') || 'Imported CRM profile'}</div>
-      ${(c.createdAt || c.lastActivity) ? `<div class="customer-meta">Created ${escapeHtml(c.createdAt || '—')} · Last activity ${escapeHtml(c.lastActivity || '—')}</div>` : ''}
-      ${c.crmNotes ? `<div class="customer-meta">${escapeHtml(shortText(c.crmNotes))}</div>` : ''}
-      <div class="customer-stats">
-        <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>
-        <div class="customer-stat"><div class="num">$${c.totalSpent.toLocaleString()}</div><div class="lbl">Total spent</div></div>
-        <div class="customer-stat"><div class="num">${c.lastBooking==='N/A'?'—':`${daysSince(c.lastBooking)}d`}</div><div class="lbl">Since last</div></div>
-      </div>
-      <div style="margin-top:0.8rem;display:flex;gap:0.5rem;">
+      <div class="customer-actions">
+        ${c.tag==='vip'?'<span class="badge badge-vip">VIP</span>':c.tag==='repeat'?'<span class="badge badge-completed">Repeat</span>':''}
         ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">📞 Call</span>'}
         ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">💬 Text</span>'}
+        ${c.email ? `<a href="mailto:${encodeURIComponent(c.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">✉️ Email</span>'}
       </div>
     </div>`).join('') || '<div class="empty"><div class="icon">🔎</div><p>No customers match this search.</p></div>';
 }
@@ -2126,9 +2536,316 @@ function saveCustomer() {
   closeModal('customer-modal');
   showToast('✅ Customer added');
   renderCRM();
+  renderCommsPanel();
   ['c-name','c-phone','c-email'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('c-source').selectedIndex = 0;
   document.getElementById('c-tag').selectedIndex = 0;
+}
+
+// ── EXPENSES ──
+function renderExpenses() {
+  const monthExpenses = expensesInPeriod('month');
+  const deliveryExpenses = expensesInPeriod('month', 'delivery');
+  const directCost = currentMonthFuelCost() + deliveryExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const ytdExpenses = expensesInPeriod('year');
+
+  const monthTotal = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const deliveryTotal = deliveryExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const ytdTotal = ytdExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+
+  document.getElementById('expense-kpi-month').textContent = `$${Math.round(monthTotal).toLocaleString()}`;
+  document.getElementById('expense-kpi-month-meta').textContent = `${monthExpenses.length} expenses logged this month`;
+  document.getElementById('expense-kpi-delivery').textContent = `$${Math.round(deliveryTotal).toLocaleString()}`;
+  document.getElementById('expense-kpi-delivery-meta').textContent = `${deliveryExpenses.length} delivery-related charges`;
+  document.getElementById('expense-kpi-direct').textContent = `$${Math.round(directCost).toLocaleString()}`;
+  document.getElementById('expense-kpi-direct-meta').textContent = `$${Math.round(currentMonthFuelCost()).toLocaleString()} fuel + $${Math.round(deliveryTotal).toLocaleString()} delivery`;
+  document.getElementById('expense-kpi-ytd').textContent = `$${Math.round(ytdTotal).toLocaleString()}`;
+  document.getElementById('expense-kpi-ytd-meta').textContent = `${ytdExpenses.length} expenses tracked this year`;
+
+  const table = document.getElementById('expense-table');
+  if (!table) return;
+  const ordered = sortNewestFirst(expenses, (expense) => expense.date);
+  table.innerHTML = ordered.length ? ordered.map((expense) => `
+    <tr>
+      <td>${escapeHtml(expense.date)}</td>
+      <td>${escapeHtml(expense.category)}</td>
+      <td><strong>${escapeHtml(expense.name)}</strong></td>
+      <td style="color:var(--muted);">${escapeHtml(expense.notes || '—')}</td>
+      <td style="color:var(--amber);font-weight:500;">$${Number(expense.amount || 0).toLocaleString()}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="5"><div class="empty"><div class="icon">💸</div><p>No expenses logged yet.</p></div></td></tr>';
+}
+function saveExpense() {
+  const name = document.getElementById('e-name').value.trim();
+  const amount = parseFloat(document.getElementById('e-amount').value || '0');
+  if (!name || !amount) {
+    showToast('⚠️ Add an expense name and amount');
+    return;
+  }
+  expenses.unshift({
+    id: nextId(expenses),
+    date: document.getElementById('e-date').value || today(),
+    category: document.getElementById('e-category').value,
+    name,
+    amount,
+    notes: document.getElementById('e-notes').value.trim()
+  });
+  saveData();
+  closeModal('expense-modal');
+  ['e-name','e-amount','e-notes'].forEach((id) => document.getElementById(id).value = '');
+  document.getElementById('e-date').value = today();
+  document.getElementById('e-category').value = 'delivery';
+  renderExpenses();
+  renderDashboardMetrics();
+  showToast('💸 Expense saved');
+}
+
+// ── COMMUNICATIONS ──
+function renderCommunications() {
+  const table = document.getElementById('communications-table');
+  if (!table) return;
+  const ordered = sortNewestFirst(communicationsLog, (item) => item.date);
+  table.innerHTML = ordered.length ? ordered.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.date)}</td>
+      <td>${escapeHtml(item.customerName || 'General')}</td>
+      <td>${escapeHtml(item.channel || 'note')}</td>
+      <td style="color:var(--muted);">${escapeHtml(shortText(item.message, 150))}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="4"><div class="empty"><div class="icon">💬</div><p>No communications logged yet.</p></div></td></tr>';
+}
+function renderMassEmailDraft() {
+  const emails = customers.map((customer) => normalizeEmail(customer.email)).filter(Boolean);
+  const phones = customers.map((customer) => normalizePhone(customer.phone)).filter(Boolean);
+  const repeatCount = customers.filter((customer) => ['repeat', 'vip'].includes(customer.tag)).length;
+  const subject = document.getElementById('mass-email-subject')?.value || '';
+  const body = document.getElementById('mass-email-body')?.value || '';
+  document.getElementById('mass-email-count').textContent = emails.length.toLocaleString();
+  document.getElementById('mass-text-count').textContent = phones.length.toLocaleString();
+  document.getElementById('mass-repeat-count').textContent = repeatCount.toLocaleString();
+  const draftLink = document.getElementById('mass-email-link');
+  if (draftLink) {
+    draftLink.href = `mailto:?bcc=${encodeURIComponent(emails.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+}
+function renderCommsPanel() {
+  const select = document.getElementById('comm-customer');
+  const customerCard = document.getElementById('comm-customer-card');
+  const message = document.getElementById('comm-message')?.value || '';
+  if (!select || !customerCard) return;
+
+  const ordered = [...customers].sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+  const existingValue = select.value;
+  select.innerHTML = ordered.map((customer) => `<option value="${customer.id}">${escapeHtml(customer.name)}</option>`).join('');
+  if (existingValue && ordered.some((customer) => String(customer.id) === existingValue)) {
+    select.value = existingValue;
+  }
+  const current = ordered.find((customer) => String(customer.id) === String(select.value)) || ordered[0];
+  if (!current) {
+    customerCard.innerHTML = '<p class="note-soft">Import or add a customer to start drafting follow-ups.</p>';
+    return;
+  }
+  select.value = String(current.id);
+  customerCard.innerHTML = `
+    <h3>${escapeHtml(current.name)}</h3>
+    <p>${current.phone ? escapeHtml(current.phone) : 'No phone on file'}${current.email ? ` · ${escapeHtml(current.email)}` : ''}</p>
+    <div class="mini-kpis">
+      <div class="mini-kpi"><strong>${current.bookings}</strong><span>bookings</span></div>
+      <div class="mini-kpi"><strong>$${Number(current.totalSpent || 0).toLocaleString()}</strong><span>lifetime</span></div>
+      <div class="mini-kpi"><strong>${current.lastBooking === 'N/A' ? '—' : current.lastBooking}</strong><span>last booking</span></div>
+    </div>
+  `;
+  const textLink = document.getElementById('comm-text-link');
+  const emailLink = document.getElementById('comm-email-link');
+  if (textLink) {
+    textLink.href = current.phone ? `sms:${phoneHref(current.phone)}?body=${encodeURIComponent(message)}` : '#';
+    textLink.style.pointerEvents = current.phone ? 'auto' : 'none';
+    textLink.style.opacity = current.phone ? '1' : '0.45';
+  }
+  if (emailLink) {
+    emailLink.href = current.email ? `mailto:${encodeURIComponent(current.email)}?subject=${encodeURIComponent('Shoreline Aquatics follow-up')}&body=${encodeURIComponent(message)}` : '#';
+    emailLink.style.pointerEvents = current.email ? 'auto' : 'none';
+    emailLink.style.opacity = current.email ? '1' : '0.45';
+  }
+  renderMassEmailDraft();
+  renderCommunications();
+}
+function logCommunication() {
+  const select = document.getElementById('comm-customer');
+  const message = document.getElementById('comm-message')?.value.trim();
+  const customer = customers.find((item) => String(item.id) === String(select?.value));
+  if (!customer || !message) {
+    showToast('⚠️ Choose a customer and add your message first');
+    return;
+  }
+  communicationsLog.unshift({
+    id: nextId(communicationsLog),
+    date: new Date().toISOString(),
+    customerId: customer.id,
+    customerName: customer.name,
+    channel: customer.email && customer.phone ? 'text/email draft' : customer.phone ? 'text draft' : 'email draft',
+    message
+  });
+  saveData();
+  renderCommunications();
+  showToast('💬 Communication note saved');
+}
+
+// ── REVIEWS ──
+function ensureReviewRequestsForCompletedBookings() {
+  bookings.filter((booking) => booking.status === 'completed').forEach((booking) => {
+    const exists = reviewRequests.some((request) => request.bookingId === booking.id) || reviews.some((review) => review.bookingId === booking.id);
+    if (!exists) {
+      reviewRequests.unshift({
+        id: nextId(reviewRequests),
+        bookingId: booking.id,
+        customerName: booking.name,
+        phone: booking.phone,
+        email: booking.email,
+        sentAt: '',
+        status: 'pending'
+      });
+    }
+  });
+}
+function reviewMessage(name) {
+  return `Hey ${firstName(name)}! Thanks again for riding with Shoreline Aquatics. If you had a great time, we'd really appreciate a quick review about your experience on the lake.`;
+}
+function sendReviewDrop(requestId, channel) {
+  const request = reviewRequests.find((item) => item.id === requestId);
+  if (!request) return;
+  request.sentAt = new Date().toISOString();
+  request.channel = channel;
+  saveData();
+  renderReviewHub();
+  if (channel === 'text' && request.phone) {
+    window.location.href = `sms:${phoneHref(request.phone)}?body=${encodeURIComponent(reviewMessage(request.customerName))}`;
+    return;
+  }
+  if (channel === 'email' && request.email) {
+    window.location.href = `mailto:${encodeURIComponent(request.email)}?subject=${encodeURIComponent('Quick favor from Shoreline Aquatics')}&body=${encodeURIComponent(reviewMessage(request.customerName))}`;
+    return;
+  }
+  showToast('⚠️ No contact info on file for that review request');
+}
+function markReviewCompleted(requestId) {
+  const request = reviewRequests.find((item) => item.id === requestId);
+  if (!request) return;
+  const rating = window.prompt('Star rating (1-5)', '5');
+  const reviewText = window.prompt('Paste the review text or a short summary', '');
+  reviews.unshift({
+    id: nextId(reviews),
+    bookingId: request.bookingId,
+    customerName: request.customerName,
+    rating: Number(rating) || 5,
+    text: reviewText || 'Review logged manually',
+    date: new Date().toISOString(),
+    responded: false
+  });
+  request.status = 'reviewed';
+  saveData();
+  renderReviewHub();
+  showToast('⭐ Review logged');
+}
+function toggleReviewResponded(reviewId) {
+  const review = reviews.find((item) => item.id === reviewId);
+  if (!review) return;
+  review.responded = !review.responded;
+  saveData();
+  renderReviewHub();
+}
+function renderReviewHub() {
+  ensureReviewRequestsForCompletedBookings();
+  const pending = reviewRequests.filter((request) => request.status !== 'reviewed');
+  const completedRentals = bookings.filter((booking) => booking.status === 'completed').length;
+  const reviewRate = completedRentals ? Math.round((reviews.length / completedRentals) * 100) : 0;
+  document.getElementById('reviews-kpi-pending').textContent = pending.length.toLocaleString();
+  document.getElementById('reviews-kpi-complete').textContent = reviews.length.toLocaleString();
+  document.getElementById('reviews-kpi-response').textContent = reviews.filter((review) => !review.responded).length.toLocaleString();
+  document.getElementById('reviews-kpi-rate').textContent = `${reviewRate}%`;
+
+  const requestList = document.getElementById('review-request-list');
+  const logList = document.getElementById('review-log-list');
+  if (requestList) {
+    requestList.innerHTML = pending.length ? sortNewestFirst(pending, (item) => item.sentAt || '').map((request) => `
+      <div class="list-row">
+        <div class="list-row-main">
+          <strong>${escapeHtml(request.customerName)}</strong>
+          <div class="sub">${escapeHtml(request.sentAt ? `Last sent ${request.sentAt.slice(0, 10)}` : 'Ready to send now')}</div>
+        </div>
+        <div class="list-row-actions">
+          <button class="btn btn-primary btn-sm" onclick="sendReviewDrop(${request.id}, 'text')">Text request</button>
+          <button class="btn btn-ghost btn-sm" onclick="sendReviewDrop(${request.id}, 'email')">Email request</button>
+          <button class="btn btn-ghost btn-sm" onclick="markReviewCompleted(${request.id})">Log review</button>
+        </div>
+      </div>
+    `).join('') : '<div class="empty"><div class="icon">🎉</div><p>No pending review drops right now.</p></div>';
+  }
+  if (logList) {
+    logList.innerHTML = reviews.length ? sortNewestFirst(reviews, (item) => item.date).map((review) => `
+      <div class="list-row">
+        <div class="list-row-main">
+          <strong>${escapeHtml(review.customerName)} · ${'★'.repeat(Math.max(1, Math.min(5, Number(review.rating) || 5)))}</strong>
+          <div class="sub">${escapeHtml(shortText(review.text, 180))}</div>
+          <div class="sub">${escapeHtml(String(review.date || '').slice(0, 10) || 'No date')}</div>
+        </div>
+        <div class="list-row-actions">
+          <span class="badge ${review.responded ? 'badge-confirmed' : 'badge-pending'}">${review.responded ? 'Responded' : 'Needs response'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="toggleReviewResponded(${review.id})">${review.responded ? 'Mark unanswered' : 'Mark responded'}</button>
+        </div>
+      </div>
+    `).join('') : '<div class="empty"><div class="icon">⭐</div><p>No reviews logged yet.</p></div>';
+  }
+}
+
+// ── SOCIAL ──
+function saveSocialDraft() {
+  const caption = document.getElementById('social-caption')?.value.trim();
+  const link = document.getElementById('social-link')?.value.trim();
+  if (!caption) {
+    showToast('⚠️ Add a caption first');
+    return;
+  }
+  socialPosts.unshift({
+    id: nextId(socialPosts),
+    caption,
+    link,
+    createdAt: new Date().toISOString()
+  });
+  saveData();
+  renderSocialQueue();
+  showToast('📣 Social draft saved');
+}
+function copySocialCaption() {
+  const caption = document.getElementById('social-caption')?.value.trim() || '';
+  const link = document.getElementById('social-link')?.value.trim() || '';
+  const payload = link ? `${caption}\n\n${link}` : caption;
+  navigator.clipboard?.writeText(payload);
+  showToast('📋 Caption copied');
+}
+function copySavedSocial(postId) {
+  const post = socialPosts.find((item) => item.id === postId);
+  if (!post) return;
+  const payload = post.link ? `${post.caption}\n\n${post.link}` : post.caption;
+  navigator.clipboard?.writeText(payload);
+  showToast('📋 Saved draft copied');
+}
+function renderSocialQueue() {
+  const list = document.getElementById('social-post-list');
+  if (!list) return;
+  const ordered = sortNewestFirst(socialPosts, (item) => item.createdAt);
+  list.innerHTML = ordered.length ? ordered.map((post) => `
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>${escapeHtml(String(post.createdAt || '').slice(0, 10) || 'Draft')}</strong>
+        <div class="sub">${escapeHtml(shortText(post.caption, 180))}</div>
+        <div class="sub">${post.link ? escapeHtml(post.link) : 'No link attached'}</div>
+      </div>
+      <div class="list-row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="copySavedSocial(${post.id})">Copy draft</button>
+      </div>
+    </div>
+  `).join('') : '<div class="empty"><div class="icon">📣</div><p>No social drafts saved yet.</p></div>';
 }
 
 // ── FUEL ──
@@ -2148,7 +2865,7 @@ function saveFuel() {
   const g=parseFloat(document.getElementById('f-gallons').value)||0;
   const p=parseFloat(document.getElementById('f-ppg').value)||3.89;
   fuelLog.unshift({craft:document.getElementById('f-craft').value,date:document.getElementById('f-date').value||today(),gallons:g,ppg:p,hours:parseFloat(document.getElementById('f-hours').value)||0,ref:document.getElementById('f-ref').value||'–'});
-  saveData(); closeModal('fuel-modal'); showToast('⛽ Fuel entry saved'); renderFuel();
+  saveData(); closeModal('fuel-modal'); showToast('⛽ Fuel entry saved'); renderFuel(); renderExpenses(); renderDashboardMetrics();
 }
 
 // ── MAINTENANCE ──
@@ -2236,7 +2953,17 @@ function switchReminderTab(tab, btn) {
 
 // ── DASHBOARD BARS ──
 function renderBookingBars() {
-  const weeks = [{w:'Week 1',v:3},{w:'Week 2',v:5},{w:'Week 3',v:4},{w:'Week 4',v:6}];
+  const start = startOfMonth(new Date());
+  const weeks = [0, 1, 2, 3, 4].map((index) => {
+    const weekStart = new Date(start.getFullYear(), start.getMonth(), 1 + (index * 7));
+    const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6, 23, 59, 59, 999);
+    const count = bookings.filter((booking) => {
+      const bookingDate = dateValue(booking.date);
+      return bookingDate && inRange(bookingDate, weekStart, weekEnd) && bookingDate.getMonth() === start.getMonth();
+    }).length;
+    return {w:`Week ${index + 1}`,v:count};
+  }).filter((week) => week.v > 0 || week.w !== 'Week 5');
+  if (!weeks.length) weeks.push({w:'Week 1', v:0});
   const max = Math.max(...weeks.map(w=>w.v));
   document.getElementById('booking-bars').innerHTML = weeks.map(w=>`
     <div class="bar-col">
@@ -2259,12 +2986,12 @@ function today() { return new Date().toISOString().split('T')[0]; }
 try {
   const versionKey = 'sla_version';
   const storedVersion = localStorage.getItem(versionKey);
-  if (storedVersion && storedVersion !== 'v5') {
-    ['sla_bookings', 'sla_customers', 'sla_fuel', 'sla_maint', 'sla_invoices', 'sla_import_meta', 'sla_invoice_import_meta'].forEach((key) => {
+  if (storedVersion && storedVersion !== 'v6') {
+    ['sla_bookings', 'sla_customers', 'sla_expenses', 'sla_fuel', 'sla_maint', 'sla_invoices', 'sla_comms', 'sla_review_requests', 'sla_reviews', 'sla_social_posts', 'sla_import_meta', 'sla_invoice_import_meta'].forEach((key) => {
       if (localStorage.getItem(key) === '[]') localStorage.removeItem(key);
     });
   }
-  localStorage.setItem(versionKey, 'v5');
+  localStorage.setItem(versionKey, 'v6');
 } catch(e){}
 async function bootApp() {
   try {
@@ -2278,10 +3005,17 @@ async function bootApp() {
     renderImportSummary();
     renderInvoiceImportSummary();
     renderUpcoming();
+    renderDashboardMetrics();
     renderBookingBars();
     renderInvoices();
+    renderCRM();
+    renderExpenses();
+    renderCommsPanel();
+    renderReviewHub();
+    renderSocialQueue();
     document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
     document.getElementById('b-date').value = today();
+    document.getElementById('e-date').value = today();
     document.getElementById('f-date').value = today();
     document.getElementById('m-date').value = today();
     document.body.dataset.appReady = 'true';
