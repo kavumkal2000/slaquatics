@@ -617,6 +617,7 @@ function applyQueryDefaults() {
   const craft = normalizeCraft(params.get("craft"));
   const type = params.get("type");
   const hours = Number(params.get("hours") || 0);
+  const date = params.get("date");
 
   if (type && TYPE_TO_CRAFTS[type]) {
     setType(type);
@@ -629,6 +630,9 @@ function applyQueryDefaults() {
   }
 
   populateDurationOptions(hours);
+  if (date) {
+    qs("date").value = date;
+  }
   updateSummary();
 }
 

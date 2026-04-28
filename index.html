@@ -175,6 +175,63 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .calc-book-btn:hover { background: var(--orange); }
 .price-match { text-align: center; margin-top: 0.8rem; font-size: 0.78rem; color: rgba(255,255,255,0.6); }
 .price-match span { color: var(--gold); }
+.booking-calendar-shell { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr); gap: 1rem; margin-bottom: 1.35rem; }
+.booking-calendar-card,
+.booking-calendar-summary {
+  background: rgba(15,32,64,0.9);
+  border: 1px solid rgba(245,166,35,0.16);
+  border-radius: 18px;
+  padding: 1.1rem 1.1rem 1.15rem;
+}
+.booking-calendar-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+.booking-calendar-copy h3,
+.booking-calendar-summary h3 { font-size: 1rem; font-weight: 500; color: var(--white); margin-bottom: 0.28rem; }
+.booking-calendar-copy p,
+.booking-calendar-summary p { font-size: 0.82rem; line-height: 1.6; color: rgba(255,255,255,0.66); }
+.booking-calendar-nav { display: flex; align-items: center; gap: 0.55rem; }
+.booking-calendar-month { min-width: 170px; text-align: center; font-size: 0.88rem; font-weight: 500; letter-spacing: 0.04em; }
+.booking-calendar-btn {
+  width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04); color: var(--white); cursor: pointer; font-size: 0.95rem;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+.booking-calendar-btn:hover { border-color: rgba(245,166,35,0.32); color: var(--gold); transform: translateY(-1px); }
+.booking-calendar-weekdays,
+.booking-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0.45rem; }
+.booking-calendar-weekdays { margin-bottom: 0.5rem; }
+.booking-calendar-weekday {
+  text-align: center; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.42); padding: 0.2rem 0;
+}
+.booking-calendar-day {
+  min-height: 88px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03); padding: 0.7rem 0.65rem; text-align: left;
+  display: flex; flex-direction: column; gap: 0.45rem; cursor: pointer; color: var(--white);
+  font-family: 'DM Sans', sans-serif; transition: all 0.18s;
+}
+.booking-calendar-day:hover { border-color: rgba(245,166,35,0.28); transform: translateY(-1px); }
+.booking-calendar-day.other-month { opacity: 0.42; }
+.booking-calendar-day.today { border-color: rgba(26,158,212,0.34); box-shadow: inset 0 0 0 1px rgba(26,158,212,0.16); }
+.booking-calendar-day.selected { border-color: rgba(245,166,35,0.45); background: rgba(245,166,35,0.1); }
+.booking-calendar-day-top { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; }
+.booking-calendar-day-num { font-size: 0.92rem; font-weight: 600; }
+.booking-calendar-day-badge {
+  min-width: 20px; height: 20px; border-radius: 999px; padding: 0 0.4rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(245,166,35,0.14); color: var(--gold); font-size: 0.67rem; font-weight: 600;
+}
+.booking-calendar-day-meta { font-size: 0.72rem; line-height: 1.45; color: rgba(255,255,255,0.56); }
+.booking-calendar-selected {
+  display: inline-flex; align-items: center; gap: 0.55rem; width: fit-content;
+  background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.22);
+  color: var(--gold); border-radius: 999px; padding: 0.38rem 0.8rem; font-size: 0.74rem;
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.85rem;
+}
+.booking-calendar-big-date {
+  font-family: 'Bebas Neue', cursive; font-size: 2rem; line-height: 1; letter-spacing: 0.04em;
+  color: var(--white); margin-bottom: 0.5rem;
+}
+.booking-calendar-note { margin-top: 0.95rem; font-size: 0.78rem; line-height: 1.55; color: rgba(255,255,255,0.56); }
 
 /* ── FLEET ── */
 .fleet-section { background: linear-gradient(180deg, rgba(12,27,48,0.88) 0%, rgba(8,17,31,1) 100%); }
@@ -433,6 +490,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   section { padding: 4.5rem 1.5rem; }
   .hero-inner { padding: 7rem 1.5rem 2.5rem; }
   .trust-inner { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 1.6rem 1.5rem; }
+  .booking-calendar-shell { grid-template-columns: 1fr; }
   .calc-panel.active { grid-template-columns: 1fr; }
   .fleet-grid { grid-template-columns: 1fr; }
   .addons-grid { grid-template-columns: 1fr; }
@@ -456,6 +514,17 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .nav-right { gap: 0.7rem; margin-left: auto; }
   .nav-phone { font-size: 0.76rem; white-space: nowrap; }
   nav .btn-primary { padding: 0.7rem 0.95rem; font-size: 0.72rem; }
+  .booking-calendar-card,
+  .booking-calendar-summary { padding: 1rem 0.95rem; }
+  .booking-calendar-head { align-items: flex-start; }
+  .booking-calendar-nav { width: 100%; justify-content: space-between; }
+  .booking-calendar-month { min-width: auto; }
+  .booking-calendar-weekdays,
+  .booking-calendar-grid { gap: 0.3rem; }
+  .booking-calendar-day { min-height: 74px; padding: 0.55rem 0.45rem; }
+  .booking-calendar-day-num { font-size: 0.82rem; }
+  .booking-calendar-day-meta { font-size: 0.64rem; }
+  .booking-calendar-big-date { font-size: 1.7rem; }
   .hero-actions { gap: 0.75rem; }
   .hero-info-bar {
     display: grid;
@@ -669,6 +738,38 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="section-tag">Book Your Rental</div>
     <h2>Build Your Package</h2>
     <p class="section-sub" style="margin-bottom:2rem;">Choose the number of jet skis you need or lock in the boat, pick your duration, and see your price instantly. Every rental includes delivery, life jackets, full tank, and a cooler.</p>
+    <div class="booking-calendar-shell">
+      <div class="booking-calendar-card">
+        <div class="booking-calendar-head">
+          <div class="booking-calendar-copy">
+            <h3>Choose Your Rental Date</h3>
+            <p>Pick the day you want to get on the water. We’ll carry it straight into the booking form so your request is already prefilled.</p>
+          </div>
+          <div class="booking-calendar-nav">
+            <button class="booking-calendar-btn" type="button" aria-label="Previous month" onclick="shiftBookingCalendarMonth(-1)">←</button>
+            <div class="booking-calendar-month" id="booking-calendar-month">Month Year</div>
+            <button class="booking-calendar-btn" type="button" aria-label="Next month" onclick="shiftBookingCalendarMonth(1)">→</button>
+          </div>
+        </div>
+        <div class="booking-calendar-weekdays">
+          <div class="booking-calendar-weekday">Sun</div>
+          <div class="booking-calendar-weekday">Mon</div>
+          <div class="booking-calendar-weekday">Tue</div>
+          <div class="booking-calendar-weekday">Wed</div>
+          <div class="booking-calendar-weekday">Thu</div>
+          <div class="booking-calendar-weekday">Fri</div>
+          <div class="booking-calendar-weekday">Sat</div>
+        </div>
+        <div class="booking-calendar-grid" id="booking-calendar-grid"></div>
+      </div>
+      <div class="booking-calendar-summary">
+        <div class="booking-calendar-selected"><span>Selected</span><span id="booking-calendar-pill-date">Today</span></div>
+        <div class="booking-calendar-big-date" id="booking-calendar-big-date">Today</div>
+        <p id="booking-calendar-copy">Choose your package below and we’ll send this date into the booking request automatically.</p>
+        <a href="./jetski-booking/" class="btn-primary" id="booking-calendar-continue" style="margin-top:1rem;">Continue With This Date</a>
+        <div class="booking-calendar-note">You’re only picking the requested day here. Exact start time, party size, and final details still get confirmed in the booking form.</div>
+      </div>
+    </div>
     <div class="calc-wrap">
       <!-- Tabs: Jet Ski | Boat -->
       <div class="calc-tabs">
@@ -1093,13 +1194,118 @@ const CRAFT_NAMES = {
   jetski3:'3 Jet Skis',
   jetski4:'4 Jet Skis'
 };
+let selectedBookingDate = '';
+let bookingCalendarMonth = null;
+
+function localIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalIsoDate(iso) {
+  if (!iso) return null;
+  const parts = String(iso).split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function todayLocalIso() {
+  return localIsoDate(new Date());
+}
+
+function formatSelectedDate(iso) {
+  const date = parseLocalIsoDate(iso);
+  if (!date) return 'Choose a date';
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
 
 function buildBookingUrl(params) {
   const url = new URL("jetski-booking/", window.location.href);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, String(value));
   });
+  if (selectedBookingDate) url.searchParams.set('date', selectedBookingDate);
   return url.toString();
+}
+
+function syncCalendarContinueLink() {
+  const continueLink = document.getElementById('booking-calendar-continue');
+  const pillDate = document.getElementById('booking-calendar-pill-date');
+  const bigDate = document.getElementById('booking-calendar-big-date');
+  const copy = document.getElementById('booking-calendar-copy');
+  if (!continueLink || !pillDate || !bigDate || !copy) return;
+
+  const activeTab = document.getElementById('panel-boat')?.classList.contains('active') ? 'boat' : 'jetski';
+  if (activeTab === 'boat') {
+    const hours = parseInt(getSelected('bt-dur-opts', 'hours')) || 4;
+    const total = PRICING.boat[hours] || 0;
+    continueLink.href = buildBookingUrl({ type: 'boat', craft: 'boat', hours, total });
+  } else {
+    const craft = getSelected('js-craft-opts', 'craft') || 'jetski2';
+    const hours = parseInt(getSelected('js-dur-opts', 'hours')) || 2;
+    const total = PRICING[craft]?.[hours] || 0;
+    continueLink.href = buildBookingUrl({ type: 'jetski', craft, hours, total });
+  }
+
+  const formatted = formatSelectedDate(selectedBookingDate);
+  pillDate.textContent = formatted;
+  bigDate.textContent = formatted;
+  copy.textContent = `Choose your package below and we’ll carry ${formatted.toLowerCase()} into the booking form automatically.`;
+}
+
+function renderBookingCalendar() {
+  const grid = document.getElementById('booking-calendar-grid');
+  const monthLabel = document.getElementById('booking-calendar-month');
+  if (!grid || !monthLabel) return;
+
+  if (!selectedBookingDate) selectedBookingDate = todayLocalIso();
+  if (!bookingCalendarMonth) {
+    const selectedDate = parseLocalIsoDate(selectedBookingDate) || new Date();
+    bookingCalendarMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+  }
+
+  monthLabel.textContent = bookingCalendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const firstVisible = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth(), 1 - bookingCalendarMonth.getDay());
+  const cells = [];
+
+  for (let offset = 0; offset < 42; offset += 1) {
+    const cellDate = new Date(firstVisible.getFullYear(), firstVisible.getMonth(), firstVisible.getDate() + offset);
+    const cellIso = localIsoDate(cellDate);
+    const isOtherMonth = cellDate.getMonth() !== bookingCalendarMonth.getMonth();
+    const isToday = cellIso === todayLocalIso();
+    const isSelected = cellIso === selectedBookingDate;
+    const soonLabel = offset < 14 && !isOtherMonth ? 'Popular' : '&nbsp;';
+
+    cells.push(`
+      <button class="booking-calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" type="button" onclick="selectBookingDate('${cellIso}')">
+        <div class="booking-calendar-day-top">
+          <span class="booking-calendar-day-num">${cellDate.getDate()}</span>
+          ${isSelected ? '<span class="booking-calendar-day-badge">Go</span>' : ''}
+        </div>
+        <div class="booking-calendar-day-meta">${soonLabel}</div>
+      </button>
+    `);
+  }
+
+  grid.innerHTML = cells.join('');
+  syncCalendarContinueLink();
+}
+
+function selectBookingDate(iso) {
+  selectedBookingDate = iso;
+  const date = parseLocalIsoDate(iso);
+  if (date) bookingCalendarMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  renderBookingCalendar();
+  calcPrice();
+  calcBoatPrice();
+}
+
+function shiftBookingCalendarMonth(delta) {
+  if (!bookingCalendarMonth) bookingCalendarMonth = new Date();
+  bookingCalendarMonth = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth() + delta, 1);
+  renderBookingCalendar();
 }
 
 function selectOpt(groupId, el) {
@@ -1127,6 +1333,7 @@ function calcPrice() {
     hours,
     total: price
   });
+  syncCalendarContinueLink();
 }
 
 function calcBoatPrice() {
@@ -1142,6 +1349,7 @@ function calcBoatPrice() {
     hours,
     total: price
   });
+  syncCalendarContinueLink();
 }
 
 function switchCalcTab(tab) {
@@ -1149,6 +1357,7 @@ function switchCalcTab(tab) {
   document.querySelectorAll('.calc-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
+  syncCalendarContinueLink();
 }
 
 // ── REVIEWS CAROUSEL ──
@@ -1241,6 +1450,8 @@ window.addEventListener('resize', renderReviewCarousel);
 
 calcPrice();
 calcBoatPrice();
+selectedBookingDate = todayLocalIso();
+renderBookingCalendar();
 renderReviewCarousel();
 startReviewAutoplay();
 </script>
