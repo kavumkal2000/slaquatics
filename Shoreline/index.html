@@ -106,7 +106,7 @@ h1 em { color: var(--gold); font-style: normal; }
 
 /* ── TRUST BAR ── */
 .trust-bar { background: var(--deep); border-top: 1px solid rgba(245,166,35,0.2); border-bottom: 1px solid var(--border); }
-.trust-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); padding: 1.6rem 4rem; }
+.trust-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 1.6rem 4rem; }
 .trust-item { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; padding: 0 1rem; border-right: 1px solid rgba(255,255,255,0.06); }
 .trust-item:last-child { border-right: none; }
 .trust-num { font-family: 'Bebas Neue', cursive; font-size: 2.2rem; color: var(--gold); line-height: 1; letter-spacing: 0.04em; }
@@ -208,6 +208,7 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .fleet-desc { font-size: 0.93rem; color: rgba(255,255,255,0.84); line-height: 1.72; max-width: 42ch; }
 .fleet-price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
 .fleet-price-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.8rem 0.65rem; text-align: center; transition: border-color 0.2s, transform 0.2s; }
+.fleet-price-item { min-height: 74px; display: flex; flex-direction: column; justify-content: center; }
 .fleet-price-item:hover { border-color: rgba(245,166,35,0.35); transform: translateY(-1px); }
 .fleet-price-dur { font-size: 0.68rem; color: rgba(255,255,255,0.58); text-transform: uppercase; letter-spacing: 0.1em; }
 .fleet-price-amt { font-family: 'Bebas Neue', cursive; font-size: 1.5rem; color: var(--gold); letter-spacing: 0.04em; margin-top: 0.1rem; }
@@ -265,6 +266,9 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 18px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   transition: transform 0.22s, border-color 0.22s;
 }
 .why-item:hover { transform: translateY(-3px); border-color: rgba(245,166,35,0.26); }
@@ -276,7 +280,7 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   background: linear-gradient(180deg, rgba(8,17,31,0.04) 0%, rgba(8,17,31,0.68) 100%);
 }
 .why-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.why-body { padding: 1.5rem 1.6rem 1.7rem; }
+.why-body { padding: 1.5rem 1.6rem 1.7rem; display: flex; flex-direction: column; flex: 1; }
 .why-top { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.9rem; }
 .why-num {
   width: 46px;
@@ -428,7 +432,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   nav ul { display: none; }
   section { padding: 4.5rem 1.5rem; }
   .hero-inner { padding: 7rem 1.5rem 2.5rem; }
-  .trust-inner { grid-template-columns: repeat(2,1fr); padding: 1.6rem 1.5rem; }
+  .trust-inner { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 1.6rem 1.5rem; }
   .calc-panel.active { grid-template-columns: 1fr; }
   .fleet-grid { grid-template-columns: 1fr; }
   .addons-grid { grid-template-columns: 1fr; }
@@ -447,6 +451,24 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .review-slide { flex-basis: calc((100% - 1.2rem) / 2); }
 }
 @media (max-width: 760px) {
+  nav { padding: 0.75rem 0.95rem; gap: 0.65rem; }
+  .nav-logo img { height: 58px; }
+  .nav-right { gap: 0.7rem; margin-left: auto; }
+  .nav-phone { font-size: 0.76rem; white-space: nowrap; }
+  nav .btn-primary { padding: 0.7rem 0.95rem; font-size: 0.72rem; }
+  .hero-actions { gap: 0.75rem; }
+  .hero-info-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: min(100%, 420px);
+    gap: 0.85rem;
+    padding: 0.95rem 1rem;
+  }
+  .hero-info-item { align-items: flex-start; }
+  .trust-inner { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; padding: 1.15rem 0.9rem; }
+  .trust-item { border-right: none; padding: 0 0.2rem; }
+  .trust-num { font-size: 1.8rem; }
+  .trust-label { font-size: 0.62rem; line-height: 1.35; letter-spacing: 0.07em; }
   .fleet-media { min-height: 225px; }
   .fleet-body { padding: 1.4rem 1.25rem 1.5rem; }
   .fleet-title-row { flex-direction: column; align-items: start; }
