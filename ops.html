@@ -95,6 +95,77 @@ tbody td{padding:0.85rem 1.2rem;font-size:0.84rem;border-bottom:1px solid rgba(2
 tbody tr:last-child td{border-bottom:none;}
 tbody tr:hover{background:rgba(255,255,255,0.02);}
 
+/* BOOKING CALENDAR */
+.calendar-shell{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,0.85fr);gap:1rem;margin-bottom:1.3rem;}
+.calendar-card,.agenda-card{
+  background:var(--deep);border-radius:14px;border:1px solid var(--border);
+  padding:1rem 1rem 1.1rem;
+}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.9rem;flex-wrap:wrap;}
+.calendar-head h3,.agenda-card h3{font-size:0.9rem;font-weight:500;}
+.calendar-head-copy{display:flex;flex-direction:column;gap:0.2rem;}
+.calendar-head-copy p,.agenda-sub{font-size:0.76rem;color:var(--muted);line-height:1.55;}
+.calendar-nav{display:flex;align-items:center;gap:0.5rem;}
+.calendar-month-label{min-width:160px;text-align:center;font-size:0.86rem;font-weight:500;letter-spacing:0.04em;}
+.calendar-btn{
+  width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.03);color:var(--white);cursor:pointer;font-size:0.95rem;
+  transition:all 0.18s;
+}
+.calendar-btn:hover{border-color:rgba(26,158,212,0.4);color:var(--wave);}
+.calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:0.45rem;}
+.calendar-weekdays{margin-bottom:0.45rem;}
+.calendar-weekday{
+  padding:0.3rem 0;font-size:0.68rem;text-transform:uppercase;letter-spacing:0.12em;
+  color:var(--muted);text-align:center;
+}
+.calendar-day{
+  min-height:104px;border-radius:12px;border:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.03);padding:0.7rem 0.7rem 0.65rem;cursor:pointer;
+  display:flex;flex-direction:column;gap:0.45rem;transition:all 0.18s;position:relative;
+  text-align:left;font-family:'DM Sans',sans-serif;color:var(--white);
+}
+.calendar-day:hover{border-color:rgba(26,158,212,0.32);transform:translateY(-1px);}
+.calendar-day.other-month{opacity:0.45;}
+.calendar-day.today{border-color:rgba(245,158,11,0.34);box-shadow:inset 0 0 0 1px rgba(245,158,11,0.16);}
+.calendar-day.selected{border-color:rgba(26,158,212,0.5);background:rgba(26,158,212,0.1);}
+.calendar-day.has-bookings{background:linear-gradient(180deg, rgba(26,158,212,0.12), rgba(255,255,255,0.03));}
+.calendar-day-top{display:flex;align-items:center;justify-content:space-between;gap:0.5rem;}
+.calendar-day-num{font-size:0.92rem;font-weight:600;color:var(--white);}
+.calendar-day-count{
+  min-width:22px;height:22px;padding:0 0.4rem;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(26,158,212,0.18);color:var(--wave);font-size:0.72rem;font-weight:600;
+}
+.calendar-day-meta{font-size:0.72rem;color:var(--muted);line-height:1.4;min-height:1em;}
+.calendar-day-list{display:flex;flex-direction:column;gap:0.32rem;margin-top:auto;}
+.calendar-pill{
+  display:flex;align-items:center;gap:0.4rem;font-size:0.68rem;border-radius:999px;
+  padding:0.24rem 0.5rem;background:rgba(255,255,255,0.05);color:var(--white);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.calendar-pill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--wave);}
+.calendar-pill.pending .calendar-pill-dot{background:var(--amber);}
+.calendar-pill.confirmed .calendar-pill-dot{background:var(--green);}
+.calendar-pill.completed .calendar-pill-dot{background:var(--wave);}
+.calendar-pill.noshow .calendar-pill-dot{background:var(--red);}
+.agenda-card{display:flex;flex-direction:column;}
+.agenda-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;margin-bottom:1rem;flex-wrap:wrap;}
+.agenda-date{font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:0.05em;line-height:1;}
+.agenda-list{display:flex;flex-direction:column;gap:0.7rem;}
+.agenda-item{
+  background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;padding:0.85rem 0.9rem;display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;
+}
+.agenda-item-main{display:flex;flex-direction:column;gap:0.24rem;min-width:0;}
+.agenda-item-main strong{font-size:0.86rem;}
+.agenda-item-meta{font-size:0.75rem;color:var(--muted);line-height:1.5;}
+.agenda-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.45rem;flex-shrink:0;}
+.agenda-empty{
+  border:1px dashed rgba(255,255,255,0.12);border-radius:12px;padding:1.1rem 1rem;
+  font-size:0.82rem;color:var(--muted);line-height:1.6;text-align:center;
+}
+
 /* STATUS BADGES */
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:0.69rem;padding:0.25rem 0.65rem;border-radius:20px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;}
 .badge-confirmed{background:rgba(16,185,129,0.15);color:var(--green);}
@@ -218,6 +289,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 /* RESPONSIVE */
 @media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.crm-grid{grid-template-columns:1fr 1fr;}.maint-grid{grid-template-columns:1fr 1fr;}.topbar{padding:0.9rem 1rem;align-items:flex-start;gap:0.75rem;}.topbar-right{flex-wrap:wrap;justify-content:flex-end;}.ops-mode-pill{font-size:0.66rem;}}
+@media(max-width:1100px){.calendar-shell{grid-template-columns:1fr;}.agenda-item{flex-direction:column;}.agenda-item-right{align-items:flex-start;}}
+@media(max-width:900px){.calendar-day{min-height:92px;padding:0.65rem 0.55rem 0.55rem;}.calendar-month-label{min-width:auto;}}
+@media(max-width:640px){.calendar-head,.agenda-head{align-items:flex-start;}.calendar-nav{width:100%;justify-content:space-between;}.calendar-weekdays,.calendar-grid{gap:0.3rem;}.calendar-day{min-height:84px;padding:0.55rem 0.45rem;}.calendar-day-num{font-size:0.84rem;}.calendar-day-meta{font-size:0.66rem;}.calendar-pill{padding:0.2rem 0.42rem;font-size:0.62rem;}.calendar-day-count{min-width:20px;height:20px;font-size:0.68rem;}}
 </style>
 <meta name="theme-color" content="#08111f">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -327,6 +401,42 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <button class="tab" onclick="filterByStatus('pending',this)">Pending</button>
     <button class="tab" onclick="filterByStatus('completed',this)">Completed</button>
     <button class="tab" onclick="filterByStatus('noshow',this)">No-Shows</button>
+  </div>
+  <div class="calendar-shell">
+    <div class="calendar-card">
+      <div class="calendar-head">
+        <div class="calendar-head-copy">
+          <h3>Rental Calendar</h3>
+          <p>See which dates customers want to rent, then click any day to view the full schedule.</p>
+        </div>
+        <div class="calendar-nav">
+          <button class="calendar-btn" onclick="shiftCalendarMonth(-1)" aria-label="Previous month">←</button>
+          <div class="calendar-month-label" id="calendar-month-label">Month Year</div>
+          <button class="calendar-btn" onclick="shiftCalendarMonth(1)" aria-label="Next month">→</button>
+        </div>
+      </div>
+      <div class="calendar-weekdays">
+        <div class="calendar-weekday">Sun</div>
+        <div class="calendar-weekday">Mon</div>
+        <div class="calendar-weekday">Tue</div>
+        <div class="calendar-weekday">Wed</div>
+        <div class="calendar-weekday">Thu</div>
+        <div class="calendar-weekday">Fri</div>
+        <div class="calendar-weekday">Sat</div>
+      </div>
+      <div class="calendar-grid" id="booking-calendar-grid"></div>
+    </div>
+    <div class="agenda-card">
+      <div class="agenda-head">
+        <div>
+          <h3>Selected Day</h3>
+          <div class="agenda-date" id="calendar-agenda-date">Today</div>
+          <div class="agenda-sub" id="calendar-agenda-sub">0 bookings scheduled</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openBookingForSelectedDate()">+ Add booking</button>
+      </div>
+      <div class="agenda-list" id="calendar-agenda-list"></div>
+    </div>
   </div>
   <div class="table-wrap">
     <table>
@@ -1702,8 +1812,12 @@ function saveBooking() {
   document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
   closeModal('booking-modal');
   showToast('✅ Booking saved — remind customer to pay $50 deposit');
+  selectedCalendarDate = b.date || selectedCalendarDate;
+  const bookingDateObj = parseIsoDate(b.date);
+  if (bookingDateObj) calendarMonthCursor = monthStart(bookingDateObj);
   renderUpcoming();
   if(document.getElementById('page-bookings').classList.contains('active')) renderBookings();
+  else renderBookingCalendar();
   if(document.getElementById('page-crm').classList.contains('active')) renderCRM();
   ['b-name','b-phone','b-email','b-date','b-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('b-craft').value=''; document.getElementById('b-duration').value=''; document.getElementById('b-drone').value='no';
@@ -1729,6 +1843,145 @@ function renderUpcoming() {
 
 // ── RENDER ALL BOOKINGS ──
 let currentFilter = 'all';
+let calendarMonthCursor = null;
+let selectedCalendarDate = '';
+
+function localDateParts(iso) {
+  if (!iso || iso === 'TBD') return null;
+  const parts = String(iso).split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
+  return {year: parts[0], month: parts[1] - 1, day: parts[2]};
+}
+
+function isoFromDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseIsoDate(iso) {
+  const parts = localDateParts(iso);
+  return parts ? new Date(parts.year, parts.month, parts.day) : null;
+}
+
+function monthStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function bookingTimeValue(timeValue) {
+  return String(timeValue || '99:99');
+}
+
+function bookingsForDate(dateIso) {
+  return bookings
+    .filter((booking) => booking.date === dateIso)
+    .sort((a, b) => bookingTimeValue(a.time).localeCompare(bookingTimeValue(b.time)));
+}
+
+function formatAgendaDate(dateIso) {
+  const date = parseIsoDate(dateIso);
+  if (!date) return 'Choose a day';
+  return date.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+}
+
+function shiftCalendarMonth(delta) {
+  const base = calendarMonthCursor || monthStart(new Date());
+  calendarMonthCursor = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+  renderBookingCalendar();
+}
+
+function selectCalendarDate(dateIso) {
+  selectedCalendarDate = dateIso;
+  const selectedDateObj = parseIsoDate(dateIso);
+  if (selectedDateObj) calendarMonthCursor = monthStart(selectedDateObj);
+  renderBookingCalendar();
+}
+
+function openBookingForSelectedDate() {
+  openModal('booking-modal');
+  document.getElementById('b-date').value = selectedCalendarDate || today();
+  calcBookingPrice();
+}
+
+function renderBookingAgenda() {
+  const agendaDateEl = document.getElementById('calendar-agenda-date');
+  const agendaSubEl = document.getElementById('calendar-agenda-sub');
+  const agendaListEl = document.getElementById('calendar-agenda-list');
+  if (!agendaDateEl || !agendaSubEl || !agendaListEl) return;
+
+  const dateIso = selectedCalendarDate || today();
+  const dayBookings = bookingsForDate(dateIso);
+  agendaDateEl.textContent = formatAgendaDate(dateIso);
+  agendaSubEl.textContent = dayBookings.length
+    ? `${dayBookings.length} booking${dayBookings.length === 1 ? '' : 's'} scheduled`
+    : 'No rentals scheduled yet';
+
+  if (!dayBookings.length) {
+    agendaListEl.innerHTML = `<div class="agenda-empty">No one is booked for this date yet. Use <strong>+ Add booking</strong> to lock in a new rental for ${escapeHtml(dateIso)}.</div>`;
+    return;
+  }
+
+  agendaListEl.innerHTML = dayBookings.map((booking) => `
+    <div class="agenda-item">
+      <div class="agenda-item-main">
+        <strong>${escapeHtml(booking.name)}</strong>
+        <div class="agenda-item-meta">${escapeHtml(bookingCraftLabel(booking))} · ${escapeHtml(bookingDurationLabel(booking))} · ${escapeHtml(booking.time || 'TBD')}</div>
+        <div class="agenda-item-meta">${booking.phone ? escapeHtml(booking.phone) : 'No phone on file'}${booking.drone ? ' · Drone coverage' : ''}</div>
+      </div>
+      <div class="agenda-item-right">
+        <div style="color:var(--wave);font-weight:500;">${bookingTotalLabel(booking)}</div>
+        ${statusBadge(booking.status)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderBookingCalendar() {
+  const grid = document.getElementById('booking-calendar-grid');
+  const monthLabel = document.getElementById('calendar-month-label');
+  if (!grid || !monthLabel) return;
+
+  const firstBookedDate = bookings.map((booking) => booking.date).find((dateValue) => parseIsoDate(dateValue));
+  if (!selectedCalendarDate || !parseIsoDate(selectedCalendarDate)) selectedCalendarDate = firstBookedDate || today();
+  if (!calendarMonthCursor) {
+    const selectedDateObj = parseIsoDate(selectedCalendarDate) || new Date();
+    calendarMonthCursor = monthStart(selectedDateObj);
+  }
+
+  monthLabel.textContent = calendarMonthCursor.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+  const firstVisible = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth(), 1 - calendarMonthCursor.getDay());
+  const cells = [];
+
+  for (let offset = 0; offset < 42; offset += 1) {
+    const cellDate = new Date(firstVisible.getFullYear(), firstVisible.getMonth(), firstVisible.getDate() + offset);
+    const cellIso = isoFromDate(cellDate);
+    const dayBookings = bookingsForDate(cellIso);
+    const previewItems = dayBookings.slice(0, 2);
+    const isOtherMonth = cellDate.getMonth() !== calendarMonthCursor.getMonth();
+    const isToday = cellIso === today();
+    const isSelected = cellIso === selectedCalendarDate;
+    const pendingCount = dayBookings.filter((booking) => booking.status === 'pending').length;
+
+    cells.push(`
+      <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${dayBookings.length ? ' has-bookings' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" onclick="selectCalendarDate('${cellIso}')">
+        <div class="calendar-day-top">
+          <span class="calendar-day-num">${cellDate.getDate()}</span>
+          ${dayBookings.length ? `<span class="calendar-day-count">${dayBookings.length}</span>` : ''}
+        </div>
+        <div class="calendar-day-meta">${dayBookings.length ? `${pendingCount} pending` : '&nbsp;'}</div>
+        <div class="calendar-day-list">
+          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(booking.status)}"><span class="calendar-pill-dot"></span><span>${escapeHtml((booking.time || 'TBD').slice(0,5))} · ${escapeHtml(firstName(booking.name))}</span></div>`).join('')}
+          ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : ''}
+        </div>
+      </button>
+    `);
+  }
+
+  grid.innerHTML = cells.join('');
+  renderBookingAgenda();
+}
+
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
   const list = currentFilter==='all' ? bookings : bookings.filter(b=>b.status===currentFilter);
@@ -1749,6 +2002,7 @@ function renderBookings(filter) {
         ${b.status!=='noshow'&&b.status!=='completed'?`<button class="btn btn-danger btn-sm" onclick="updateStatus(${b.id},'noshow')">No-show</button>`:''}
       </td>
     </tr>`).join('');
+  renderBookingCalendar();
 }
 
 function filterByStatus(status, btn) {
