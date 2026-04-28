@@ -47,7 +47,9 @@ const DEFAULT_STATE = {
     {craft:'SeaDoo TRIXX #1',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
     {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'}
   ],
-  importMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false}
+  invoices: [],
+  importMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false},
+  invoiceImportMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false}
 };
 
 function clone(value) {
@@ -78,7 +80,9 @@ function sanitizeState(value = {}) {
     customers: normalizeArray(value.customers, DEFAULT_STATE.customers),
     fuelLog: normalizeArray(value.fuelLog, DEFAULT_STATE.fuelLog),
     maintLog: normalizeArray(value.maintLog, DEFAULT_STATE.maintLog),
-    importMeta: normalizeImportMeta(value.importMeta)
+    invoices: normalizeArray(value.invoices, DEFAULT_STATE.invoices),
+    importMeta: normalizeImportMeta(value.importMeta),
+    invoiceImportMeta: normalizeImportMeta(value.invoiceImportMeta)
   };
 }
 

@@ -243,6 +243,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span><span>Dashboard</span></button>
   <button class="nav-item" onclick="showPage('bookings',this)"><span class="icon">📅</span><span>Bookings</span><span class="nav-badge" id="pending-badge">2</span></button>
   <div class="nav-section">Business</div>
+  <button class="nav-item" onclick="showPage('invoices',this)"><span class="icon">🧾</span><span>Invoices</span></button>
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
   <button class="nav-item" onclick="showPage('fuel',this)"><span class="icon">⛽</span><span>Fuel Log</span></button>
   <button class="nav-item" onclick="showPage('maintenance',this)"><span class="icon">🔧</span><span>Maintenance</span></button>
@@ -331,6 +332,37 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <table>
       <thead><tr><th>Customer</th><th>Phone</th><th>Craft</th><th>Date & Time</th><th>Duration</th><th>Total</th><th>Deposit</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="bookings-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ CRM ═══ -->
+<div class="page" id="page-invoices">
+  <div class="section-head">
+    <h2>Invoices</h2>
+    <div class="crm-toolbar">
+      <input class="search-input" placeholder="Search invoices..." oninput="filterInvoices(this)">
+      <button class="btn btn-ghost btn-sm" onclick="triggerInvoiceImport()">Import Admin Tribe Invoice CSV</button>
+    </div>
+  </div>
+  <input type="file" id="invoice-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleInvoiceImport(event)">
+  <div class="import-panel">
+    <div>
+      <div class="title" id="invoice-import-title">Synced Invoice Import</div>
+      <div class="copy" id="invoice-import-summary">Import the Admin Tribe invoice export here to keep a full payment history inside the private Shoreline ops app.</div>
+    </div>
+    <div class="import-pill" id="invoice-import-pill">No invoice import yet</div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">Imported invoices</div><div class="value" id="invoice-kpi-count">0</div><div class="delta up" id="invoice-kpi-updated">0 rows synced</div></div>
+    <div class="kpi-card"><div class="label">Paid total</div><div class="value" style="color:var(--green);" id="invoice-kpi-paid">$0</div><div class="delta up" id="invoice-kpi-paid-count">0 paid invoices</div></div>
+    <div class="kpi-card"><div class="label">Open total</div><div class="value" style="color:var(--amber);" id="invoice-kpi-open">$0</div><div class="delta warn" id="invoice-kpi-open-count">0 open invoices</div></div>
+    <div class="kpi-card"><div class="label">Unknown customers</div><div class="value" style="color:var(--wave);" id="invoice-kpi-unknown">0</div><div class="delta warn">Auto-generated POS invoices</div></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Items</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody id="invoice-table"></tbody>
     </table>
   </div>
 </div>
@@ -577,7 +609,9 @@ const LOCAL_KEYS = {
   customers: 'sla_customers',
   fuelLog: 'sla_fuel',
   maintLog: 'sla_maint',
-  importMeta: 'sla_import_meta'
+  invoices: 'sla_invoices',
+  importMeta: 'sla_import_meta',
+  invoiceImportMeta: 'sla_invoice_import_meta'
 };
 let backendAvailable = false;
 
@@ -587,7 +621,9 @@ function snapshotState() {
     customers,
     fuelLog,
     maintLog,
-    importMeta
+    invoices,
+    importMeta,
+    invoiceImportMeta
   };
 }
 function applyState(nextState = {}) {
@@ -595,8 +631,12 @@ function applyState(nextState = {}) {
   if (Array.isArray(nextState.customers)) customers = nextState.customers;
   if (Array.isArray(nextState.fuelLog)) fuelLog = nextState.fuelLog;
   if (Array.isArray(nextState.maintLog)) maintLog = nextState.maintLog;
+  if (Array.isArray(nextState.invoices)) invoices = nextState.invoices;
   if (nextState.importMeta && typeof nextState.importMeta === 'object') {
     importMeta = {...importMeta, ...nextState.importMeta};
+  }
+  if (nextState.invoiceImportMeta && typeof nextState.invoiceImportMeta === 'object') {
+    invoiceImportMeta = {...invoiceImportMeta, ...nextState.invoiceImportMeta};
   }
 }
 function updateModeBadge() {
@@ -620,7 +660,9 @@ function readLocalBackup() {
     const c = localStorage.getItem(LOCAL_KEYS.customers); if (c) next.customers = JSON.parse(c);
     const f = localStorage.getItem(LOCAL_KEYS.fuelLog); if (f) next.fuelLog = JSON.parse(f);
     const m = localStorage.getItem(LOCAL_KEYS.maintLog); if (m) next.maintLog = JSON.parse(m);
+    const iv = localStorage.getItem(LOCAL_KEYS.invoices); if (iv) next.invoices = JSON.parse(iv);
     const i = localStorage.getItem(LOCAL_KEYS.importMeta); if (i) next.importMeta = JSON.parse(i);
+    const iim = localStorage.getItem(LOCAL_KEYS.invoiceImportMeta); if (iim) next.invoiceImportMeta = JSON.parse(iim);
     return next;
   } catch (error) {
     console.warn('localStorage unavailable', error);
@@ -634,7 +676,9 @@ function writeLocalBackup() {
     localStorage.setItem(LOCAL_KEYS.customers, JSON.stringify(customers));
     localStorage.setItem(LOCAL_KEYS.fuelLog, JSON.stringify(fuelLog));
     localStorage.setItem(LOCAL_KEYS.maintLog, JSON.stringify(maintLog));
+    localStorage.setItem(LOCAL_KEYS.invoices, JSON.stringify(invoices));
     localStorage.setItem(LOCAL_KEYS.importMeta, JSON.stringify(importMeta));
+    localStorage.setItem(LOCAL_KEYS.invoiceImportMeta, JSON.stringify(invoiceImportMeta));
   } catch (error) {
     console.warn('localStorage unavailable', error);
   }
@@ -642,7 +686,11 @@ function writeLocalBackup() {
 function shouldPromoteBackup(serverState, backupState) {
   const backupCustomers = Array.isArray(backupState?.customers) ? backupState.customers.length : 0;
   const serverCustomers = Array.isArray(serverState?.customers) ? serverState.customers.length : 0;
-  return Boolean(backupState?.importMeta?.importedAt) && (!serverState?.importMeta?.importedAt || backupCustomers > serverCustomers);
+  const backupInvoices = Array.isArray(backupState?.invoices) ? backupState.invoices.length : 0;
+  const serverInvoices = Array.isArray(serverState?.invoices) ? serverState.invoices.length : 0;
+  const crmNeedsPromotion = Boolean(backupState?.importMeta?.importedAt) && (!serverState?.importMeta?.importedAt || backupCustomers > serverCustomers);
+  const invoiceNeedsPromotion = Boolean(backupState?.invoiceImportMeta?.importedAt) && (!serverState?.invoiceImportMeta?.importedAt || backupInvoices > serverInvoices);
+  return crmNeedsPromotion || invoiceNeedsPromotion;
 }
 async function requestJson(path, options = {}) {
   const headers = { Accept: 'application/json', ...(options.headers || {}) };
@@ -762,7 +810,9 @@ let customers = [
   {id:8,name:'Avery Collins',phone:'(210) 555-0153',email:'avery@example.com',bookings:2,totalSpent:1600,lastBooking:'2026-03-18',source:'Direct',tag:'vip'},
 ];
 let importMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
+let invoiceImportMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let crmSearchQuery = '';
+let invoiceSearchQuery = '';
 
 let fuelLog = [
   {craft:'SeaDoo TRIXX #1',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
@@ -776,6 +826,8 @@ let maintLog = [
   {craft:'SeaDoo TRIXX #1',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
   {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'},
 ];
+
+let invoices = [];
 
 const equipment = [
   {name:'Yamaha VX #1',hours:88,serviceInterval:100,lastService:'2026-03-10'},
@@ -1077,6 +1129,9 @@ function parseCsvObjects(text) {
 }
 function detectImportType(headers) {
   const normalized = headers.map((header) => normalizeHeader(header));
+  if (normalized.some((header) => header.includes('invoice number') || header.includes('invoice total') || header.includes('issue date'))) {
+    return 'invoices';
+  }
   if (normalized.some((header) => header.includes('pipeline') || header.includes('opportunity') || header.includes('monetary value') || header === 'stage')) {
     return 'opportunities';
   }
@@ -1084,6 +1139,198 @@ function detectImportType(headers) {
     return 'contacts';
   }
   return 'unknown';
+}
+function normalizeInvoiceStatus(status) {
+  return String(status || 'unknown').trim().toLowerCase();
+}
+function invoiceStatusBadge(status) {
+  const normalized = normalizeInvoiceStatus(status);
+  const className = normalized === 'paid'
+    ? 'badge-confirmed'
+    : normalized === 'draft' || normalized === 'sent'
+      ? 'badge-pending'
+      : normalized === 'overdue'
+        ? 'badge-noshow'
+        : normalized === 'void' || normalized === 'cancelled'
+          ? 'badge-cancelled'
+          : 'badge-completed';
+  return `<span class="badge ${className}">${escapeHtml(status || 'Unknown')}</span>`;
+}
+function invoiceLineSummary(invoice) {
+  const items = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
+  if (!items.length) return 'No line items';
+  if (items.length === 1) return items[0].name || items[0].description || 'Custom item';
+  return `${items[0].name || items[0].description || 'Custom item'} +${items.length - 1} more`;
+}
+function invoiceSearchText(invoice) {
+  return [
+    invoice.invoiceNumber,
+    invoice.invoiceName,
+    invoice.customerName,
+    invoice.customerEmail,
+    invoice.customerPhone,
+    invoice.status,
+    invoice.issueDate,
+    invoice.dueDate,
+    invoiceLineSummary(invoice)
+  ].join(' ').toLowerCase();
+}
+function meaningfulInvoiceCustomer(customerName, customerEmail, customerPhone) {
+  const normalizedName = String(customerName || '').trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(customerEmail);
+  const normalizedPhone = normalizePhone(customerPhone);
+  return Boolean(
+    (normalizedName && normalizedName !== 'unknown') ||
+    (normalizedEmail && normalizedEmail !== 'auto.generated@pos.payment') ||
+    normalizedPhone
+  );
+}
+function invoiceImportKey(invoice) {
+  return String(invoice.invoiceNumber || '').trim().toLowerCase()
+    || [
+      normalizeName(invoice.customerName),
+      invoice.issueDate,
+      Number(invoice.total || 0).toFixed(2)
+    ].join('|');
+}
+function dedupeInvoiceLineItems(items) {
+  const seen = new Set();
+  return (Array.isArray(items) ? items : []).filter((item) => {
+    const key = [
+      String(item.name || '').trim().toLowerCase(),
+      String(item.description || '').trim().toLowerCase(),
+      Number(item.amount || 0).toFixed(2),
+      Number(item.quantity || 0),
+      String(item.currency || '').trim().toUpperCase()
+    ].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+function mergeInvoiceRecord(target, incoming) {
+  target.invoiceName = incoming.invoiceName || target.invoiceName;
+  target.invoiceNumber = incoming.invoiceNumber || target.invoiceNumber;
+  target.recurring = Boolean(incoming.recurring || target.recurring);
+  target.customerId = incoming.customerId || target.customerId;
+  target.customerName = incoming.customerName || target.customerName;
+  target.customerEmail = incoming.customerEmail || target.customerEmail;
+  target.customerPhone = incoming.customerPhone || target.customerPhone;
+  target.issueDate = incoming.issueDate || target.issueDate;
+  target.dueDate = incoming.dueDate || target.dueDate;
+  target.subTotal = Number(incoming.subTotal ?? target.subTotal ?? 0);
+  target.discountAmount = Number(incoming.discountAmount ?? target.discountAmount ?? 0);
+  target.taxAmount = Number(incoming.taxAmount ?? target.taxAmount ?? 0);
+  target.total = Number(incoming.total ?? target.total ?? 0);
+  target.status = incoming.status || target.status;
+  target.liveMode = incoming.liveMode || target.liveMode;
+  target.importSource = incoming.importSource || target.importSource || 'admintribe';
+  target.lineItems = dedupeInvoiceLineItems([...(target.lineItems || []), ...(incoming.lineItems || [])]);
+  target.rawFields = mergeCrmFields(target.rawFields, incoming.rawFields);
+}
+function importInvoicesFromCsv(rows, fileName) {
+  const grouped = new Map();
+  for (const row of rows) {
+    const invoiceNumber = rowValue(row, ['invoice number']);
+    const invoiceName = rowValue(row, ['invoice name', 'name']);
+    const issueDate = isoDate(rowValue(row, ['issue date']));
+    const total = parseMoney(rowValue(row, ['invoice total', 'total']));
+    if (!invoiceNumber && !invoiceName && !issueDate && !total) continue;
+    const lineItem = {
+      name: rowValue(row, ['line item name']),
+      description: rowValue(row, ['line item description']),
+      amount: parseMoney(rowValue(row, ['line item amount'])),
+      quantity: Number(rowValue(row, ['line item quantity'])) || 0,
+      currency: rowValue(row, ['line item currency']) || 'USD',
+      discount: parseMoney(rowValue(row, ['line item discount'])),
+      tax: parseMoney(rowValue(row, ['line item tax'])),
+      productId: rowValue(row, ['line item productid', 'line item product id']),
+      priceId: rowValue(row, ['line item priceid', 'line item price id'])
+    };
+    const invoice = {
+      invoiceName: invoiceName || 'Imported invoice',
+      invoiceNumber,
+      recurring: /^yes$/i.test(rowValue(row, ['recurring flag'])),
+      customerId: rowValue(row, ['customer id']),
+      customerName: rowValue(row, ['customer name']) || 'Unknown',
+      customerEmail: rowValue(row, ['customer email', 'email']),
+      customerPhone: rowValue(row, ['customer phone no', 'customer phone', 'phone']),
+      issueDate: issueDate === 'N/A' ? '' : issueDate,
+      dueDate: (() => {
+        const value = isoDate(rowValue(row, ['due date']));
+        return value === 'N/A' ? '' : value;
+      })(),
+      subTotal: parseMoney(rowValue(row, ['invoice sub total', 'invoice subtotal', 'sub total'])),
+      discountAmount: parseMoney(rowValue(row, ['invoice discount amount', 'discount amount'])),
+      taxAmount: parseMoney(rowValue(row, ['invoice tax amount', 'tax amount'])),
+      total,
+      status: rowValue(row, ['status']) || 'Unknown',
+      liveMode: rowValue(row, ['live mode']) || 'Unknown',
+      lineItems: [lineItem],
+      rawFields: collectCrmFields(row),
+      importSource: 'admintribe'
+    };
+    const key = invoiceImportKey(invoice);
+    if (!grouped.has(key)) {
+      grouped.set(key, invoice);
+    } else {
+      mergeInvoiceRecord(grouped.get(key), invoice);
+    }
+  }
+
+  let added = 0;
+  let updated = 0;
+  const existing = new Map((invoices || []).map((invoice) => [invoiceImportKey(invoice), invoice]));
+  for (const incoming of grouped.values()) {
+    const existingInvoice = existing.get(invoiceImportKey(incoming));
+    if (existingInvoice) {
+      mergeInvoiceRecord(existingInvoice, incoming);
+      updated += 1;
+    } else {
+      invoices.push({
+        id: nextId(invoices),
+        lineItems: [],
+        rawFields: {},
+        ...incoming
+      });
+      added += 1;
+    }
+    if (meaningfulInvoiceCustomer(incoming.customerName, incoming.customerEmail, incoming.customerPhone)) {
+      upsertImportedCustomer({
+        name: incoming.customerName,
+        phone: incoming.customerPhone,
+        email: incoming.customerEmail,
+        bookings: 0,
+        totalSpent: incoming.total,
+        lastBooking: incoming.issueDate || 'N/A',
+        source: 'Admin Tribe Invoice',
+        crmNotes: `Invoice ${incoming.invoiceNumber || incoming.invoiceName} · ${incoming.status} · ${invoiceLineSummary(incoming)}`,
+        crmFields: {
+          lastInvoiceNumber: incoming.invoiceNumber,
+          lastInvoiceStatus: incoming.status,
+          lastInvoiceTotal: String(incoming.total || ''),
+          lastInvoiceDate: incoming.issueDate || ''
+        }
+      });
+    }
+  }
+  invoices = invoices
+    .map((invoice, index) => ({...invoice, id: index + 1, lineItems: dedupeInvoiceLineItems(invoice.lineItems)}))
+    .sort((left, right) => {
+      const leftDate = new Date(left.issueDate || 0).getTime();
+      const rightDate = new Date(right.issueDate || 0).getTime();
+      return rightDate - leftDate || String(right.invoiceNumber || '').localeCompare(String(left.invoiceNumber || ''));
+    });
+  invoiceImportMeta = {
+    lastType: 'invoices',
+    fileName,
+    importedAt: new Date().toISOString(),
+    added,
+    updated,
+    recordCount: rows.length,
+    replacedSeed: false
+  };
+  return {added, updated};
 }
 function renderImportSummary() {
   const summary = document.getElementById('crm-import-summary');
@@ -1103,12 +1350,37 @@ function renderImportSummary() {
   summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} ${backendAvailable ? 'Data is stored in the private Shoreline ops service.' : 'Data is stored only in this browser.'}`;
   pill.textContent = `${importMeta.recordCount} rows imported`;
 }
+function renderInvoiceImportSummary() {
+  const summary = document.getElementById('invoice-import-summary');
+  const pill = document.getElementById('invoice-import-pill');
+  const title = document.getElementById('invoice-import-title');
+  if (!summary || !pill || !title) return;
+  title.textContent = backendAvailable ? 'Synced Invoice Import' : 'Browser-Only Invoice Import';
+  if (!invoiceImportMeta.importedAt) {
+    summary.textContent = backendAvailable
+      ? 'Import the Admin Tribe invoice export here to keep a full payment history inside the private Shoreline ops service.'
+      : 'Import the Admin Tribe invoice export here to review invoice history in this browser.';
+    pill.textContent = 'No invoice import yet';
+    return;
+  }
+  const importedAt = new Date(invoiceImportMeta.importedAt).toLocaleString();
+  summary.textContent = `Invoices from ${invoiceImportMeta.fileName} on ${importedAt}: ${invoiceImportMeta.added} added, ${invoiceImportMeta.updated} updated. ${backendAvailable ? 'Data is stored in the private Shoreline ops service.' : 'Data is stored only in this browser.'}`;
+  pill.textContent = `${invoiceImportMeta.recordCount} rows imported`;
+}
 function filterCRM(input) {
   crmSearchQuery = String(input?.value || '').trim().toLowerCase();
   renderCRM();
 }
+function filterInvoices(input) {
+  invoiceSearchQuery = String(input?.value || '').trim().toLowerCase();
+  renderInvoices();
+}
 function triggerCRMImport() {
   const fileInput = document.getElementById('crm-import-input');
+  if (fileInput) fileInput.click();
+}
+function triggerInvoiceImport() {
+  const fileInput = document.getElementById('invoice-import-input');
   if (fileInput) fileInput.click();
 }
 function importContactsFromCsv(rows, fileName) {
@@ -1258,19 +1530,24 @@ function handleCRMImport(event) {
       if (!parsed.rows.length) throw new Error('No records were found in that CSV.');
       const type = detectImportType(parsed.headers);
       if (type === 'unknown') {
-        throw new Error('Could not identify that CSV. Export Contacts or Opportunities from Admin Tribe and try again.');
+        throw new Error('Could not identify that CSV. Export Contacts, Opportunities, or Invoices from Admin Tribe and try again.');
       }
       const summary = type === 'contacts'
         ? importContactsFromCsv(parsed.rows, file.name)
-        : importOpportunitiesFromCsv(parsed.rows, file.name);
+        : type === 'opportunities'
+          ? importOpportunitiesFromCsv(parsed.rows, file.name)
+          : importInvoicesFromCsv(parsed.rows, file.name);
       saveData();
       renderImportSummary();
+      renderInvoiceImportSummary();
       renderUpcoming();
       if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
+      if (document.getElementById('page-invoices').classList.contains('active')) renderInvoices();
       renderCRM();
       renderReminders();
       document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
-      showToast(`✅ Imported ${type === 'contacts' ? 'customers' : 'bookings'} — ${summary.added} added, ${summary.updated} updated`);
+      const label = type === 'contacts' ? 'customers' : type === 'opportunities' ? 'bookings' : 'invoices';
+      showToast(`✅ Imported ${label} — ${summary.added} added, ${summary.updated} updated`);
     } catch (error) {
       console.error('CRM import failed:', error);
       showToast(`⚠️ ${error.message}`);
@@ -1285,15 +1562,19 @@ function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
   if (!parsed.rows.length) throw new Error('No records were found in that CSV.');
   const type = detectImportType(parsed.headers);
   if (type === 'unknown') {
-    throw new Error('Could not identify that CSV. Export Contacts or Opportunities from Admin Tribe and try again.');
+    throw new Error('Could not identify that CSV. Export Contacts, Opportunities, or Invoices from Admin Tribe and try again.');
   }
   const summary = type === 'contacts'
     ? importContactsFromCsv(parsed.rows, fileName)
-    : importOpportunitiesFromCsv(parsed.rows, fileName);
+    : type === 'opportunities'
+      ? importOpportunitiesFromCsv(parsed.rows, fileName)
+      : importInvoicesFromCsv(parsed.rows, fileName);
   saveData();
   renderImportSummary();
+  renderInvoiceImportSummary();
   renderUpcoming();
   if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
+  if (document.getElementById('page-invoices').classList.contains('active')) renderInvoices();
   renderCRM();
   renderReminders();
   document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
@@ -1306,11 +1587,39 @@ function importCRMFromTextarea() {
     const result = processCRMImportText(rawText, 'pasted-admintribe.csv');
     if (textarea) textarea.value = '';
     closeModal('crm-paste-modal');
-    showToast(`✅ Imported ${result.type === 'contacts' ? 'customers' : 'bookings'} — ${result.summary.added} added, ${result.summary.updated} updated`);
+    const label = result.type === 'contacts' ? 'customers' : result.type === 'opportunities' ? 'bookings' : 'invoices';
+    showToast(`✅ Imported ${label} — ${result.summary.added} added, ${result.summary.updated} updated`);
   } catch (error) {
     console.error('CRM paste import failed:', error);
     showToast(`⚠️ ${error.message}`);
   }
+}
+function handleInvoiceImport(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = parseCsvObjects(reader.result);
+      if (!parsed.rows.length) throw new Error('No invoice records were found in that CSV.');
+      const type = detectImportType(parsed.headers);
+      if (type !== 'invoices') {
+        throw new Error('That file does not look like an Admin Tribe invoice export.');
+      }
+      const summary = importInvoicesFromCsv(parsed.rows, file.name);
+      saveData();
+      renderInvoiceImportSummary();
+      renderInvoices();
+      renderCRM();
+      showToast(`✅ Imported invoices — ${summary.added} added, ${summary.updated} updated`);
+    } catch (error) {
+      console.error('Invoice import failed:', error);
+      showToast(`⚠️ ${error.message}`);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ── NAVIGATION ──
@@ -1320,9 +1629,10 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',crm:'Customers',fuel:'Fuel Log',maintenance:'Maintenance',reminders:'Re-engagement'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',fuel:'Fuel Log',maintenance:'Maintenance',reminders:'Re-engagement'};
   document.getElementById('page-title').textContent = titles[id]||id;
   if(id==='bookings') renderBookings();
+  if(id==='invoices') renderInvoices();
   if(id==='crm') renderCRM();
   if(id==='fuel') renderFuel();
   if(id==='maintenance') renderMaint();
@@ -1468,6 +1778,56 @@ function filterTable(input, tableId) {
   document.querySelectorAll('#'+tableId+' tr').forEach(row => {
     row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
+}
+
+// ── INVOICES ──
+function renderInvoices() {
+  const filteredInvoices = invoices.filter((invoice) => (
+    !invoiceSearchQuery || invoiceSearchText(invoice).includes(invoiceSearchQuery)
+  ));
+  const paidInvoices = invoices.filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid');
+  const openInvoices = invoices.filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
+  const unknownInvoices = invoices.filter((invoice) => !meaningfulInvoiceCustomer(invoice.customerName, invoice.customerEmail, invoice.customerPhone));
+  const paidTotal = paidInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+  const openTotal = openInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+
+  const countEl = document.getElementById('invoice-kpi-count');
+  const updatedEl = document.getElementById('invoice-kpi-updated');
+  const paidEl = document.getElementById('invoice-kpi-paid');
+  const paidCountEl = document.getElementById('invoice-kpi-paid-count');
+  const openEl = document.getElementById('invoice-kpi-open');
+  const openCountEl = document.getElementById('invoice-kpi-open-count');
+  const unknownEl = document.getElementById('invoice-kpi-unknown');
+  if (countEl) countEl.textContent = invoices.length.toLocaleString();
+  if (updatedEl) updatedEl.textContent = invoiceImportMeta.importedAt ? `${invoiceImportMeta.recordCount} rows synced` : '0 rows synced';
+  if (paidEl) paidEl.textContent = `$${paidTotal.toLocaleString()}`;
+  if (paidCountEl) paidCountEl.textContent = `${paidInvoices.length} paid invoices`;
+  if (openEl) openEl.textContent = `$${openTotal.toLocaleString()}`;
+  if (openCountEl) openCountEl.textContent = `${openInvoices.length} open invoices`;
+  if (unknownEl) unknownEl.textContent = unknownInvoices.length.toLocaleString();
+
+  const table = document.getElementById('invoice-table');
+  if (!table) return;
+  table.innerHTML = filteredInvoices.length ? filteredInvoices.map((invoice) => `
+    <tr>
+      <td>
+        <strong>${escapeHtml(invoice.invoiceNumber || 'No number')}</strong>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(invoice.invoiceName || 'Invoice')}</div>
+      </td>
+      <td>
+        <strong>${escapeHtml(invoice.customerName || 'Unknown')}</strong>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${invoice.customerPhone ? `<a href="tel:${phoneHref(invoice.customerPhone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(invoice.customerPhone)}</a>` : escapeHtml(invoice.customerEmail || 'No contact')}</div>
+      </td>
+      <td>${escapeHtml(invoice.issueDate || '—')}</td>
+      <td>${escapeHtml(invoice.dueDate || '—')}</td>
+      <td>
+        <div>${escapeHtml(invoiceLineSummary(invoice))}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(Array.isArray(invoice.lineItems) ? `${invoice.lineItems.length} item${invoice.lineItems.length === 1 ? '' : 's'}` : '0 items')}</div>
+      </td>
+      <td style="color:var(--wave);font-weight:500;">$${Number(invoice.total || 0).toLocaleString()}</td>
+      <td>${invoiceStatusBadge(invoice.status)}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="7"><div class="empty"><div class="icon">🧾</div><p>No invoices match this search yet.</p></div></td></tr>';
 }
 
 // ── CRM ──
@@ -1645,12 +2005,12 @@ function today() { return new Date().toISOString().split('T')[0]; }
 try {
   const versionKey = 'sla_version';
   const storedVersion = localStorage.getItem(versionKey);
-  if (storedVersion && storedVersion !== 'v4') {
-    ['sla_bookings', 'sla_customers', 'sla_fuel', 'sla_maint', 'sla_import_meta'].forEach((key) => {
+  if (storedVersion && storedVersion !== 'v5') {
+    ['sla_bookings', 'sla_customers', 'sla_fuel', 'sla_maint', 'sla_invoices', 'sla_import_meta', 'sla_invoice_import_meta'].forEach((key) => {
       if (localStorage.getItem(key) === '[]') localStorage.removeItem(key);
     });
   }
-  localStorage.setItem(versionKey, 'v4');
+  localStorage.setItem(versionKey, 'v5');
 } catch(e){}
 async function bootApp() {
   try {
@@ -1662,8 +2022,10 @@ async function bootApp() {
   } finally {
     updateModeBadge();
     renderImportSummary();
+    renderInvoiceImportSummary();
     renderUpcoming();
     renderBookingBars();
+    renderInvoices();
     document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
     document.getElementById('b-date').value = today();
     document.getElementById('f-date').value = today();
