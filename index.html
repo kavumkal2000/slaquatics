@@ -328,6 +328,125 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .addon-cta { color: var(--white); text-decoration: none; font-size: 0.82rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; }
 .addon-cta:hover { color: var(--gold); }
 
+/* ── HOW IT WORKS ── */
+.how-section {
+  background:
+    radial-gradient(circle at top right, rgba(245,166,35,0.12), transparent 30%),
+    linear-gradient(180deg, rgba(8,17,31,1) 0%, rgba(10,23,40,1) 100%);
+}
+.how-shell {
+  background: linear-gradient(180deg, rgba(12,27,48,0.96) 0%, rgba(9,21,39,0.96) 100%);
+  border: 1px solid rgba(245,166,35,0.14);
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.24);
+}
+.how-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+.how-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.how-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.55rem;
+  flex-shrink: 0;
+}
+.how-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: clamp(2.6rem, 4vw, 3.6rem);
+  line-height: 0.95;
+  letter-spacing: 0.05em;
+}
+.how-intro {
+  max-width: 520px;
+  color: rgba(255,255,255,0.72);
+  font-size: 0.95rem;
+  line-height: 1.72;
+}
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+.how-step {
+  position: relative;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 22px;
+  padding: 1.35rem 1.2rem 1.45rem;
+  min-height: 100%;
+  overflow: hidden;
+}
+.how-step::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold) 0%, rgba(245,166,35,0.08) 100%);
+}
+.how-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.22);
+  color: var(--gold);
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  margin-bottom: 1rem;
+}
+.how-step h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  margin-bottom: 0.75rem;
+}
+.how-step p {
+  color: rgba(255,255,255,0.76);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+.how-arrow {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: -0.82rem;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(245,166,35,0.14);
+  border: 1px solid rgba(245,166,35,0.26);
+  color: var(--gold);
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  z-index: 2;
+}
+
 /* ── WHY US ── */
 .why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; margin-top: 3rem; }
 .why-item {
@@ -539,6 +658,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .addon-card-feature { grid-template-columns: 1fr; }
   .addon-media { min-height: 250px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .addon-content { padding: 1.5rem; }
+  .how-grid { grid-template-columns: 1fr; }
+  .how-step { padding-bottom: 1.15rem; }
   .drone-inner { grid-template-columns: 1fr; gap: 2.5rem; }
   .why-grid { grid-template-columns: repeat(2,1fr); }
   .faq-cols { grid-template-columns: 1fr; }
@@ -556,6 +677,21 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .nav-right { gap: 0.7rem; margin-left: auto; }
   .nav-phone { font-size: 0.76rem; white-space: nowrap; }
   nav .btn-primary { padding: 0.7rem 0.95rem; font-size: 0.72rem; }
+  .how-shell { padding: 1.3rem; }
+  .how-head { margin-bottom: 1.3rem; }
+  .how-title-wrap { align-items: flex-start; }
+  .how-icon { width: 48px; height: 48px; border-radius: 14px; font-size: 1.3rem; }
+  .how-title { font-size: 2.35rem; }
+  .how-step h3 { font-size: 1.08rem; }
+  .how-step p { font-size: 0.88rem; }
+  .how-arrow {
+    display: inline-flex;
+    top: auto;
+    bottom: -0.92rem;
+    right: 50%;
+    transform: translateX(50%);
+  }
+  .how-step:last-child .how-arrow { display: none; }
   .booking-calendar-card,
   .booking-calendar-summary { padding: 1rem 0.95rem; }
   .booking-calendar-head { align-items: flex-start; }
@@ -998,6 +1134,52 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </div>
             <a href="#booking" class="addon-cta">Add it to your booking →</a>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <div class="section-inner">
+    <div class="how-shell">
+      <div class="how-head">
+        <div class="how-title-wrap">
+          <div class="how-icon">🧭</div>
+          <div class="how-title">How It Works</div>
+        </div>
+        <div class="how-intro">A simple five-step flow so customers know exactly what happens from choosing the package to coming back for the next lake day.</div>
+      </div>
+      <div class="how-grid">
+        <div class="how-step">
+          <div class="how-step-num">1</div>
+          <h3>Choose Your Experience</h3>
+          <p>Jet skis, boat, or bundle. Start with the option that fits the crew and lock in the setup before moving to the booking page.</p>
+          <div class="how-arrow">↓</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">2</div>
+          <h3>Pick Your Date &amp; Time</h3>
+          <p>Book instantly online, choose the rental date on the calendar, and send Shoreline the exact time window that works best.</p>
+          <div class="how-arrow">↓</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">3</div>
+          <h3>Customize Your Day</h3>
+          <p>Add drinks, photos, or VIP upgrades. Customers can also tack on aerial drone coverage while they finish the request.</p>
+          <div class="how-arrow">↓</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">4</div>
+          <h3>Show Up &amp; Ride</h3>
+          <p>We handle the rest. Meet Shoreline at the launch, get the walkthrough, and get on the water without a messy check-in.</p>
+          <div class="how-arrow">↓</div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-num">5</div>
+          <h3>Get Your Content &amp; Come Back</h3>
+          <p>Memories plus discounts for next time, so great riders can come back faster and repeat bookings feel easy.</p>
         </div>
       </div>
     </div>
