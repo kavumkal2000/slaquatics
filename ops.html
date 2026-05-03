@@ -11,9 +11,9 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --navy:#08111f;--deep:#0c1b30;--panel:#0f2040;
-  --sky:#1a9ed4;--wave:#0fb8e0;--border:rgba(26,158,212,0.18);
-  --white:#fff;--muted:rgba(255,255,255,0.52);
+  --navy:#060b11;--deep:#121a24;--panel:#1a2531;
+  --sky:#f5a623;--wave:#7dd9ff;--border:rgba(255,255,255,0.12);
+  --white:#fff;--muted:rgba(255,255,255,0.68);
   --green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
 }
 html{scroll-behavior:smooth;}
@@ -1140,7 +1140,7 @@ const PRICING = {
   seadoo:{2:600,3:900,4:1120,6:1360,8:1600},
   boat:{1:120,2:240,3:360,4:480,6:720,8:960}
 };
-const CRAFT_NAMES = {yamaha:'2 Yamaha Jet Skis',seadoo:'Legacy 4-Ski Package',boat:'Boat Rental',imported:'Imported booking'};
+const CRAFT_NAMES = {yamaha:'Yamaha Jet Ski Package',seadoo:'4 Yamaha Jet Skis',boat:'Boat Rental',bundle:'Jet Ski + Boat Bundle',imported:'Imported booking'};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
 let bookings = [
@@ -1451,6 +1451,10 @@ function mergeCustomerRecord(target, incoming = {}) {
   target.createdAt = incoming.createdAt || target.createdAt || '';
   target.lastActivity = incoming.lastActivity || target.lastActivity || '';
   target.crmNotes = incoming.crmNotes || target.crmNotes || '';
+  target.waiverSignedAt = incoming.waiverSignedAt || target.waiverSignedAt || '';
+  target.waiverSignature = incoming.waiverSignature || target.waiverSignature || '';
+  target.emergencyName = incoming.emergencyName || target.emergencyName || '';
+  target.emergencyPhone = incoming.emergencyPhone || target.emergencyPhone || '';
   target.crmFields = mergeCrmFields(target.crmFields, incoming.crmFields);
   target.importSource = target.importSource || incoming.importSource || '';
 }
@@ -2376,7 +2380,12 @@ function renderBookings(filter) {
   const list = currentFilter==='all' ? bookings : bookings.filter(b=>b.status===currentFilter);
   document.getElementById('bookings-table').innerHTML = list.map(b => `
     <tr data-status="${b.status}">
-      <td><strong>${escapeHtml(b.name)}</strong></td>
+      <td>
+        <strong>${escapeHtml(b.name)}</strong>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">
+          ${b.waiverSignedAt ? `Waiver on file · ${escapeHtml(b.waiverSignedAt)}` : 'Waiver still needed'}
+        </div>
+      </td>
       <td>${b.phone ? `<a href="tel:${phoneHref(b.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(b.phone)}</a>` : '<span style="color:var(--muted);">—</span>'}</td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
       <td>${escapeHtml(b.date)} ${escapeHtml(b.time)}</td>
@@ -2445,15 +2454,15 @@ function filterTable(input, tableId) {
 function renderFleetLegend() {
   const legend = document.getElementById('fleet-legend');
   if (!legend) return;
-  const counts = {yamaha:0, boat:0, seadoo:0};
+  const palette = ['#f5a623', '#7dd9ff', '#10b981', '#8b5cf6', '#ef4444'];
+  const counts = new Map();
   bookings.forEach((booking) => {
-    if (Object.prototype.hasOwnProperty.call(counts, booking.craft)) counts[booking.craft] += 1;
+    const label = bookingCraftLabel(booking);
+    counts.set(label, (counts.get(label) || 0) + 1);
   });
-  legend.innerHTML = `
-    <div class="legend-item"><div class="legend-dot" style="background:#1a9ed4"></div>2 Yamaha Jet Skis — ${counts.yamaha}</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#0fb8e0"></div>Boat Rental — ${counts.boat}</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Legacy jet ski packages — ${counts.seadoo}</div>
-  `;
+  legend.innerHTML = Array.from(counts.entries()).map(([label, count], index) => `
+    <div class="legend-item"><div class="legend-dot" style="background:${palette[index % palette.length]}"></div>${escapeHtml(label)} — ${count}</div>
+  `).join('');
 }
 function renderDashboardMetrics() {
   const pendingDeposits = bookings.filter((booking) => booking.status === 'pending' && !booking.deposit).length;
@@ -2550,6 +2559,7 @@ function renderCRM() {
         <div>
           <div class="customer-meta">${[c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ') || 'Imported CRM profile'}</div>
           ${(c.createdAt || c.lastActivity || c.lastBooking) ? `<div class="customer-meta">Newest activity ${escapeHtml(c.lastActivity || c.createdAt || c.lastBooking || '—')} · Last booking ${escapeHtml(c.lastBooking || '—')}</div>` : ''}
+          ${c.waiverSignedAt ? `<div class="customer-meta">Waiver on file · ${escapeHtml(c.waiverSignedAt)}${c.emergencyName ? ` · Emergency: ${escapeHtml(c.emergencyName)}` : ''}</div>` : ''}
           ${c.crmNotes ? `<div class="customer-meta">${escapeHtml(shortText(c.crmNotes))}</div>` : ''}
           <div class="customer-stats">
             <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>

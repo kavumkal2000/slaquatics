@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Jet ski & boat rentals on Lake Lewisville, TX. Choose 1 to 4 jet skis or a captained boat rental delivered to your spot. Life jackets, full tank, and cooler included. Book online — (469) 693-7164.">
+<meta name="description" content="Jet ski & boat rentals delivered to Lake Lewisville, TX. Choose 2 to 4 Yamaha jet skis, a captained boat rental, or a lake-day bundle. Book online — (469) 693-7164.">
 <meta name="keywords" content="jet ski rental lake lewisville, boat rental lewisville texas, DFW jet ski rental, hickory creek boat rental, lake lewisville jet ski rental">
 <meta property="og:title" content="Shoreline Aquatics — Jet Ski & Boat Rentals | Lake Lewisville TX">
-<meta property="og:description" content="Jet ski & boat rentals delivered to Lake Lewisville. Choose 1 to 4 jet skis or a boat rental with captain. Book online or call (469) 693-7164.">
+<meta property="og:description" content="Jet ski & boat rentals delivered to Lake Lewisville. Choose 2 to 4 Yamaha jet skis, a boat rental with captain, or a bundle. Book online or call (469) 693-7164.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://slaquatics.com">
 <meta name="twitter:card" content="summary_large_image">
@@ -124,7 +124,7 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .calc-section { background: var(--deep); }
 .calc-wrap {
   background: var(--panel); border-radius: 20px; border: 1px solid rgba(245,166,35,0.2);
-  padding: 2.5rem 3rem; max-width: 960px; margin: 0 auto;
+  padding: 2.5rem 3rem; max-width: 1040px; margin: 0 auto;
 }
 .calc-tabs { display: flex; gap: 0; margin-bottom: 2rem; border-radius: 10px; overflow: hidden; border: 1px solid rgba(245,166,35,0.3); }
 .calc-tab-btn {
@@ -263,15 +263,27 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .fleet-stat-label { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.48); }
 .fleet-stat-value { font-family: 'Bebas Neue', cursive; font-size: 1.55rem; color: var(--gold); line-height: 1; letter-spacing: 0.05em; }
 .fleet-desc { font-size: 0.93rem; color: rgba(255,255,255,0.84); line-height: 1.72; max-width: 42ch; }
-.fleet-price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; }
-.fleet-price-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0.8rem 0.65rem; text-align: center; transition: border-color 0.2s, transform 0.2s; }
-.fleet-price-item { min-height: 74px; display: flex; flex-direction: column; justify-content: center; }
-.fleet-price-item:hover { border-color: rgba(245,166,35,0.35); transform: translateY(-1px); }
-.fleet-price-dur { font-size: 0.68rem; color: rgba(255,255,255,0.58); text-transform: uppercase; letter-spacing: 0.1em; }
-.fleet-price-amt { font-family: 'Bebas Neue', cursive; font-size: 1.5rem; color: var(--gold); letter-spacing: 0.04em; margin-top: 0.1rem; }
 .fleet-perks { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .fleet-perk { background: rgba(26,158,212,0.1); color: #7dd3fc; border: 1px solid rgba(26,158,212,0.18); font-size: 0.68rem; padding: 0.28rem 0.68rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.07em; }
 .fleet-actions { margin-top: auto; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.fleet-rate-note { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.95rem 1rem; font-size: 0.81rem; color: rgba(255,255,255,0.72); line-height: 1.65; }
+.bundle-highlight {
+  margin-top: 1.4rem;
+  background:
+    radial-gradient(circle at top left, rgba(245,166,35,0.16), transparent 42%),
+    linear-gradient(140deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
+  border: 1px solid rgba(245,166,35,0.16);
+  border-radius: 24px;
+  padding: 1.5rem 1.6rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+.bundle-highlight h3 { font-family: 'Bebas Neue', cursive; font-size: 2rem; letter-spacing: 0.04em; margin-bottom: 0.45rem; }
+.bundle-highlight p { font-size: 0.92rem; line-height: 1.72; color: rgba(255,255,255,0.78); max-width: 56ch; }
+.bundle-badges { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
+.bundle-badge { background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.22); color: var(--gold); border-radius: 999px; padding: 0.3rem 0.75rem; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
 
 /* ── ADD-ONS ── */
 .addons-grid { display: grid; grid-template-columns: minmax(0, 980px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
@@ -425,23 +437,53 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 
 /* ── MAP ── */
 .map-section { background: var(--deep); }
-.map-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 3rem; align-items: center; }
-.map-detail { display: flex; gap: 0.9rem; margin-bottom: 1.2rem; align-items: flex-start; }
-.map-detail-icon { width: 38px; height: 38px; border-radius: 9px; background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.2); display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
-.map-detail-label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 0.2rem; }
-.map-detail-value { font-size: 0.92rem; font-weight: 500; line-height: 1.4; color: var(--white); }
-.map-detail-value a { color: var(--gold); text-decoration: none; }
-.map-embed { border-radius: 16px; overflow: hidden; border: 1px solid var(--border); height: 380px; }
-.map-embed iframe { width: 100%; height: 100%; border: 0; display: block; filter: brightness(0.85) saturate(1.1); }
-.delivery-note { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2); border-radius: 10px; padding: 1rem 1.2rem; margin-top: 1.5rem; font-size: 0.84rem; color: rgba(255,255,255,0.82); line-height: 1.6; }
-.delivery-note strong { color: var(--gold); }
+.directions-card {
+  max-width: 940px;
+  background: linear-gradient(180deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
+  border: 1px solid rgba(245,166,35,0.16);
+  border-radius: 22px;
+  padding: 1.7rem 1.8rem;
+  box-shadow: 0 22px 50px rgba(0,0,0,0.24);
+}
+.directions-card p {
+  font-size: 0.93rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.76);
+  margin-bottom: 1.2rem;
+}
+.directions-list { display: grid; gap: 0.8rem; }
+.direction-step {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+  padding: 0.9rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.direction-index {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.22);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+}
+.direction-copy { font-size: 0.94rem; line-height: 1.7; color: rgba(255,255,255,0.84); padding-top: 0.2rem; }
 
 /* ── FAQ ── */
 .faq-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 5rem; }
 .faq-item { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 1.35rem 0; cursor: pointer; }
-.faq-q { display: flex; justify-content: space-between; align-items: center; font-size: 0.92rem; font-weight: 500; gap: 1rem; color: var(--white); }
+.faq-q { display: flex; justify-content: space-between; align-items: center; font-size: 1rem; font-weight: 500; gap: 1rem; color: var(--white); }
 .faq-toggle { font-size: 1.2rem; color: var(--gold); flex-shrink: 0; transition: transform 0.2s; }
-.faq-a { font-size: 0.85rem; color: rgba(255,255,255,0.75); line-height: 1.72; margin-top: 0.75rem; display: none; }
+.faq-a { font-size: 0.95rem; color: rgba(255,255,255,0.75); line-height: 1.78; margin-top: 0.75rem; display: none; }
 .faq-item.open .faq-toggle { transform: rotate(45deg); }
 .faq-item.open .faq-a { display: block; }
 
@@ -499,7 +541,6 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .addon-content { padding: 1.5rem; }
   .drone-inner { grid-template-columns: 1fr; gap: 2.5rem; }
   .why-grid { grid-template-columns: repeat(2,1fr); }
-  .map-grid { grid-template-columns: 1fr; }
   .faq-cols { grid-template-columns: 1fr; }
   .ig-grid { grid-template-columns: repeat(3,1fr); }
   .footer-inner { grid-template-columns: 1fr 1fr; gap: 2rem; }
@@ -507,6 +548,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .cta-band { padding: 4rem 1.5rem; }
   .hero-info-bar { gap: 1.2rem; padding: 0.8rem 1.2rem; }
   .review-slide { flex-basis: calc((100% - 1.2rem) / 2); }
+  .bundle-highlight { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   nav { padding: 0.75rem 0.95rem; gap: 0.65rem; }
@@ -609,7 +651,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   <div class="hero-inner">
     <div class="eyebrow">Lake Lewisville · Hickory Creek, TX</div>
     <h1>Ride The <em>Open</em><br>Water</h1>
-    <p class="hero-sub">Jet ski & boat rentals delivered to your spot on Lake Lewisville. Life jackets, full tank, and a cooler — all included. No license required.</p>
+    <p class="hero-sub">Jet ski & boat rentals delivered to Lake Lewisville. Meet us at the launch, get your walkthrough, and hit the water with life jackets, fuel, and cooler included.</p>
     <div class="hero-actions">
       <a href="#booking" class="btn-primary">Book Your Rental</a>
       <a href="#fleet" class="btn-ghost">See Our Fleet</a>
@@ -655,29 +697,23 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   <div class="section-inner">
     <div class="section-tag">Our Fleet</div>
     <h2>Pick Your Ride First</h2>
-    <p class="section-sub">Jet skis and boat rentals sit side by side here so customers can compare fast, decide what fits their crew, and jump straight into booking.</p>
+    <p class="section-sub">Compare the fleet fast, lock in the package that fits your group, and move straight into the booking page for the date, waiver, and final request details.</p>
     <div class="fleet-grid">
       <div class="fleet-card" id="jetski">
         <div class="fleet-media">
           <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/66a08829bf892e0763e15ed4.jpeg" alt="Jet skis on Lake Lewisville">
         </div>
         <div class="fleet-body">
-          <div class="fleet-badge">2 Yamaha Jet Skis</div>
+          <div class="fleet-badge">2 to 4 Yamaha Jet Skis</div>
           <div class="fleet-title-row">
             <div class="fleet-title">Jet Ski Rentals</div>
             <div class="fleet-stat">
-              <div class="fleet-stat-label">Starts at</div>
-              <div class="fleet-stat-value">$300</div>
+              <div class="fleet-stat-label">Starting as low as</div>
+              <div class="fleet-stat-value">$56/hr</div>
             </div>
           </div>
-          <p class="fleet-desc">Every jet ski booking now includes a matching pair of Yamaha jet skis, safety gear, and a simple booking flow so your crew can lock in the lake day fast.</p>
-          <div class="fleet-price-grid">
-            <div class="fleet-price-item"><div class="fleet-price-dur">2 Hours · $75/hr</div><div class="fleet-price-amt">$300</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">3 Hours · $75/hr</div><div class="fleet-price-amt">$450</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">4 Hours · Most Popular</div><div class="fleet-price-amt">$560</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">6 Hours · Best Value</div><div class="fleet-price-amt">$720</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">8 Hours · Full Day</div><div class="fleet-price-amt">$900</div></div>
-          </div>
+          <p class="fleet-desc">Choose 2, 3, or 4 Yamaha jet skis, then pick the number of hours on the booking page. Exact totals live there so the homepage stays cleaner and easier to scan.</p>
+          <div class="fleet-rate-note">Rates begin at <strong style="color:var(--gold);">$56/hr per ski</strong> on the longest block. Exact pricing, deposits, and add-ons show up once the customer confirms their package.</div>
           <div class="fleet-perks">
             <span class="fleet-perk">Life Jackets</span>
             <span class="fleet-perk">Full Tank</span>
@@ -687,7 +723,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             <span class="fleet-perk">No License Needed</span>
           </div>
           <div class="fleet-actions">
-            <a href="#booking" class="btn-primary">Book Jet Skis</a>
+            <a href="#booking" class="btn-primary">Choose Jet Skis</a>
           </div>
         </div>
       </div>
@@ -701,19 +737,12 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <div class="fleet-title-row">
             <div class="fleet-title">Boat Rental</div>
             <div class="fleet-stat">
-              <div class="fleet-stat-label">Flat hourly rate</div>
+              <div class="fleet-stat-label">Hourly rate</div>
               <div class="fleet-stat-value">$120/hr</div>
             </div>
           </div>
-          <p class="fleet-desc">For laid-back lake days, birthdays, and bigger groups, the captained boat gives your crew room to spread out while Shoreline handles navigation and setup.</p>
-          <div class="fleet-price-grid">
-            <div class="fleet-price-item"><div class="fleet-price-dur">1 hour</div><div class="fleet-price-amt">$120</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">2 hours</div><div class="fleet-price-amt">$240</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">3 hours</div><div class="fleet-price-amt">$360</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">4 hours</div><div class="fleet-price-amt">$480</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">6 hours</div><div class="fleet-price-amt">$720</div></div>
-            <div class="fleet-price-item"><div class="fleet-price-dur">8 hours</div><div class="fleet-price-amt">$960</div></div>
-          </div>
+          <p class="fleet-desc">For laid-back lake days, birthdays, and bigger groups, the captained boat gives your crew room to spread out while Shoreline handles the setup and ride plan.</p>
+          <div class="fleet-rate-note">The boat stays simple: <strong style="color:var(--gold);">$120 per hour</strong> with the captain included. Customers choose the exact duration when they continue to booking.</div>
           <div class="fleet-perks">
             <span class="fleet-perk">Captain Included</span>
             <span class="fleet-perk">Up to 10 Guests</span>
@@ -723,10 +752,22 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             <span class="fleet-perk">Cooler</span>
           </div>
           <div class="fleet-actions">
-            <a href="#booking" class="btn-primary">Book the Boat</a>
+            <a href="#booking" class="btn-primary">Choose the Boat</a>
           </div>
         </div>
       </div>
+    </div>
+    <div class="bundle-highlight">
+      <div>
+        <h3>Want the bundle instead?</h3>
+        <p>Customers can now combine Yamaha jet skis and the boat in one request. Choose the fleet size on the homepage, then finish the date, waiver, and details on the booking page.</p>
+        <div class="bundle-badges">
+          <span class="bundle-badge">Jet skis + boat</span>
+          <span class="bundle-badge">Captain included</span>
+          <span class="bundle-badge">Built for bigger groups</span>
+        </div>
+      </div>
+      <div><a href="#booking" class="btn-primary">Build a Bundle</a></div>
     </div>
   </div>
 </section>
@@ -735,42 +776,9 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 <section id="booking" class="calc-section">
   <div class="section-inner">
     <div class="section-tag">Book Your Rental</div>
-    <h2>Build Your Package</h2>
-    <p class="section-sub" style="margin-bottom:2rem;">Choose between the 2-jet-ski Yamaha package or the captained boat, pick your duration, and see your price instantly. Every rental includes life jackets, a full tank, and a clear booking flow.</p>
-    <div class="booking-calendar-shell">
-      <div class="booking-calendar-card">
-        <div class="booking-calendar-head">
-          <div class="booking-calendar-copy">
-            <h3>Choose Your Rental Date</h3>
-            <p>Pick the day you want to get on the water. We’ll carry it straight into the booking form so your request is already prefilled.</p>
-          </div>
-          <div class="booking-calendar-nav">
-            <button class="booking-calendar-btn" type="button" aria-label="Previous month" onclick="shiftBookingCalendarMonth(-1)">←</button>
-            <div class="booking-calendar-month" id="booking-calendar-month">Month Year</div>
-            <button class="booking-calendar-btn" type="button" aria-label="Next month" onclick="shiftBookingCalendarMonth(1)">→</button>
-          </div>
-        </div>
-        <div class="booking-calendar-weekdays">
-          <div class="booking-calendar-weekday">Sun</div>
-          <div class="booking-calendar-weekday">Mon</div>
-          <div class="booking-calendar-weekday">Tue</div>
-          <div class="booking-calendar-weekday">Wed</div>
-          <div class="booking-calendar-weekday">Thu</div>
-          <div class="booking-calendar-weekday">Fri</div>
-          <div class="booking-calendar-weekday">Sat</div>
-        </div>
-        <div class="booking-calendar-grid" id="booking-calendar-grid"></div>
-      </div>
-      <div class="booking-calendar-summary">
-        <div class="booking-calendar-selected"><span>Selected</span><span id="booking-calendar-pill-date">Today</span></div>
-        <div class="booking-calendar-big-date" id="booking-calendar-big-date">Today</div>
-        <p id="booking-calendar-copy">Choose your package below and we’ll send this date into the booking request automatically.</p>
-        <a href="./jetski-booking/" class="btn-primary" id="booking-calendar-continue" style="margin-top:1rem;">Continue With This Date</a>
-        <div class="booking-calendar-note">You’re only picking the requested day here. Exact start time, party size, and final details still get confirmed in the booking form.</div>
-      </div>
-    </div>
+    <h2>Choose The Package First</h2>
+    <p class="section-sub" style="margin-bottom:2rem;">Customers confirm the fleet size and number of hours here, then move to the booking page for the calendar, waiver, and final request details.</p>
     <div class="calc-wrap">
-      <!-- Tabs: Jet Ski | Boat -->
       <div class="calc-tabs">
         <button class="calc-tab-btn active" id="tab-jetski" onclick="switchCalcTab('jetski')">
           <span class="calc-tab-icon">🏄</span> Jet Ski Rental
@@ -778,15 +786,25 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <button class="calc-tab-btn" id="tab-boat" onclick="switchCalcTab('boat')">
           <span class="calc-tab-icon">⛵</span> Boat Rental
         </button>
+        <button class="calc-tab-btn" id="tab-bundle" onclick="switchCalcTab('bundle')">
+          <span class="calc-tab-icon">🌊</span> Bundle
+        </button>
       </div>
 
-      <!-- JET SKI PANEL -->
       <div class="calc-panel active" id="panel-jetski">
         <div>
-          <div class="calc-col-label">1 · Jet ski package</div>
+          <div class="calc-col-label">1 · Number of jet skis needed</div>
           <div class="calc-select-group" id="js-craft-opts">
             <div class="calc-option selected" data-craft="jetski2" onclick="selectOpt('js-craft-opts',this);calcPrice()">
-              <div><div class="calc-option-name">2 Yamaha Jet Skis</div><div class="calc-option-sub">Your standard Shoreline rental package</div></div>
+              <div><div class="calc-option-name">2 Yamaha Jet Skis</div><div class="calc-option-sub">Best for a smaller crew</div></div>
+              <div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-craft="jetski3" onclick="selectOpt('js-craft-opts',this);calcPrice()">
+              <div><div class="calc-option-name">3 Yamaha Jet Skis</div><div class="calc-option-sub">Extra room for a bigger group</div></div>
+              <div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-craft="jetski4" onclick="selectOpt('js-craft-opts',this);calcPrice()">
+              <div><div class="calc-option-name">4 Yamaha Jet Skis</div><div class="calc-option-sub">Largest Yamaha setup</div></div>
               <div class="calc-check"></div>
             </div>
           </div>
@@ -830,12 +848,11 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Safety Briefing</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=jetski&craft=jetski2&hours=2&total=300" class="calc-book-btn" id="js-book-btn">Book for $300 →</a>
+          <a href="./jetski-booking/?type=jetski&craft=jetski2&hours=2&total=300" class="calc-book-btn" id="js-book-btn">Continue to Calendar &amp; Waiver →</a>
           <p class="price-match">💰 Found a lower price? <span>We'll match it.</span></p>
         </div>
       </div>
 
-      <!-- BOAT PANEL -->
       <div class="calc-panel" id="panel-boat">
         <div>
           <div class="calc-col-label">Choose your duration</div>
@@ -881,7 +898,70 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Up to 10 Guests</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=boat&craft=boat&hours=4&total=480" class="calc-book-btn" id="bt-book-btn">Book for $480 →</a>
+          <a href="./jetski-booking/?type=boat&craft=boat&hours=4&total=480" class="calc-book-btn" id="bt-book-btn">Continue to Calendar &amp; Waiver →</a>
+          <p class="price-match">Easy hourly pricing with the captain already included.</p>
+        </div>
+      </div>
+
+      <div class="calc-panel" id="panel-bundle">
+        <div>
+          <div class="calc-col-label">1 · Choose your bundle size</div>
+          <div class="calc-select-group" id="bd-craft-opts">
+            <div class="calc-option selected" data-craft="bundle2" onclick="selectOpt('bd-craft-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">2 Jet Skis + Boat</div><div class="calc-option-sub">Best for a mixed group</div></div>
+              <div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-craft="bundle3" onclick="selectOpt('bd-craft-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">3 Jet Skis + Boat</div><div class="calc-option-sub">Extra room for more riders</div></div>
+              <div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-craft="bundle4" onclick="selectOpt('bd-craft-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">4 Jet Skis + Boat</div><div class="calc-option-sub">Full lake-day setup</div></div>
+              <div class="calc-check"></div>
+            </div>
+          </div>
+          <hr class="calc-divider">
+          <div class="calc-col-label">2 · Choose your duration</div>
+          <div class="calc-select-group" id="bd-dur-opts">
+            <div class="calc-option selected" data-hours="2" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">2 Hours</div></div><div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-hours="3" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">3 Hours</div></div><div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-hours="4" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub">Most popular</div></div><div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-hours="6" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub">Best value</div></div><div class="calc-check"></div>
+            </div>
+            <div class="calc-option" data-hours="8" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
+              <div><div class="calc-option-name">Full Day (8 Hours)</div><div class="calc-option-sub">Full day bundle</div></div><div class="calc-check"></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="calc-result-box">
+            <div class="calc-result-label">Your Total</div>
+            <div class="calc-result-price" id="bd-price">$540</div>
+            <div class="calc-result-desc" id="bd-desc">2 Jet Skis + Boat · 2hrs</div>
+            <div class="calc-deposit-row">
+              <div class="calc-deposit-item"><div class="dl">Booking deposit</div><div class="dv" style="color:var(--gold);">$50</div></div>
+              <div class="calc-deposit-item"><div class="dl">Damage deposit/ski</div><div class="dv" style="color:var(--gold);">$200</div></div>
+            </div>
+          </div>
+          <div class="calc-includes">
+            <div class="calc-includes-label">Everything included</div>
+            <div class="calc-include-list">
+              <span class="calc-include-item">Yamaha Jet Skis</span>
+              <span class="calc-include-item">Boat + Captain</span>
+              <span class="calc-include-item">Life Jackets</span>
+              <span class="calc-include-item">Full Tank</span>
+              <span class="calc-include-item">Fast &amp; Easy Booking</span>
+              <span class="calc-include-item">Cooler</span>
+            </div>
+          </div>
+          <a href="./jetski-booking/?type=bundle&craft=bundle2&hours=2&total=540" class="calc-book-btn" id="bd-book-btn">Continue to Calendar &amp; Waiver →</a>
           <p class="price-match">💰 Found a lower price? <span>We'll match it.</span></p>
         </div>
       </div>
@@ -894,7 +974,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   <div class="section-inner">
     <div class="section-tag">Add-On Services</div>
     <h2>Upgrade Your Experience</h2>
-    <p class="section-sub">Make your day on the water unforgettable with aerial drone coverage.</p>
+    <p class="section-sub">Keep the add-on simple. If the customer wants a highlight video from the water, they can add drone coverage during booking.</p>
     <div class="addons-grid">
       <div class="addon-card addon-card-feature">
         <div class="addon-media">
@@ -906,15 +986,15 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           </div>
           <div class="addon-icon">🎬</div>
           <div class="addon-name">Aerial Drone Coverage</div>
-          <p class="addon-desc">Add a clean highlight video from above the water so your group leaves with one polished clip from the day.</p>
+          <p class="addon-desc">Add one clean highlight edit from above the water so the group leaves with a polished clip from the day.</p>
           <div class="addon-points">
             <span class="addon-point">Launch + ride footage</span>
-            <span class="addon-point">Delivered as a highlight edit</span>
+            <span class="addon-point">Simple add-on at booking</span>
           </div>
           <div class="addon-foot">
             <div class="addon-price-wrap">
-              <div class="addon-price">$50 <span style="font-size:0.8rem;font-weight:400;color:rgba(255,255,255,0.6);">full video</span></div>
-              <div class="addon-price-note">Simple add-on at booking</div>
+              <div class="addon-price">$50 <span style="font-size:0.8rem;font-weight:400;color:rgba(255,255,255,0.6);">highlight edit</span></div>
+              <div class="addon-price-note">No extra clutter in the main booking flow</div>
             </div>
             <a href="#booking" class="addon-cta">Add it to your booking →</a>
           </div>
@@ -966,28 +1046,15 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 <section id="location" class="map-section">
   <div class="section-inner">
     <div class="section-tag">Location</div>
-    <h2>Find Us on the Lake</h2>
-    <div class="map-grid">
-      <div>
-        <div class="map-detail">
-          <div class="map-detail-icon">📍</div>
-          <div><div class="map-detail-label">Address</div><div class="map-detail-value">2000 Main St<br>Hickory Creek, TX 75065</div></div>
-        </div>
-        <div class="map-detail">
-          <div class="map-detail-icon">🕗</div>
-          <div><div class="map-detail-label">Hours</div><div class="map-detail-value">Monday – Sunday<br>8:30 AM – 8:30 PM</div></div>
-        </div>
-        <div class="map-detail">
-          <div class="map-detail-icon">📞</div>
-          <div><div class="map-detail-label">Phone</div><div class="map-detail-value"><a href="tel:4696937164">(469) 693-7164</a></div></div>
-        </div>
-        <div class="map-detail">
-          <div class="map-detail-icon">🚤</div>
-          <div><div class="map-detail-label">Lake</div><div class="map-detail-value">Lake Lewisville<br>Serving all of DFW</div></div>
-        </div>
-      </div>
-      <div class="map-embed">
-        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3344.8872!2d-97.02973!3d33.09724!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x864c5e91e4e781af%3A0x8df562fc06be34fc!2s2000%20Main%20St%2C%20Hickory%20Creek%2C%20TX%2075065!5e0!3m2!1sen!2sus!4v1713400000000!5m2!1sen!2sus" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <h2>Arrival Directions</h2>
+    <div class="directions-card">
+      <p>The address, hours, and phone number already sit at the top of the site. Here’s the simple arrival walkthrough customers actually need once they are on the way.</p>
+      <div class="directions-list">
+        <div class="direction-step"><div class="direction-index">1</div><div class="direction-copy">Drive down Main Street until you see the storage units on your left.</div></div>
+        <div class="direction-step"><div class="direction-index">2</div><div class="direction-copy">Continue straight and enter the park.</div></div>
+        <div class="direction-step"><div class="direction-index">3</div><div class="direction-copy">Once inside, make an immediate left.</div></div>
+        <div class="direction-step"><div class="direction-index">4</div><div class="direction-copy">Drive straight to the boat ramp.</div></div>
+        <div class="direction-step"><div class="direction-index">5</div><div class="direction-copy">Look for the cabanas on your left. Shoreline Aquatics and the jet skis will be there.</div></div>
       </div>
     </div>
   </div>
@@ -1034,7 +1101,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
       <div class="reviews-track" id="reviews-track">
         <div class="review-slide"><div class="review-card">
           <div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
-          <div class="review-text">"Best experience on the lake! They delivered right to our spot, walked us through everything, and the jet skis were in perfect condition. Already planning our next trip!"</div>
+          <div class="review-text">"Best experience on the lake. We met them at the launch, they walked us through everything, and the jet skis were in perfect condition. Already planning our next trip."</div>
           <div class="review-author"><div class="review-avatar" style="background:rgba(245,166,35,0.2);color:var(--gold);">TJ</div><div><div class="review-name">Taimoor J.</div><div class="review-meta">DFW Area · Verified Customer</div></div></div>
           <div class="review-source"><div class="google-dot"></div> Google Review</div>
         </div></div>
@@ -1046,7 +1113,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         </div></div>
         <div class="review-slide"><div class="review-card">
           <div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
-          <div class="review-text">"My kids had never been on jet skis and they were so patient walking everyone through it. Delivered right on time, prices are unbeatable. 10/10!"</div>
+          <div class="review-text">"My kids had never been on jet skis and they were so patient walking everyone through it. Super organized, prices are unbeatable, and the whole process felt easy. 10/10!"</div>
           <div class="review-author"><div class="review-avatar" style="background:rgba(16,185,129,0.2);color:#6ee7b7;">MG</div><div><div class="review-name">Marifer G.</div><div class="review-meta">Florida · Verified Customer</div></div></div>
           <div class="review-source"><div class="google-dot"></div> Google Review</div>
         </div></div>
@@ -1064,7 +1131,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         </div></div>
         <div class="review-slide"><div class="review-card">
           <div class="review-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
-          <div class="review-text">"Called last minute and they made it work. Everything promised was delivered and we had an absolute blast. My go-to recommendation for anyone in DFW."</div>
+          <div class="review-text">"Called last minute and they made it work. Everything promised was ready when we arrived and we had an absolute blast. My go-to recommendation for anyone in DFW."</div>
           <div class="review-author"><div class="review-avatar" style="background:rgba(239,68,68,0.2);color:#fca5a5;">DW</div><div><div class="review-name">Debra W.</div><div class="review-meta">Cincinnati, OH · Verified Customer</div></div></div>
           <div class="review-source"><div class="google-dot" style="background:#1877F2;"></div> Facebook Review</div>
         </div></div>
@@ -1121,7 +1188,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
       <div class="footer-logo">
         <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics">
       </div>
-      <p class="footer-about">Jet ski & boat rentals delivered to Lake Lewisville, TX. Dallas-local, family-run, and proud of it. Open daily 8:30 AM – 8:30 PM.</p>
+      <p class="footer-about">Jet ski & boat rentals delivered to Lake Lewisville, TX. Meet us at the launch, get your walkthrough, and enjoy a cleaner rental flow from start to finish.</p>
       <div class="footer-socials">
         <a href="https://www.instagram.com/shoreline__aquatics" class="footer-social" target="_blank">ig</a>
         <a href="https://www.facebook.com/profile.php?id=61558497639216" class="footer-social" target="_blank">fb</a>
@@ -1142,7 +1209,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <li><a href="#fleet">Compare the Fleet</a></li>
         <li><a href="#booking">Build Your Package</a></li>
         <li><a href="#addons">Aerial Drone Coverage</a></li>
-        <li><a href="#location">Arrival & Delivery</a></li>
+        <li><a href="#location">Arrival Directions</a></li>
       </ul>
     </div>
     <div class="footer-col">
@@ -1150,7 +1217,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
       <ul>
         <li><a href="#reviews">Reviews</a></li>
         <li><a href="#faq">FAQ</a></li>
-        <li><a href="#location">Location & Map</a></li>
+        <li><a href="#location">Arrival Directions</a></li>
         <li><a href="./privacy-policy/">Privacy Policy</a></li>
       </ul>
     </div>
@@ -1167,123 +1234,29 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 // ── CALC ──
 const PRICING = {
   jetski2: {2:300,3:450,4:560,6:720,8:900},
-  boat:    {1:120,2:240,3:360,4:480,6:720,8:960}
+  jetski3: {2:450,3:675,4:840,6:1080,8:1350},
+  jetski4: {2:600,3:900,4:1120,6:1440,8:1800},
+  boat:    {1:120,2:240,3:360,4:480,6:720,8:960},
+  bundle2: {2:540,3:810,4:1040,6:1440,8:1860},
+  bundle3: {2:690,3:1035,4:1320,6:1800,8:2310},
+  bundle4: {2:840,3:1260,4:1600,6:2160,8:2760}
 };
 const CRAFT_NAMES = {
-  jetski2:'2 Yamaha Jet Skis'
+  jetski2: '2 Yamaha Jet Skis',
+  jetski3: '3 Yamaha Jet Skis',
+  jetski4: '4 Yamaha Jet Skis',
+  boat: 'Boat Rental',
+  bundle2: '2 Yamaha Jet Skis + Boat',
+  bundle3: '3 Yamaha Jet Skis + Boat',
+  bundle4: '4 Yamaha Jet Skis + Boat'
 };
-let selectedBookingDate = '';
-let bookingCalendarMonth = null;
-
-function localIsoDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseLocalIsoDate(iso) {
-  if (!iso) return null;
-  const parts = String(iso).split('-').map(Number);
-  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
-  return new Date(parts[0], parts[1] - 1, parts[2]);
-}
-
-function todayLocalIso() {
-  return localIsoDate(new Date());
-}
-
-function formatSelectedDate(iso) {
-  const date = parseLocalIsoDate(iso);
-  if (!date) return 'Choose a date';
-  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-}
 
 function buildBookingUrl(params) {
-  const url = new URL("jetski-booking/", window.location.href);
+  const url = new URL('jetski-booking/', window.location.href);
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, String(value));
   });
-  if (selectedBookingDate) url.searchParams.set('date', selectedBookingDate);
   return url.toString();
-}
-
-function syncCalendarContinueLink() {
-  const continueLink = document.getElementById('booking-calendar-continue');
-  const pillDate = document.getElementById('booking-calendar-pill-date');
-  const bigDate = document.getElementById('booking-calendar-big-date');
-  const copy = document.getElementById('booking-calendar-copy');
-  if (!continueLink || !pillDate || !bigDate || !copy) return;
-
-  const activeTab = document.getElementById('panel-boat')?.classList.contains('active') ? 'boat' : 'jetski';
-  if (activeTab === 'boat') {
-    const hours = parseInt(getSelected('bt-dur-opts', 'hours')) || 4;
-    const total = PRICING.boat[hours] || 0;
-    continueLink.href = buildBookingUrl({ type: 'boat', craft: 'boat', hours, total });
-  } else {
-    const craft = 'jetski2';
-    const hours = parseInt(getSelected('js-dur-opts', 'hours')) || 2;
-    const total = PRICING[craft]?.[hours] || 0;
-    continueLink.href = buildBookingUrl({ type: 'jetski', craft, hours, total });
-  }
-
-  const formatted = formatSelectedDate(selectedBookingDate);
-  pillDate.textContent = formatted;
-  bigDate.textContent = formatted;
-  copy.textContent = `Choose your package below and we’ll carry ${formatted.toLowerCase()} into the booking form automatically.`;
-}
-
-function renderBookingCalendar() {
-  const grid = document.getElementById('booking-calendar-grid');
-  const monthLabel = document.getElementById('booking-calendar-month');
-  if (!grid || !monthLabel) return;
-
-  if (!selectedBookingDate) selectedBookingDate = todayLocalIso();
-  if (!bookingCalendarMonth) {
-    const selectedDate = parseLocalIsoDate(selectedBookingDate) || new Date();
-    bookingCalendarMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  }
-
-  monthLabel.textContent = bookingCalendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  const firstVisible = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth(), 1 - bookingCalendarMonth.getDay());
-  const cells = [];
-
-  for (let offset = 0; offset < 42; offset += 1) {
-    const cellDate = new Date(firstVisible.getFullYear(), firstVisible.getMonth(), firstVisible.getDate() + offset);
-    const cellIso = localIsoDate(cellDate);
-    const isOtherMonth = cellDate.getMonth() !== bookingCalendarMonth.getMonth();
-    const isToday = cellIso === todayLocalIso();
-    const isSelected = cellIso === selectedBookingDate;
-    const soonLabel = offset < 14 && !isOtherMonth ? 'Popular' : '&nbsp;';
-
-    cells.push(`
-      <button class="booking-calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" type="button" onclick="selectBookingDate('${cellIso}')">
-        <div class="booking-calendar-day-top">
-          <span class="booking-calendar-day-num">${cellDate.getDate()}</span>
-          ${isSelected ? '<span class="booking-calendar-day-badge">Go</span>' : ''}
-        </div>
-        <div class="booking-calendar-day-meta">${soonLabel}</div>
-      </button>
-    `);
-  }
-
-  grid.innerHTML = cells.join('');
-  syncCalendarContinueLink();
-}
-
-function selectBookingDate(iso) {
-  selectedBookingDate = iso;
-  const date = parseLocalIsoDate(iso);
-  if (date) bookingCalendarMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-  renderBookingCalendar();
-  calcPrice();
-  calcBoatPrice();
-}
-
-function shiftBookingCalendarMonth(delta) {
-  if (!bookingCalendarMonth) bookingCalendarMonth = new Date();
-  bookingCalendarMonth = new Date(bookingCalendarMonth.getFullYear(), bookingCalendarMonth.getMonth() + delta, 1);
-  renderBookingCalendar();
 }
 
 function selectOpt(groupId, el) {
@@ -1297,21 +1270,20 @@ function getSelected(groupId, attr) {
 }
 
 function calcPrice() {
-  const craft = 'jetski2';
+  const craft = getSelected('js-craft-opts', 'craft') || 'jetski2';
   const hours = parseInt(getSelected('js-dur-opts','hours')) || 2;
   const price = PRICING[craft]?.[hours] || 0;
   const name = CRAFT_NAMES[craft] || craft;
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hrs';
   document.getElementById('js-price').textContent = '$'+price.toLocaleString();
   document.getElementById('js-desc').textContent = name+' · '+hLabel;
-  document.getElementById('js-book-btn').textContent = 'Book for $'+price.toLocaleString()+' →';
+  document.getElementById('js-book-btn').textContent = 'Continue to Calendar & Waiver →';
   document.getElementById('js-book-btn').href = buildBookingUrl({
     type: 'jetski',
     craft,
     hours,
     total: price
   });
-  syncCalendarContinueLink();
 }
 
 function calcBoatPrice() {
@@ -1320,14 +1292,29 @@ function calcBoatPrice() {
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hr'+(hours>1?'s':'');
   document.getElementById('bt-price').textContent = '$'+price.toLocaleString();
   document.getElementById('bt-desc').textContent = 'Boat Rental · '+hLabel+' · Up to 10 guests';
-  document.getElementById('bt-book-btn').textContent = 'Book for $'+price.toLocaleString()+' →';
+  document.getElementById('bt-book-btn').textContent = 'Continue to Calendar & Waiver →';
   document.getElementById('bt-book-btn').href = buildBookingUrl({
     type: 'boat',
     craft: 'boat',
     hours,
     total: price
   });
-  syncCalendarContinueLink();
+}
+
+function calcBundlePrice() {
+  const craft = getSelected('bd-craft-opts', 'craft') || 'bundle2';
+  const hours = parseInt(getSelected('bd-dur-opts', 'hours')) || 2;
+  const price = PRICING[craft]?.[hours] || 0;
+  const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hrs';
+  document.getElementById('bd-price').textContent = '$'+price.toLocaleString();
+  document.getElementById('bd-desc').textContent = `${CRAFT_NAMES[craft]} · ${hLabel}`;
+  document.getElementById('bd-book-btn').textContent = 'Continue to Calendar & Waiver →';
+  document.getElementById('bd-book-btn').href = buildBookingUrl({
+    type: 'bundle',
+    craft,
+    hours,
+    total: price
+  });
 }
 
 function switchCalcTab(tab) {
@@ -1335,7 +1322,6 @@ function switchCalcTab(tab) {
   document.querySelectorAll('.calc-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-'+tab).classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
-  syncCalendarContinueLink();
 }
 
 // ── REVIEWS CAROUSEL ──
@@ -1428,8 +1414,7 @@ window.addEventListener('resize', renderReviewCarousel);
 
 calcPrice();
 calcBoatPrice();
-selectedBookingDate = todayLocalIso();
-renderBookingCalendar();
+calcBundlePrice();
 renderReviewCarousel();
 startReviewAutoplay();
 </script>

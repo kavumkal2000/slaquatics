@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Start a booking request with Shoreline Aquatics for jet ski and boat rentals on Lake Lewisville. Pick your package, choose your date, and send your request in minutes.">
+<meta name="description" content="Start a Shoreline Aquatics booking request, choose your package, pick your rental day, and sign the waiver before sending the request.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking/">
 <title>Book a Rental | Shoreline Aquatics</title>
@@ -15,8 +15,8 @@ body {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
   background:
-    radial-gradient(circle at top right, rgba(245, 166, 35, 0.2), transparent 24%),
-    linear-gradient(180deg, #07111d 0%, #0b1a2b 48%, #102642 100%);
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.18), transparent 26%),
+    linear-gradient(180deg, #07111d 0%, #0a1a2b 50%, #102642 100%);
   color: #ffffff;
 }
 a { color: inherit; }
@@ -34,7 +34,7 @@ a { color: inherit; }
   --success: #98f5c5;
 }
 .shell {
-  max-width: 1240px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 32px 24px 64px;
 }
@@ -93,6 +93,7 @@ a { color: inherit; }
 .btn-primary {
   background: var(--gold);
   color: #08111f;
+  cursor: pointer;
 }
 .btn-primary:hover { background: var(--orange); }
 .btn-ghost {
@@ -106,14 +107,17 @@ a { color: inherit; }
 }
 .hero {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   gap: 24px;
   margin-bottom: 24px;
 }
 .hero-card,
-.form-card,
 .summary-card,
-.info-card {
+.info-card,
+.form-card,
+.calendar-card,
+.waiver-card,
+.match-card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 28px;
@@ -137,7 +141,7 @@ a { color: inherit; }
   height: 1px;
   background: currentColor;
 }
-h1, h2 {
+h1, h2, h3 {
   margin: 0;
   font-family: 'Bebas Neue', cursive;
   letter-spacing: 0.04em;
@@ -172,12 +176,15 @@ h1 span { color: var(--gold); }
 }
 .hero-side {
   display: grid;
-  gap: 24px;
+  gap: 20px;
 }
-.summary-card {
-  padding: 28px;
+.summary-card,
+.info-card,
+.match-card {
+  padding: 24px 26px;
 }
-.summary-kicker {
+.summary-kicker,
+.mini-kicker {
   font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -219,17 +226,21 @@ h1 span { color: var(--gold); }
   border-bottom: 0;
   padding-bottom: 0;
 }
-.summary-row strong { color: #ffffff; }
-.info-card {
-  padding: 26px 28px;
+.info-card h2,
+.form-card h2,
+.calendar-card h3,
+.waiver-card h3,
+.match-card h3 {
+  font-size: 1.8rem;
 }
-.info-card h2 {
-  font-size: 2rem;
-  margin-bottom: 12px;
-}
-.info-card p {
-  margin: 0 0 16px;
+.info-card p,
+.info-list,
+.section-copy,
+.waiver-copy,
+.match-copy {
+  margin-top: 10px;
   color: var(--muted);
+  font-size: 0.9rem;
   line-height: 1.7;
 }
 .info-list {
@@ -237,56 +248,97 @@ h1 span { color: var(--gold); }
   gap: 10px;
 }
 .info-item {
-  background: var(--panel-soft);
-  border-radius: 16px;
-  padding: 14px 16px;
-  color: var(--muted);
-  font-size: 0.9rem;
+  padding: 0.82rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.match-card {
+  display: none;
+  border-color: rgba(15, 184, 224, 0.3);
+  background:
+    radial-gradient(circle at top right, rgba(15, 184, 224, 0.1), transparent 46%),
+    rgba(15, 32, 64, 0.92);
+}
+.match-card.show { display: block; }
+.match-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.match-chip {
+  border-radius: 999px;
+  padding: 0.38rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(15, 184, 224, 0.24);
+  color: #8be8ff;
+  background: rgba(15, 184, 224, 0.12);
 }
 .content-grid {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: 1fr;
   gap: 24px;
 }
 .form-card {
-  padding: 32px;
+  padding: 28px;
 }
 .section-title {
-  font-size: 2.3rem;
-}
-.section-copy {
-  margin-top: 12px;
-  margin-bottom: 24px;
-  color: var(--muted);
-  line-height: 1.7;
+  font-size: 2rem;
 }
 .type-toggle {
-  display: inline-flex;
+  display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 24px;
+  margin: 24px 0 22px;
 }
 .type-btn {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
-  color: var(--muted);
+  color: #ffffff;
+  padding: 0.8rem 1rem;
   border-radius: 999px;
-  padding: 0.78rem 1rem;
-  font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
+  transition: all 0.18s ease;
 }
 .type-btn.active {
   background: var(--gold);
-  border-color: var(--gold);
   color: #08111f;
+  border-color: transparent;
 }
-form {
+.form-stack {
   display: grid;
-  gap: 18px;
+  gap: 20px;
+}
+.field-block,
+.calendar-card,
+.waiver-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 22px;
+}
+.block-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gold);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 12px;
+}
+.block-label::before {
+  content: "";
+  width: 24px;
+  height: 1px;
+  background: currentColor;
 }
 .field-grid {
   display: grid;
@@ -294,48 +346,282 @@ form {
   gap: 16px;
 }
 .field {
-  display: grid;
-  gap: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.field.full { grid-column: 1 / -1; }
-label {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+.field.full {
+  grid-column: 1 / -1;
+}
+.field label {
+  font-size: 0.78rem;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.78);
 }
-input,
-select,
-textarea {
+.field input,
+.field select,
+.field textarea {
   width: 100%;
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 0.92rem 1rem;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.92rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: rgba(245, 166, 35, 0.45);
+  box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.12);
+}
+.field select option {
+  background: #0c1b30;
+}
+.field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+.calendar-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  margin-top: 14px;
+}
+.calendar-frame,
+.calendar-summary {
+  background: rgba(8, 17, 31, 0.34);
+  border: 1px solid rgba(245, 166, 35, 0.16);
+  border-radius: 22px;
+  padding: 18px;
+}
+.calendar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.calendar-head p,
+.calendar-summary p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
+  margin-top: 8px;
+}
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.calendar-nav button {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.04);
   color: #ffffff;
-  font: inherit;
-  padding: 0.95rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
 }
-textarea {
-  min-height: 110px;
-  resize: vertical;
+.calendar-nav button:hover {
+  border-color: rgba(245, 166, 35, 0.34);
+  color: var(--gold);
 }
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: rgba(245, 166, 35, 0.75);
-  box-shadow: 0 0 0 4px rgba(245, 166, 35, 0.12);
+.calendar-month {
+  min-width: 160px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
-.helper {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.55;
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.calendar-weekdays {
+  margin-bottom: 8px;
+}
+.calendar-weekday {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.calendar-day {
+  min-height: 92px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  text-align: left;
+  padding: 0.75rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.calendar-day:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 166, 35, 0.3);
+}
+.calendar-day.other-month {
+  opacity: 0.42;
+}
+.calendar-day.today {
+  border-color: rgba(15, 184, 224, 0.34);
+}
+.calendar-day.selected {
+  border-color: rgba(245, 166, 35, 0.5);
+  background: rgba(245, 166, 35, 0.12);
+}
+.calendar-day-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+.calendar-day-num {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.calendar-day-badge {
+  border-radius: 999px;
+  padding: 0.2rem 0.48rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(245, 166, 35, 0.14);
+}
+.calendar-day-meta {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.56);
+}
+.calendar-picked {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.38rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.22);
+  margin-bottom: 14px;
+}
+.calendar-big-date {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.calendar-mini {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+.calendar-mini-item {
+  border-radius: 14px;
+  padding: 0.88rem 0.95rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.calendar-mini-item strong {
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 4px;
+}
+.calendar-mini-item span {
+  font-size: 0.92rem;
+  color: #ffffff;
+}
+.waiver-copy {
+  margin-bottom: 16px;
+}
+.waiver-box {
+  border-radius: 18px;
+  border: 1px solid rgba(245, 166, 35, 0.16);
+  background: rgba(8, 17, 31, 0.34);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.waiver-box p {
+  margin: 0 0 10px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.9rem;
+  line-height: 1.72;
+}
+.waiver-bullets {
+  display: grid;
+  gap: 10px;
+}
+.waiver-bullet {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+.waiver-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.22);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+.check-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0 18px;
+}
+.check-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 0.9rem 0.95rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.check-row input {
+  margin-top: 2px;
+}
+.check-row label {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.82);
 }
 .status {
-  min-height: 1.2rem;
+  min-height: 1.4rem;
+  margin: 4px 0 12px;
   color: var(--danger);
-  font-size: 0.86rem;
+  font-size: 0.88rem;
 }
 .status.success { color: var(--success); }
 .footer-note {
@@ -346,7 +632,7 @@ textarea:focus {
 }
 @media (max-width: 980px) {
   .hero,
-  .content-grid,
+  .calendar-shell,
   .field-grid {
     grid-template-columns: 1fr;
   }
@@ -360,9 +646,32 @@ textarea:focus {
   .hero-card,
   .summary-card,
   .info-card,
-  .form-card {
+  .form-card,
+  .calendar-card,
+  .waiver-card,
+  .match-card {
     padding: 24px;
     border-radius: 22px;
+  }
+}
+@media (max-width: 720px) {
+  .calendar-head {
+    align-items: flex-start;
+  }
+  .calendar-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .calendar-month {
+    min-width: auto;
+  }
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 6px;
+  }
+  .calendar-day {
+    min-height: 84px;
+    padding: 0.65rem 0.55rem;
   }
 }
 </style>
@@ -386,14 +695,14 @@ textarea:focus {
     <div class="hero">
       <div class="hero-card">
         <div class="eyebrow">Booking Request</div>
-        <h1>Reserve Your <span>Day On The Water</span></h1>
+        <h1>Lock In The <span>Lake Day</span></h1>
         <p class="hero-copy">
-          Build your package, pick the date and access point, and we will get your request ready for a quick text, call, or email confirmation. This keeps the rebrand site fully self-contained while still giving your team the exact trip details they need.
+          Confirm the package, pick the rental day on the calendar, and sign the waiver in one clean flow. If the rider has booked before, Shoreline can now pull their saved info into the request instead of making them start from scratch.
         </p>
         <div class="contact-strip">
           <a class="contact-pill" href="tel:4696937164">Call or text: (469) 693-7164</a>
           <a class="contact-pill" href="mailto:shorelinerentals3@gmail.com">shorelinerentals3@gmail.com</a>
-          <span class="contact-pill">Mon-Sun · 8:30 AM - 8:30 PM</span>
+          <span class="contact-pill">Launch: 2000 Main St, Hickory Creek, TX</span>
         </div>
       </div>
       <div class="hero-side">
@@ -408,15 +717,21 @@ textarea:focus {
             <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
           </div>
         </div>
+        <div class="match-card" id="match-card">
+          <div class="mini-kicker">Returning rider found</div>
+          <h3 id="match-title">Customer recognized</h3>
+          <div class="match-copy" id="match-copy">We found this rider in Shoreline Ops and prefilled what we could.</div>
+          <div class="match-chip-row" id="match-chips"></div>
+        </div>
         <div class="info-card">
           <h2>What happens next</h2>
           <p>
-            After you review your request, the confirmation page will prepare a pre-filled text message and email draft so your customer can send everything to Shoreline in one tap.
+            After the rider reviews the request, the confirmation page still builds the pre-filled text and email draft. The difference now is that the booking and waiver can also sync into the Shoreline CRM in the background.
           </p>
           <div class="info-list">
-            <div class="info-item">We come to your access point anywhere on Lake Lewisville.</div>
-            <div class="info-item">Jet ski packages include life jackets, cooler, fuel, and briefing.</div>
-            <div class="info-item">Boat rentals include the captain, life jackets, and a full tank.</div>
+            <div class="info-item">Choose between 2, 3, or 4 Yamaha jet skis, the boat, or a full bundle.</div>
+            <div class="info-item">Pick the rental date here instead of on the homepage.</div>
+            <div class="info-item">Sign the waiver once and let Shoreline remember it for repeat bookings.</div>
           </div>
         </div>
       </div>
@@ -425,149 +740,326 @@ textarea:focus {
     <div class="content-grid">
       <div class="form-card">
         <div class="eyebrow">Request Details</div>
-        <h2 class="section-title">Build the booking request</h2>
+        <h2 class="section-title">Finish the booking request</h2>
         <p class="section-copy">
-          Fill in the rider details below. We will carry your package summary through to the confirmation page so it is ready to send.
+          Confirm the package details, add the rider info, choose the rental day, and sign the waiver. Shoreline will carry the full request into the confirmation screen and the CRM sync when available.
         </p>
 
         <div class="type-toggle">
-          <button class="type-btn active" data-type="jetski" type="button">Jet Ski Package</button>
-          <button class="type-btn" data-type="boat" type="button">Boat Rental</button>
+          <button class="type-btn active" data-type="jetski" type="button">Jet Skis</button>
+          <button class="type-btn" data-type="boat" type="button">Boat</button>
+          <button class="type-btn" data-type="bundle" type="button">Bundle</button>
         </div>
 
         <form id="booking-form">
-          <div class="field-grid">
-            <div class="field">
-              <label for="craft" id="craft-label">Number of jet skis needed</label>
-              <select id="craft" name="craft" required></select>
+          <div class="form-stack">
+            <div class="field-block">
+              <div class="block-label">Package & Contact</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="craft" id="craft-label">Number of jet skis needed</label>
+                  <select id="craft" name="craft" required></select>
+                </div>
+                <div class="field">
+                  <label for="duration">Duration</label>
+                  <select id="duration" name="duration" required></select>
+                </div>
+                <div class="field">
+                  <label for="name">Customer name</label>
+                  <input id="name" name="name" type="text" placeholder="First and last name" required>
+                </div>
+                <div class="field">
+                  <label for="phone">Phone</label>
+                  <input id="phone" name="phone" type="tel" placeholder="(469) 555-0000" required>
+                </div>
+                <div class="field">
+                  <label for="email">Email</label>
+                  <input id="email" name="email" type="email" placeholder="name@example.com">
+                </div>
+                <div class="field">
+                  <label for="contact-method">Preferred contact</label>
+                  <select id="contact-method" name="contactMethod">
+                    <option value="text">Text message</option>
+                    <option value="call">Phone call</option>
+                    <option value="email">Email</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="drone">Aerial drone coverage</label>
+                  <select id="drone" name="drone">
+                    <option value="no">No aerial drone coverage</option>
+                    <option value="yes">Add aerial drone video (+$50)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="party-size">Party size</label>
+                  <input id="party-size" name="partySize" type="number" min="1" max="20" value="2">
+                </div>
+                <div class="field full">
+                  <label for="location">Launch or meeting spot</label>
+                  <input id="location" name="location" type="text" value="Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX">
+                </div>
+                <div class="field full">
+                  <label for="notes">Notes</label>
+                  <textarea id="notes" name="notes" placeholder="Anything Shoreline should know about timing, riders, or special requests?"></textarea>
+                </div>
+              </div>
             </div>
-            <div class="field">
-              <label for="duration">Duration</label>
-              <select id="duration" name="duration" required></select>
+
+            <div class="calendar-card">
+              <div class="block-label">Calendar</div>
+              <div class="calendar-shell">
+                <div class="calendar-frame">
+                  <div class="calendar-head">
+                    <div>
+                      <h3>Choose the rental day</h3>
+                      <p>Pick the requested rental date here. The confirmation page and Shoreline CRM will both use this date.</p>
+                    </div>
+                    <div class="calendar-nav">
+                      <button type="button" aria-label="Previous month" onclick="shiftCalendarMonth(-1)">←</button>
+                      <div class="calendar-month" id="calendar-month">Month Year</div>
+                      <button type="button" aria-label="Next month" onclick="shiftCalendarMonth(1)">→</button>
+                    </div>
+                  </div>
+                  <div class="calendar-weekdays">
+                    <div class="calendar-weekday">Sun</div>
+                    <div class="calendar-weekday">Mon</div>
+                    <div class="calendar-weekday">Tue</div>
+                    <div class="calendar-weekday">Wed</div>
+                    <div class="calendar-weekday">Thu</div>
+                    <div class="calendar-weekday">Fri</div>
+                    <div class="calendar-weekday">Sat</div>
+                  </div>
+                  <div class="calendar-grid" id="calendar-grid"></div>
+                </div>
+                <div class="calendar-summary">
+                  <div class="calendar-picked"><span>Selected</span><span id="calendar-pill-date">Today</span></div>
+                  <div class="calendar-big-date" id="calendar-big-date">Today</div>
+                  <p id="calendar-copy">Choose the date that works best. Exact launch timing and the final confirmation still get handled below.</p>
+                  <div class="calendar-mini">
+                    <div class="calendar-mini-item">
+                      <strong>Requested date</strong>
+                      <span id="calendar-selected-inline">Today</span>
+                    </div>
+                    <div class="field">
+                      <label for="date">Requested date</label>
+                      <input id="date" name="date" type="date" required>
+                    </div>
+                    <div class="field">
+                      <label for="time">Preferred start time</label>
+                      <input id="time" name="time" type="time" value="09:00" required>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="field">
-              <label for="name">Customer name</label>
-              <input id="name" name="name" type="text" placeholder="First and last name" required>
-            </div>
-            <div class="field">
-              <label for="phone">Phone</label>
-              <input id="phone" name="phone" type="tel" placeholder="(469) 555-0000" required>
-            </div>
-            <div class="field">
-              <label for="email">Email</label>
-              <input id="email" name="email" type="email" placeholder="name@example.com">
-            </div>
-            <div class="field">
-              <label for="contact-method">Preferred contact</label>
-              <select id="contact-method" name="contactMethod">
-                <option value="text">Text message</option>
-                <option value="call">Phone call</option>
-                <option value="email">Email</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="date">Requested date</label>
-              <input id="date" name="date" type="date" required>
-            </div>
-            <div class="field">
-              <label for="time">Preferred start time</label>
-              <input id="time" name="time" type="time" value="09:00" required>
-            </div>
-            <div class="field full">
-              <label for="location">Lake access point or meeting spot</label>
-              <input id="location" name="location" type="text" placeholder="Example: Hidden Cove Marina or Little Elm Beach">
-            </div>
-            <div class="field">
-              <label for="drone">Aerial drone coverage</label>
-              <select id="drone" name="drone">
-                <option value="no">No aerial drone coverage</option>
-                <option value="yes">Add aerial drone video (+$50)</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="party-size">Party size</label>
-              <input id="party-size" name="partySize" type="number" min="1" max="20" value="2">
-            </div>
-            <div class="field full">
-              <label for="notes">Notes</label>
-              <textarea id="notes" name="notes" placeholder="Anything we should know about your group, timing, delivery point, or special requests?"></textarea>
+
+            <div class="waiver-card">
+              <div class="block-label">Waiver</div>
+              <h3>Sign the rider waiver</h3>
+              <div class="waiver-copy">
+                This waiver now connects to the CRM too. If Shoreline already has this rider on file, the form can reuse their saved information instead of forcing them to start over.
+              </div>
+              <div class="waiver-box">
+                <p>By submitting this request, the rider confirms they understand Shoreline Aquatics is preparing a watercraft rental that includes safety gear and a launch walkthrough, but riding still comes with normal on-the-water risk.</p>
+                <div class="waiver-bullets">
+                  <div class="waiver-bullet"><div class="waiver-dot">1</div><div>The rider accepts responsibility for operating the equipment safely and following Shoreline instructions.</div></div>
+                  <div class="waiver-bullet"><div class="waiver-dot">2</div><div>The rider understands the refundable damage deposit is <strong>$200 per ski</strong> for jet ski rentals and jet ski bundles.</div></div>
+                  <div class="waiver-bullet"><div class="waiver-dot">3</div><div>The rider authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
+                </div>
+              </div>
+              <div class="check-list">
+                <div class="check-row">
+                  <input id="waiver-risk" name="waiverRisk" type="checkbox" required>
+                  <label for="waiver-risk">I understand the risks of boating and personal watercraft activity and agree to follow Shoreline’s operating and safety instructions.</label>
+                </div>
+                <div class="check-row">
+                  <input id="waiver-damage" name="waiverDamage" type="checkbox" required>
+                  <label for="waiver-damage">I understand the refundable damage deposit is $200 per ski and that Shoreline may document equipment condition before and after the rental.</label>
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="signature">Digital signature</label>
+                  <input id="signature" name="signature" type="text" placeholder="Type full legal name" required>
+                </div>
+                <div class="field">
+                  <label for="signature-date">Waiver date</label>
+                  <input id="signature-date" name="signatureDate" type="date" required>
+                </div>
+                <div class="field">
+                  <label for="emergency-name">Emergency contact name</label>
+                  <input id="emergency-name" name="emergencyName" type="text" placeholder="Optional but recommended">
+                </div>
+                <div class="field">
+                  <label for="emergency-phone">Emergency contact phone</label>
+                  <input id="emergency-phone" name="emergencyPhone" type="tel" placeholder="(469) 555-0000">
+                </div>
+              </div>
             </div>
           </div>
+
           <div class="status" id="form-status"></div>
           <button class="btn btn-primary" type="submit">Review Booking Request</button>
           <div class="footer-note">
-            This page does not charge the customer directly. It prepares a clean request summary that can be sent to Shoreline by text, call, or email for final confirmation.
+            This page does not charge the customer directly. It prepares the request summary, saves the waiver details, and syncs the rider into Shoreline Ops when that service is available.
           </div>
         </form>
       </div>
-
     </div>
   </div>
 
 <script>
+const OPS_PUBLIC_API = window.location.protocol === 'file:'
+  ? 'https://shoreline-aquatics-ops.onrender.com'
+  : (
+      window.location.hostname.includes('shoreline-aquatics-ops') ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === 'localhost'
+    )
+      ? window.location.origin
+      : 'https://shoreline-aquatics-ops.onrender.com';
+
 const PRICING = {
   jetski2: { 2: 300, 3: 450, 4: 560, 6: 720, 8: 900 },
-  boat: { 1: 120, 2: 240, 3: 360, 4: 480, 6: 720, 8: 960 }
+  jetski3: { 2: 450, 3: 675, 4: 840, 6: 1080, 8: 1350 },
+  jetski4: { 2: 600, 3: 900, 4: 1120, 6: 1440, 8: 1800 },
+  boat: { 1: 120, 2: 240, 3: 360, 4: 480, 6: 720, 8: 960 },
+  bundle2: { 2: 540, 3: 810, 4: 1040, 6: 1440, 8: 1860 },
+  bundle3: { 2: 690, 3: 1035, 4: 1320, 6: 1800, 8: 2310 },
+  bundle4: { 2: 840, 3: 1260, 4: 1600, 6: 2160, 8: 2760 }
 };
 
 const CRAFT_LABELS = {
-  jetski2: "2 Yamaha Jet Skis",
-  boat: "Boat Rental"
+  jetski2: '2 Yamaha Jet Skis',
+  jetski3: '3 Yamaha Jet Skis',
+  jetski4: '4 Yamaha Jet Skis',
+  boat: 'Boat Rental',
+  bundle2: '2 Yamaha Jet Skis + Boat',
+  bundle3: '3 Yamaha Jet Skis + Boat',
+  bundle4: '4 Yamaha Jet Skis + Boat'
 };
 
 const TYPE_TO_CRAFTS = {
-  jetski: ["jetski2"],
-  boat: ["boat"]
+  jetski: ['jetski2', 'jetski3', 'jetski4'],
+  boat: ['boat'],
+  bundle: ['bundle2', 'bundle3', 'bundle4']
 };
 
 const LEGACY_CRAFT_MAP = {
-  yamaha: "jetski2",
-  seadoo2: "jetski2",
-  seadoo4: "jetski2"
+  yamaha: 'jetski2',
+  seadoo2: 'jetski2',
+  seadoo4: 'jetski4'
 };
 
-let currentType = "jetski";
+let currentType = 'jetski';
+let calendarMonthCursor = null;
+let selectedBookingDate = '';
+let matchedCustomer = null;
+let lastLookupKey = '';
 
 function qs(id) {
   return document.getElementById(id);
 }
 
 function formatCurrency(value) {
-  return "$" + Number(value || 0).toLocaleString();
+  return '$' + Number(value || 0).toLocaleString();
 }
 
 function normalizeCraft(craft) {
   return LEGACY_CRAFT_MAP[craft] || craft;
 }
 
+function normalizePhoneKey(value = '') {
+  return String(value).replace(/\D/g, '');
+}
+
+function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function localIsoDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalIsoDate(iso) {
+  if (!iso) return null;
+  const parts = String(iso).split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+function todayLocalIso() {
+  return localIsoDate(new Date());
+}
+
+function formatSelectedDate(iso) {
+  const date = parseLocalIsoDate(iso);
+  if (!date) return 'Choose a date';
+  return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function isJetSkiType(craft) {
+  return craft.startsWith('jetski');
+}
+
+function isBundleType(craft) {
+  return craft.startsWith('bundle');
+}
+
+function getCraftLabelForType(type) {
+  if (type === 'boat') return 'Boat rental option';
+  if (type === 'bundle') return 'Bundle size';
+  return 'Number of jet skis needed';
+}
+
+function buildBookingPayloadBase() {
+  const craft = qs('craft').value;
+  const duration = Number(qs('duration').value || 0);
+  const drone = qs('drone').value === 'yes';
+  const total = (PRICING[craft]?.[duration] || 0) + (drone ? 50 : 0);
+  return {
+    type: currentType,
+    craft,
+    craftLabel: CRAFT_LABELS[craft],
+    duration,
+    durationLabel: duration === 8 ? 'Full Day (8 hours)' : `${duration} ${duration === 1 ? 'hour' : 'hours'}`,
+    total,
+    drone
+  };
+}
+
 function setType(type) {
   currentType = type;
-  qs("craft-label").textContent = type === "boat" ? "Boat rental option" : "Jet ski package";
-  document.querySelectorAll(".type-btn").forEach((button) => {
-    button.classList.toggle("active", button.dataset.type === type);
+  qs('craft-label').textContent = getCraftLabelForType(type);
+  document.querySelectorAll('.type-btn').forEach((button) => {
+    button.classList.toggle('active', button.dataset.type === type);
   });
 
-  const craftSelect = qs("craft");
+  const craftSelect = qs('craft');
   craftSelect.innerHTML = TYPE_TO_CRAFTS[type]
     .map((craft) => `<option value="${craft}">${CRAFT_LABELS[craft]}</option>`)
-    .join("");
+    .join('');
 
   populateDurationOptions();
 }
 
 function populateDurationOptions(selectedHours) {
-  const craft = qs("craft").value;
-  const durationSelect = qs("duration");
+  const craft = qs('craft').value;
+  const durationSelect = qs('duration');
   const durations = Object.keys(PRICING[craft] || {})
     .map((value) => Number(value))
     .sort((a, b) => a - b);
 
   durationSelect.innerHTML = durations
     .map((hours) => {
-      const label = hours === 8 ? "Full Day (8 hours)" : `${hours} ${hours === 1 ? "Hour" : "Hours"}`;
+      const label = hours === 8 ? 'Full Day (8 hours)' : `${hours} ${hours === 1 ? 'Hour' : 'Hours'}`;
       return `<option value="${hours}">${label}</option>`;
     })
-    .join("");
+    .join('');
 
   if (selectedHours && PRICING[craft] && PRICING[craft][selectedHours]) {
     durationSelect.value = String(selectedHours);
@@ -576,126 +1068,340 @@ function populateDurationOptions(selectedHours) {
   updateSummary();
 }
 
-function selectedTotal() {
-  const craft = qs("craft").value;
-  const duration = Number(qs("duration").value || 0);
-  const drone = qs("drone").value === "yes" ? 50 : 0;
-  return (PRICING[craft]?.[duration] || 0) + drone;
+function updateSummary() {
+  const payload = buildBookingPayloadBase();
+  const craft = payload.craft;
+  const duration = payload.duration;
+  const durationLabel = payload.durationLabel;
+  const droneEnabled = payload.drone;
+
+  qs('summary-total').textContent = formatCurrency(payload.total);
+  qs('summary-title').textContent = payload.craftLabel;
+  qs('summary-duration').textContent = durationLabel;
+
+  if (craft === 'boat') {
+    qs('summary-note').textContent = `Boat rental with captain included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ' Life jackets and a full tank are included.'}`;
+    qs('summary-extra-label').textContent = 'Captain';
+    qs('summary-extra-value').textContent = 'Included';
+  } else if (isBundleType(craft)) {
+    qs('summary-note').textContent = `${durationLabel} bundle with Yamaha jet skis, the captained boat, life jackets, fuel, and briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
+    qs('summary-extra-label').textContent = 'Damage deposit';
+    qs('summary-extra-value').textContent = '$200 per ski';
+  } else {
+    qs('summary-note').textContent = `${durationLabel} rental with ${payload.craftLabel.toLowerCase()}, life jackets, a full tank, and a safety briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
+    qs('summary-extra-label').textContent = 'Damage deposit';
+    qs('summary-extra-value').textContent = '$200 per ski';
+  }
 }
 
-function updateSummary() {
-  const craft = qs("craft").value;
-  const duration = Number(qs("duration").value || 0);
-  const droneEnabled = qs("drone").value === "yes";
-  const total = selectedTotal();
-  const durationLabel = duration === 8 ? "Full Day (8 hours)" : `${duration} ${duration === 1 ? "hour" : "hours"}`;
+function renderCalendarSummary() {
+  const formatted = formatSelectedDate(selectedBookingDate);
+  qs('calendar-pill-date').textContent = formatted;
+  qs('calendar-big-date').textContent = formatted;
+  qs('calendar-selected-inline').textContent = formatted;
+  qs('calendar-copy').textContent = `Selected rental day: ${formatted}. Exact launch time and notes stay editable below.`;
+}
 
-  qs("summary-total").textContent = formatCurrency(total);
-  qs("summary-title").textContent = CRAFT_LABELS[craft];
-  qs("summary-duration").textContent = durationLabel;
-  qs("summary-note").textContent = craft === "boat"
-    ? `Boat rental with captain included. ${droneEnabled ? "Aerial drone coverage is added to this request." : "Life jackets and a full tank are included."}`
-    : `${durationLabel} rental with 2 Yamaha jet skis, life jackets, a full tank, and a safety briefing included.${droneEnabled ? " Aerial drone coverage is added to this request." : ""}`;
+function renderCalendar() {
+  const grid = qs('calendar-grid');
+  const monthLabel = qs('calendar-month');
+  if (!grid || !monthLabel) return;
 
-  if (craft === "boat") {
-    qs("summary-extra-label").textContent = "Captain";
-    qs("summary-extra-value").textContent = "Included";
-  } else {
-    qs("summary-extra-label").textContent = "Damage deposit";
-    qs("summary-extra-value").textContent = "$200 per ski";
+  if (!selectedBookingDate) selectedBookingDate = todayLocalIso();
+  if (!calendarMonthCursor) {
+    const selectedDate = parseLocalIsoDate(selectedBookingDate) || new Date();
+    calendarMonthCursor = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
   }
+
+  monthLabel.textContent = calendarMonthCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const firstVisible = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth(), 1 - calendarMonthCursor.getDay());
+  const cells = [];
+
+  for (let offset = 0; offset < 42; offset += 1) {
+    const cellDate = new Date(firstVisible.getFullYear(), firstVisible.getMonth(), firstVisible.getDate() + offset);
+    const cellIso = localIsoDate(cellDate);
+    const isOtherMonth = cellDate.getMonth() !== calendarMonthCursor.getMonth();
+    const isToday = cellIso === todayLocalIso();
+    const isSelected = cellIso === selectedBookingDate;
+    const label = isSelected ? 'Selected' : (!isOtherMonth && offset < 14 ? 'Open' : '&nbsp;');
+
+    cells.push(`
+      <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" type="button" onclick="selectCalendarDate('${cellIso}')">
+        <div class="calendar-day-top">
+          <span class="calendar-day-num">${cellDate.getDate()}</span>
+          ${isSelected ? '<span class="calendar-day-badge">Go</span>' : ''}
+        </div>
+        <div class="calendar-day-meta">${label}</div>
+      </button>
+    `);
+  }
+
+  grid.innerHTML = cells.join('');
+  renderCalendarSummary();
+}
+
+function selectCalendarDate(iso) {
+  selectedBookingDate = iso;
+  qs('date').value = iso;
+  const date = parseLocalIsoDate(iso);
+  if (date) calendarMonthCursor = new Date(date.getFullYear(), date.getMonth(), 1);
+  renderCalendar();
+}
+
+function shiftCalendarMonth(delta) {
+  if (!calendarMonthCursor) calendarMonthCursor = new Date();
+  calendarMonthCursor = new Date(calendarMonthCursor.getFullYear(), calendarMonthCursor.getMonth() + delta, 1);
+  renderCalendar();
 }
 
 function applyQueryDefaults() {
   const params = new URLSearchParams(window.location.search);
-  const craft = normalizeCraft(params.get("craft"));
-  const type = params.get("type");
-  const hours = Number(params.get("hours") || 0);
-  const date = params.get("date");
+  const craft = normalizeCraft(params.get('craft'));
+  const type = params.get('type');
+  const hours = Number(params.get('hours') || 0);
+  const date = params.get('date');
 
   if (type && TYPE_TO_CRAFTS[type]) {
     setType(type);
-  } else if (craft === "boat") {
-    setType("boat");
+  } else if (craft === 'boat') {
+    setType('boat');
+  } else if (craft.startsWith('bundle')) {
+    setType('bundle');
   }
 
   if (craft && Object.prototype.hasOwnProperty.call(CRAFT_LABELS, craft)) {
-    qs("craft").value = craft;
+    qs('craft').value = craft;
   }
 
   populateDurationOptions(hours);
+
   if (date) {
-    qs("date").value = date;
+    selectedBookingDate = date;
+    qs('date').value = date;
+    const parsed = parseLocalIsoDate(date);
+    if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
   }
+
   updateSummary();
 }
 
-function createBookingPayload() {
-  const craft = qs("craft").value;
-  const duration = Number(qs("duration").value || 0);
-  const total = selectedTotal();
-  const drone = qs("drone").value === "yes";
+function buildLookupUrl() {
+  const phone = qs('phone').value.trim();
+  const email = qs('email').value.trim();
+  const params = new URLSearchParams();
+  if (phone) params.set('phone', phone);
+  if (email) params.set('email', email);
+  return `${OPS_PUBLIC_API}/api/public/customer-lookup?${params.toString()}`;
+}
 
+function showMatchedCustomer(customer) {
+  const card = qs('match-card');
+  const title = qs('match-title');
+  const copy = qs('match-copy');
+  const chips = qs('match-chips');
+  if (!card || !title || !copy || !chips || !customer) return;
+
+  const repeatLabel = Number(customer.bookings || 0) > 1 ? 'Repeat rider' : 'Customer on file';
+  title.textContent = `${customer.name || 'Rider'} recognized`;
+  copy.textContent = customer.waiverOnFile
+    ? 'We found this rider in Shoreline Ops and a waiver is already on file. You can update anything below if something changed.'
+    : 'We found this rider in Shoreline Ops and prefilled their saved contact info. You can still update anything below.';
+
+  const chipValues = [
+    repeatLabel,
+    customer.lastBooking ? `Last booking ${customer.lastBooking}` : '',
+    customer.waiverOnFile ? 'Waiver on file' : '',
+    customer.email ? 'Email saved' : ''
+  ].filter(Boolean);
+
+  chips.innerHTML = chipValues.map((value) => `<span class="match-chip">${value}</span>`).join('');
+  card.classList.add('show');
+}
+
+function hideMatchedCustomer() {
+  qs('match-card').classList.remove('show');
+}
+
+function applyCustomerPrefill(customer) {
+  if (!customer) return;
+  matchedCustomer = customer;
+
+  if (!qs('name').value.trim()) qs('name').value = customer.name || '';
+  if (!qs('phone').value.trim()) qs('phone').value = customer.phone || '';
+  if (!qs('email').value.trim()) qs('email').value = customer.email || '';
+
+  if (customer.waiverOnFile) {
+    qs('waiver-risk').checked = true;
+    qs('waiver-damage').checked = true;
+    if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
+    if (!qs('signature-date').value) qs('signature-date').value = todayLocalIso();
+    if (!qs('emergency-name').value.trim()) qs('emergency-name').value = customer.emergencyName || '';
+    if (!qs('emergency-phone').value.trim()) qs('emergency-phone').value = customer.emergencyPhone || '';
+  }
+
+  showMatchedCustomer(customer);
+}
+
+async function lookupReturningCustomer(force = false) {
+  const phone = qs('phone').value.trim();
+  const email = qs('email').value.trim();
+  if (!phone && !email) {
+    matchedCustomer = null;
+    hideMatchedCustomer();
+    return;
+  }
+
+  const lookupKey = `${normalizePhoneKey(phone)}|${normalizeEmail(email)}`;
+  if (!force && lookupKey === lastLookupKey) return;
+  lastLookupKey = lookupKey;
+
+  try {
+    const response = await fetch(buildLookupUrl(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return;
+    const payload = await response.json().catch(() => ({}));
+    if (payload.found && payload.customer) {
+      applyCustomerPrefill(payload.customer);
+    } else {
+      matchedCustomer = null;
+      hideMatchedCustomer();
+    }
+  } catch (error) {
+    console.warn('Customer lookup skipped:', error);
+  }
+}
+
+function createBookingPayload() {
+  const base = buildBookingPayloadBase();
   return {
-    type: currentType,
-    craft,
-    craftLabel: CRAFT_LABELS[craft],
-    duration,
-    durationLabel: duration === 8 ? "Full Day (8 hours)" : `${duration} ${duration === 1 ? "hour" : "hours"}`,
-    total,
-    drone,
-    name: qs("name").value.trim(),
-    phone: qs("phone").value.trim(),
-    email: qs("email").value.trim(),
-    date: qs("date").value,
-    time: qs("time").value,
-    location: qs("location").value.trim(),
-    contactMethod: qs("contact-method").value,
-    partySize: qs("party-size").value,
-    notes: qs("notes").value.trim()
+    ...base,
+    name: qs('name').value.trim(),
+    phone: qs('phone').value.trim(),
+    email: qs('email').value.trim(),
+    date: qs('date').value,
+    time: qs('time').value,
+    location: qs('location').value.trim(),
+    contactMethod: qs('contact-method').value,
+    partySize: qs('party-size').value,
+    notes: qs('notes').value.trim(),
+    crmMatchId: matchedCustomer?.id || null,
+    waiver: {
+      acceptedRisk: qs('waiver-risk').checked,
+      acceptedDamage: qs('waiver-damage').checked,
+      signature: qs('signature').value.trim(),
+      signatureDate: qs('signature-date').value,
+      emergencyName: qs('emergency-name').value.trim(),
+      emergencyPhone: qs('emergency-phone').value.trim()
+    }
   };
 }
 
 function validatePayload(payload) {
   if (!payload.name || !payload.phone || !payload.date || !payload.time) {
-    return "Please fill in the customer name, phone number, requested date, and start time.";
+    return 'Please fill in the customer name, phone number, requested date, and start time.';
   }
   if (!payload.craft || !payload.duration || !payload.total) {
-    return "Please choose a valid craft and duration before continuing.";
+    return 'Please choose a valid package and duration before continuing.';
   }
-  return "";
+  if (!payload.waiver.acceptedRisk || !payload.waiver.acceptedDamage) {
+    return 'Please confirm the waiver terms before continuing.';
+  }
+  if (!payload.waiver.signature || !payload.waiver.signatureDate) {
+    return 'Please provide the rider signature and waiver date.';
+  }
+  return '';
 }
 
-function handleSubmit(event) {
+async function syncBookingToOps(payload) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking-request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || 'Could not sync the booking into Shoreline Ops.');
+  }
+  return body;
+}
+
+async function handleSubmit(event) {
   event.preventDefault();
   const payload = createBookingPayload();
   const error = validatePayload(payload);
-  const status = qs("form-status");
+  const status = qs('form-status');
 
   if (error) {
     status.textContent = error;
-    status.classList.remove("success");
+    status.classList.remove('success');
     return;
   }
 
-  localStorage.setItem("sla_booking_request", JSON.stringify(payload));
-  status.textContent = "Booking request saved. Opening the confirmation page...";
-  status.classList.add("success");
-  window.location.href = "../jetski-booking-confirmation/";
+  status.textContent = 'Saving booking request and waiver...';
+  status.classList.remove('success');
+
+  let syncMeta = { synced: false };
+  try {
+    const result = await syncBookingToOps(payload);
+    syncMeta = {
+      synced: true,
+      bookingId: result.bookingId || null,
+      customerId: result.customer?.id || null,
+      matchedExistingCustomer: Boolean(result.matchedExistingCustomer),
+      waiverStored: Boolean(result.waiverStored)
+    };
+  } catch (syncError) {
+    syncMeta = {
+      synced: false,
+      error: syncError.message || 'Could not sync the request to Shoreline Ops.'
+    };
+  }
+
+  localStorage.setItem('sla_booking_request', JSON.stringify({
+    ...payload,
+    syncMeta
+  }));
+
+  status.textContent = syncMeta.synced
+    ? 'Booking request saved and synced to Shoreline Ops. Opening the confirmation page...'
+    : 'Booking request saved. Opening the confirmation page...';
+  status.classList.add('success');
+  window.location.href = '../jetski-booking-confirmation/';
 }
 
-document.querySelectorAll(".type-btn").forEach((button) => {
-  button.addEventListener("click", () => setType(button.dataset.type));
+document.querySelectorAll('.type-btn').forEach((button) => {
+  button.addEventListener('click', () => setType(button.dataset.type));
 });
 
-qs("craft").addEventListener("change", () => populateDurationOptions());
-qs("duration").addEventListener("change", updateSummary);
-qs("drone").addEventListener("change", updateSummary);
-qs("booking-form").addEventListener("submit", handleSubmit);
-qs("date").value = new Date().toISOString().split("T")[0];
+qs('craft').addEventListener('change', () => populateDurationOptions());
+qs('duration').addEventListener('change', updateSummary);
+qs('drone').addEventListener('change', updateSummary);
+qs('date').addEventListener('change', (event) => {
+  if (!event.target.value) return;
+  selectedBookingDate = event.target.value;
+  const parsed = parseLocalIsoDate(selectedBookingDate);
+  if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+  renderCalendar();
+});
+qs('phone').addEventListener('blur', () => lookupReturningCustomer());
+qs('email').addEventListener('blur', () => lookupReturningCustomer());
+qs('booking-form').addEventListener('submit', handleSubmit);
+qs('name').addEventListener('blur', () => {
+  if (!qs('signature').value.trim()) qs('signature').value = qs('name').value.trim();
+});
 
-setType("jetski");
+qs('date').value = todayLocalIso();
+qs('signature-date').value = todayLocalIso();
+selectedBookingDate = qs('date').value;
+setType('jetski');
 applyQueryDefaults();
+renderCalendar();
+updateSummary();
 </script>
 </body>
 </html>

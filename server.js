@@ -261,6 +261,27 @@ function sendJson(response, statusCode, payload, headers = {}) {
   response.end(JSON.stringify(payload));
 }
 
+function publicCorsHeaders(request) {
+  const origin = request?.headers?.origin;
+  return {
+    'Access-Control-Allow-Origin': origin && origin !== 'null' ? origin : '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin'
+  };
+}
+
+function sendPublicJson(response, request, statusCode, payload) {
+  sendJson(response, statusCode, payload, publicCorsHeaders(request));
+}
+
+function sendPublicNoContent(response, request) {
+  setCommonHeaders(response, publicCorsHeaders(request));
+  response.writeHead(204);
+  response.end();
+}
+
 function sendRedirect(response, location) {
   setCommonHeaders(response, { Location: location, 'Cache-Control': 'no-store' });
   response.writeHead(302);
@@ -293,6 +314,10 @@ function normalizeEmail(value = '') {
   return String(value || '').trim().toLowerCase();
 }
 
+function phoneDigits(value = '') {
+  return String(value || '').replace(/\D/g, '');
+}
+
 function htmlEscape(value = '') {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -304,6 +329,95 @@ function htmlEscape(value = '') {
 
 function firstName(value = '') {
   return String(value || '').trim().split(/\s+/)[0] || 'there';
+}
+
+function nextId(items = []) {
+  return items.reduce((max, item) => Math.max(max, Number(item?.id || 0)), 0) + 1;
+}
+
+function parseIsoDate(value) {
+  if (!value) return null;
+  const parsed = new Date(`${String(value)}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function latestDateValue(first, second) {
+  if (!second) return first || '';
+  if (!first) return second;
+  const firstDate = parseIsoDate(first);
+  const secondDate = parseIsoDate(second);
+  if (!firstDate) return second;
+  if (!secondDate) return first;
+  return secondDate > firstDate ? second : first;
+}
+
+function isTruthyWaiver(value) {
+  return Boolean(value?.acceptedRisk && value?.acceptedDamage && value?.signature);
+}
+
+function sanitizePublicCustomer(customer = {}) {
+  return {
+    id: Number(customer.id || 0),
+    name: String(customer.name || '').trim(),
+    phone: String(customer.phone || '').trim(),
+    email: String(customer.email || '').trim(),
+    bookings: Number(customer.bookings || 0),
+    totalSpent: Number(customer.totalSpent || 0),
+    lastBooking: String(customer.lastBooking || ''),
+    waiverOnFile: Boolean(customer.waiverSignedAt || customer.waiver?.signedAt || customer.waiverSignature),
+    waiverSignedAt: String(customer.waiverSignedAt || customer.waiver?.signedAt || ''),
+    waiverSignature: String(customer.waiverSignature || customer.waiver?.signature || ''),
+    emergencyName: String(customer.emergencyName || customer.waiver?.emergencyName || ''),
+    emergencyPhone: String(customer.emergencyPhone || customer.waiver?.emergencyPhone || '')
+  };
+}
+
+function findMatchingCustomer(state, payload = {}) {
+  const phoneKey = phoneDigits(payload.phone);
+  const emailKey = normalizeEmail(payload.email);
+  return state.customers.find((customer) => (
+    (phoneKey && phoneDigits(customer.phone) === phoneKey) ||
+    (emailKey && normalizeEmail(customer.email) === emailKey)
+  )) || null;
+}
+
+function findMatchingBooking(state, payload = {}) {
+  const phoneKey = phoneDigits(payload.phone);
+  const emailKey = normalizeEmail(payload.email);
+  const craftLabel = String(payload.craftLabel || '').trim();
+  return state.bookings.find((booking) => (
+    booking.date === payload.date &&
+    booking.time === payload.time &&
+    Number(booking.duration || 0) === Number(payload.duration || 0) &&
+    String(booking.craftLabel || '').trim() === craftLabel &&
+    (
+      (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
+      (emailKey && normalizeEmail(booking.email) === emailKey)
+    )
+  )) || null;
+}
+
+function updateCustomerRollup(state, customer) {
+  const phoneKey = phoneDigits(customer.phone);
+  const emailKey = normalizeEmail(customer.email);
+  const relatedBookings = state.bookings.filter((booking) => (
+    (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
+    (emailKey && normalizeEmail(booking.email) === emailKey)
+  ));
+  customer.bookings = relatedBookings.length;
+  customer.totalSpent = relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
+  customer.lastBooking = relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), customer.lastBooking || '');
+  if (customer.bookings > 1 && customer.tag !== 'vip') customer.tag = 'repeat';
+}
+
+function publicCustomerPayload(customer) {
+  return sanitizePublicCustomer(customer);
+}
+
+function publicCraftKey(type = '', craft = '') {
+  if (type === 'boat') return 'boat';
+  if (type === 'bundle') return 'bundle';
+  return 'yamaha';
 }
 
 function integrationStatus() {
@@ -514,6 +628,8 @@ async function serveFile(response, filePath, headers = {}) {
 }
 
 async function handleApi(request, response, pathname) {
+  const requestUrl = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+
   if (pathname === '/api/health' && request.method === 'GET') {
     sendJson(response, 200, { ok: true, storage: stateStore.kind });
     return true;
@@ -548,6 +664,137 @@ async function handleApi(request, response, pathname) {
     clearSessionCookie(response);
     sendJson(response, 200, { ok: true });
     return true;
+  }
+
+  if (pathname.startsWith('/api/public/') && request.method === 'OPTIONS') {
+    sendPublicNoContent(response, request);
+    return true;
+  }
+
+  if (pathname === '/api/public/customer-lookup' && request.method === 'GET') {
+    const state = await stateStore.read();
+    const customer = findMatchingCustomer(state, {
+      phone: requestUrl.searchParams.get('phone') || '',
+      email: requestUrl.searchParams.get('email') || ''
+    });
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      found: Boolean(customer),
+      customer: customer ? publicCustomerPayload(customer) : null
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/booking-request' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      if (!payload?.name || !payload?.phone || !payload?.date || !payload?.time) {
+        throw new Error('Customer name, phone number, requested date, and start time are required.');
+      }
+      if (!payload?.craft || !payload?.craftLabel || !payload?.duration || !payload?.total) {
+        throw new Error('A valid package, duration, and total are required.');
+      }
+      if (!isTruthyWaiver(payload.waiver)) {
+        throw new Error('A completed waiver is required before saving this booking request.');
+      }
+
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const existingCustomer = findMatchingCustomer(state, payload);
+      const customer = existingCustomer || {
+        id: nextId(state.customers),
+        name: String(payload.name || '').trim(),
+        phone: String(payload.phone || '').trim(),
+        email: String(payload.email || '').trim(),
+        bookings: 0,
+        totalSpent: 0,
+        lastBooking: '',
+        source: 'Website Booking',
+        tag: '',
+        company: '',
+        crmTags: '',
+        crmNotes: '',
+        createdAt: now.split('T')[0],
+        lastActivity: now,
+        importSource: 'website'
+      };
+
+      customer.name = String(payload.name || customer.name || '').trim();
+      customer.phone = String(payload.phone || customer.phone || '').trim();
+      customer.email = String(payload.email || customer.email || '').trim();
+      customer.lastActivity = now;
+      customer.source = customer.source || 'Website Booking';
+      customer.importSource = customer.importSource || 'website';
+      customer.waiverSignedAt = String(payload.waiver.signatureDate || payload.date || now.split('T')[0]).trim();
+      customer.waiverSignature = String(payload.waiver.signature || '').trim();
+      customer.emergencyName = String(payload.waiver.emergencyName || '').trim();
+      customer.emergencyPhone = String(payload.waiver.emergencyPhone || '').trim();
+      customer.waiver = {
+        acceptedRisk: true,
+        acceptedDamage: true,
+        signature: customer.waiverSignature,
+        signedAt: customer.waiverSignedAt,
+        emergencyName: customer.emergencyName,
+        emergencyPhone: customer.emergencyPhone
+      };
+
+      if (!existingCustomer) {
+        state.customers.push(customer);
+      }
+
+      const existingBooking = findMatchingBooking(state, payload);
+      const booking = existingBooking || {
+        id: nextId(state.bookings),
+        status: 'pending',
+        deposit: false
+      };
+
+      booking.name = customer.name;
+      booking.phone = customer.phone;
+      booking.email = customer.email;
+      booking.craft = publicCraftKey(payload.type, payload.craft);
+      booking.craftLabel = String(payload.craftLabel || '').trim();
+      booking.duration = Number(payload.duration || 0);
+      booking.durationLabel = String(payload.durationLabel || '').trim();
+      booking.total = Number(payload.total || 0);
+      booking.drone = Boolean(payload.drone);
+      booking.date = String(payload.date || '').trim();
+      booking.time = String(payload.time || '').trim();
+      booking.location = String(payload.location || '').trim();
+      booking.contactMethod = String(payload.contactMethod || 'text').trim();
+      booking.partySize = String(payload.partySize || '').trim();
+      booking.notes = String(payload.notes || '').trim();
+      booking.customerId = customer.id;
+      booking.source = 'Website Booking';
+      booking.updatedAt = now;
+      booking.waiverSignedAt = customer.waiverSignedAt;
+      booking.waiverSignature = customer.waiverSignature;
+      booking.emergencyName = customer.emergencyName;
+      booking.emergencyPhone = customer.emergencyPhone;
+      booking.waiverAccepted = true;
+
+      if (!existingBooking) {
+        booking.createdAt = now;
+        state.bookings.push(booking);
+      }
+
+      updateCustomerRollup(state, customer);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        bookingId: booking.id,
+        matchedExistingCustomer: Boolean(existingCustomer),
+        waiverStored: true,
+        customer: publicCustomerPayload(customer)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the booking request.'
+      });
+      return true;
+    }
   }
 
   if (!pathname.startsWith('/api/ops/')) return false;
