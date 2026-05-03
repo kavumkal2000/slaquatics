@@ -448,46 +448,111 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 }
 
 /* ── WHY US ── */
-.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; margin-top: 3rem; }
-.why-item {
-  background: linear-gradient(180deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 18px;
+.why-section {
+  position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  transition: transform 0.22s, border-color 0.22s;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255,255,255,0.62) 0 4%, transparent 7%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.42) 0 5%, transparent 9%),
+    radial-gradient(circle at 52% 72%, rgba(255,255,255,0.2) 0 7%, transparent 11%),
+    linear-gradient(140deg, #8af1ff 0%, #43d2e8 26%, #1ca7c4 56%, #0a758f 100%);
 }
-.why-item:hover { transform: translateY(-3px); border-color: rgba(245,166,35,0.26); }
-.why-media { position: relative; height: 170px; overflow: hidden; }
-.why-media::after {
+.why-section::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(8,17,31,0.04) 0%, rgba(8,17,31,0.68) 100%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 100%),
+    repeating-radial-gradient(circle at 18% 26%, rgba(255,255,255,0.16) 0 2px, transparent 2px 21px),
+    repeating-radial-gradient(circle at 74% 66%, rgba(255,255,255,0.12) 0 2px, transparent 2px 24px);
+  mix-blend-mode: screen;
+  opacity: 0.72;
+  pointer-events: none;
 }
-.why-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.why-body { padding: 1.5rem 1.6rem 1.7rem; display: flex; flex-direction: column; flex: 1; }
-.why-top { display: flex; align-items: center; gap: 0.85rem; margin-bottom: 0.9rem; }
-.why-num {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  background: rgba(245,166,35,0.12);
-  border: 1px solid rgba(245,166,35,0.22);
+.why-section .section-inner { position: relative; z-index: 1; }
+.why-hero {
+  max-width: 1180px;
+  margin: 0 auto 2.2rem;
+  padding: 1.55rem 2rem 1.35rem;
+  text-align: center;
+  background: rgba(11,44,53,0.56);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 26px;
+  box-shadow: 0 20px 44px rgba(4,40,48,0.18);
+  backdrop-filter: blur(10px);
+}
+.why-title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2.4rem, 4.6vw, 4rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.why-subtitle {
+  margin: 0.65rem 0 0;
+  color: rgba(255,255,255,0.94);
+  font-size: clamp(0.98rem, 1.7vw, 1.55rem);
+  line-height: 1.45;
+}
+.why-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.45rem;
+}
+.why-item {
+  background: rgba(255,255,255,0.98);
+  border: 2px solid rgba(8,66,78,0.16);
+  border-radius: 28px;
+  padding: 2rem 1.35rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 100%;
+  box-shadow: 0 24px 40px rgba(7,44,53,0.16);
+  transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+}
+.why-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 48px rgba(7,44,53,0.2);
+  border-color: rgba(8,66,78,0.28);
+}
+.why-icon-badge {
+  width: 110px;
+  height: 110px;
+  border-radius: 999px;
+  background: #0d96a8;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Bebas Neue', cursive;
-  font-size: 1.4rem;
-  color: var(--gold);
-  line-height: 1;
-  letter-spacing: 0.06em;
-  flex-shrink: 0;
+  margin-bottom: 1.45rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 16px 30px rgba(13,150,168,0.22);
 }
-.why-item h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.35rem; line-height: 1.35; color: var(--white); }
-.why-item p { font-size: 0.84rem; color: rgba(255,255,255,0.76); line-height: 1.72; }
+.why-icon-svg {
+  width: 58px;
+  height: 58px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.why-item h3 {
+  margin: 0 0 0.95rem;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.18;
+  color: #0d1320;
+}
+.why-item p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #213746;
+  line-height: 1.62;
+}
 
 /* ── DRONE ── */
 .drone-inner { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center; }
@@ -722,7 +787,14 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .fleet-stat { text-align: left; }
   .fleet-price-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .why-grid { grid-template-columns: 1fr; }
-  .why-media { height: 148px; }
+  .why-hero { padding: 1.25rem 1rem 1.15rem; border-radius: 22px; margin-bottom: 1.4rem; }
+  .why-title { font-size: 2.6rem; }
+  .why-subtitle { font-size: 0.95rem; }
+  .why-item { padding: 1.45rem 1.1rem 1.2rem; border-radius: 24px; }
+  .why-icon-badge { width: 92px; height: 92px; margin-bottom: 1.1rem; }
+  .why-icon-svg { width: 48px; height: 48px; }
+  .why-item h3 { font-size: 1.02rem; }
+  .why-item p { font-size: 0.88rem; }
   .reviews-summary { flex-direction: column; align-items: start; gap: 0.9rem; }
   .summary-divider { width: 100%; height: 1px; }
   .review-slide { flex-basis: 100%; }
@@ -1187,38 +1259,57 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 </section>
 
 <!-- WHY US -->
-<section style="background:var(--deep);">
+<section class="why-section">
   <div class="section-inner">
-    <div class="section-tag">Why Choose Us</div>
-    <h2>The Shoreline Difference</h2>
+    <div class="why-hero">
+      <h2 class="why-title">Why Choose Us?</h2>
+      <p class="why-subtitle">We Have The Best Rates and Added Perks in the Area</p>
+    </div>
     <div class="why-grid">
       <div class="why-item">
-        <div class="why-media"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/66a08829bf892e0763e15ed4.jpeg" alt="Jet skis ready at the shoreline"></div>
-        <div class="why-body">
-          <div class="why-top"><div class="why-num">01</div><h3>Best Rates, Clearly Posted</h3></div>
-          <p>Customers can compare the fleet fast, see the real pricing upfront, and know we’ll still match a better local rate if they find one.</p>
+        <div class="why-icon-badge" aria-hidden="true">
+          <svg class="why-icon-svg" viewBox="0 0 48 48">
+            <rect x="9" y="11" width="30" height="18" rx="3"></rect>
+            <circle cx="24" cy="20" r="4"></circle>
+            <path d="M13 15h5M30 25h5M8 33h13l4-4h15"></path>
+            <path d="M8 39h10c4 0 6-1 8.5-3.2L31 33h9"></path>
+          </svg>
         </div>
+        <h3>Unbeatable Rates</h3>
+        <p>We keep pricing aggressive so more people can get on the water. If someone finds a better local rate, Shoreline can still work to match it.</p>
       </div>
       <div class="why-item">
-        <div class="why-media"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg" alt="Lake Lewisville delivery setup"></div>
-        <div class="why-body">
-          <div class="why-top"><div class="why-num">02</div><h3>Fast &amp; Easy Booking</h3></div>
-          <p>Customers can lock in their date, choose the right package, and get clear arrival details without a cluttered booking process.</p>
+        <div class="why-icon-badge" aria-hidden="true">
+          <svg class="why-icon-svg" viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="14"></circle>
+            <path d="M10 24h28M24 10a21 21 0 0 1 0 28M24 10a21 21 0 0 0 0 28M15 17c2.8 1.6 9.2 1.6 18 0M15 31c2.8-1.6 9.2-1.6 18 0"></path>
+          </svg>
         </div>
+        <h3>Delivered to Lake Lewisville</h3>
+        <p>Everything is staged right at Lake Lewisville so the crew can meet Shoreline there, check in fast, and get on the water without confusion.</p>
       </div>
       <div class="why-item">
-        <div class="why-media"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Aerial drone view over Lake Lewisville"></div>
-        <div class="why-body">
-          <div class="why-top"><div class="why-num">03</div><h3>Everything Included</h3></div>
-          <p>Life jackets, full tank, cooler, briefing, and the option to add drone coverage without cluttering the rental flow or surprise upsells later.</p>
+        <div class="why-icon-badge" aria-hidden="true">
+          <svg class="why-icon-svg" viewBox="0 0 48 48">
+            <path d="M16 21v-8a4 4 0 0 1 8 0v8"></path>
+            <path d="M16 21H10v16h22c2.1 0 3.9-1.5 4.2-3.6l1.5-9.2A3.5 3.5 0 0 0 34.2 20H24"></path>
+            <path d="M10 21v16"></path>
+          </svg>
         </div>
+        <h3>Exceptional Service &amp; Amenities</h3>
+        <p>Rentals include the helpful extras people actually use: life jackets, full tank, a cooler, a clear walkthrough, and optional add-ons like drone coverage.</p>
       </div>
       <div class="why-item">
-        <div class="why-media"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/66c4486780910831f7c4fbf0.jpeg" alt="Boat prepared for guests on the trailer"></div>
-        <div class="why-body">
-          <div class="why-top"><div class="why-num">04</div><h3>Licensed, Insured, Ready</h3></div>
-          <p>Customers get a cleaner, safer experience with real prep behind the scenes: insured equipment, calm walkthroughs, and a team that shows up ready.</p>
+        <div class="why-icon-badge" aria-hidden="true">
+          <svg class="why-icon-svg" viewBox="0 0 48 48">
+            <circle cx="24" cy="18" r="7"></circle>
+            <path d="M12 37c2.8-6.4 20.8-6.4 24 0"></path>
+            <path d="M10 30l1.3 2.7 3 .4-2.1 2 0.5 2.9-2.7-1.5-2.7 1.5 0.5-2.9-2.1-2 3-.4z"></path>
+            <path d="M38 30l1.3 2.7 3 .4-2.1 2 0.5 2.9-2.7-1.5-2.7 1.5 0.5-2.9-2.1-2 3-.4z"></path>
+          </svg>
         </div>
+        <h3>We Care</h3>
+        <p>Our equipment is kept ready, the safety talk stays clear, and the goal is simple: make sure people feel taken care of so they want to book again.</p>
       </div>
     </div>
   </div>
