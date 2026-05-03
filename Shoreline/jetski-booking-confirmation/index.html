@@ -104,6 +104,21 @@ p {
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 0.92rem;
 }
+.status.success {
+  color: #aaf4cb;
+  border-color: rgba(91, 219, 151, 0.32);
+  background: rgba(91, 219, 151, 0.08);
+}
+.status.warn {
+  color: #ffe29f;
+  border-color: rgba(245, 166, 35, 0.3);
+  background: rgba(245, 166, 35, 0.1);
+}
+.status.error {
+  color: #ffb3b3;
+  border-color: rgba(255, 120, 120, 0.32);
+  background: rgba(255, 120, 120, 0.08);
+}
 .summary-grid {
   display: grid;
   gap: 14px;
@@ -154,6 +169,10 @@ p {
   border-color: var(--gold);
   color: var(--gold);
 }
+.btn[aria-disabled="true"] {
+  opacity: 0.58;
+  pointer-events: none;
+}
 .empty {
   margin-top: 18px;
   padding: 18px;
@@ -187,9 +206,9 @@ p {
 
     <div class="card">
       <div class="eyebrow">Confirmation</div>
-      <h1>Send The <span style="color: var(--gold);">Booking Request</span></h1>
+      <h1>Review And Pay The <span style="color: var(--gold);">Booking Deposit</span></h1>
       <p>
-        Your rental details are ready. Use the buttons below to open a pre-filled text message or email draft, or call Shoreline directly if you want to lock in the reservation right away.
+        Your rental details are ready. Pay the $50 booking deposit through Stripe to hold the slot, or use the fallback contact buttons if Shoreline needs to handle the reservation manually.
       </p>
 
       <div id="empty-state" class="empty" hidden>
@@ -206,11 +225,14 @@ p {
           <div class="summary-row"><span>Meeting spot</span><strong id="summary-location"></strong></div>
           <div class="summary-row"><span>Party size</span><strong id="summary-party"></strong></div>
           <div class="summary-row"><span>Total quote</span><strong id="summary-total"></strong></div>
+          <div class="summary-row"><span>Booking deposit due now</span><strong id="summary-deposit">$50</strong></div>
+          <div class="summary-row"><span>Payment status</span><strong id="summary-payment-status">Not paid yet</strong></div>
           <div class="summary-row"><span>Customer</span><strong id="summary-customer"></strong></div>
           <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact"></strong></div>
         </div>
 
         <div class="actions">
+          <a class="btn btn-primary" id="stripe-link" href="#">Pay $50 deposit</a>
           <a class="btn btn-primary" id="sms-link" href="#">Text booking request</a>
           <a class="btn btn-ghost" id="email-link" href="#">Email booking request</a>
           <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
@@ -224,6 +246,21 @@ p {
 <script>
 const CONTACT_PHONE = "4696937164";
 const CONTACT_EMAIL = "shorelinerentals3@gmail.com";
+const OPS_PUBLIC_API = window.location.protocol === 'file:'
+  ? 'https://shoreline-aquatics-ops.onrender.com'
+  : (
+      window.location.hostname.includes('shoreline-aquatics-ops') ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === 'localhost'
+    )
+      ? window.location.origin
+      : 'https://shoreline-aquatics-ops.onrender.com';
+const DEFAULT_SITE_ORIGIN = window.location.protocol === 'file:'
+  ? 'https://slaquatics.onrender.com'
+  : window.location.origin;
+
+let activeBooking = null;
+let stripeReady = false;
 
 function readBooking() {
   try {
@@ -231,6 +268,15 @@ function readBooking() {
   } catch {
     return null;
   }
+}
+
+function saveBooking(booking) {
+  if (!booking) return;
+  localStorage.setItem("sla_booking_request", JSON.stringify(booking));
+}
+
+function formatCurrency(value) {
+  return `$${Number(value || 0).toLocaleString()}`;
 }
 
 function buildMessage(booking) {
@@ -249,6 +295,7 @@ function buildMessage(booking) {
     `Meeting spot: ${booking.location || "To be confirmed"}`,
     `Preferred contact: ${booking.contactMethod}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
+    `Booking deposit: ${booking.paymentStatus === "paid" || booking.deposit ? "Paid" : "$50 due to hold the slot"}`,
     `Notes: ${booking.notes || "None"}`
   ].join("\n");
 }
@@ -257,7 +304,54 @@ function setText(id, value) {
   document.getElementById(id).textContent = value;
 }
 
+function setStatus(message, tone = "") {
+  const status = document.getElementById("copy-status");
+  status.textContent = message;
+  status.className = `status${tone ? ` ${tone}` : ""}`;
+}
+
+function mergeBooking(base, incoming = {}) {
+  return {
+    ...(base || {}),
+    ...(incoming || {}),
+    paymentStatus: incoming.paymentStatus || base?.paymentStatus || 'unpaid',
+    depositAmount: incoming.depositAmount || base?.depositAmount || 50,
+    deposit: typeof incoming.deposit === "boolean" ? incoming.deposit : Boolean(base?.deposit)
+  };
+}
+
+function updatePaymentUi(booking) {
+  const depositAmount = Number(booking?.depositAmount || 50);
+  const paymentStatus = booking?.paymentStatus === "paid" || booking?.deposit
+    ? "Deposit paid"
+    : booking?.paymentStatus === "pending"
+      ? "Checkout started"
+      : booking?.paymentStatus === "expired"
+        ? "Checkout expired"
+        : "Not paid yet";
+
+  setText("summary-deposit", formatCurrency(depositAmount));
+  setText("summary-payment-status", paymentStatus);
+
+  const stripeButton = document.getElementById("stripe-link");
+  if (!stripeReady) {
+    stripeButton.textContent = "Stripe setup not finished";
+    stripeButton.setAttribute("aria-disabled", "true");
+    return;
+  }
+
+  if (booking?.paymentStatus === "paid" || booking?.deposit) {
+    stripeButton.textContent = "Deposit paid";
+    stripeButton.setAttribute("aria-disabled", "true");
+    return;
+  }
+
+  stripeButton.textContent = `Pay ${formatCurrency(depositAmount)} deposit`;
+  stripeButton.removeAttribute("aria-disabled");
+}
+
 function showBooking(booking) {
+  activeBooking = booking;
   const message = buildMessage(booking);
   const smsHref = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(message)}`;
   const emailSubject = encodeURIComponent(`Booking request from ${booking.name}`);
@@ -271,28 +365,158 @@ function showBooking(booking) {
   setText("summary-total", `$${Number(booking.total || 0).toLocaleString()}`);
   setText("summary-customer", `${booking.name} · ${booking.phone}`);
   setText("summary-contact", booking.contactMethod);
+  updatePaymentUi(booking);
 
   document.getElementById("sms-link").href = smsHref;
   document.getElementById("email-link").href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
-  document.getElementById("copy-link").addEventListener("click", async (event) => {
-    event.preventDefault();
-    try {
-      await navigator.clipboard.writeText(message);
-      document.getElementById("copy-status").textContent = "Request copied. Paste it into any message app if SMS or email does not open automatically.";
-    } catch {
-      document.getElementById("copy-status").textContent = "Copy failed in this browser. Use the email or text buttons instead.";
-    }
-  });
 
+  document.getElementById("empty-state").hidden = true;
   document.getElementById("request-wrap").hidden = false;
 }
 
-const booking = readBooking();
-if (!booking) {
-  document.getElementById("empty-state").hidden = false;
-} else {
-  showBooking(booking);
+async function loadStripeAvailability() {
+  try {
+    const response = await fetch(`${OPS_PUBLIC_API}/api/public/integrations/status`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return;
+    const payload = await response.json().catch(() => ({}));
+    stripeReady = Boolean(payload?.integrations?.stripeConfigured);
+  } catch {
+    stripeReady = false;
+  }
+  updatePaymentUi(activeBooking);
 }
+
+async function verifyCheckoutSession(sessionId) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/checkout-session?session_id=${encodeURIComponent(sessionId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not verify the Stripe checkout session.');
+  }
+  return payload;
+}
+
+async function handleStripeCheckout(event) {
+  event.preventDefault();
+  if (!activeBooking) {
+    setStatus('Go back to the booking page and complete the request before starting checkout.', 'error');
+    return;
+  }
+  if (!stripeReady) {
+    setStatus('Stripe is not configured yet on the Shoreline backend. Finish the Stripe keys first, then this button will work.', 'warn');
+    return;
+  }
+
+  const stripeButton = document.getElementById('stripe-link');
+  stripeButton.setAttribute('aria-disabled', 'true');
+  stripeButton.textContent = 'Opening Stripe...';
+  setStatus('Creating a secure Stripe checkout for the booking deposit...');
+
+  try {
+    const response = await fetch(`${OPS_PUBLIC_API}/api/public/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify({
+        booking: activeBooking,
+        siteOrigin: DEFAULT_SITE_ORIGIN
+      })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || 'Could not create the Stripe checkout session.');
+    }
+
+    if (payload.alreadyPaid) {
+      activeBooking = mergeBooking(activeBooking, payload.booking || { paymentStatus: 'paid', deposit: true });
+      saveBooking(activeBooking);
+      showBooking(activeBooking);
+      setStatus('This booking deposit is already marked as paid.', 'success');
+      return;
+    }
+
+    if (!payload.checkoutUrl) {
+      throw new Error('Stripe did not return a checkout URL.');
+    }
+
+    window.location.href = payload.checkoutUrl;
+  } catch (error) {
+    showBooking(activeBooking);
+    setStatus(error.message || 'Stripe checkout could not be started.', 'error');
+  }
+}
+
+document.getElementById("copy-link").addEventListener("click", async (event) => {
+  event.preventDefault();
+  const booking = activeBooking || readBooking();
+  if (!booking) {
+    setStatus('No booking request is available to copy yet.', 'warn');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(buildMessage(booking));
+    setStatus('Request copied. Paste it into any message app if SMS or email does not open automatically.', 'success');
+  } catch {
+    setStatus('Copy failed in this browser. Use the email or text buttons instead.', 'error');
+  }
+});
+
+document.getElementById("stripe-link").addEventListener("click", handleStripeCheckout);
+
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const storedBooking = readBooking();
+
+  if (storedBooking) {
+    showBooking(storedBooking);
+    setStatus('Review the request below, then pay the booking deposit to hold the slot.');
+  }
+
+  await loadStripeAvailability();
+
+  const sessionId = params.get('session_id');
+  if (sessionId) {
+    try {
+      setStatus('Checking the Stripe payment status for this booking...');
+      const payload = await verifyCheckoutSession(sessionId);
+      const merged = mergeBooking(storedBooking, payload.booking || {});
+      if (merged && (payload.session?.paymentStatus || payload.booking)) {
+        merged.paymentStatus = payload.session?.paymentStatus || merged.paymentStatus;
+        merged.deposit = merged.paymentStatus === 'paid' || Boolean(merged.deposit);
+        merged.depositAmount = payload.booking?.depositAmount || merged.depositAmount || 50;
+        saveBooking(merged);
+        showBooking(merged);
+      }
+
+      if (payload.session?.paymentStatus === 'paid') {
+        setStatus('Booking deposit paid. This reservation now has a paid Stripe deposit on file.', 'success');
+      } else if (payload.session?.paymentStatus === 'unpaid') {
+        setStatus('Stripe checkout completed, but the payment is still unpaid. Shoreline should verify this booking before launch.', 'warn');
+      } else {
+        setStatus('Stripe checkout was found, but the payment is still processing.', 'warn');
+      }
+      return;
+    } catch (error) {
+      setStatus(error.message || 'Could not verify the Stripe payment result.', 'error');
+    }
+  }
+
+  if (params.get('payment') === 'cancelled' && activeBooking) {
+    setStatus('Stripe checkout was cancelled. The booking request is still here whenever you are ready to pay the deposit.', 'warn');
+    return;
+  }
+
+  if (!storedBooking) {
+    document.getElementById("empty-state").hidden = false;
+  }
+})();
 </script>
 </body>
 </html>

@@ -726,12 +726,12 @@ h1 span { color: var(--gold); }
         <div class="info-card">
           <h2>What happens next</h2>
           <p>
-            After the rider reviews the request, the confirmation page still builds the pre-filled text and email draft. The difference now is that the booking and waiver can also sync into the Shoreline CRM in the background.
+            After the rider reviews the request, the confirmation page can launch Stripe for the $50 booking deposit, while the booking and waiver still sync into the Shoreline CRM in the background.
           </p>
           <div class="info-list">
             <div class="info-item">Choose between 2, 3, or 4 Yamaha jet skis, the boat, or a full bundle.</div>
             <div class="info-item">Pick the rental date here instead of on the homepage.</div>
-            <div class="info-item">Sign the waiver once and let Shoreline remember it for repeat bookings.</div>
+            <div class="info-item">Sign the waiver once, then let repeat riders move faster next time.</div>
           </div>
         </div>
       </div>
@@ -902,7 +902,7 @@ h1 span { color: var(--gold); }
           <div class="status" id="form-status"></div>
           <button class="btn btn-primary" type="submit">Review Booking Request</button>
           <div class="footer-note">
-            This page does not charge the customer directly. It prepares the request summary, saves the waiver details, and syncs the rider into Shoreline Ops when that service is available.
+            This page does not charge the customer directly. It prepares the request summary, saves the waiver details, and hands the rider off to Stripe on the next screen for the $50 booking deposit.
           </div>
         </form>
       </div>

@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { promises as fs } from 'node:fs';
+import Stripe from 'stripe';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,42 +32,45 @@ const SOCIAL_FACEBOOK_WEBHOOK_URL = process.env.SOCIAL_FACEBOOK_WEBHOOK_URL || '
 const SOCIAL_INSTAGRAM_WEBHOOK_URL = process.env.SOCIAL_INSTAGRAM_WEBHOOK_URL || '';
 const SOCIAL_X_WEBHOOK_URL = process.env.SOCIAL_X_WEBHOOK_URL || '';
 const SOCIAL_TIKTOK_WEBHOOK_URL = process.env.SOCIAL_TIKTOK_WEBHOOK_URL || '';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const PUBLIC_SITE_URL = String(process.env.PUBLIC_SITE_URL || 'https://slaquatics.onrender.com').replace(/\/+$/, '');
+const STRIPE_API_VERSION = '2026-02-25.clover';
+const BOOKING_DEPOSIT_CENTS = 5000;
+const DRONE_ADDON_CENTS = 5000;
+const PRICING_CENTS = {
+  jetski2: { 2: 30000, 3: 45000, 4: 56000, 6: 72000, 8: 90000 },
+  jetski3: { 2: 45000, 3: 67500, 4: 84000, 6: 108000, 8: 135000 },
+  jetski4: { 2: 60000, 3: 90000, 4: 112000, 6: 144000, 8: 180000 },
+  boat: { 1: 12000, 2: 24000, 3: 36000, 4: 48000, 6: 72000, 8: 96000 },
+  bundle2: { 2: 54000, 3: 81000, 4: 104000, 6: 144000, 8: 186000 },
+  bundle3: { 2: 69000, 3: 103500, 4: 132000, 6: 180000, 8: 231000 },
+  bundle4: { 2: 84000, 3: 126000, 4: 160000, 6: 216000, 8: 276000 }
+};
+const CRAFT_LABELS = {
+  jetski2: '2 Yamaha Jet Skis',
+  jetski3: '3 Yamaha Jet Skis',
+  jetski4: '4 Yamaha Jet Skis',
+  boat: 'Boat Rental',
+  bundle2: '2 Yamaha Jet Skis + Boat',
+  bundle3: '3 Yamaha Jet Skis + Boat',
+  bundle4: '4 Yamaha Jet Skis + Boat'
+};
+const LEGACY_CRAFT_MAP = {
+  yamaha: 'jetski2',
+  seadoo2: 'jetski2',
+  seadoo4: 'jetski4'
+};
+const stripe = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: STRIPE_API_VERSION })
+  : null;
 
 const DEFAULT_STATE = {
-  bookings: [
-    {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',craft:'yamaha',duration:4,date:'2026-04-22',time:'09:00',drone:true,status:'confirmed',deposit:true,notes:'Group of 4, birthday'},
-    {id:2,name:'Ashley L.',phone:'(972) 555-0344',email:'ashley@email.com',craft:'yamaha',duration:2,date:'2026-04-22',time:'13:00',drone:false,status:'pending',deposit:false,notes:''},
-    {id:3,name:'James T.',phone:'(469) 555-0092',email:'james@email.com',craft:'boat',duration:4,date:'2026-04-24',time:'10:00',drone:true,status:'confirmed',deposit:true,notes:'Family of 8'},
-    {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',craft:'yamaha',duration:8,date:'2026-04-19',time:'08:30',drone:true,status:'completed',deposit:true,notes:''},
-    {id:5,name:'Derek K.',phone:'(214) 555-0416',email:'derek@email.com',craft:'yamaha',duration:3,date:'2026-04-18',time:'11:00',drone:false,status:'noshow',deposit:false,notes:'No answer on day-of call'},
-    {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',craft:'boat',duration:6,date:'2026-04-17',time:'09:00',drone:false,status:'completed',deposit:true,notes:''}
-  ],
-  customers: [
-    {id:1,name:'Alex Harper',phone:'(214) 555-0180',email:'alex@example.com',bookings:2,totalSpent:860,lastBooking:'2026-04-09',source:'Google',tag:'repeat'},
-    {id:2,name:'Jordan Lee',phone:'(972) 555-0194',email:'jordan@example.com',bookings:1,totalSpent:300,lastBooking:'2026-04-05',source:'Instagram',tag:''},
-    {id:3,name:'Taylor Brooks',phone:'(469) 555-0162',email:'taylor@example.com',bookings:1,totalSpent:600,lastBooking:'2026-04-05',source:'Referral',tag:'repeat'},
-    {id:4,name:'Casey Morgan',phone:'(817) 555-0118',email:'casey@example.com',bookings:1,totalSpent:330,lastBooking:'2026-03-31',source:'Google',tag:''},
-    {id:5,name:'Riley Bennett',phone:'(512) 555-0141',email:'riley@example.com',bookings:3,totalSpent:1800,lastBooking:'2026-03-26',source:'Instagram',tag:'vip'},
-    {id:6,name:'Cameron Ellis',phone:'(903) 555-0127',email:'cameron@example.com',bookings:1,totalSpent:500,lastBooking:'2026-03-25',source:'Facebook',tag:''},
-    {id:7,name:'Morgan Hayes',phone:'(254) 555-0176',email:'morgan@example.com',bookings:2,totalSpent:1100,lastBooking:'2026-03-20',source:'Referral',tag:'repeat'},
-    {id:8,name:'Avery Collins',phone:'(210) 555-0153',email:'avery@example.com',bookings:2,totalSpent:1600,lastBooking:'2026-03-18',source:'Direct',tag:'vip'}
-  ],
-  expenses: [
-    {id:1,date:'2026-04-07',category:'delivery',name:'Trailer fuel and launch run',amount:65,notes:'Little Elm pickup'},
-    {id:2,date:'2026-04-10',category:'marketing',name:'Instagram promotion',amount:85,notes:'Weekend promo push'},
-    {id:3,date:'2026-04-14',category:'maintenance',name:'Life jacket replacements',amount:120,notes:'Two adult vests'}
-  ],
-  fuelLog: [
-    {craft:'Yamaha VX #2',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
-    {craft:'Yamaha VX #1',date:'2026-04-18',gallons:1.8,ppg:3.89,hours:3,ref:'Derek K.'},
-    {craft:'Boat',date:'2026-04-17',gallons:3.5,ppg:3.89,hours:6,ref:'Christina N.'},
-    {craft:'Boat',date:'2026-04-15',gallons:6.1,ppg:3.89,hours:4,ref:'James T.'}
-  ],
-  maintLog: [
-    {craft:'Yamaha VX #1',type:'Oil change',date:'2026-03-10',hours:80,cost:45,notes:'Mobil 1 10W-30'},
-    {craft:'Yamaha VX #2',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
-    {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'}
-  ],
+  bookings: [],
+  customers: [],
+  expenses: [],
+  fuelLog: [],
+  maintLog: [],
   invoices: [],
   communicationsLog: [],
   reviewRequests: [],
@@ -314,6 +318,43 @@ function normalizeEmail(value = '') {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizeCraftKey(value = '') {
+  return LEGACY_CRAFT_MAP[String(value || '').trim()] || String(value || '').trim();
+}
+
+function bookingTypeForCraft(craft = '') {
+  if (craft === 'boat') return 'boat';
+  if (craft.startsWith('bundle')) return 'bundle';
+  return 'jetski';
+}
+
+function durationLabel(hours) {
+  const amount = Number(hours || 0);
+  return amount === 8 ? 'Full Day (8 hours)' : `${amount} ${amount === 1 ? 'hour' : 'hours'}`;
+}
+
+function priceForSelection(craft = '', duration = 0, drone = false) {
+  const normalizedCraft = normalizeCraftKey(craft);
+  const normalizedDuration = Number(duration || 0);
+  const droneEnabled = drone === true || drone === 'true' || drone === 'yes' || drone === 1 || drone === '1';
+  const baseAmount = PRICING_CENTS[normalizedCraft]?.[normalizedDuration];
+  if (!baseAmount) {
+    throw new Error('Please choose a valid package and duration before continuing.');
+  }
+  return {
+    craft: normalizedCraft,
+    type: bookingTypeForCraft(normalizedCraft),
+    craftLabel: CRAFT_LABELS[normalizedCraft] || normalizedCraft,
+    duration: normalizedDuration,
+    durationLabel: durationLabel(normalizedDuration),
+    drone: droneEnabled,
+    baseAmount,
+    droneAmount: droneEnabled ? DRONE_ADDON_CENTS : 0,
+    totalAmount: baseAmount + (droneEnabled ? DRONE_ADDON_CENTS : 0),
+    bookingDepositAmount: BOOKING_DEPOSIT_CENTS
+  };
+}
+
 function phoneDigits(value = '') {
   return String(value || '').replace(/\D/g, '');
 }
@@ -420,6 +461,172 @@ function publicCraftKey(type = '', craft = '') {
   return 'yamaha';
 }
 
+function stripTrailingSlash(value = '') {
+  return String(value || '').replace(/\/+$/, '');
+}
+
+function isSafeHttpOrigin(value = '') {
+  return /^https?:\/\/[^/]+$/i.test(stripTrailingSlash(value));
+}
+
+function deriveSiteOrigin(request, override = '') {
+  const preferred = stripTrailingSlash(override);
+  if (isSafeHttpOrigin(preferred)) return preferred;
+
+  const origin = stripTrailingSlash(request?.headers?.origin || '');
+  if (isSafeHttpOrigin(origin) && !/shoreline-aquatics-ops/i.test(origin)) {
+    return origin;
+  }
+
+  return PUBLIC_SITE_URL;
+}
+
+function stripeConfigured() {
+  return Boolean(stripe && STRIPE_SECRET_KEY);
+}
+
+function stripeWebhookConfigured() {
+  return Boolean(stripeConfigured() && STRIPE_WEBHOOK_SECRET);
+}
+
+function bookingPaymentSummary(booking = {}) {
+  return {
+    depositAmount: Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100),
+    paymentStatus: String(booking.paymentStatus || (booking.deposit ? 'paid' : 'unpaid')),
+    paymentSessionId: String(booking.paymentSessionId || ''),
+    paymentCompletedAt: String(booking.paymentCompletedAt || ''),
+    paymentIntentId: String(booking.paymentIntentId || '')
+  };
+}
+
+function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  if (!payload?.name || !payload?.phone || !payload?.date || !payload?.time) {
+    throw new Error('Customer name, phone number, requested date, and start time are required.');
+  }
+  if (!isTruthyWaiver(payload.waiver)) {
+    throw new Error('A completed waiver is required before saving this booking request.');
+  }
+
+  const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
+  const existingCustomer = findMatchingCustomer(state, payload);
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: String(payload.name || '').trim(),
+    phone: String(payload.phone || '').trim(),
+    email: String(payload.email || '').trim(),
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Website Booking',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = String(payload.name || customer.name || '').trim();
+  customer.phone = String(payload.phone || customer.phone || '').trim();
+  customer.email = String(payload.email || customer.email || '').trim();
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Website Booking';
+  customer.importSource = customer.importSource || 'website';
+  customer.waiverSignedAt = String(payload.waiver.signatureDate || payload.date || now.split('T')[0]).trim();
+  customer.waiverSignature = String(payload.waiver.signature || '').trim();
+  customer.emergencyName = String(payload.waiver.emergencyName || '').trim();
+  customer.emergencyPhone = String(payload.waiver.emergencyPhone || '').trim();
+  customer.waiver = {
+    acceptedRisk: true,
+    acceptedDamage: true,
+    signature: customer.waiverSignature,
+    signedAt: customer.waiverSignedAt,
+    emergencyName: customer.emergencyName,
+    emergencyPhone: customer.emergencyPhone
+  };
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  const existingBooking = findMatchingBooking(state, {
+    ...payload,
+    craftLabel: pricing.craftLabel,
+    duration: pricing.duration
+  });
+  const booking = existingBooking || {
+    id: nextId(state.bookings),
+    status: 'pending',
+    deposit: false
+  };
+
+  booking.name = customer.name;
+  booking.phone = customer.phone;
+  booking.email = customer.email;
+  booking.craft = publicCraftKey(pricing.type, pricing.craft);
+  booking.craftKey = pricing.craft;
+  booking.craftLabel = pricing.craftLabel;
+  booking.duration = pricing.duration;
+  booking.durationLabel = pricing.durationLabel;
+  booking.total = Number((pricing.totalAmount / 100).toFixed(2));
+  booking.baseTotal = Number((pricing.baseAmount / 100).toFixed(2));
+  booking.drone = pricing.drone;
+  booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
+  booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
+  booking.date = String(payload.date || '').trim();
+  booking.time = String(payload.time || '').trim();
+  booking.location = String(payload.location || '').trim();
+  booking.contactMethod = String(payload.contactMethod || 'text').trim();
+  booking.partySize = String(payload.partySize || '').trim();
+  booking.notes = String(payload.notes || '').trim();
+  booking.customerId = customer.id;
+  booking.source = 'Website Booking';
+  booking.updatedAt = now;
+  booking.waiverSignedAt = customer.waiverSignedAt;
+  booking.waiverSignature = customer.waiverSignature;
+  booking.emergencyName = customer.emergencyName;
+  booking.emergencyPhone = customer.emergencyPhone;
+  booking.waiverAccepted = true;
+  booking.paymentStatus = booking.deposit ? 'paid' : String(booking.paymentStatus || 'unpaid');
+
+  if (!existingBooking) {
+    booking.createdAt = now;
+    state.bookings.push(booking);
+  }
+
+  updateCustomerRollup(state, customer);
+  return { state, customer, booking, existingCustomer, existingBooking, pricing };
+}
+
+function findBookingForStripeSession(state, session = {}) {
+  const bookingId = Number(session?.metadata?.bookingId || session?.client_reference_id || 0);
+  if (bookingId) {
+    const byId = state.bookings.find((booking) => Number(booking.id || 0) === bookingId);
+    if (byId) return byId;
+  }
+  const sessionId = String(session?.id || '');
+  if (sessionId) {
+    const bySession = state.bookings.find((booking) => String(booking.paymentSessionId || '') === sessionId);
+    if (bySession) return bySession;
+  }
+  return null;
+}
+
+function applyStripeSessionToBooking(state, session = {}, now = new Date().toISOString()) {
+  const booking = findBookingForStripeSession(state, session);
+  if (!booking) return null;
+
+  booking.paymentSessionId = String(session.id || booking.paymentSessionId || '');
+  booking.paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : String(booking.paymentIntentId || '');
+  booking.depositAmount = Number(((session.amount_total || BOOKING_DEPOSIT_CENTS) / 100).toFixed(2));
+  booking.paymentStatus = String(session.payment_status || booking.paymentStatus || 'pending');
+  booking.deposit = booking.paymentStatus === 'paid';
+  booking.paymentCompletedAt = booking.deposit ? now : String(booking.paymentCompletedAt || '');
+  booking.updatedAt = now;
+  return booking;
+}
+
 function integrationStatus() {
   const socialPlatforms = [
     SOCIAL_FACEBOOK_WEBHOOK_URL ? 'facebook' : '',
@@ -433,6 +640,8 @@ function integrationStatus() {
     reviewLinksConfigured: Boolean(GOOGLE_REVIEW_URL || FACEBOOK_REVIEW_URL),
     reviewAutomationEnabled: AUTO_SEND_REVIEW_REQUESTS,
     reviewChannel: REVIEW_REQUEST_CHANNEL,
+    stripeConfigured: stripeConfigured(),
+    stripeWebhookConfigured: stripeWebhookConfigured(),
     socialConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL || socialPlatforms.length),
     socialAutomationConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL),
     socialPlatforms
@@ -685,100 +894,20 @@ async function handleApi(request, response, pathname) {
     return true;
   }
 
+  if (pathname === '/api/public/integrations/status' && request.method === 'GET') {
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      integrations: integrationStatus()
+    });
+    return true;
+  }
+
   if (pathname === '/api/public/booking-request' && request.method === 'POST') {
     try {
       const payload = JSON.parse(await readRequestBody(request) || '{}');
-      if (!payload?.name || !payload?.phone || !payload?.date || !payload?.time) {
-        throw new Error('Customer name, phone number, requested date, and start time are required.');
-      }
-      if (!payload?.craft || !payload?.craftLabel || !payload?.duration || !payload?.total) {
-        throw new Error('A valid package, duration, and total are required.');
-      }
-      if (!isTruthyWaiver(payload.waiver)) {
-        throw new Error('A completed waiver is required before saving this booking request.');
-      }
-
       const state = await stateStore.read();
       const now = new Date().toISOString();
-      const existingCustomer = findMatchingCustomer(state, payload);
-      const customer = existingCustomer || {
-        id: nextId(state.customers),
-        name: String(payload.name || '').trim(),
-        phone: String(payload.phone || '').trim(),
-        email: String(payload.email || '').trim(),
-        bookings: 0,
-        totalSpent: 0,
-        lastBooking: '',
-        source: 'Website Booking',
-        tag: '',
-        company: '',
-        crmTags: '',
-        crmNotes: '',
-        createdAt: now.split('T')[0],
-        lastActivity: now,
-        importSource: 'website'
-      };
-
-      customer.name = String(payload.name || customer.name || '').trim();
-      customer.phone = String(payload.phone || customer.phone || '').trim();
-      customer.email = String(payload.email || customer.email || '').trim();
-      customer.lastActivity = now;
-      customer.source = customer.source || 'Website Booking';
-      customer.importSource = customer.importSource || 'website';
-      customer.waiverSignedAt = String(payload.waiver.signatureDate || payload.date || now.split('T')[0]).trim();
-      customer.waiverSignature = String(payload.waiver.signature || '').trim();
-      customer.emergencyName = String(payload.waiver.emergencyName || '').trim();
-      customer.emergencyPhone = String(payload.waiver.emergencyPhone || '').trim();
-      customer.waiver = {
-        acceptedRisk: true,
-        acceptedDamage: true,
-        signature: customer.waiverSignature,
-        signedAt: customer.waiverSignedAt,
-        emergencyName: customer.emergencyName,
-        emergencyPhone: customer.emergencyPhone
-      };
-
-      if (!existingCustomer) {
-        state.customers.push(customer);
-      }
-
-      const existingBooking = findMatchingBooking(state, payload);
-      const booking = existingBooking || {
-        id: nextId(state.bookings),
-        status: 'pending',
-        deposit: false
-      };
-
-      booking.name = customer.name;
-      booking.phone = customer.phone;
-      booking.email = customer.email;
-      booking.craft = publicCraftKey(payload.type, payload.craft);
-      booking.craftLabel = String(payload.craftLabel || '').trim();
-      booking.duration = Number(payload.duration || 0);
-      booking.durationLabel = String(payload.durationLabel || '').trim();
-      booking.total = Number(payload.total || 0);
-      booking.drone = Boolean(payload.drone);
-      booking.date = String(payload.date || '').trim();
-      booking.time = String(payload.time || '').trim();
-      booking.location = String(payload.location || '').trim();
-      booking.contactMethod = String(payload.contactMethod || 'text').trim();
-      booking.partySize = String(payload.partySize || '').trim();
-      booking.notes = String(payload.notes || '').trim();
-      booking.customerId = customer.id;
-      booking.source = 'Website Booking';
-      booking.updatedAt = now;
-      booking.waiverSignedAt = customer.waiverSignedAt;
-      booking.waiverSignature = customer.waiverSignature;
-      booking.emergencyName = customer.emergencyName;
-      booking.emergencyPhone = customer.emergencyPhone;
-      booking.waiverAccepted = true;
-
-      if (!existingBooking) {
-        booking.createdAt = now;
-        state.bookings.push(booking);
-      }
-
-      updateCustomerRollup(state, customer);
+      const { customer, booking, existingCustomer } = upsertBookingFromPayload(state, payload, now);
       await stateStore.write(state);
 
       sendPublicJson(response, request, 200, {
@@ -786,13 +915,247 @@ async function handleApi(request, response, pathname) {
         bookingId: booking.id,
         matchedExistingCustomer: Boolean(existingCustomer),
         waiverStored: true,
-        customer: publicCustomerPayload(customer)
+        customer: publicCustomerPayload(customer),
+        booking: {
+          id: booking.id,
+          craftLabel: booking.craftLabel,
+          durationLabel: booking.durationLabel,
+          total: booking.total,
+          depositAmount: Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100),
+          paymentStatus: booking.paymentStatus || 'unpaid'
+        }
       });
       return true;
     } catch (error) {
       sendPublicJson(response, request, 400, {
         error: error.message || 'Could not save the booking request.'
       });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/create-checkout-session' && request.method === 'POST') {
+    if (!stripeConfigured()) {
+      sendPublicJson(response, request, 503, {
+        error: 'Stripe is not configured yet for Shoreline checkout.'
+      });
+      return true;
+    }
+
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const payload = body?.booking || body || {};
+      const siteOrigin = deriveSiteOrigin(request, body?.siteOrigin || payload?.siteOrigin || '');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { booking, pricing } = upsertBookingFromPayload(state, payload, now);
+
+      if (booking.deposit || booking.paymentStatus === 'paid') {
+        await stateStore.write(state);
+        sendPublicJson(response, request, 200, {
+          ok: true,
+          alreadyPaid: true,
+          bookingId: booking.id,
+          booking: {
+            id: booking.id,
+            craftLabel: booking.craftLabel,
+            durationLabel: booking.durationLabel,
+            total: booking.total,
+            ...bookingPaymentSummary(booking)
+          }
+        });
+        return true;
+      }
+
+      const descriptionParts = [
+        `${booking.craftLabel}`,
+        booking.durationLabel,
+        booking.date,
+        booking.time
+      ].filter(Boolean);
+      const description = descriptionParts.join(' · ');
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        success_url: `${siteOrigin}/jetski-booking-confirmation/?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteOrigin}/jetski-booking-confirmation/?payment=cancelled`,
+        customer_email: booking.email || undefined,
+        billing_address_collection: 'auto',
+        phone_number_collection: { enabled: true },
+        invoice_creation: { enabled: true },
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: 'usd',
+              unit_amount: BOOKING_DEPOSIT_CENTS,
+              product_data: {
+                name: 'Shoreline Aquatics Booking Deposit',
+                description,
+                metadata: {
+                  craft: pricing.craft,
+                  bookingId: String(booking.id)
+                }
+              }
+            }
+          }
+        ],
+        payment_intent_data: {
+          metadata: {
+            bookingId: String(booking.id),
+            customerId: String(booking.customerId || ''),
+            craft: pricing.craft,
+            craftLabel: booking.craftLabel,
+            duration: String(booking.duration),
+            date: booking.date,
+            time: booking.time
+          }
+        },
+        metadata: {
+          bookingId: String(booking.id),
+          customerId: String(booking.customerId || ''),
+          craft: pricing.craft,
+          craftLabel: booking.craftLabel,
+          duration: String(booking.duration),
+          date: booking.date,
+          time: booking.time,
+          totalQuote: String(booking.total),
+          depositAmount: String((BOOKING_DEPOSIT_CENTS / 100).toFixed(2))
+        },
+        client_reference_id: String(booking.id),
+        custom_text: {
+          submit: {
+            message: 'Today you are paying the $50 booking deposit. The remaining balance is handled with Shoreline before launch.'
+          }
+        }
+      });
+
+      booking.paymentStatus = 'pending';
+      booking.paymentSessionId = String(session.id || '');
+      booking.depositAmount = Number((BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
+      booking.updatedAt = now;
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        checkoutUrl: session.url,
+        sessionId: session.id,
+        bookingId: booking.id,
+        amountDue: Number((BOOKING_DEPOSIT_CENTS / 100).toFixed(2))
+      });
+      return true;
+    } catch (error) {
+      console.error('Stripe checkout session failed:', error);
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not start Stripe checkout.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/checkout-session' && request.method === 'GET') {
+    if (!stripeConfigured()) {
+      sendPublicJson(response, request, 503, {
+        error: 'Stripe is not configured yet for Shoreline checkout.'
+      });
+      return true;
+    }
+
+    const sessionId = String(requestUrl.searchParams.get('session_id') || '').trim();
+    if (!sessionId) {
+      sendPublicJson(response, request, 400, { error: 'A Stripe session id is required.' });
+      return true;
+    }
+
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const booking = applyStripeSessionToBooking(state, session, now);
+      if (booking) {
+        await stateStore.write(state);
+      }
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          paymentStatus: session.payment_status,
+          amountTotal: Number(((session.amount_total || 0) / 100).toFixed(2)),
+          customerEmail: session.customer_details?.email || session.customer_email || '',
+          customerName: session.customer_details?.name || '',
+          bookingId: session.metadata?.bookingId || session.client_reference_id || ''
+        },
+        booking: booking ? {
+          id: booking.id,
+          name: booking.name,
+          phone: booking.phone,
+          email: booking.email,
+          craftLabel: booking.craftLabel,
+          durationLabel: booking.durationLabel,
+          total: booking.total,
+          date: booking.date,
+          time: booking.time,
+          location: booking.location,
+          contactMethod: booking.contactMethod,
+          partySize: booking.partySize,
+          drone: booking.drone,
+          ...bookingPaymentSummary(booking)
+        } : null
+      });
+      return true;
+    } catch (error) {
+      console.error('Stripe checkout session lookup failed:', error);
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not verify the Stripe checkout session.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/webhooks/stripe' && request.method === 'POST') {
+    if (!stripeWebhookConfigured()) {
+      sendJson(response, 503, { error: 'Stripe webhook handling is not configured yet.' });
+      return true;
+    }
+
+    try {
+      const signature = request.headers['stripe-signature'];
+      if (!signature) {
+        throw new Error('Missing Stripe signature header.');
+      }
+      const rawBody = await readRequestBody(request);
+      const event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET);
+
+      if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+        const state = await stateStore.read();
+        const session = event.data.object;
+        const booking = applyStripeSessionToBooking(state, session, new Date().toISOString());
+        if (booking) {
+          await stateStore.write(state);
+        }
+      }
+
+      if (event.type === 'checkout.session.expired') {
+        const state = await stateStore.read();
+        const session = event.data.object;
+        const booking = findBookingForStripeSession(state, session);
+        if (booking) {
+          booking.paymentStatus = 'expired';
+          booking.deposit = false;
+          booking.updatedAt = new Date().toISOString();
+          await stateStore.write(state);
+        }
+      }
+
+      setCommonHeaders(response, { 'Content-Type': 'application/json; charset=utf-8' });
+      response.writeHead(200);
+      response.end(JSON.stringify({ received: true }));
+      return true;
+    } catch (error) {
+      console.error('Stripe webhook error:', error);
+      sendJson(response, 400, { error: error.message || 'Could not process Stripe webhook.' });
       return true;
     }
   }
