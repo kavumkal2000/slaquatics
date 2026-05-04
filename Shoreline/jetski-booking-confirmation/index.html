@@ -64,7 +64,7 @@ a{color:inherit}
 .summary-grid,
 .match-chip-row,
 .legal-list{display:grid}
-.hero{grid-template-columns:minmax(0,1.12fr) minmax(300px,.88fr);gap:20px;margin-bottom:24px}
+.hero{grid-template-columns:1fr;gap:20px;margin-bottom:24px}
 .hero-card,
 .info-card,
 .form-card,
@@ -119,7 +119,7 @@ h3{font-size:1.75rem}
   padding:.82rem .95rem;border-radius:14px;background:rgba(11,28,48,.04);
   border:1px solid rgba(11,28,48,.08);color:var(--ink-soft);font-size:.9rem;line-height:1.65
 }
-.content-grid{grid-template-columns:minmax(0,1.02fr) minmax(300px,.82fr);gap:24px}
+.content-grid{grid-template-columns:1fr;gap:24px}
 .form-card h2,.summary-card h2,.match-card h2{font-size:1.95rem}
 .form-stack{gap:20px;margin-top:22px}
 .field-block,
@@ -237,16 +237,6 @@ h3{font-size:1.75rem}
         <h1>Complete The <span class="accent">Waiver</span> And Pay The Deposit</h1>
         <div class="hero-copy">
           This is the final booking step before the thank-you page. Fill in the rider details, complete the waiver, and pay the $50 booking deposit to hold the rental date.
-        </div>
-      </div>
-
-      <div class="info-card">
-        <div class="section-copy">
-          Use this page to finish everything Shoreline needs before checkout. If the rider has booked before, some saved waiver details may fill in automatically.
-        </div>
-        <div class="info-list">
-          <div class="info-item">The booking deposit due now is <strong style="color:var(--gold)">$50</strong>.</div>
-          <div class="info-item">The thank-you page after payment shows the arrival instructions and next steps.</div>
         </div>
       </div>
     </div>
@@ -380,30 +370,8 @@ h3{font-size:1.75rem}
 
           <div class="actions">
             <button class="btn btn-primary" id="stripe-link" type="submit">Pay $50 deposit</button>
-            <a class="btn btn-primary" id="sms-link" href="#">Text Shoreline</a>
-            <a class="btn btn-ghost" id="email-link" href="#">Email Shoreline</a>
-            <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
-            <a class="btn btn-ghost" href="../jetski-booking/">Edit date &amp; time</a>
           </div>
         </form>
-      </div>
-
-      <div class="summary-card">
-        <div class="block-label">Booking Summary</div>
-        <h2>Review the rental before payment</h2>
-        <div class="summary-total" id="summary-total">$300</div>
-        <div class="summary-title" id="summary-package">2 Yamaha Jet Skis</div>
-        <div class="summary-note" id="summary-note">Your selected package, date, and launch details show here before you pay the booking deposit.</div>
-
-        <div class="summary-grid">
-          <div class="summary-row"><span>Date</span><strong id="summary-date">-</strong></div>
-          <div class="summary-row"><span>Start time</span><strong id="summary-time">-</strong></div>
-          <div class="summary-row"><span>Meeting spot</span><strong id="summary-location">-</strong></div>
-          <div class="summary-row"><span>Party size</span><strong id="summary-party">2</strong></div>
-          <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact">Text message</strong></div>
-          <div class="summary-row"><span>Booking deposit due now</span><strong id="summary-deposit">$50</strong></div>
-          <div class="summary-row"><span>Payment status</span><strong id="summary-payment-status">Not paid yet</strong></div>
-        </div>
       </div>
     </div>
   </div>
@@ -604,13 +572,16 @@ function updatePaymentUi(booking) {
 function updateContactLinks() {
   const booking = createPayload(false);
   if (!booking) return;
+  const smsLink = qs("sms-link");
+  const emailLink = qs("email-link");
+  if (!smsLink && !emailLink) return;
   const message = buildMessage(booking);
   const smsHref = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(message)}`;
   const emailSubject = encodeURIComponent(`Booking request from ${booking.name || 'Shoreline customer'}`);
   const emailBody = encodeURIComponent(message);
 
-  qs("sms-link").href = smsHref;
-  qs("email-link").href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
+  if (smsLink) smsLink.href = smsHref;
+  if (emailLink) emailLink.href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
 }
 
 function showMatchedCustomer(customer) {
