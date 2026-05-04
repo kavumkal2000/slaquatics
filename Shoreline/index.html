@@ -276,7 +276,7 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .fleet-title { font-family: 'Bebas Neue', cursive; font-size: clamp(2rem, 3vw, 2.8rem); color: var(--white); letter-spacing: 0.04em; line-height: 0.98; }
 .fleet-stat { text-align: right; flex-shrink: 0; }
 .fleet-stat-label { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.48); }
-.fleet-stat-value { font-family: 'Bebas Neue', cursive; font-size: 1.55rem; color: var(--gold); line-height: 1; letter-spacing: 0.05em; }
+.fleet-stat-value { font-family: 'Bebas Neue', cursive; font-size: 2.4rem; color: var(--gold); line-height: 1; letter-spacing: 0.05em; }
 .fleet-desc { font-size: 0.93rem; color: rgba(255,255,255,0.84); line-height: 1.72; max-width: 42ch; }
 .fleet-perks { display: flex; flex-wrap: wrap; gap: 0.45rem; }
 .fleet-perk { background: rgba(26,158,212,0.1); color: #7dd3fc; border: 1px solid rgba(26,158,212,0.18); font-size: 0.68rem; padding: 0.28rem 0.68rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.07em; }
@@ -431,9 +431,9 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 22px;
-  padding: 1.35rem 1.2rem 1.45rem;
+  padding: 2rem 1.2rem 1.45rem;
   min-height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 .how-step::before {
   content: '';
@@ -449,14 +449,17 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   justify-content: center;
   width: 42px;
   height: 42px;
-  border-radius: 14px;
-  background: rgba(245,166,35,0.12);
-  border: 1px solid rgba(245,166,35,0.22);
-  color: var(--gold);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  border: 3px solid rgba(8,17,31,0.92);
+  color: #08111f;
   font-family: 'Bebas Neue', cursive;
   font-size: 1.35rem;
   letter-spacing: 0.06em;
-  margin-bottom: 1rem;
+  position: absolute;
+  top: -18px;
+  left: 18px;
+  box-shadow: 0 16px 30px rgba(0,0,0,0.26);
 }
 .how-step-icon {
   width: 72px;
@@ -877,7 +880,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .addon-media { min-height: 250px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .addon-content { padding: 1.5rem; }
   .how-grid { grid-template-columns: 1fr; }
-  .how-step { padding-bottom: 1.15rem; }
+  .how-step { padding: 1.85rem 1.1rem 1.15rem; }
   .location-grid { grid-template-columns: 1fr; }
   .drone-inner { grid-template-columns: 1fr; gap: 2.5rem; }
   .why-grid { grid-template-columns: repeat(2,1fr); }

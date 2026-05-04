@@ -1071,7 +1071,7 @@ async function handleApi(request, response, pathname) {
 
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
-        success_url: `${siteOrigin}/jetski-booking-confirmation/?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: `${siteOrigin}/booking-thank-you/?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${siteOrigin}/jetski-booking-confirmation/?payment=cancelled`,
         customer_email: booking.email || undefined,
         billing_address_collection: 'auto',

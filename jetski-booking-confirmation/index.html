@@ -3,307 +3,426 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Review and send your Shoreline Aquatics booking request.">
+<meta name="description" content="Complete the Shoreline Aquatics waiver, review your rental details, and pay the booking deposit.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking-confirmation/">
-<title>Booking Confirmation | Shoreline Aquatics</title>
+<title>Waiver & Deposit | Shoreline Aquatics</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: 'DM Sans', sans-serif;
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --gold:#f5a623;
+  --orange:#e8841a;
+  --panel:rgba(12,27,48,0.92);
+  --line:rgba(255,255,255,0.1);
+  --muted:rgba(255,255,255,0.68);
+  --success:#98f5c5;
+  --danger:#ff9c9c;
+}
+body{
+  margin:0;
+  font-family:'DM Sans',sans-serif;
+  color:#fff;
   background:
-    radial-gradient(circle at top left, rgba(15, 184, 224, 0.16), transparent 24%),
+    radial-gradient(circle at top left, rgba(15,184,224,0.16), transparent 24%),
     linear-gradient(180deg, #08111f 0%, #0b1930 48%, #102642 100%);
-  color: #ffffff;
 }
-:root {
-  --gold: #f5a623;
-  --orange: #e8841a;
-  --line: rgba(255, 255, 255, 0.1);
-  --panel: rgba(12, 27, 48, 0.92);
-  --muted: rgba(255, 255, 255, 0.68);
+a{color:inherit}
+.shell{max-width:1220px;margin:0 auto;padding:32px 24px 64px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:28px
 }
-.shell {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 36px 20px 64px;
+.brand{display:flex;align-items:center;gap:14px;text-decoration:none}
+.brand-mark{
+  width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--gold),var(--orange));color:#08111f;
+  font-family:'Bebas Neue',cursive;font-size:1.55rem;letter-spacing:.08em
 }
-.brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  text-decoration: none;
-  color: inherit;
-  margin-bottom: 32px;
+.brand-copy strong{display:block;font-size:1rem;letter-spacing:.08em;text-transform:uppercase}
+.brand-copy span{font-size:.82rem;color:var(--muted)}
+.top-actions{display:flex;flex-wrap:wrap;gap:12px}
+.btn{
+  border:0;border-radius:999px;padding:.82rem 1.18rem;font-size:.82rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;
+  transition:transform .18s ease,background .18s ease,border-color .18s ease
 }
-.brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--gold), var(--orange));
-  color: #08111f;
-  display: grid;
-  place-items: center;
-  font-family: 'Bebas Neue', cursive;
-  font-size: 1.55rem;
-  letter-spacing: 0.08em;
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--gold);color:#08111f}
+.btn-primary:hover{background:var(--orange)}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.24)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.hero,
+.hero-note-grid,
+.content-grid,
+.form-stack,
+.field-grid,
+.check-list,
+.info-list,
+.summary-grid,
+.match-chip-row,
+.legal-list{display:grid}
+.hero{grid-template-columns:minmax(0,1.12fr) minmax(300px,.88fr);gap:20px;margin-bottom:24px}
+.hero-card,
+.info-card,
+.form-card,
+.summary-card,
+.match-card,
+.empty,
+.field-block,
+.waiver-card,
+.legal-box{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:28px;
+  box-shadow:0 28px 80px rgba(0,0,0,.28)
 }
-.brand-copy strong {
-  display: block;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.hero-card,
+.info-card,
+.form-card,
+.summary-card,
+.empty,
+.match-card{padding:28px}
+.eyebrow,
+.block-label{
+  display:inline-flex;align-items:center;gap:10px;color:var(--gold);
+  font-size:.74rem;text-transform:uppercase;letter-spacing:.16em
 }
-.brand-copy span {
-  color: var(--muted);
-  font-size: 0.82rem;
+.eyebrow::before,
+.block-label::before{content:"";width:24px;height:1px;background:currentColor}
+.block-label{margin-bottom:12px}
+.mini-kicker{
+  font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)
 }
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  padding: 30px;
-  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.28);
+h1,h2,h3{
+  margin:0;
+  font-family:'Bebas Neue',cursive;
+  letter-spacing:.04em;
+  line-height:.96
 }
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--gold);
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
+h1{margin-top:16px;font-size:clamp(3rem,6vw,5rem)}
+h2{font-size:1.95rem}
+h3{font-size:1.75rem}
+.accent{color:var(--gold)}
+.hero-copy,.section-copy,.summary-note,.empty p,.legal-copy,.match-copy,.status{
+  color:var(--muted);
+  line-height:1.72
 }
-.eyebrow::before {
-  content: "";
-  width: 28px;
-  height: 1px;
-  background: currentColor;
+.hero-copy{margin-top:18px;max-width:760px;font-size:1rem}
+.hero-note-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:24px}
+.hero-note{
+  border-radius:18px;padding:1rem 1rem .95rem;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.82);font-size:.88rem;line-height:1.6
 }
-h1, h2 {
-  margin: 0;
-  font-family: 'Bebas Neue', cursive;
-  letter-spacing: 0.04em;
-  line-height: 0.95;
+.hero-note strong{display:block;color:#fff;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.info-card{display:grid;gap:14px;align-content:start}
+.section-copy{margin-top:12px}
+.info-list{gap:10px}
+.info-item{
+  padding:.82rem .95rem;border-radius:14px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.82);font-size:.9rem;line-height:1.65
 }
-h1 {
-  margin-top: 16px;
-  font-size: clamp(3rem, 6vw, 4.8rem);
+.content-grid{grid-template-columns:minmax(0,1.02fr) minmax(300px,.82fr);gap:24px}
+.form-card h2,.summary-card h2,.match-card h2{font-size:1.95rem}
+.form-stack{gap:20px;margin-top:22px}
+.field-block,
+.waiver-card,
+.legal-box{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:22px
 }
-p {
-  color: var(--muted);
-  line-height: 1.7;
-}
-.status {
-  margin-top: 18px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.92rem;
-}
-.status.success {
-  color: #aaf4cb;
-  border-color: rgba(91, 219, 151, 0.32);
-  background: rgba(91, 219, 151, 0.08);
-}
-.status.warn {
-  color: #ffe29f;
-  border-color: rgba(245, 166, 35, 0.3);
-  background: rgba(245, 166, 35, 0.1);
-}
-.status.error {
-  color: #ffb3b3;
-  border-color: rgba(255, 120, 120, 0.32);
-  background: rgba(255, 120, 120, 0.08);
-}
-.summary-grid {
-  display: grid;
-  gap: 14px;
-  margin-top: 24px;
-}
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.summary-row:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-.summary-row span { color: var(--muted); }
-.summary-row strong { text-align: right; }
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 28px;
-}
-.next-steps-card {
-  margin-top: 26px;
-  padding: 22px;
-  border-radius: 22px;
-  border: 1px solid rgba(245, 166, 35, 0.22);
+.waiver-card{
   background:
-    radial-gradient(circle at top right, rgba(245, 166, 35, 0.12), transparent 36%),
-    rgba(255, 255, 255, 0.04);
+    radial-gradient(circle at top right, rgba(245,166,35,.12), transparent 34%),
+    linear-gradient(180deg, rgba(15,32,64,.96) 0%, rgba(10,26,43,.96) 100%);
+  border-color:rgba(245,166,35,.24);
+  box-shadow:0 24px 70px rgba(0,0,0,.22)
 }
-.next-steps-card h2 {
-  font-size: 2rem;
+.field-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field.full{grid-column:1/-1}
+.field label{
+  font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.78)
 }
-.next-steps-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 16px;
+.field input,.field select,.field textarea{
+  width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;padding:.92rem 1rem;color:#fff;font-family:'DM Sans',sans-serif;font-size:.92rem
 }
-.next-step {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-  padding: 1rem 1rem 0.95rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:rgba(245,166,35,.45);box-shadow:0 0 0 3px rgba(245,166,35,.12)
 }
-.next-step-num {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #08111f;
-  background: var(--gold);
+.field textarea{min-height:120px;resize:vertical}
+.field select option{background:#0c1b30}
+.check-list{gap:12px;margin:18px 0 0}
+.check-row{
+  display:grid;grid-template-columns:20px minmax(0,1fr);gap:12px;align-items:start;
+  padding:.95rem 1rem;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
 }
-.next-step strong {
-  display: block;
-  margin-bottom: 4px;
-  color: #ffffff;
+.check-row label{color:rgba(255,255,255,.82);font-size:.9rem;line-height:1.7}
+.waiver-link{
+  display:inline-flex;align-items:center;gap:8px;padding:.72rem .95rem;border-radius:999px;
+  border:1px solid rgba(245,166,35,.22);background:rgba(245,166,35,.1);color:var(--gold);
+  text-decoration:none;font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-top:16px
 }
-.btn {
-  border: 0;
-  border-radius: 999px;
-  padding: 0.82rem 1.18rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-decoration: none;
-  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+.legal-box{margin-top:18px}
+.legal-list{gap:10px;margin-top:12px}
+.legal-item{
+  display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;
+  color:rgba(255,255,255,.74);font-size:.86rem;line-height:1.65
 }
-.btn:hover { transform: translateY(-1px); }
-.btn-primary {
-  background: var(--gold);
-  color: #08111f;
+.legal-dot{
+  width:22px;height:22px;border-radius:999px;background:rgba(245,166,35,.12);
+  border:1px solid rgba(245,166,35,.22);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.75rem
 }
-.btn-primary:hover { background: var(--orange); }
-.btn-ghost {
-  background: transparent;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+.summary-card{position:sticky;top:28px;align-self:start}
+.summary-total{
+  margin-top:10px;font-family:'Bebas Neue',cursive;font-size:4rem;color:var(--gold);letter-spacing:.04em;line-height:1
 }
-.btn-ghost:hover {
-  border-color: var(--gold);
-  color: var(--gold);
+.summary-title{margin-top:8px;font-size:1rem;font-weight:700}
+.summary-grid{gap:12px;margin-top:22px}
+.summary-row{
+  display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.9rem
 }
-.btn[aria-disabled="true"] {
-  opacity: 0.58;
-  pointer-events: none;
+.summary-row:last-child{border-bottom:0;padding-bottom:0}
+.summary-row span{color:var(--muted)}
+.summary-row strong{text-align:right}
+.status{
+  min-height:1.4rem;margin:14px 0 0;font-size:.9rem;padding:14px 16px;border-radius:16px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
 }
-.empty {
-  margin-top: 18px;
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.status.success{color:#aaf4cb;border-color:rgba(91,219,151,.32);background:rgba(91,219,151,.08)}
+.status.warn{color:#ffe29f;border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.1)}
+.status.error{color:#ffb3b3;border-color:rgba(255,120,120,.32);background:rgba(255,120,120,.08)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.match-card{
+  display:none;border-color:rgba(15,184,224,.3);
+  background:radial-gradient(circle at top right, rgba(15,184,224,.1), transparent 46%), rgba(15,32,64,.92)
 }
-@media (max-width: 720px) {
-  .card {
-    padding: 22px;
-    border-radius: 22px;
+.match-card.show{display:block}
+.match-chip-row{grid-template-columns:repeat(auto-fit,minmax(110px,max-content));gap:8px;margin-top:14px}
+.match-chip{
+  border-radius:999px;padding:.38rem .8rem;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid rgba(15,184,224,.24);color:#8be8ff;background:rgba(15,184,224,.12)
+}
+.empty[hidden]{display:none}
+@media (max-width:980px){
+  .hero,.content-grid,.hero-note-grid,.field-grid{grid-template-columns:1fr}
+  .summary-card{position:static}
+  .shell{padding:22px 16px 48px}
+  .hero-card,.info-card,.form-card,.summary-card,.match-card,.empty,.field-block,.waiver-card,.legal-box{
+    padding:24px;border-radius:22px
   }
-  .summary-row {
-    flex-direction: column;
-  }
-  .summary-row strong {
-    text-align: left;
-  }
+}
+@media (max-width:720px){
+  .summary-row{flex-direction:column}
+  .summary-row strong{text-align:left}
 }
 </style>
 </head>
 <body>
   <div class="shell">
-    <a class="brand" href="../">
-      <div class="brand-mark">SA</div>
-      <div class="brand-copy">
-        <strong>Shoreline Aquatics</strong>
-        <span>Lake Lewisville jet ski and boat rentals</span>
+    <div class="topbar">
+      <a class="brand" href="../">
+        <div class="brand-mark">SA</div>
+        <div class="brand-copy">
+          <strong>Shoreline Aquatics</strong>
+          <span>Lake Lewisville jet ski and boat rentals</span>
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="btn btn-ghost" href="../jetski-booking/">Back To Calendar</a>
+        <a class="btn btn-primary" href="tel:4696937164">Call (469) 693-7164</a>
       </div>
-    </a>
+    </div>
 
-    <div class="card">
-      <div class="eyebrow">Confirmation</div>
-      <h1 id="page-title">Review And Pay The <span style="color: var(--gold);">Booking Deposit</span></h1>
-      <p id="page-copy">
-        Your rental details are ready. Pay the $50 booking deposit to hold your date, or contact Shoreline directly if you need help finishing the reservation.
-      </p>
-
-      <div id="empty-state" class="empty" hidden>
-        No booking details are saved yet. Head back to the booking page, choose your rental, and your confirmation details will show here.
+    <div class="hero">
+      <div class="hero-card">
+        <div class="eyebrow">Waiver & Deposit</div>
+        <h1>Complete The <span class="accent">Waiver</span> And Pay The Deposit</h1>
+        <div class="hero-copy">
+          This is the final booking step before the thank-you page. Fill in the rider details, complete the waiver, and pay the $50 booking deposit to hold the rental date.
+        </div>
+        <div class="hero-note-grid">
+          <div class="hero-note">
+            <strong>Step 1</strong>
+            Confirm the rider name, phone number, email, and the party size for this reservation.
+          </div>
+          <div class="hero-note">
+            <strong>Step 2</strong>
+            Complete the digital waiver so Shoreline can keep it on file for this booking and future returns.
+          </div>
+          <div class="hero-note">
+            <strong>Step 3</strong>
+            Pay the $50 booking deposit. After that, the next page becomes the thank-you page with arrival directions.
+          </div>
+        </div>
       </div>
 
-      <div id="request-wrap" hidden>
-        <div class="status" id="copy-status">We prepared your request summary below.</div>
+      <div class="info-card">
+        <div class="mini-kicker">Before Payment</div>
+        <h2>One page for the rider and the deposit.</h2>
+        <div class="section-copy">
+          Use this page to finish everything Shoreline needs before checkout. If the rider has booked before, some saved waiver details may fill in automatically.
+        </div>
+        <div class="info-list">
+          <div class="info-item">The booking deposit due now is <strong style="color:var(--gold)">$50</strong>.</div>
+          <div class="info-item">Jet ski rentals and jet ski bundles still carry a <strong style="color:var(--gold)">$200 per ski</strong> refundable damage deposit at check-in.</div>
+          <div class="info-item">The thank-you page after payment shows the arrival instructions and next steps.</div>
+        </div>
+      </div>
+    </div>
 
-        <div class="summary-grid">
-          <div class="summary-row"><span>Package</span><strong id="summary-package"></strong></div>
-          <div class="summary-row"><span>Date</span><strong id="summary-date"></strong></div>
-          <div class="summary-row"><span>Start time</span><strong id="summary-time"></strong></div>
-          <div class="summary-row"><span>Meeting spot</span><strong id="summary-location"></strong></div>
-          <div class="summary-row"><span>Party size</span><strong id="summary-party"></strong></div>
-          <div class="summary-row"><span>Total quote</span><strong id="summary-total"></strong></div>
-          <div class="summary-row"><span>Booking deposit due now</span><strong id="summary-deposit">$50</strong></div>
-          <div class="summary-row"><span>Payment status</span><strong id="summary-payment-status">Not paid yet</strong></div>
-          <div class="summary-row"><span>Customer</span><strong id="summary-customer"></strong></div>
-          <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact"></strong></div>
+    <div class="empty" id="empty-state" hidden>
+      <div class="block-label">No Booking Yet</div>
+      <h2>Start with the calendar first.</h2>
+      <p>No booking details are saved yet. Head back to the calendar page, choose the rental date, and the waiver and deposit step will be ready here.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="../jetski-booking/">Go To Booking Calendar</a>
+      </div>
+    </div>
+
+    <div class="content-grid" id="request-wrap" hidden>
+      <div class="form-card">
+        <div class="block-label">Rider Details</div>
+        <h2>Complete the rider info and waiver</h2>
+        <div class="section-copy">
+          Finish the form below, then pay the booking deposit to move into the thank-you page and arrival instructions.
         </div>
 
-        <div class="actions">
-          <a class="btn btn-primary" id="stripe-link" href="#">Pay $50 deposit</a>
-          <a class="btn btn-primary" id="sms-link" href="#">Text Shoreline</a>
-          <a class="btn btn-ghost" id="email-link" href="#">Email Shoreline</a>
-          <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
-          <a class="btn btn-ghost" id="copy-link" href="#">Copy booking details</a>
-          <a class="btn btn-ghost" href="../jetski-booking/">Edit request</a>
+        <div class="match-card" id="match-card">
+          <div class="mini-kicker">Returning rider found</div>
+          <h2 id="match-title">Customer recognized</h2>
+          <div class="match-copy" id="match-copy">Welcome back. We filled in the details we already had for this rider.</div>
+          <div class="match-chip-row" id="match-chips"></div>
         </div>
 
-        <div class="next-steps-card" id="next-steps-card" hidden>
-          <h2>What Happens Next</h2>
-          <p>Your booking deposit is on file. Here’s what to expect before launch day.</p>
-          <div class="next-steps-list">
-            <div class="next-step">
-              <div class="next-step-num">1</div>
-              <div><strong>Shoreline locks in the request</strong><span>Your request for <span id="next-package"></span> on <span id="next-date"></span> at <span id="next-time"></span> is now the active booking hold.</span></div>
+        <form id="waiver-payment-form">
+          <div class="form-stack">
+            <div class="field-block">
+              <div class="block-label">Contact Details</div>
+              <div class="field-grid">
+                <div class="field">
+                  <label for="name">Customer name</label>
+                  <input id="name" name="name" type="text" placeholder="First and last name" required>
+                </div>
+                <div class="field">
+                  <label for="phone">Phone</label>
+                  <input id="phone" name="phone" type="tel" placeholder="(469) 555-0000" required>
+                </div>
+                <div class="field">
+                  <label for="email">Email</label>
+                  <input id="email" name="email" type="email" placeholder="name@example.com">
+                </div>
+                <div class="field">
+                  <label for="date-of-birth">Date of birth</label>
+                  <input id="date-of-birth" name="dateOfBirth" type="date" required>
+                </div>
+                <div class="field">
+                  <label for="contact-method">Preferred contact</label>
+                  <select id="contact-method" name="contactMethod">
+                    <option value="text">Text message</option>
+                    <option value="call">Phone call</option>
+                    <option value="email">Email</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="party-size">Party size</label>
+                  <input id="party-size" name="partySize" type="number" min="1" max="20" value="2">
+                </div>
+                <div class="field full">
+                  <label for="location">Launch or meeting spot</label>
+                  <input id="location" name="location" type="text" value="Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX">
+                </div>
+                <div class="field full">
+                  <label for="notes">Notes</label>
+                  <textarea id="notes" name="notes" placeholder="Anything Shoreline should know about timing, riders, or special requests?"></textarea>
+                </div>
+              </div>
             </div>
-            <div class="next-step">
-              <div class="next-step-num">2</div>
-              <div><strong>Watch for your confirmation</strong><span>Shoreline will follow up through <span id="next-contact"></span> with any final timing or arrival details before your rental.</span></div>
-            </div>
-            <div class="next-step">
-              <div class="next-step-num">3</div>
-              <div><strong>Arrive at the launch with your ID</strong><span>Meet Shoreline Aquatics at 2000 Main St, Hickory Creek, TX and follow the arrival instructions before heading to the water.</span></div>
-            </div>
-            <div class="next-step">
-              <div class="next-step-num">4</div>
-              <div><strong>Handle the rest at check-in</strong><span>The remaining balance and any refundable damage deposit that applies to the package will be handled before you head onto the water.</span></div>
+
+            <div class="waiver-card">
+              <div class="block-label">Waiver</div>
+              <h3>Review the waiver and sign online</h3>
+              <div class="section-copy">
+                The rider confirms the normal on-the-water risks, the refundable damage deposit, and Shoreline’s safety instructions before checkout.
+              </div>
+              <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">View full waiver</a>
+
+              <div class="legal-box">
+                <div class="mini-kicker">Agreement Summary</div>
+                <div class="legal-list">
+                  <div class="legal-item"><div class="legal-dot">1</div><div>All watercraft are used at the renter’s and renter’s guests’ own risk, including weather, wakes, collisions, equipment issues, and operator error.</div></div>
+                  <div class="legal-item"><div class="legal-dot">2</div><div>The rider accepts responsibility for operating the equipment safely, following Shoreline instructions, and understanding the refundable damage deposit is <strong style="color:var(--gold)">$200 per ski</strong> for jet ski rentals and jet ski bundles.</div></div>
+                  <div class="legal-item"><div class="legal-dot">3</div><div>The rider releases Shoreline Aquatics LLC from claims tied to normal participation risks and authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
+                </div>
+              </div>
+
+              <div class="check-list">
+                <div class="check-row">
+                  <input id="waiver-risk" name="waiverRisk" type="checkbox" required>
+                  <label for="waiver-risk">I understand the risks of boating and personal watercraft activity and agree to follow Shoreline’s operating and safety instructions.</label>
+                </div>
+                <div class="check-row">
+                  <input id="waiver-damage" name="waiverDamage" type="checkbox" required>
+                  <label for="waiver-damage">I understand the refundable damage deposit is $200 per ski and that Shoreline may document equipment condition before and after the rental.</label>
+                </div>
+                <div class="check-row">
+                  <input id="waiver-verify" name="waiverVerify" type="checkbox" required>
+                  <label for="waiver-verify">I verify I completed the above information accurately and agree to all Shoreline waiver terms and conditions.</label>
+                </div>
+              </div>
+
+              <div class="field-grid" style="margin-top:18px">
+                <div class="field">
+                  <label for="waiver-initials">Participant initials</label>
+                  <input id="waiver-initials" name="waiverInitials" type="text" maxlength="6" placeholder="Initial here" required>
+                </div>
+                <div class="field">
+                  <label for="signature">Digital signature</label>
+                  <input id="signature" name="signature" type="text" placeholder="Type full legal name" required>
+                </div>
+                <div class="field">
+                  <label for="signature-date">Waiver date</label>
+                  <input id="signature-date" name="signatureDate" type="date" required>
+                </div>
+                <div class="field">
+                  <label for="emergency-name">Emergency contact name</label>
+                  <input id="emergency-name" name="emergencyName" type="text" placeholder="Optional but recommended">
+                </div>
+                <div class="field">
+                  <label for="emergency-phone">Emergency contact phone</label>
+                  <input id="emergency-phone" name="emergencyPhone" type="tel" placeholder="(469) 555-0000">
+                </div>
+              </div>
             </div>
           </div>
+
+          <div class="status" id="copy-status">Finish the form, then pay the booking deposit to hold the rental date.</div>
+
+          <div class="actions">
+            <button class="btn btn-primary" id="stripe-link" type="submit">Pay $50 deposit</button>
+            <a class="btn btn-primary" id="sms-link" href="#">Text Shoreline</a>
+            <a class="btn btn-ghost" id="email-link" href="#">Email Shoreline</a>
+            <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
+            <a class="btn btn-ghost" href="../jetski-booking/">Edit date &amp; time</a>
+          </div>
+        </form>
+      </div>
+
+      <div class="summary-card">
+        <div class="block-label">Booking Summary</div>
+        <h2>Review the rental before payment</h2>
+        <div class="summary-total" id="summary-total">$300</div>
+        <div class="summary-title" id="summary-package">2 Yamaha Jet Skis</div>
+        <div class="summary-note" id="summary-note">Your selected package, date, and launch details show here before you pay the booking deposit.</div>
+
+        <div class="summary-grid">
+          <div class="summary-row"><span>Date</span><strong id="summary-date">-</strong></div>
+          <div class="summary-row"><span>Start time</span><strong id="summary-time">-</strong></div>
+          <div class="summary-row"><span>Meeting spot</span><strong id="summary-location">-</strong></div>
+          <div class="summary-row"><span>Party size</span><strong id="summary-party">2</strong></div>
+          <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact">Text message</strong></div>
+          <div class="summary-row"><span>Booking deposit due now</span><strong id="summary-deposit">$50</strong></div>
+          <div class="summary-row"><span>Payment status</span><strong id="summary-payment-status">Not paid yet</strong></div>
+          <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
         </div>
       </div>
     </div>
@@ -327,6 +446,12 @@ const DEFAULT_SITE_ORIGIN = window.location.protocol === 'file:'
 
 let activeBooking = null;
 let stripeReady = false;
+let matchedCustomer = null;
+let lastLookupKey = '';
+
+function qs(id) {
+  return document.getElementById(id);
+}
 
 function readBooking() {
   try {
@@ -345,9 +470,40 @@ function formatCurrency(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
+function formatContactMethod(value = '') {
+  if (value === 'call') return 'Phone call';
+  if (value === 'email') return 'Email';
+  return 'Text message';
+}
+
+function normalizePhoneKey(value = '') {
+  return String(value).replace(/\D/g, '');
+}
+
+function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function splitName(fullName = '') {
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  return {
+    first: parts[0] || '',
+    last: parts.slice(1).join(' ')
+  };
+}
+
+function buildLookupUrl() {
+  const phone = qs('phone').value.trim();
+  const email = qs('email').value.trim();
+  const params = new URLSearchParams();
+  if (phone) params.set('phone', phone);
+  if (email) params.set('email', email);
+  return `${OPS_PUBLIC_API}/api/public/customer-lookup?${params.toString()}`;
+}
+
 function buildMessage(booking) {
   return [
-    `Hi Shoreline Aquatics, I want to request a booking.`,
+    `Hi Shoreline Aquatics, I want to finalize this booking.`,
     ``,
     `Name: ${booking.name}`,
     `Phone: ${booking.phone}`,
@@ -367,11 +523,12 @@ function buildMessage(booking) {
 }
 
 function setText(id, value) {
-  document.getElementById(id).textContent = value;
+  const element = qs(id);
+  if (element) element.textContent = value;
 }
 
 function setStatus(message, tone = "") {
-  const status = document.getElementById("copy-status");
+  const status = qs("copy-status");
   status.textContent = message;
   status.className = `status${tone ? ` ${tone}` : ""}`;
 }
@@ -384,6 +541,49 @@ function mergeBooking(base, incoming = {}) {
     depositAmount: incoming.depositAmount || base?.depositAmount || 50,
     deposit: typeof incoming.deposit === "boolean" ? incoming.deposit : Boolean(base?.deposit)
   };
+}
+
+function populateSummary(booking) {
+  setText("summary-total", formatCurrency(booking.total || 0));
+  setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
+  setText("summary-note", booking.craft === 'boat'
+    ? 'Your boat rental with captain included is ready for the waiver and deposit step.'
+    : booking.craft?.startsWith('bundle')
+      ? 'Your lake-day bundle is ready for the waiver and deposit step.'
+      : 'Your Yamaha jet ski rental is ready for the waiver and deposit step.');
+  setText("summary-date", booking.date || '-');
+  setText("summary-time", booking.time || '-');
+  setText("summary-location", booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
+  setText("summary-party", booking.partySize || '2');
+  setText("summary-contact", formatContactMethod(booking.contactMethod));
+
+  if (booking.craft === 'boat') {
+    setText('summary-extra-label', 'Captain');
+    setText('summary-extra-value', 'Included');
+  } else {
+    setText('summary-extra-label', 'Damage deposit');
+    setText('summary-extra-value', '$200 per ski');
+  }
+}
+
+function populateForm(booking) {
+  if (!booking) return;
+  if (booking.name) qs('name').value = booking.name;
+  if (booking.phone) qs('phone').value = booking.phone;
+  if (booking.email) qs('email').value = booking.email;
+  if (booking.contactMethod) qs('contact-method').value = booking.contactMethod;
+  if (booking.partySize) qs('party-size').value = booking.partySize;
+  if (booking.location) qs('location').value = booking.location;
+  if (booking.notes) qs('notes').value = booking.notes;
+  if (booking.waiver?.dateOfBirth) qs('date-of-birth').value = booking.waiver.dateOfBirth;
+  if (booking.waiver?.acceptedRisk) qs('waiver-risk').checked = true;
+  if (booking.waiver?.acceptedDamage) qs('waiver-damage').checked = true;
+  if (booking.waiver?.verified) qs('waiver-verify').checked = true;
+  if (booking.waiver?.initials) qs('waiver-initials').value = booking.waiver.initials;
+  if (booking.waiver?.signature) qs('signature').value = booking.waiver.signature;
+  if (booking.waiver?.signatureDate) qs('signature-date').value = booking.waiver.signatureDate;
+  if (booking.waiver?.emergencyName) qs('emergency-name').value = booking.waiver.emergencyName;
+  if (booking.waiver?.emergencyPhone) qs('emergency-phone').value = booking.waiver.emergencyPhone;
 }
 
 function updatePaymentUi(booking) {
@@ -399,69 +599,177 @@ function updatePaymentUi(booking) {
   setText("summary-deposit", formatCurrency(depositAmount));
   setText("summary-payment-status", paymentStatus);
 
-  const stripeButton = document.getElementById("stripe-link");
+  const stripeButton = qs("stripe-link");
   if (!stripeReady) {
     stripeButton.textContent = "Online deposit unavailable";
     stripeButton.setAttribute("aria-disabled", "true");
+    stripeButton.disabled = true;
     return;
   }
 
   if (booking?.paymentStatus === "paid" || booking?.deposit) {
     stripeButton.textContent = "Deposit paid";
     stripeButton.setAttribute("aria-disabled", "true");
+    stripeButton.disabled = true;
     return;
   }
 
   stripeButton.textContent = `Pay ${formatCurrency(depositAmount)} deposit`;
   stripeButton.removeAttribute("aria-disabled");
+  stripeButton.disabled = false;
 }
 
-function updateThankYouUi(booking) {
-  const paid = booking?.paymentStatus === "paid" || booking?.deposit;
-  const title = document.getElementById("page-title");
-  const copy = document.getElementById("page-copy");
-  const nextStepsCard = document.getElementById("next-steps-card");
+function updateContactLinks() {
+  const booking = createPayload(false);
+  if (!booking) return;
+  const message = buildMessage(booking);
+  const smsHref = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(message)}`;
+  const emailSubject = encodeURIComponent(`Booking request from ${booking.name || 'Shoreline customer'}`);
+  const emailBody = encodeURIComponent(message);
 
-  if (!title || !copy || !nextStepsCard) return;
+  qs("sms-link").href = smsHref;
+  qs("email-link").href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
+}
 
-  if (paid) {
-    title.innerHTML = `Thanks, You're <span style="color: var(--gold);">Booked In</span>`;
-    copy.textContent = "Your booking deposit is paid. Use the details below as your confirmation and next-step checklist before rental day.";
-    nextStepsCard.hidden = false;
-  } else {
-    title.innerHTML = `Review And Pay The <span style="color: var(--gold);">Booking Deposit</span>`;
-    copy.textContent = "Your rental details are ready. Pay the $50 booking deposit to hold your date, or contact Shoreline directly if you need help finishing the reservation.";
-    nextStepsCard.hidden = true;
+function showMatchedCustomer(customer) {
+  if (!customer) return;
+  const card = qs('match-card');
+  const repeatLabel = Number(customer.bookings || 0) > 1 ? 'Repeat rider' : 'Returning guest';
+  qs('match-title').textContent = `${customer.name || 'Rider'} recognized`;
+  qs('match-copy').textContent = customer.waiverOnFile
+    ? 'Welcome back. A waiver is already on file, and you can update anything below if something changed.'
+    : 'Welcome back. We filled in the contact details we already had, and you can update anything below if needed.';
+
+  const chipValues = [
+    repeatLabel,
+    customer.lastBooking ? `Last booking ${customer.lastBooking}` : '',
+    customer.waiverOnFile ? 'Waiver saved' : '',
+    customer.email ? 'Email ready' : ''
+  ].filter(Boolean);
+
+  qs('match-chips').innerHTML = chipValues.map((value) => `<span class="match-chip">${value}</span>`).join('');
+  card.classList.add('show');
+}
+
+function hideMatchedCustomer() {
+  qs('match-card').classList.remove('show');
+}
+
+function applyCustomerPrefill(customer) {
+  if (!customer) return;
+  matchedCustomer = customer;
+
+  if (!qs('name').value.trim()) qs('name').value = customer.name || '';
+  if (!qs('phone').value.trim()) qs('phone').value = customer.phone || '';
+  if (!qs('email').value.trim()) qs('email').value = customer.email || '';
+
+  if (customer.waiverOnFile) {
+    qs('waiver-risk').checked = true;
+    qs('waiver-damage').checked = true;
+    qs('waiver-verify').checked = Boolean(customer.waiverVerified);
+    if (!qs('date-of-birth').value) qs('date-of-birth').value = customer.dateOfBirth || '';
+    if (!qs('waiver-initials').value.trim()) qs('waiver-initials').value = customer.waiverInitials || '';
+    if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
+    if (!qs('signature-date').value) qs('signature-date').value = new Date().toISOString().slice(0, 10);
+    if (!qs('emergency-name').value.trim()) qs('emergency-name').value = customer.emergencyName || '';
+    if (!qs('emergency-phone').value.trim()) qs('emergency-phone').value = customer.emergencyPhone || '';
+  }
+
+  showMatchedCustomer(customer);
+  updateContactLinks();
+}
+
+async function lookupReturningCustomer(force = false) {
+  const phone = qs('phone').value.trim();
+  const email = qs('email').value.trim();
+  if (!phone && !email) {
+    matchedCustomer = null;
+    hideMatchedCustomer();
+    return;
+  }
+
+  const lookupKey = `${normalizePhoneKey(phone)}|${normalizeEmail(email)}`;
+  if (!force && lookupKey === lastLookupKey) return;
+  lastLookupKey = lookupKey;
+
+  try {
+    const response = await fetch(buildLookupUrl(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return;
+    const payload = await response.json().catch(() => ({}));
+    if (payload.found && payload.customer) {
+      applyCustomerPrefill(payload.customer);
+    } else {
+      matchedCustomer = null;
+      hideMatchedCustomer();
+    }
+  } catch (error) {
+    console.warn('Customer lookup skipped:', error);
   }
 }
 
-function showBooking(booking) {
-  activeBooking = booking;
-  const message = buildMessage(booking);
-  const smsHref = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(message)}`;
-  const emailSubject = encodeURIComponent(`Booking request from ${booking.name}`);
-  const emailBody = encodeURIComponent(message);
+function createPayload(requireBase = true) {
+  const base = activeBooking || readBooking();
+  if (!base && requireBase) return null;
+  return {
+    ...(base || {}),
+    name: qs('name').value.trim(),
+    phone: qs('phone').value.trim(),
+    email: qs('email').value.trim(),
+    location: qs('location').value.trim(),
+    contactMethod: qs('contact-method').value,
+    partySize: qs('party-size').value,
+    notes: qs('notes').value.trim(),
+    crmMatchId: matchedCustomer?.id || base?.crmMatchId || null,
+    waiver: {
+      acceptedRisk: qs('waiver-risk').checked,
+      acceptedDamage: qs('waiver-damage').checked,
+      verified: qs('waiver-verify').checked,
+      dateOfBirth: qs('date-of-birth').value,
+      initials: qs('waiver-initials').value.trim(),
+      signature: qs('signature').value.trim(),
+      signatureDate: qs('signature-date').value,
+      emergencyName: qs('emergency-name').value.trim(),
+      emergencyPhone: qs('emergency-phone').value.trim()
+    }
+  };
+}
 
-  setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
-  setText("summary-date", booking.date);
-  setText("summary-time", booking.time);
-  setText("summary-location", booking.location || "To be confirmed");
-  setText("summary-party", booking.partySize || "Not provided");
-  setText("summary-total", `$${Number(booking.total || 0).toLocaleString()}`);
-  setText("summary-customer", `${booking.name} · ${booking.phone}`);
-  setText("summary-contact", booking.contactMethod);
-  setText("next-package", `${booking.craftLabel} · ${booking.durationLabel}`);
-  setText("next-date", booking.date);
-  setText("next-time", booking.time);
-  setText("next-contact", booking.contactMethod);
-  updatePaymentUi(booking);
-  updateThankYouUi(booking);
+function validatePayload(payload) {
+  if (!payload?.date || !payload?.time || !payload?.craft) {
+    return 'Please start on the calendar page and choose the rental date and package first.';
+  }
+  if (!payload.name || !payload.phone) {
+    return 'Please fill in the rider name and phone number before paying the deposit.';
+  }
+  if (!payload.waiver.acceptedRisk || !payload.waiver.acceptedDamage) {
+    return 'Please confirm the waiver terms before paying the deposit.';
+  }
+  if (!payload.waiver.verified || !payload.waiver.dateOfBirth || !payload.waiver.initials) {
+    return 'Please complete the date of birth, participant initials, and verification for the waiver.';
+  }
+  if (!payload.waiver.signature || !payload.waiver.signatureDate) {
+    return 'Please provide the rider signature and waiver date.';
+  }
+  return '';
+}
 
-  document.getElementById("sms-link").href = smsHref;
-  document.getElementById("email-link").href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
-
-  document.getElementById("empty-state").hidden = true;
-  document.getElementById("request-wrap").hidden = false;
+async function syncBookingToOps(payload) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking-request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || 'We could not save your booking right now.');
+  }
+  return body;
 }
 
 async function loadStripeAvailability() {
@@ -479,22 +787,20 @@ async function loadStripeAvailability() {
   updatePaymentUi(activeBooking);
 }
 
-async function verifyCheckoutSession(sessionId) {
-  const response = await fetch(`${OPS_PUBLIC_API}/api/public/checkout-session?session_id=${encodeURIComponent(sessionId)}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json' }
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload.error || 'Could not verify the Stripe checkout session.');
-  }
-  return payload;
+function showBooking(booking) {
+  activeBooking = mergeBooking(activeBooking, booking || {});
+  populateSummary(activeBooking);
+  populateForm(activeBooking);
+  updatePaymentUi(activeBooking);
+  updateContactLinks();
+  qs('empty-state').hidden = true;
+  qs('request-wrap').hidden = false;
 }
 
 async function handleStripeCheckout(event) {
   event.preventDefault();
   if (!activeBooking) {
-    setStatus('Please complete the booking page before starting checkout.', 'error');
+    setStatus('Please complete the booking calendar step first.', 'error');
     return;
   }
   if (!stripeReady) {
@@ -502,12 +808,40 @@ async function handleStripeCheckout(event) {
     return;
   }
 
-  const stripeButton = document.getElementById('stripe-link');
+  const payload = createPayload(true);
+  const error = validatePayload(payload);
+  if (error) {
+    setStatus(error, 'error');
+    return;
+  }
+
+  const stripeButton = qs('stripe-link');
   stripeButton.setAttribute('aria-disabled', 'true');
-  stripeButton.textContent = 'Opening Stripe...';
-  setStatus('Opening secure checkout for your booking deposit...');
+  stripeButton.disabled = true;
+  stripeButton.textContent = 'Saving waiver...';
+  setStatus('Saving the rider details and waiver before checkout...');
 
   try {
+    const result = await syncBookingToOps(payload);
+    activeBooking = mergeBooking(payload, {
+      id: result.bookingId || payload.id,
+      paymentStatus: result.booking?.paymentStatus || 'unpaid',
+      depositAmount: result.booking?.depositAmount || 50
+    });
+    activeBooking.syncMeta = {
+      synced: true,
+      bookingId: result.bookingId || null,
+      customerId: result.customer?.id || null,
+      matchedExistingCustomer: Boolean(result.matchedExistingCustomer),
+      waiverStored: Boolean(result.waiverStored)
+    };
+    saveBooking(activeBooking);
+    populateSummary(activeBooking);
+    updateContactLinks();
+
+    setStatus('Opening secure checkout for your booking deposit...');
+    stripeButton.textContent = 'Opening Stripe...';
+
     const response = await fetch(`${OPS_PUBLIC_API}/api/public/create-checkout-session`, {
       method: 'POST',
       headers: {
@@ -519,93 +853,81 @@ async function handleStripeCheckout(event) {
         siteOrigin: DEFAULT_SITE_ORIGIN
       })
     });
-    const payload = await response.json().catch(() => ({}));
+    const checkout = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload.error || 'Could not create the Stripe checkout session.');
+      throw new Error(checkout.error || 'Could not create the Stripe checkout session.');
     }
 
-    if (payload.alreadyPaid) {
-      activeBooking = mergeBooking(activeBooking, payload.booking || { paymentStatus: 'paid', deposit: true });
+    if (checkout.alreadyPaid) {
+      activeBooking = mergeBooking(activeBooking, checkout.booking || { paymentStatus: 'paid', deposit: true });
       saveBooking(activeBooking);
-      showBooking(activeBooking);
+      updatePaymentUi(activeBooking);
       setStatus('This booking deposit is already marked as paid.', 'success');
       return;
     }
 
-    if (!payload.checkoutUrl) {
+    if (!checkout.checkoutUrl) {
       throw new Error('Stripe did not return a checkout URL.');
     }
 
-    window.location.href = payload.checkoutUrl;
+    window.location.href = checkout.checkoutUrl;
   } catch (error) {
-    showBooking(activeBooking);
+    updatePaymentUi(activeBooking);
     setStatus(error.message || 'We could not start checkout right now.', 'error');
   }
 }
 
-document.getElementById("copy-link").addEventListener("click", async (event) => {
-  event.preventDefault();
-  const booking = activeBooking || readBooking();
-  if (!booking) {
-    setStatus('No booking request is available to copy yet.', 'warn');
-    return;
+qs('waiver-payment-form').addEventListener('submit', handleStripeCheckout);
+qs('phone').addEventListener('blur', () => {
+  lookupReturningCustomer();
+  updateContactLinks();
+});
+qs('email').addEventListener('blur', () => {
+  lookupReturningCustomer();
+  updateContactLinks();
+});
+qs('name').addEventListener('blur', () => {
+  const fullName = qs('name').value.trim();
+  if (!qs('signature').value.trim()) qs('signature').value = fullName;
+  if (!qs('waiver-initials').value.trim() && fullName) {
+    const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('');
+    qs('waiver-initials').value = initials;
   }
-  try {
-    await navigator.clipboard.writeText(buildMessage(booking));
-    setStatus('Request copied. Paste it into any message app if SMS or email does not open automatically.', 'success');
-  } catch {
-    setStatus('Copy failed in this browser. Use the email or text buttons instead.', 'error');
-  }
+  updateContactLinks();
+});
+['contact-method','party-size','location','notes','waiver-risk','waiver-damage','waiver-verify','date-of-birth','waiver-initials','signature','signature-date','emergency-name','emergency-phone'].forEach((id) => {
+  const element = qs(id);
+  if (!element) return;
+  element.addEventListener('change', updateContactLinks);
+  element.addEventListener('input', updateContactLinks);
 });
 
-document.getElementById("stripe-link").addEventListener("click", handleStripeCheckout);
+qs('signature-date').value = new Date().toISOString().slice(0, 10);
 
 (async function init() {
   const params = new URLSearchParams(window.location.search);
   const storedBooking = readBooking();
 
-  if (storedBooking) {
-    showBooking(storedBooking);
-    setStatus('Review the request below, then pay the booking deposit to hold the slot.');
+  if (!storedBooking) {
+    qs('empty-state').hidden = false;
+    qs('request-wrap').hidden = true;
+    return;
   }
 
+  showBooking(storedBooking);
   await loadStripeAvailability();
 
-  const sessionId = params.get('session_id');
-  if (sessionId) {
-    try {
-      setStatus('Checking the Stripe payment status for this booking...');
-      const payload = await verifyCheckoutSession(sessionId);
-      const merged = mergeBooking(storedBooking, payload.booking || {});
-      if (merged && (payload.session?.paymentStatus || payload.booking)) {
-        merged.paymentStatus = payload.session?.paymentStatus || merged.paymentStatus;
-        merged.deposit = merged.paymentStatus === 'paid' || Boolean(merged.deposit);
-        merged.depositAmount = payload.booking?.depositAmount || merged.depositAmount || 50;
-        saveBooking(merged);
-        showBooking(merged);
-      }
-
-      if (payload.session?.paymentStatus === 'paid') {
-        setStatus('Booking deposit paid. Your reservation is now held for the selected date.', 'success');
-      } else if (payload.session?.paymentStatus === 'unpaid') {
-        setStatus('Your checkout was received, but the payment still shows as unpaid. Please contact Shoreline if you need help.', 'warn');
-      } else {
-        setStatus('Your payment is still processing. We will update the reservation as soon as it clears.', 'warn');
-      }
-      return;
-    } catch (error) {
-      setStatus(error.message || 'We could not verify the payment result right now.', 'error');
-    }
-  }
-
-  if (params.get('payment') === 'cancelled' && activeBooking) {
+  if (params.get('payment') === 'cancelled') {
     setStatus('Checkout was cancelled. Your booking details are still here whenever you are ready to pay the deposit.', 'warn');
     return;
   }
 
-  if (!storedBooking) {
-    document.getElementById("empty-state").hidden = false;
+  if (params.get('session_id')) {
+    window.location.href = `../booking-thank-you/?session_id=${encodeURIComponent(params.get('session_id'))}`;
+    return;
   }
+
+  setStatus('Finish the rider form below, then pay the booking deposit to hold the selected rental date.');
 })();
 </script>
 </body>

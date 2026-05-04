@@ -768,9 +768,9 @@ h1 span { color: var(--gold); }
 
     <div class="hero">
       <div class="hero-card">
-        <h1>Choose The Day. Sign The Waiver. <span>Send The Request.</span></h1>
+        <h1>Choose The Day. Review The Package. <span>Continue To Waiver.</span></h1>
         <p class="hero-copy">
-          Start with the rental calendar, then choose your package details and finish the waiver. If you've rented with Shoreline before, some of your details may already be filled in to make booking faster.
+          This page keeps the flow simple. Pick the rental day and start time first, review the package summary underneath, then continue to the waiver and deposit page.
         </p>
         <div class="contact-strip">
           <a class="contact-pill" href="tel:4696937164">Call or text: (469) 693-7164</a>
@@ -780,15 +780,15 @@ h1 span { color: var(--gold); }
         <div class="hero-note-grid">
           <div class="hero-note">
             <strong>Step 1</strong>
-            Pick the rental day first so the rest of the request is built around the actual date.
+            Pick the rental day first so the date and time are locked before anything else.
           </div>
           <div class="hero-note">
             <strong>Step 2</strong>
-            Choose the package, duration, drone option, and launch details without jumping between pages.
+            Review the package summary underneath the calendar and make sure the selection looks right.
           </div>
           <div class="hero-note">
             <strong>Step 3</strong>
-            Finish the waiver, review your details, and pay the booking deposit to hold your date.
+            Continue to the next page for the waiver, rider details, and deposit payment.
           </div>
         </div>
       </div>
@@ -796,16 +796,10 @@ h1 span { color: var(--gold); }
 
     <div class="content-grid">
       <div class="form-card">
-        <h2 class="section-title">Start with the rental calendar</h2>
+        <h2 class="section-title">Pick the rental date first</h2>
         <p class="section-copy">
-          Choose the date first, then dial in the package and finish the waiver so everything is ready for confirmation.
+          Choose the date and start time here. The next page handles the waiver, contact details, and the booking deposit.
         </p>
-
-        <div class="type-toggle">
-          <button class="type-btn active" data-type="jetski" type="button">Jet Skis</button>
-          <button class="type-btn" data-type="boat" type="button">Boat</button>
-          <button class="type-btn" data-type="bundle" type="button">Bundle</button>
-        </div>
 
         <form id="booking-form">
           <div class="form-stack">
@@ -816,7 +810,7 @@ h1 span { color: var(--gold); }
                   <div class="calendar-head">
                     <div>
                       <h3>Choose the rental day first</h3>
-                      <p>Pick the exact day up front so the rest of your booking stays centered around the right rental date.</p>
+                      <p>Pick the exact day up front so the rest of the booking stays centered around the right rental date.</p>
                     </div>
                     <div class="calendar-nav">
                       <button type="button" aria-label="Previous month" onclick="shiftCalendarMonth(-1)">←</button>
@@ -838,7 +832,7 @@ h1 span { color: var(--gold); }
                 <div class="calendar-summary">
                   <div class="calendar-picked"><span>Selected</span><span id="calendar-pill-date">Today</span></div>
                   <div class="calendar-big-date" id="calendar-big-date">Today</div>
-                  <p id="calendar-copy">Choose the date that works best, then finish the rest of your booking details below.</p>
+                  <p id="calendar-copy">Choose the date that works best, then continue to the waiver and deposit page.</p>
                   <div class="calendar-mini">
                     <div class="calendar-mini-item">
                       <strong>Requested date</strong>
@@ -857,144 +851,39 @@ h1 span { color: var(--gold); }
               </div>
             </div>
 
-            <div class="field-block">
-              <div class="block-label">Package Details</div>
-              <div class="field-grid">
-                <div class="field">
-                  <label for="craft" id="craft-label">Number of jet skis needed</label>
-                  <select id="craft" name="craft" required></select>
-                </div>
-                <div class="field">
-                  <label for="duration">Duration</label>
-                  <select id="duration" name="duration" required></select>
-                </div>
-                <div class="field">
-                  <label for="drone">Aerial drone coverage</label>
-                  <select id="drone" name="drone">
-                    <option value="no">No aerial drone coverage</option>
-                    <option value="yes">Add aerial drone video (+$50)</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="party-size">Party size</label>
-                  <input id="party-size" name="partySize" type="number" min="1" max="20" value="2">
-                </div>
-                <div class="field full">
-                  <label for="location">Launch or meeting spot</label>
-                  <input id="location" name="location" type="text" value="Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX">
-                </div>
-                <div class="field full">
-                  <label for="notes">Notes</label>
-                  <textarea id="notes" name="notes" placeholder="Anything Shoreline should know about timing, riders, or special requests?"></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div class="waiver-card">
-              <div class="block-label">Waiver</div>
-              <h3>Rider info and waiver in one step</h3>
-              <div class="waiver-copy">
-                Fill in the rider details and complete the waiver here so everything is ready before your booking is confirmed.
-              </div>
-              <div class="waiver-links">
-                <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">View full waiver</a>
-              </div>
-              <div class="waiver-box">
-                <p><strong>Assumption and acknowledgement of risks and release of liability.</strong> By submitting this request, the rider confirms they understand Shoreline Aquatics is preparing a watercraft rental that includes safety gear and a launch walkthrough, but riding still comes with normal on-the-water risk.</p>
-                <div class="waiver-bullets">
-                  <div class="waiver-bullet"><div class="waiver-dot">1</div><div>All watercraft are used at the renter’s and renter’s guests’ own risk, including weather, wakes, collisions, equipment issues, and operator error.</div></div>
-                  <div class="waiver-bullet"><div class="waiver-dot">2</div><div>The rider accepts responsibility for operating the equipment safely, following Shoreline instructions, and understanding the refundable damage deposit is <strong>$200 per ski</strong> for jet ski rentals and jet ski bundles.</div></div>
-                  <div class="waiver-bullet"><div class="waiver-dot">3</div><div>The rider releases Shoreline Aquatics LLC from claims tied to normal participation risks and authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
-                </div>
-              </div>
-              <div class="field-grid waiver-contact-grid">
-                <div class="field">
-                  <label for="name">Customer name</label>
-                  <input id="name" name="name" type="text" placeholder="First and last name" required>
-                </div>
-                <div class="field">
-                  <label for="phone">Phone</label>
-                  <input id="phone" name="phone" type="tel" placeholder="(469) 555-0000" required>
-                </div>
-                <div class="field">
-                  <label for="email">Email</label>
-                  <input id="email" name="email" type="email" placeholder="name@example.com">
-                </div>
-                <div class="field">
-                  <label for="date-of-birth">Date of birth</label>
-                  <input id="date-of-birth" name="dateOfBirth" type="date" required>
-                </div>
-                <div class="field">
-                  <label for="contact-method">Preferred contact</label>
-                  <select id="contact-method" name="contactMethod">
-                    <option value="text">Text message</option>
-                    <option value="call">Phone call</option>
-                    <option value="email">Email</option>
-                  </select>
-                </div>
-              </div>
-              <div class="match-card inline-match" id="match-card">
-                <div class="mini-kicker">Returning rider found</div>
-                <h3 id="match-title">Customer recognized</h3>
-                <div class="match-copy" id="match-copy">Welcome back. We filled in the details we already had for this rider.</div>
-                <div class="match-chip-row" id="match-chips"></div>
-              </div>
-              <div class="check-list">
-                <div class="check-row">
-                  <input id="waiver-risk" name="waiverRisk" type="checkbox" required>
-                  <label for="waiver-risk">I understand the risks of boating and personal watercraft activity and agree to follow Shoreline’s operating and safety instructions.</label>
-                </div>
-                <div class="check-row">
-                  <input id="waiver-damage" name="waiverDamage" type="checkbox" required>
-                  <label for="waiver-damage">I understand the refundable damage deposit is $200 per ski and that Shoreline may document equipment condition before and after the rental.</label>
-                </div>
-                <div class="check-row">
-                  <input id="waiver-verify" name="waiverVerify" type="checkbox" required>
-                  <label for="waiver-verify">I verify I completed the above information accurately and agree to all Shoreline waiver terms and conditions.</label>
-                </div>
-              </div>
-              <div class="field-grid">
-                <div class="field">
-                  <label for="waiver-initials">Participant initials</label>
-                  <input id="waiver-initials" name="waiverInitials" type="text" maxlength="6" placeholder="Initial here" required>
-                </div>
-                <div class="field">
-                  <label for="signature">Digital signature</label>
-                  <input id="signature" name="signature" type="text" placeholder="Type full legal name" required>
-                </div>
-                <div class="field">
-                  <label for="signature-date">Waiver date</label>
-                  <input id="signature-date" name="signatureDate" type="date" required>
-                </div>
-                <div class="field">
-                  <label for="emergency-name">Emergency contact name</label>
-                  <input id="emergency-name" name="emergencyName" type="text" placeholder="Optional but recommended">
-                </div>
-                <div class="field">
-                  <label for="emergency-phone">Emergency contact phone</label>
-                  <input id="emergency-phone" name="emergencyPhone" type="tel" placeholder="(469) 555-0000">
-                </div>
-              </div>
-            </div>
-
             <div class="summary-card bottom-summary">
-              <div class="summary-kicker">Live package summary</div>
+              <div class="summary-kicker">Package summary</div>
               <h3>Review the booking before the next step</h3>
               <div class="summary-total" id="summary-total">$300</div>
               <div class="summary-title" id="summary-title">2 Yamaha Jet Skis</div>
               <div class="summary-note" id="summary-note">2 hour rental with 2 Yamaha jet skis, life jackets, a full tank, and safety briefing included.</div>
               <div class="summary-grid">
                 <div class="summary-row"><span>Duration</span><strong id="summary-duration">2 hours</strong></div>
+                <div class="summary-row"><span>Rental date</span><strong id="summary-date">Today</strong></div>
+                <div class="summary-row"><span>Start time</span><strong id="summary-time">09:00</strong></div>
                 <div class="summary-row"><span>Booking deposit</span><strong>$50</strong></div>
                 <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
               </div>
+              <div class="footer-note" style="margin-top:18px">
+                Need to change the package? Head back to the homepage booking section before continuing.
+              </div>
+            </div>
+
+            <div hidden aria-hidden="true">
+              <span id="craft-label"></span>
+              <select id="craft" name="craft" required></select>
+              <select id="duration" name="duration" required></select>
+              <select id="drone" name="drone">
+                <option value="no">No aerial drone coverage</option>
+                <option value="yes">Add aerial drone video (+$50)</option>
+              </select>
             </div>
           </div>
 
           <div class="status" id="form-status"></div>
-          <button class="btn btn-primary" type="submit">Continue To Thank You &amp; Deposit</button>
+          <button class="btn btn-primary" type="submit">Continue To Waiver &amp; Deposit</button>
           <div class="footer-note">
-            You'll review everything one more time on the next screen, then pay the $50 booking deposit to hold your rental date.
+            The next page is where the rider fills out the waiver, confirms contact details, and pays the $50 booking deposit.
           </div>
         </form>
       </div>
@@ -1126,7 +1015,8 @@ function buildBookingPayloadBase() {
 
 function setType(type) {
   currentType = type;
-  qs('craft-label').textContent = getCraftLabelForType(type);
+  const craftLabel = qs('craft-label');
+  if (craftLabel) craftLabel.textContent = getCraftLabelForType(type);
   document.querySelectorAll('.type-btn').forEach((button) => {
     button.classList.toggle('active', button.dataset.type === type);
   });
@@ -1166,10 +1056,14 @@ function updateSummary() {
   const duration = payload.duration;
   const durationLabel = payload.durationLabel;
   const droneEnabled = payload.drone;
+  const selectedDateText = formatSelectedDate(selectedBookingDate);
+  const selectedTime = qs('time').value || '09:00';
 
   qs('summary-total').textContent = formatCurrency(payload.total);
   qs('summary-title').textContent = payload.craftLabel;
   qs('summary-duration').textContent = durationLabel;
+  qs('summary-date').textContent = selectedDateText;
+  qs('summary-time').textContent = selectedTime;
 
   if (craft === 'boat') {
     qs('summary-note').textContent = `Boat rental with captain included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ' Life jackets and a full tank are included.'}`;
@@ -1192,6 +1086,7 @@ function renderCalendarSummary() {
   qs('calendar-big-date').textContent = formatted;
   qs('calendar-selected-inline').textContent = formatted;
   qs('calendar-copy').textContent = `Selected rental day: ${formatted}. Exact launch time and notes stay editable below.`;
+  updateSummary();
 }
 
 function renderCalendar() {
@@ -1282,158 +1177,25 @@ function applyQueryDefaults() {
   updateSummary();
 }
 
-function buildLookupUrl() {
-  const phone = qs('phone').value.trim();
-  const email = qs('email').value.trim();
-  const params = new URLSearchParams();
-  if (phone) params.set('phone', phone);
-  if (email) params.set('email', email);
-  return `${OPS_PUBLIC_API}/api/public/customer-lookup?${params.toString()}`;
-}
-
-function showMatchedCustomer(customer) {
-  const card = qs('match-card');
-  const title = qs('match-title');
-  const copy = qs('match-copy');
-  const chips = qs('match-chips');
-  if (!card || !title || !copy || !chips || !customer) return;
-
-  const repeatLabel = Number(customer.bookings || 0) > 1 ? 'Repeat rider' : 'Returning guest';
-  title.textContent = `${customer.name || 'Rider'} recognized`;
-  copy.textContent = customer.waiverOnFile
-    ? 'Welcome back. A waiver is already on file, and you can update anything below if something changed.'
-    : 'Welcome back. We filled in the contact details we already had, and you can update anything below if needed.';
-
-  const chipValues = [
-    repeatLabel,
-    customer.lastBooking ? `Last booking ${customer.lastBooking}` : '',
-    customer.waiverOnFile ? 'Waiver saved' : '',
-    customer.email ? 'Email ready' : ''
-  ].filter(Boolean);
-
-  chips.innerHTML = chipValues.map((value) => `<span class="match-chip">${value}</span>`).join('');
-  card.classList.add('show');
-}
-
-function hideMatchedCustomer() {
-  qs('match-card').classList.remove('show');
-}
-
-function applyCustomerPrefill(customer) {
-  if (!customer) return;
-  matchedCustomer = customer;
-
-  if (!qs('name').value.trim()) qs('name').value = customer.name || '';
-  if (!qs('phone').value.trim()) qs('phone').value = customer.phone || '';
-  if (!qs('email').value.trim()) qs('email').value = customer.email || '';
-
-  if (customer.waiverOnFile) {
-    qs('waiver-risk').checked = true;
-    qs('waiver-damage').checked = true;
-    qs('waiver-verify').checked = Boolean(customer.waiverVerified);
-    if (!qs('date-of-birth').value) qs('date-of-birth').value = customer.dateOfBirth || '';
-    if (!qs('waiver-initials').value.trim()) qs('waiver-initials').value = customer.waiverInitials || '';
-    if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
-    if (!qs('signature-date').value) qs('signature-date').value = todayLocalIso();
-    if (!qs('emergency-name').value.trim()) qs('emergency-name').value = customer.emergencyName || '';
-    if (!qs('emergency-phone').value.trim()) qs('emergency-phone').value = customer.emergencyPhone || '';
-  }
-
-  showMatchedCustomer(customer);
-}
-
-async function lookupReturningCustomer(force = false) {
-  const phone = qs('phone').value.trim();
-  const email = qs('email').value.trim();
-  if (!phone && !email) {
-    matchedCustomer = null;
-    hideMatchedCustomer();
-    return;
-  }
-
-  const lookupKey = `${normalizePhoneKey(phone)}|${normalizeEmail(email)}`;
-  if (!force && lookupKey === lastLookupKey) return;
-  lastLookupKey = lookupKey;
-
-  try {
-    const response = await fetch(buildLookupUrl(), {
-      method: 'GET',
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) return;
-    const payload = await response.json().catch(() => ({}));
-    if (payload.found && payload.customer) {
-      applyCustomerPrefill(payload.customer);
-    } else {
-      matchedCustomer = null;
-      hideMatchedCustomer();
-    }
-  } catch (error) {
-    console.warn('Customer lookup skipped:', error);
-  }
-}
-
 function createBookingPayload() {
   const base = buildBookingPayloadBase();
   return {
     ...base,
-    name: qs('name').value.trim(),
-    phone: qs('phone').value.trim(),
-    email: qs('email').value.trim(),
     date: qs('date').value,
     time: qs('time').value,
-    location: qs('location').value.trim(),
-    contactMethod: qs('contact-method').value,
-    partySize: qs('party-size').value,
-    notes: qs('notes').value.trim(),
-    crmMatchId: matchedCustomer?.id || null,
-    waiver: {
-      acceptedRisk: qs('waiver-risk').checked,
-      acceptedDamage: qs('waiver-damage').checked,
-      verified: qs('waiver-verify').checked,
-      dateOfBirth: qs('date-of-birth').value,
-      initials: qs('waiver-initials').value.trim(),
-      signature: qs('signature').value.trim(),
-      signatureDate: qs('signature-date').value,
-      emergencyName: qs('emergency-name').value.trim(),
-      emergencyPhone: qs('emergency-phone').value.trim()
-    }
+    location: 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX',
+    contactMethod: 'text',
+    partySize: '',
+    notes: ''
   };
 }
 
 function validatePayload(payload) {
-  if (!payload.name || !payload.phone || !payload.date || !payload.time) {
-    return 'Please fill in the customer name, phone number, requested date, and start time.';
-  }
+  if (!payload.date || !payload.time) return 'Please choose the rental date and preferred start time.';
   if (!payload.craft || !payload.duration || !payload.total) {
     return 'Please choose a valid package and duration before continuing.';
   }
-  if (!payload.waiver.acceptedRisk || !payload.waiver.acceptedDamage) {
-    return 'Please confirm the waiver terms before continuing.';
-  }
-  if (!payload.waiver.verified || !payload.waiver.dateOfBirth || !payload.waiver.initials) {
-    return 'Please complete the date of birth, participant initials, and verification for the waiver.';
-  }
-  if (!payload.waiver.signature || !payload.waiver.signatureDate) {
-    return 'Please provide the rider signature and waiver date.';
-  }
   return '';
-}
-
-async function syncBookingToOps(payload) {
-  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking-request`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(body.error || 'We could not save your booking right now.');
-  }
-  return body;
 }
 
 async function handleSubmit(event) {
@@ -1451,33 +1213,13 @@ async function handleSubmit(event) {
   status.textContent = 'Saving your booking details...';
   status.classList.remove('success');
 
-  let syncMeta = { synced: false };
-  try {
-    const result = await syncBookingToOps(payload);
-    syncMeta = {
-      synced: true,
-      bookingId: result.bookingId || null,
-      customerId: result.customer?.id || null,
-      matchedExistingCustomer: Boolean(result.matchedExistingCustomer),
-      waiverStored: Boolean(result.waiverStored)
-    };
-  } catch (syncError) {
-    syncMeta = {
-      synced: false,
-      error: syncError.message || 'We could not save your request right now.'
-    };
-  }
-
   localStorage.setItem('sla_booking_request', JSON.stringify({
     ...payload,
     paymentStatus: 'unpaid',
-    depositAmount: 50,
-    syncMeta
+    depositAmount: 50
   }));
 
-  status.textContent = syncMeta.synced
-    ? 'Booking request saved. Opening your confirmation page...'
-    : 'Booking request saved. Opening your confirmation page...';
+  status.textContent = 'Booking details saved. Opening the waiver and deposit page...';
   status.classList.add('success');
   window.location.href = '../jetski-booking-confirmation/';
 }
@@ -1489,6 +1231,7 @@ document.querySelectorAll('.type-btn').forEach((button) => {
 qs('craft').addEventListener('change', () => populateDurationOptions());
 qs('duration').addEventListener('change', updateSummary);
 qs('drone').addEventListener('change', updateSummary);
+qs('time').addEventListener('change', updateSummary);
 qs('date').addEventListener('change', (event) => {
   if (!event.target.value) return;
   selectedBookingDate = event.target.value;
@@ -1496,20 +1239,9 @@ qs('date').addEventListener('change', (event) => {
   if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
   renderCalendar();
 });
-qs('phone').addEventListener('blur', () => lookupReturningCustomer());
-qs('email').addEventListener('blur', () => lookupReturningCustomer());
 qs('booking-form').addEventListener('submit', handleSubmit);
-qs('name').addEventListener('blur', () => {
-  const fullName = qs('name').value.trim();
-  if (!qs('signature').value.trim()) qs('signature').value = fullName;
-  if (!qs('waiver-initials').value.trim() && fullName) {
-    const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('');
-    qs('waiver-initials').value = initials;
-  }
-});
 
 qs('date').value = todayLocalIso();
-qs('signature-date').value = todayLocalIso();
 selectedBookingDate = qs('date').value;
 setType('jetski');
 applyQueryDefaults();
