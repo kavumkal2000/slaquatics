@@ -844,7 +844,6 @@ h1 span { color: var(--gold); }
                 <div class="summary-row"><span>Rental date</span><strong id="summary-date">Today</strong></div>
                 <div class="summary-row"><span>Start time</span><strong id="summary-time">10:00 AM</strong></div>
                 <div class="summary-row"><span>Booking deposit</span><strong>$50</strong></div>
-                <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
               </div>
               <div class="footer-note" style="margin-top:18px">
                 Need to change the package? Head back to the homepage booking section before continuing.
@@ -1062,12 +1061,8 @@ function updateSummary() {
     qs('summary-extra-value').textContent = 'Included';
   } else if (isBundleType(craft)) {
     qs('summary-note').textContent = `${durationLabel} bundle with Yamaha jet skis, the captained boat, life jackets, fuel, and briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
-    qs('summary-extra-label').textContent = 'Damage deposit';
-    qs('summary-extra-value').textContent = '$200 per ski';
   } else {
     qs('summary-note').textContent = `${durationLabel} rental with ${payload.craftLabel.toLowerCase()}, life jackets, a full tank, and a safety briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
-    qs('summary-extra-label').textContent = 'Damage deposit';
-    qs('summary-extra-value').textContent = '$200 per ski';
   }
 }
 

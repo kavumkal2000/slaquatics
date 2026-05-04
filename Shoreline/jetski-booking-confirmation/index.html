@@ -264,7 +264,6 @@ h3{font-size:1.75rem}
         </div>
         <div class="info-list">
           <div class="info-item">The booking deposit due now is <strong style="color:var(--gold)">$50</strong>.</div>
-          <div class="info-item">Jet ski rentals and jet ski bundles still carry a <strong style="color:var(--gold)">$200 per ski</strong> refundable damage deposit at check-in.</div>
           <div class="info-item">The thank-you page after payment shows the arrival instructions and next steps.</div>
         </div>
       </div>
@@ -342,7 +341,7 @@ h3{font-size:1.75rem}
               <div class="block-label">Waiver</div>
               <h3>Review the waiver and sign online</h3>
               <div class="section-copy">
-                The rider confirms the normal on-the-water risks, the refundable damage deposit, and Shoreline’s safety instructions before checkout.
+                The rider confirms the normal on-the-water risks and Shoreline’s safety instructions before checkout.
               </div>
               <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">View full waiver</a>
 
@@ -350,7 +349,7 @@ h3{font-size:1.75rem}
                 <div class="mini-kicker">Agreement Summary</div>
                 <div class="legal-list">
                   <div class="legal-item"><div class="legal-dot">1</div><div>All watercraft are used at the renter’s and renter’s guests’ own risk, including weather, wakes, collisions, equipment issues, and operator error.</div></div>
-                  <div class="legal-item"><div class="legal-dot">2</div><div>The rider accepts responsibility for operating the equipment safely, following Shoreline instructions, and understanding the refundable damage deposit is <strong style="color:var(--gold)">$200 per ski</strong> for jet ski rentals and jet ski bundles.</div></div>
+                  <div class="legal-item"><div class="legal-dot">2</div><div>The rider accepts responsibility for operating the equipment safely and following Shoreline instructions throughout the rental.</div></div>
                   <div class="legal-item"><div class="legal-dot">3</div><div>The rider releases Shoreline Aquatics LLC from claims tied to normal participation risks and authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
                 </div>
               </div>
@@ -362,7 +361,7 @@ h3{font-size:1.75rem}
                 </div>
                 <div class="check-row">
                   <input id="waiver-damage" name="waiverDamage" type="checkbox" required>
-                  <label for="waiver-damage">I understand the refundable damage deposit is $200 per ski and that Shoreline may document equipment condition before and after the rental.</label>
+                  <label for="waiver-damage">I understand Shoreline may document equipment condition before and after the rental.</label>
                 </div>
                 <div class="check-row">
                   <input id="waiver-verify" name="waiverVerify" type="checkbox" required>
@@ -422,7 +421,6 @@ h3{font-size:1.75rem}
           <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact">Text message</strong></div>
           <div class="summary-row"><span>Booking deposit due now</span><strong id="summary-deposit">$50</strong></div>
           <div class="summary-row"><span>Payment status</span><strong id="summary-payment-status">Not paid yet</strong></div>
-          <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
         </div>
       </div>
     </div>
@@ -566,13 +564,6 @@ function populateSummary(booking) {
   setText("summary-party", booking.partySize || '2');
   setText("summary-contact", formatContactMethod(booking.contactMethod));
 
-  if (booking.craft === 'boat') {
-    setText('summary-extra-label', 'Captain');
-    setText('summary-extra-value', 'Included');
-  } else {
-    setText('summary-extra-label', 'Damage deposit');
-    setText('summary-extra-value', '$200 per ski');
-  }
 }
 
 function populateForm(booking) {
