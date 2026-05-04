@@ -251,11 +251,11 @@ p {
       <div class="eyebrow">Confirmation</div>
       <h1 id="page-title">Review And Pay The <span style="color: var(--gold);">Booking Deposit</span></h1>
       <p id="page-copy">
-        Your rental details are ready. Pay the $50 booking deposit through Stripe to hold the slot, or use the fallback contact buttons if Shoreline needs to handle the reservation manually.
+        Your rental details are ready. Pay the $50 booking deposit to hold your date, or contact Shoreline directly if you need help finishing the reservation.
       </p>
 
       <div id="empty-state" class="empty" hidden>
-        No booking request is saved yet. Go back to the booking page, choose your package, and we will prepare the confirmation details here.
+        No booking details are saved yet. Head back to the booking page, choose your rental, and your confirmation details will show here.
       </div>
 
       <div id="request-wrap" hidden>
@@ -276,16 +276,16 @@ p {
 
         <div class="actions">
           <a class="btn btn-primary" id="stripe-link" href="#">Pay $50 deposit</a>
-          <a class="btn btn-primary" id="sms-link" href="#">Text booking request</a>
-          <a class="btn btn-ghost" id="email-link" href="#">Email booking request</a>
+          <a class="btn btn-primary" id="sms-link" href="#">Text Shoreline</a>
+          <a class="btn btn-ghost" id="email-link" href="#">Email Shoreline</a>
           <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
-          <a class="btn btn-ghost" id="copy-link" href="#">Copy request text</a>
+          <a class="btn btn-ghost" id="copy-link" href="#">Copy booking details</a>
           <a class="btn btn-ghost" href="../jetski-booking/">Edit request</a>
         </div>
 
         <div class="next-steps-card" id="next-steps-card" hidden>
           <h2>What Happens Next</h2>
-          <p>Your booking deposit is on file. Here’s the clean handoff from payment to launch day.</p>
+          <p>Your booking deposit is on file. Here’s what to expect before launch day.</p>
           <div class="next-steps-list">
             <div class="next-step">
               <div class="next-step-num">1</div>
@@ -293,11 +293,11 @@ p {
             </div>
             <div class="next-step">
               <div class="next-step-num">2</div>
-              <div><strong>We reach back out through your preferred contact</strong><span>Expect Shoreline to confirm final details through <span id="next-contact"></span> if anything needs to be tightened before launch.</span></div>
+              <div><strong>Watch for your confirmation</strong><span>Shoreline will follow up through <span id="next-contact"></span> with any final timing or arrival details before your rental.</span></div>
             </div>
             <div class="next-step">
               <div class="next-step-num">3</div>
-              <div><strong>Arrive at the launch with your ID</strong><span>Meet Shoreline Aquatics at 2000 Main St, Hickory Creek, TX and follow the arrival instructions already shown on the main site.</span></div>
+              <div><strong>Arrive at the launch with your ID</strong><span>Meet Shoreline Aquatics at 2000 Main St, Hickory Creek, TX and follow the arrival instructions before heading to the water.</span></div>
             </div>
             <div class="next-step">
               <div class="next-step-num">4</div>
@@ -401,7 +401,7 @@ function updatePaymentUi(booking) {
 
   const stripeButton = document.getElementById("stripe-link");
   if (!stripeReady) {
-    stripeButton.textContent = "Stripe setup not finished";
+    stripeButton.textContent = "Online deposit unavailable";
     stripeButton.setAttribute("aria-disabled", "true");
     return;
   }
@@ -426,11 +426,11 @@ function updateThankYouUi(booking) {
 
   if (paid) {
     title.innerHTML = `Thanks, You're <span style="color: var(--gold);">Booked In</span>`;
-    copy.textContent = "Your booking deposit is paid. Use the details below as your thank-you page and next-step checklist before launch day.";
+    copy.textContent = "Your booking deposit is paid. Use the details below as your confirmation and next-step checklist before rental day.";
     nextStepsCard.hidden = false;
   } else {
     title.innerHTML = `Review And Pay The <span style="color: var(--gold);">Booking Deposit</span>`;
-    copy.textContent = "Your rental details are ready. Pay the $50 booking deposit through Stripe to hold the slot, or use the fallback contact buttons if Shoreline needs to handle the reservation manually.";
+    copy.textContent = "Your rental details are ready. Pay the $50 booking deposit to hold your date, or contact Shoreline directly if you need help finishing the reservation.";
     nextStepsCard.hidden = true;
   }
 }
@@ -494,18 +494,18 @@ async function verifyCheckoutSession(sessionId) {
 async function handleStripeCheckout(event) {
   event.preventDefault();
   if (!activeBooking) {
-    setStatus('Go back to the booking page and complete the request before starting checkout.', 'error');
+    setStatus('Please complete the booking page before starting checkout.', 'error');
     return;
   }
   if (!stripeReady) {
-    setStatus('Stripe is not configured yet on the Shoreline backend. Finish the Stripe keys first, then this button will work.', 'warn');
+    setStatus('Online deposit payment is temporarily unavailable. Please call or text Shoreline to finish your reservation.', 'warn');
     return;
   }
 
   const stripeButton = document.getElementById('stripe-link');
   stripeButton.setAttribute('aria-disabled', 'true');
   stripeButton.textContent = 'Opening Stripe...';
-  setStatus('Creating a secure Stripe checkout for the booking deposit...');
+  setStatus('Opening secure checkout for your booking deposit...');
 
   try {
     const response = await fetch(`${OPS_PUBLIC_API}/api/public/create-checkout-session`, {
@@ -539,7 +539,7 @@ async function handleStripeCheckout(event) {
     window.location.href = payload.checkoutUrl;
   } catch (error) {
     showBooking(activeBooking);
-    setStatus(error.message || 'Stripe checkout could not be started.', 'error');
+    setStatus(error.message || 'We could not start checkout right now.', 'error');
   }
 }
 
@@ -586,20 +586,20 @@ document.getElementById("stripe-link").addEventListener("click", handleStripeChe
       }
 
       if (payload.session?.paymentStatus === 'paid') {
-        setStatus('Booking deposit paid. This reservation now has a paid Stripe deposit on file.', 'success');
+        setStatus('Booking deposit paid. Your reservation is now held for the selected date.', 'success');
       } else if (payload.session?.paymentStatus === 'unpaid') {
-        setStatus('Stripe checkout completed, but the payment is still unpaid. Shoreline should verify this booking before launch.', 'warn');
+        setStatus('Your checkout was received, but the payment still shows as unpaid. Please contact Shoreline if you need help.', 'warn');
       } else {
-        setStatus('Stripe checkout was found, but the payment is still processing.', 'warn');
+        setStatus('Your payment is still processing. We will update the reservation as soon as it clears.', 'warn');
       }
       return;
     } catch (error) {
-      setStatus(error.message || 'Could not verify the Stripe payment result.', 'error');
+      setStatus(error.message || 'We could not verify the payment result right now.', 'error');
     }
   }
 
   if (params.get('payment') === 'cancelled' && activeBooking) {
-    setStatus('Stripe checkout was cancelled. The booking request is still here whenever you are ready to pay the deposit.', 'warn');
+    setStatus('Checkout was cancelled. Your booking details are still here whenever you are ready to pay the deposit.', 'warn');
     return;
   }
 

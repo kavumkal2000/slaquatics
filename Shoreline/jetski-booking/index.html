@@ -770,7 +770,7 @@ h1 span { color: var(--gold); }
       <div class="hero-card">
         <h1>Choose The Day. Sign The Waiver. <span>Send The Request.</span></h1>
         <p class="hero-copy">
-          Start with the rental calendar, then choose the package details and finish the waiver. If the rider has booked before, Shoreline can still pull saved contact details and waiver info from the CRM instead of making them start from scratch.
+          Start with the rental calendar, then choose your package details and finish the waiver. If you've rented with Shoreline before, some of your details may already be filled in to make booking faster.
         </p>
         <div class="contact-strip">
           <a class="contact-pill" href="tel:4696937164">Call or text: (469) 693-7164</a>
@@ -788,7 +788,7 @@ h1 span { color: var(--gold); }
           </div>
           <div class="hero-note">
             <strong>Step 3</strong>
-            Sign once, send the request, then pay the booking deposit on the thank-you page.
+            Finish the waiver, review your details, and pay the booking deposit to hold your date.
           </div>
         </div>
       </div>
@@ -798,7 +798,7 @@ h1 span { color: var(--gold); }
       <div class="form-card">
         <h2 class="section-title">Start with the rental calendar</h2>
         <p class="section-copy">
-          Choose the date first, then dial in the package and finish the waiver. The rider info you collect in the waiver also gets saved to Shoreline Ops when the CRM sync is available.
+          Choose the date first, then dial in the package and finish the waiver so everything is ready for confirmation.
         </p>
 
         <div class="type-toggle">
@@ -816,7 +816,7 @@ h1 span { color: var(--gold); }
                   <div class="calendar-head">
                     <div>
                       <h3>Choose the rental day first</h3>
-                      <p>Pick the exact day up front. The booking request, thank-you page, and Shoreline CRM will all carry this same date through the rest of the flow.</p>
+                      <p>Pick the exact day up front so the rest of your booking stays centered around the right rental date.</p>
                     </div>
                     <div class="calendar-nav">
                       <button type="button" aria-label="Previous month" onclick="shiftCalendarMonth(-1)">←</button>
@@ -838,7 +838,7 @@ h1 span { color: var(--gold); }
                 <div class="calendar-summary">
                   <div class="calendar-picked"><span>Selected</span><span id="calendar-pill-date">Today</span></div>
                   <div class="calendar-big-date" id="calendar-big-date">Today</div>
-                  <p id="calendar-copy">Choose the date that works best. Package details, rider info, and launch timing all get layered in after this step.</p>
+                  <p id="calendar-copy">Choose the date that works best, then finish the rest of your booking details below.</p>
                   <div class="calendar-mini">
                     <div class="calendar-mini-item">
                       <strong>Requested date</strong>
@@ -894,10 +894,10 @@ h1 span { color: var(--gold); }
               <div class="block-label">Waiver</div>
               <h3>Rider info and waiver in one step</h3>
               <div class="waiver-copy">
-                Name, phone, email, date of birth, and the signed waiver all flow together here so the rider does not have to fill out the same details in multiple places. If Shoreline already has this rider on file, the CRM can still prefill the saved info below.
+                Fill in the rider details and complete the waiver here so everything is ready before your booking is confirmed.
               </div>
               <div class="waiver-links">
-                <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">Open the full waiver page</a>
+                <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">View full waiver</a>
               </div>
               <div class="waiver-box">
                 <p><strong>Assumption and acknowledgement of risks and release of liability.</strong> By submitting this request, the rider confirms they understand Shoreline Aquatics is preparing a watercraft rental that includes safety gear and a launch walkthrough, but riding still comes with normal on-the-water risk.</p>
@@ -936,7 +936,7 @@ h1 span { color: var(--gold); }
               <div class="match-card inline-match" id="match-card">
                 <div class="mini-kicker">Returning rider found</div>
                 <h3 id="match-title">Customer recognized</h3>
-                <div class="match-copy" id="match-copy">We found this rider in Shoreline Ops and prefilled what we could.</div>
+                <div class="match-copy" id="match-copy">Welcome back. We filled in the details we already had for this rider.</div>
                 <div class="match-chip-row" id="match-chips"></div>
               </div>
               <div class="check-list">
@@ -994,7 +994,7 @@ h1 span { color: var(--gold); }
           <div class="status" id="form-status"></div>
           <button class="btn btn-primary" type="submit">Continue To Thank You &amp; Deposit</button>
           <div class="footer-note">
-            This page does not charge the customer directly. It saves the booking request, pushes the rider info and waiver into Shoreline Ops, and then hands the customer off to the thank-you page for the $50 booking deposit.
+            You'll review everything one more time on the next screen, then pay the $50 booking deposit to hold your rental date.
           </div>
         </form>
       </div>
@@ -1298,17 +1298,17 @@ function showMatchedCustomer(customer) {
   const chips = qs('match-chips');
   if (!card || !title || !copy || !chips || !customer) return;
 
-  const repeatLabel = Number(customer.bookings || 0) > 1 ? 'Repeat rider' : 'Customer on file';
+  const repeatLabel = Number(customer.bookings || 0) > 1 ? 'Repeat rider' : 'Returning guest';
   title.textContent = `${customer.name || 'Rider'} recognized`;
   copy.textContent = customer.waiverOnFile
-    ? 'We found this rider in Shoreline Ops and a waiver is already on file. You can update anything below if something changed.'
-    : 'We found this rider in Shoreline Ops and prefilled their saved contact info. You can still update anything below.';
+    ? 'Welcome back. A waiver is already on file, and you can update anything below if something changed.'
+    : 'Welcome back. We filled in the contact details we already had, and you can update anything below if needed.';
 
   const chipValues = [
     repeatLabel,
     customer.lastBooking ? `Last booking ${customer.lastBooking}` : '',
-    customer.waiverOnFile ? 'Waiver on file' : '',
-    customer.email ? 'Email saved' : ''
+    customer.waiverOnFile ? 'Waiver saved' : '',
+    customer.email ? 'Email ready' : ''
   ].filter(Boolean);
 
   chips.innerHTML = chipValues.map((value) => `<span class="match-chip">${value}</span>`).join('');
@@ -1431,7 +1431,7 @@ async function syncBookingToOps(payload) {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(body.error || 'Could not sync the booking into Shoreline Ops.');
+    throw new Error(body.error || 'We could not save your booking right now.');
   }
   return body;
 }
@@ -1448,7 +1448,7 @@ async function handleSubmit(event) {
     return;
   }
 
-  status.textContent = 'Saving booking request and waiver...';
+  status.textContent = 'Saving your booking details...';
   status.classList.remove('success');
 
   let syncMeta = { synced: false };
@@ -1464,7 +1464,7 @@ async function handleSubmit(event) {
   } catch (syncError) {
     syncMeta = {
       synced: false,
-      error: syncError.message || 'Could not sync the request to Shoreline Ops.'
+      error: syncError.message || 'We could not save your request right now.'
     };
   }
 
@@ -1476,8 +1476,8 @@ async function handleSubmit(event) {
   }));
 
   status.textContent = syncMeta.synced
-    ? 'Booking request saved and synced to Shoreline Ops. Opening the thank-you page...'
-    : 'Booking request saved. Opening the thank-you page...';
+    ? 'Booking request saved. Opening your confirmation page...'
+    : 'Booking request saved. Opening your confirmation page...';
   status.classList.add('success');
   window.location.href = '../jetski-booking-confirmation/';
 }

@@ -149,12 +149,12 @@ h2{font-size:2rem}
       <div class="eyebrow">Rental Waiver</div>
       <h1>Complete The Shoreline <span style="color:var(--gold)">Waiver Online</span></h1>
       <div class="hero-copy">
-        This is the same Shoreline Aquatics rental waiver language from the existing waiver page, now pulled into the main website and styled to match the rest of the booking experience. Once it is submitted, the rider record and waiver details can be saved into Shoreline Ops.
+        Complete your rental waiver before your day on the water so check-in is faster when you arrive.
       </div>
       <div class="hero-pills">
-        <span class="hero-pill">Same Shoreline waiver terms</span>
-        <span class="hero-pill">Styled like the main website</span>
-        <span class="hero-pill">CRM-connected submission</span>
+        <span class="hero-pill">Fast online form</span>
+        <span class="hero-pill">Signed before arrival</span>
+        <span class="hero-pill">Ready for your rental day</span>
       </div>
     </div>
 
@@ -163,7 +163,7 @@ h2{font-size:2rem}
         <div class="form-card">
           <h2>Responsible Party Details</h2>
           <div class="section-copy">
-            Fill this out before the rental day. If Shoreline already has this rider on file, the phone or email lookup can prefill the waiver details that were already saved.
+            Fill this out before the rental day so your waiver is already completed when you arrive.
           </div>
 
           <form id="waiver-form">
@@ -216,7 +216,7 @@ h2{font-size:2rem}
             <div class="status" id="waiver-status"></div>
             <button class="btn btn-primary" type="submit">Submit Waiver</button>
             <div class="footer-note">
-              Submitting this waiver stores the rider details and signed waiver in Shoreline Ops. If the rider later books through the booking page, Shoreline can reuse the waiver details already on file.
+              Once this waiver is submitted, you'll be ready to move straight into booking if your rental date has not been reserved yet.
             </div>
           </form>
         </div>
@@ -224,7 +224,7 @@ h2{font-size:2rem}
         <div class="success-card" id="success-card">
           <h2>Waiver Saved</h2>
           <div class="success-copy">
-            The waiver is now on file for this rider. The next step is the booking page if the rental still needs to be requested.
+            Your waiver has been submitted successfully. If you still need to reserve a rental date, continue to booking below.
           </div>
           <div class="top-actions" style="margin-top:16px">
             <a class="btn btn-primary" href="../jetski-booking/">Continue to booking</a>
@@ -391,7 +391,7 @@ async function submitWaiver(event) {
   const status = qs('waiver-status');
   const payload = buildPayload();
 
-  status.textContent = 'Saving waiver to Shoreline Ops...';
+    status.textContent = 'Saving your waiver...';
   status.classList.remove('success');
 
   try {
@@ -405,7 +405,7 @@ async function submitWaiver(event) {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.error || 'Could not save the waiver.');
+      throw new Error(body.error || 'We could not save your waiver right now.');
     }
 
     localStorage.setItem('sla_standalone_waiver', JSON.stringify({
@@ -418,7 +418,7 @@ async function submitWaiver(event) {
     qs('success-card').classList.add('show');
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   } catch (error) {
-    status.textContent = error.message || 'Could not save the waiver.';
+    status.textContent = error.message || 'We could not save your waiver right now.';
     status.classList.remove('success');
   }
 }
