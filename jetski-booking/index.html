@@ -52,31 +52,9 @@ a { color: inherit; }
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
   text-decoration: none;
 }
-.brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--gold), var(--orange));
-  color: #08111f;
-  display: grid;
-  place-items: center;
-  font-family: 'Bebas Neue', cursive;
-  font-size: 1.55rem;
-  letter-spacing: 0.08em;
-}
-.brand-copy strong {
-  display: block;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.brand-copy span {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
+.brand-logo img { height: 68px; width: auto; display: block; }
 .top-actions {
   display: flex;
   flex-wrap: wrap;
@@ -757,14 +735,12 @@ h1 span { color: var(--gold); }
 </head>
 <body>
   <div class="shell">
-    <div class="topbar">
-      <a class="brand" href="../">
-        <div class="brand-mark">SA</div>
-        <div class="brand-copy">
-          <strong>Shoreline Aquatics</strong>
-          <span>Lake Lewisville jet ski and boat rentals</span>
+  <div class="topbar">
+    <a class="brand" href="../">
+        <div class="brand-logo">
+          <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics">
         </div>
-      </a>
+    </a>
       <div class="top-actions">
         <a class="btn btn-ghost" href="../waiver/">Waiver</a>
         <a class="btn btn-ghost" href="../privacy-policy/">Privacy Policy</a>
