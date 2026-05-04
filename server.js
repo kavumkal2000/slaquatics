@@ -38,6 +38,17 @@ const PUBLIC_SITE_URL = String(process.env.PUBLIC_SITE_URL || 'https://slaquatic
 const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
 const DRONE_ADDON_CENTS = 5000;
+const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
+const SHORELINE_PHONE_LINK = '4696937164';
+const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
+const SHORELINE_ADDRESS = '2000 Main St, Hickory Creek, TX 75065';
+const ARRIVAL_INSTRUCTIONS = [
+  'Proceed down Main Street until you pass the storage units on your left.',
+  'Continue straight ahead and enter the park.',
+  'Upon entering, make an immediate left.',
+  'Follow the road straight to the boat ramp.',
+  'The cabanas will be on your left — Shoreline Aquatics and the jet skis will be located in this area.'
+];
 const PRICING_CENTS = {
   jetski2: { 2: 30000, 3: 45000, 4: 56000, 6: 72000, 8: 90000 },
   jetski3: { 2: 45000, 3: 67500, 4: 84000, 6: 108000, 8: 135000 },
@@ -372,6 +383,32 @@ function firstName(value = '') {
   return String(value || '').trim().split(/\s+/)[0] || 'there';
 }
 
+function formatCurrency(value = 0) {
+  return `$${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function formatDateLabel(value = '') {
+  const parsed = parseIsoDate(value);
+  if (!parsed) return value || '-';
+  return parsed.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function formatTimeLabel(value = '') {
+  const [hourText = '', minuteText = '00'] = String(value || '').split(':');
+  const hour = Number(hourText);
+  if (Number.isNaN(hour)) return value || '-';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = hour % 12 || 12;
+  return `${twelveHour}:${minuteText} ${suffix}`;
+}
+
 function nextId(items = []) {
   return items.reduce((max, item) => Math.max(max, Number(item?.id || 0)), 0) + 1;
 }
@@ -579,6 +616,104 @@ function bookingPaymentSummary(booking = {}) {
     paymentCompletedAt: String(booking.paymentCompletedAt || ''),
     paymentIntentId: String(booking.paymentIntentId || '')
   };
+}
+
+function bookingEmailLocation(booking = {}) {
+  return String(booking.location || `${SHORELINE_LOCATION_NAME} - ${SHORELINE_ADDRESS}`).trim();
+}
+
+function bookingRemainingBalance(booking = {}) {
+  return Math.max(Number(booking.total || 0) - Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100), 0);
+}
+
+function bookingConfirmationText(booking = {}) {
+  const arrivalLines = ARRIVAL_INSTRUCTIONS.map((line, index) => `${index + 1}. ${line}`).join('\n');
+  const remainingBalance = bookingRemainingBalance(booking);
+  return [
+    `Hi ${firstName(booking.name)},`,
+    '',
+    `Your Shoreline Aquatics booking deposit is confirmed and your rental date is reserved.`,
+    '',
+    'Booking details',
+    `Package: ${booking.craftLabel || 'Rental package'}`,
+    `Duration: ${booking.durationLabel || '-'}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Start time: ${formatTimeLabel(booking.time)}`,
+    `Meeting spot: ${bookingEmailLocation(booking)}`,
+    `Party size: ${booking.partySize || 'Not provided'}`,
+    `Aerial drone coverage: ${booking.drone ? 'Included' : 'Not included'}`,
+    `Quoted total: ${formatCurrency(booking.total || 0)}`,
+    `Deposit received: ${formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100)}`,
+    `Remaining balance: ${formatCurrency(remainingBalance)}`,
+    '',
+    'What happens next',
+    '- Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.',
+    '- Shoreline provides life jackets, fuel, cooler space, and the safety briefing before launch.',
+    '- The remaining balance is handled directly with Shoreline before you head out on the water.',
+    '',
+    'Arrival instructions',
+    arrivalLines,
+    '',
+    `Address: ${SHORELINE_ADDRESS}`,
+    `Call or text Shoreline: ${SHORELINE_PHONE_DISPLAY}`,
+    '',
+    'If anything changes with your party size or timing, reply to this email or call/text Shoreline before your rental window.',
+    '',
+    'See you on the water,',
+    'Shoreline Aquatics'
+  ].join('\n');
+}
+
+function bookingConfirmationHtml(booking = {}) {
+  const remainingBalance = bookingRemainingBalance(booking);
+  const arrivalList = ARRIVAL_INSTRUCTIONS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
+      <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
+        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
+        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">Your booking deposit is confirmed</h1>
+        <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(firstName(booking.name))}, your rental date is locked in and Shoreline has everything needed for launch day.</p>
+      </div>
+      <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
+        <h2 style="margin:0 0 12px;font-size:18px;">Booking details</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:15px;">
+          <tr><td style="padding:8px 0;color:#5a6b85;">Package</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.craftLabel || 'Rental package')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.durationLabel || '-')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Date</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatDateLabel(booking.date))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Start time</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatTimeLabel(booking.time))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Meeting spot</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(bookingEmailLocation(booking))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Party size</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.partySize || 'Not provided')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Drone coverage</td><td style="padding:8px 0;text-align:right;font-weight:700;">${booking.drone ? 'Included' : 'Not included'}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Deposit received</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0f8b53;">${htmlEscape(formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Remaining balance</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(remainingBalance))}</td></tr>
+        </table>
+
+        <div style="margin-top:24px;padding:18px;border-radius:18px;background:#f5f8fc;">
+          <h2 style="margin:0 0 10px;font-size:18px;">What happens next</h2>
+          <ul style="margin:0;padding-left:18px;">
+            <li>Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.</li>
+            <li>Life jackets, fuel, cooler space, and the pre-launch safety briefing are included.</li>
+            <li>The remaining balance is handled directly with Shoreline before you head out on the water.</li>
+          </ul>
+        </div>
+
+        <div style="margin-top:24px;">
+          <h2 style="margin:0 0 10px;font-size:18px;">Arrival instructions</h2>
+          <ol style="margin:0;padding-left:20px;">
+            ${arrivalList}
+          </ol>
+          <p style="margin:16px 0 0;"><strong>Address:</strong> ${htmlEscape(SHORELINE_ADDRESS)}<br><strong>Call or text:</strong> <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a></p>
+        </div>
+
+        <p style="margin:24px 0 0;color:#5a6b85;">If anything changes with your party size or timing, reply to this email or call/text Shoreline before your rental window.</p>
+      </div>
+    </div>
+  `;
+}
+
+function bookingConfirmationSubject(booking = {}) {
+  return `Booking confirmed for ${formatDateLabel(booking.date)} • Shoreline Aquatics`;
 }
 
 function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
@@ -875,7 +1010,7 @@ async function sendTwilioSms({ to, body }) {
   return json;
 }
 
-async function sendResendEmail({ to, subject, text, html, bcc = [] }) {
+async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyKey = '' }) {
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
     throw new Error('Resend email is not configured yet.');
   }
@@ -888,7 +1023,8 @@ async function sendResendEmail({ to, subject, text, html, bcc = [] }) {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
     },
     body: JSON.stringify({
       from: RESEND_FROM_EMAIL,
@@ -905,6 +1041,46 @@ async function sendResendEmail({ to, subject, text, html, bcc = [] }) {
     throw new Error(message);
   }
   return json;
+}
+
+async function sendBookingConfirmationEmail(state, booking, session = {}, now = new Date().toISOString()) {
+  if (!booking || booking.paymentStatus !== 'paid' || !booking.deposit) {
+    return { sent: false, reason: 'booking-not-paid' };
+  }
+  if (booking.confirmationEmailSentAt) {
+    return { sent: false, reason: 'already-sent' };
+  }
+  if (!booking.email) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+
+  const subject = bookingConfirmationSubject(booking);
+  const text = bookingConfirmationText(booking);
+  const html = bookingConfirmationHtml(booking);
+  const idempotencyKey = `shoreline-booking-confirmation-${booking.id}-${session?.id || booking.paymentSessionId || 'paid'}`;
+  const result = await sendResendEmail({
+    to: booking.email,
+    subject,
+    text,
+    html,
+    idempotencyKey
+  });
+
+  booking.confirmationEmailSentAt = now;
+  booking.confirmationEmailId = String(result?.id || '');
+  booking.updatedAt = now;
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    date: now,
+    customerId: booking.customerId || 0,
+    customerName: booking.name || booking.email,
+    channel: 'booking-confirmation-email',
+    message: `Paid booking confirmation sent to ${booking.email} for ${booking.craftLabel} on ${booking.date} at ${booking.time}.`
+  });
+  return { sent: true, result };
 }
 
 async function postWebhook(url, payload, extraHeaders = {}) {
@@ -1316,6 +1492,13 @@ async function handleApi(request, response, pathname) {
       const state = await stateStore.read();
       const now = new Date().toISOString();
       const booking = applyStripeSessionToBooking(state, session, now);
+      if (booking?.paymentStatus === 'paid' && booking.deposit) {
+        try {
+          await sendBookingConfirmationEmail(state, booking, session, now);
+        } catch (error) {
+          console.error('Booking confirmation email failed during checkout verification:', error);
+        }
+      }
       if (booking) {
         await stateStore.write(state);
       }
@@ -1362,6 +1545,9 @@ async function handleApi(request, response, pathname) {
         const state = await stateStore.read();
         const session = event.data.object;
         const booking = applyStripeSessionToBooking(state, session, new Date().toISOString());
+        if (booking?.paymentStatus === 'paid' && booking.deposit) {
+          await sendBookingConfirmationEmail(state, booking, session, new Date().toISOString());
+        }
         if (booking) {
           await stateStore.write(state);
         }
