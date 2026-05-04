@@ -516,48 +516,48 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 16% 18%, rgba(20,116,137,0.36) 0 7%, transparent 12%),
-    radial-gradient(circle at 82% 22%, rgba(11,72,104,0.3) 0 8%, transparent 14%),
-    linear-gradient(160deg, #07131f 0%, #0a1d2d 42%, #0d2d3e 72%, #071018 100%);
+    radial-gradient(circle at 14% 18%, rgba(245,166,35,0.12) 0 8%, transparent 18%),
+    radial-gradient(circle at 84% 22%, rgba(15,184,224,0.12) 0 9%, transparent 18%),
+    linear-gradient(180deg, #08111f 0%, #0b1930 52%, #091421 100%);
 }
 .why-section::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%),
-    repeating-radial-gradient(circle at 18% 26%, rgba(255,255,255,0.08) 0 2px, transparent 2px 21px),
-    repeating-radial-gradient(circle at 74% 66%, rgba(255,255,255,0.06) 0 2px, transparent 2px 24px);
-  mix-blend-mode: screen;
-  opacity: 0.42;
+    linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+  opacity: 0.65;
   pointer-events: none;
 }
 .why-section .section-inner { position: relative; z-index: 1; }
 .why-hero {
-  max-width: 1180px;
+  max-width: 860px;
   margin: 0 auto 2.2rem;
-  padding: 1.55rem 2rem 1.35rem;
-  text-align: center;
-  background: rgba(6,18,30,0.7);
-  border: 1px solid rgba(255,255,255,0.12);
+  padding: 1.8rem 2rem 1.55rem;
+  text-align: left;
+  background:
+    linear-gradient(180deg, rgba(12,27,48,0.96) 0%, rgba(8,17,31,0.96) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 26px;
   box-shadow: 0 20px 44px rgba(0,0,0,0.24);
-  backdrop-filter: blur(10px);
+}
+.why-hero .section-tag {
+  margin-bottom: 0.95rem;
 }
 .why-title {
   margin: 0;
   color: #fff;
-  font-size: clamp(2.4rem, 4.6vw, 4rem);
+  font-size: clamp(2.4rem, 4.4vw, 3.6rem);
   font-weight: 800;
   line-height: 0.95;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 .why-subtitle {
   margin: 0.65rem 0 0;
-  color: rgba(255,255,255,0.94);
-  font-size: clamp(0.98rem, 1.7vw, 1.55rem);
-  line-height: 1.45;
+  max-width: 700px;
+  color: rgba(255,255,255,0.72);
+  font-size: clamp(0.98rem, 1.6vw, 1.14rem);
+  line-height: 1.7;
 }
 .why-grid {
   display: grid;
@@ -565,38 +565,74 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   gap: 1.45rem;
 }
 .why-item {
-  background: rgba(255,255,255,0.98);
-  border: 2px solid rgba(8,66,78,0.16);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 28px;
-  padding: 2rem 1.35rem 1.5rem;
+  padding: 1.35rem 1.35rem 1.45rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: flex-start;
+  text-align: left;
   min-height: 100%;
-  box-shadow: 0 24px 40px rgba(7,44,53,0.16);
+  box-shadow: 0 24px 40px rgba(0,0,0,0.18);
   transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+}
+.why-item::before {
+  content: '';
+  position: absolute;
+  left: 1.35rem;
+  right: 1.35rem;
+  top: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold), rgba(15,184,224,0.75));
 }
 .why-item:hover {
   transform: translateY(-4px);
-  box-shadow: 0 28px 48px rgba(7,44,53,0.2);
-  border-color: rgba(8,66,78,0.28);
+  box-shadow: 0 28px 48px rgba(0,0,0,0.24);
+  border-color: rgba(245,166,35,0.2);
+}
+.why-item-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 1.1rem;
+}
+.why-item-index {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.why-item-index::after {
+  content: '';
+  width: 22px;
+  height: 1px;
+  background: rgba(255,255,255,0.18);
 }
 .why-icon-badge {
-  width: 110px;
-  height: 110px;
-  border-radius: 999px;
-  background: #0d96a8;
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(245,166,35,0.18), rgba(15,184,224,0.18));
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.45rem;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 16px 30px rgba(13,150,168,0.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
 }
 .why-icon-svg {
-  width: 58px;
-  height: 58px;
+  width: 34px;
+  height: 34px;
   stroke: currentColor;
   fill: none;
   stroke-width: 2.4;
@@ -608,12 +644,12 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   font-size: 1.1rem;
   font-weight: 800;
   line-height: 1.18;
-  color: #0d1320;
+  color: #ffffff;
 }
 .why-item p {
   margin: 0;
   font-size: 0.95rem;
-  color: #213746;
+  color: rgba(255,255,255,0.72);
   line-height: 1.62;
 }
 
@@ -910,12 +946,13 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .bundle-media-stack { grid-template-columns: 1fr; }
   .bundle-media { min-height: 200px; }
   .why-grid { grid-template-columns: 1fr; }
-  .why-hero { padding: 1.25rem 1rem 1.15rem; border-radius: 22px; margin-bottom: 1.4rem; }
+  .why-hero { padding: 1.25rem 1rem 1.15rem; border-radius: 22px; margin-bottom: 1.4rem; text-align: left; }
   .why-title { font-size: 2.6rem; }
   .why-subtitle { font-size: 0.95rem; }
   .why-item { padding: 1.45rem 1.1rem 1.2rem; border-radius: 24px; }
-  .why-icon-badge { width: 92px; height: 92px; margin-bottom: 1.1rem; }
-  .why-icon-svg { width: 48px; height: 48px; }
+  .why-item-top { margin-bottom: 1rem; }
+  .why-icon-badge { width: 60px; height: 60px; }
+  .why-icon-svg { width: 30px; height: 30px; }
   .why-item h3 { font-size: 1.02rem; }
   .why-item p { font-size: 0.88rem; }
   .reviews-summary { flex-direction: column; align-items: start; gap: 0.9rem; }
@@ -1467,51 +1504,64 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 <section class="why-section">
   <div class="section-inner">
     <div class="why-hero">
+      <div class="section-tag">Why Choose Us</div>
       <h2 class="why-title">Why Choose Us?</h2>
       <p class="why-subtitle">We Have The Best Rates and Added Perks in the Area</p>
     </div>
     <div class="why-grid">
       <div class="why-item">
-        <div class="why-icon-badge" aria-hidden="true">
-          <svg class="why-icon-svg" viewBox="0 0 48 48">
-            <rect x="9" y="11" width="30" height="18" rx="3"></rect>
-            <circle cx="24" cy="20" r="4"></circle>
-            <path d="M13 15h5M30 25h5M8 33h13l4-4h15"></path>
-            <path d="M8 39h10c4 0 6-1 8.5-3.2L31 33h9"></path>
-          </svg>
+        <div class="why-item-top">
+          <span class="why-item-index">01</span>
+          <div class="why-icon-badge" aria-hidden="true">
+            <svg class="why-icon-svg" viewBox="0 0 48 48">
+              <rect x="9" y="11" width="30" height="18" rx="3"></rect>
+              <circle cx="24" cy="20" r="4"></circle>
+              <path d="M13 15h5M30 25h5M8 33h13l4-4h15"></path>
+              <path d="M8 39h10c4 0 6-1 8.5-3.2L31 33h9"></path>
+            </svg>
+          </div>
         </div>
         <h3>Unbeatable Rates</h3>
         <p>We keep pricing aggressive so more people can get on the water. If someone finds a better local rate, Shoreline can still work to match it.</p>
       </div>
       <div class="why-item">
-        <div class="why-icon-badge" aria-hidden="true">
-          <svg class="why-icon-svg" viewBox="0 0 48 48">
-            <circle cx="24" cy="24" r="14"></circle>
-            <path d="M10 24h28M24 10a21 21 0 0 1 0 28M24 10a21 21 0 0 0 0 28M15 17c2.8 1.6 9.2 1.6 18 0M15 31c2.8-1.6 9.2-1.6 18 0"></path>
-          </svg>
+        <div class="why-item-top">
+          <span class="why-item-index">02</span>
+          <div class="why-icon-badge" aria-hidden="true">
+            <svg class="why-icon-svg" viewBox="0 0 48 48">
+              <circle cx="24" cy="24" r="14"></circle>
+              <path d="M10 24h28M24 10a21 21 0 0 1 0 28M24 10a21 21 0 0 0 0 28M15 17c2.8 1.6 9.2 1.6 18 0M15 31c2.8-1.6 9.2-1.6 18 0"></path>
+            </svg>
+          </div>
         </div>
         <h3>Delivered to Lake Lewisville</h3>
         <p>Everything is staged right at Lake Lewisville so the crew can meet Shoreline there, check in fast, and get on the water without confusion.</p>
       </div>
       <div class="why-item">
-        <div class="why-icon-badge" aria-hidden="true">
-          <svg class="why-icon-svg" viewBox="0 0 48 48">
-            <path d="M16 21v-8a4 4 0 0 1 8 0v8"></path>
-            <path d="M16 21H10v16h22c2.1 0 3.9-1.5 4.2-3.6l1.5-9.2A3.5 3.5 0 0 0 34.2 20H24"></path>
-            <path d="M10 21v16"></path>
-          </svg>
+        <div class="why-item-top">
+          <span class="why-item-index">03</span>
+          <div class="why-icon-badge" aria-hidden="true">
+            <svg class="why-icon-svg" viewBox="0 0 48 48">
+              <path d="M16 21v-8a4 4 0 0 1 8 0v8"></path>
+              <path d="M16 21H10v16h22c2.1 0 3.9-1.5 4.2-3.6l1.5-9.2A3.5 3.5 0 0 0 34.2 20H24"></path>
+              <path d="M10 21v16"></path>
+            </svg>
+          </div>
         </div>
         <h3>Exceptional Service &amp; Amenities</h3>
         <p>Rentals include the helpful extras people actually use: life jackets, full tank, a cooler, a clear walkthrough, and optional add-ons like drone coverage.</p>
       </div>
       <div class="why-item">
-        <div class="why-icon-badge" aria-hidden="true">
-          <svg class="why-icon-svg" viewBox="0 0 48 48">
-            <circle cx="24" cy="18" r="7"></circle>
-            <path d="M12 37c2.8-6.4 20.8-6.4 24 0"></path>
-            <path d="M10 30l1.3 2.7 3 .4-2.1 2 0.5 2.9-2.7-1.5-2.7 1.5 0.5-2.9-2.1-2 3-.4z"></path>
-            <path d="M38 30l1.3 2.7 3 .4-2.1 2 0.5 2.9-2.7-1.5-2.7 1.5 0.5-2.9-2.1-2 3-.4z"></path>
-          </svg>
+        <div class="why-item-top">
+          <span class="why-item-index">04</span>
+          <div class="why-icon-badge" aria-hidden="true">
+            <svg class="why-icon-svg" viewBox="0 0 48 48">
+              <circle cx="24" cy="18" r="7"></circle>
+              <path d="M12 37c2.8-6.4 20.8-6.4 24 0"></path>
+              <path d="M10 30l1.3 2.7 3 .4-2.1 2 0.5 2.9-2.7-1.5-2.7 1.5 0.5-2.9-2.1-2 3-.4z"></path>
+              <path d="M38 30l1.3 2.7 3 .4-2.1 2 0.5 2.9-2.7-1.5-2.7 1.5 0.5-2.9-2.1-2 3-.4z"></path>
+            </svg>
+          </div>
         </div>
         <h3>We Care</h3>
         <p>Our equipment is kept ready, the safety talk stays clear, and the goal is simple: make sure people feel taken care of so they want to book again.</p>
