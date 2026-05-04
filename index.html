@@ -150,11 +150,26 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .calc-option.selected { border-color: var(--gold); background: rgba(245,166,35,0.1); }
 .calc-option-name { font-size: 0.9rem; font-weight: 500; color: var(--white); }
 .calc-option-sub { font-size: 0.73rem; color: rgba(255,255,255,0.6); margin-top: 1px; }
+.calc-option-sub strong { color: var(--gold); font-weight: 700; letter-spacing: 0.04em; }
 .calc-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.18s; }
 .calc-option.selected .calc-check { border-color: var(--gold); background: var(--gold); }
 .calc-check::after { content: '✓'; font-size: 0.65rem; color: #08111f; display: none; font-weight: 700; }
 .calc-option.selected .calc-check::after { display: block; }
 .calc-divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 1.2rem 0; }
+.calc-addon-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(15,184,224,0.18);
+  background: linear-gradient(180deg, rgba(15,184,224,0.08) 0%, rgba(12,27,48,0.26) 100%);
+}
+.calc-addon-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7dd3fc;
+  margin-bottom: 0.7rem;
+}
 /* Result side */
 .calc-result-box {
   background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.3);
@@ -274,16 +289,43 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
     linear-gradient(140deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
   border: 1px solid rgba(245,166,35,0.16);
   border-radius: 24px;
-  padding: 1.5rem 1.6rem;
+  padding: 1.5rem 1.6rem 1.65rem;
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) auto;
-  gap: 1rem;
-  align-items: center;
+  grid-template-columns: minmax(260px, 0.92fr) minmax(0, 1.08fr);
+  gap: 1.4rem;
+  align-items: stretch;
+}
+.bundle-media-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  align-items: stretch;
+}
+.bundle-media {
+  position: relative;
+  min-height: 220px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 16px 38px rgba(0,0,0,0.24);
+}
+.bundle-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8,17,31,0.05) 0%, rgba(8,17,31,0.52) 100%);
+}
+.bundle-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bundle-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .bundle-highlight h3 { font-family: 'Bebas Neue', cursive; font-size: 2rem; letter-spacing: 0.04em; margin-bottom: 0.45rem; }
 .bundle-highlight p { font-size: 0.92rem; line-height: 1.72; color: rgba(255,255,255,0.78); max-width: 56ch; }
 .bundle-badges { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.85rem; }
 .bundle-badge { background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.22); color: var(--gold); border-radius: 999px; padding: 0.3rem 0.75rem; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.bundle-action { margin-top: 1.2rem; display: flex; }
 
 /* ── ADD-ONS ── */
 .addons-grid { display: grid; grid-template-columns: minmax(0, 980px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
@@ -416,6 +458,28 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   letter-spacing: 0.06em;
   margin-bottom: 1rem;
 }
+.how-step-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  margin-bottom: 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(245,166,35,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.how-step-svg {
+  width: 40px;
+  height: 40px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .how-step h3 {
   font-family: 'DM Sans', sans-serif;
   font-size: 1.2rem;
@@ -452,21 +516,20 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 14% 18%, rgba(255,255,255,0.62) 0 4%, transparent 7%),
-    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.42) 0 5%, transparent 9%),
-    radial-gradient(circle at 52% 72%, rgba(255,255,255,0.2) 0 7%, transparent 11%),
-    linear-gradient(140deg, #8af1ff 0%, #43d2e8 26%, #1ca7c4 56%, #0a758f 100%);
+    radial-gradient(circle at 16% 18%, rgba(20,116,137,0.36) 0 7%, transparent 12%),
+    radial-gradient(circle at 82% 22%, rgba(11,72,104,0.3) 0 8%, transparent 14%),
+    linear-gradient(160deg, #07131f 0%, #0a1d2d 42%, #0d2d3e 72%, #071018 100%);
 }
 .why-section::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.03) 100%),
-    repeating-radial-gradient(circle at 18% 26%, rgba(255,255,255,0.16) 0 2px, transparent 2px 21px),
-    repeating-radial-gradient(circle at 74% 66%, rgba(255,255,255,0.12) 0 2px, transparent 2px 24px);
+    linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.01) 100%),
+    repeating-radial-gradient(circle at 18% 26%, rgba(255,255,255,0.08) 0 2px, transparent 2px 21px),
+    repeating-radial-gradient(circle at 74% 66%, rgba(255,255,255,0.06) 0 2px, transparent 2px 24px);
   mix-blend-mode: screen;
-  opacity: 0.72;
+  opacity: 0.42;
   pointer-events: none;
 }
 .why-section .section-inner { position: relative; z-index: 1; }
@@ -475,10 +538,10 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   margin: 0 auto 2.2rem;
   padding: 1.55rem 2rem 1.35rem;
   text-align: center;
-  background: rgba(11,44,53,0.56);
-  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(6,18,30,0.7);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 26px;
-  box-shadow: 0 20px 44px rgba(4,40,48,0.18);
+  box-shadow: 0 20px 44px rgba(0,0,0,0.24);
   backdrop-filter: blur(10px);
 }
 .why-title {
@@ -621,13 +684,38 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 
 /* ── MAP ── */
 .map-section { background: var(--deep); }
-.directions-card {
-  max-width: 940px;
+.location-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 1.2rem;
+  align-items: stretch;
+}
+.directions-card,
+.map-card {
   background: linear-gradient(180deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
   border: 1px solid rgba(245,166,35,0.16);
   border-radius: 22px;
   padding: 1.7rem 1.8rem;
   box-shadow: 0 22px 50px rgba(0,0,0,0.24);
+}
+.location-address {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+.address-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(245,166,35,0.1);
+  border: 1px solid rgba(245,166,35,0.18);
+  color: var(--gold);
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .directions-card p {
   font-size: 0.93rem;
@@ -661,6 +749,35 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   letter-spacing: 0.06em;
 }
 .direction-copy { font-size: 0.94rem; line-height: 1.7; color: rgba(255,255,255,0.84); padding-top: 0.2rem; }
+.map-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+}
+.map-card h3 {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 2rem;
+  letter-spacing: 0.04em;
+  color: var(--white);
+}
+.map-card p {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.74);
+}
+.map-embed {
+  min-height: 100%;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+.map-embed iframe {
+  width: 100%;
+  min-height: 420px;
+  border: 0;
+  display: block;
+}
 
 /* ── FAQ ── */
 .faq-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 5rem; }
@@ -725,6 +842,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .addon-content { padding: 1.5rem; }
   .how-grid { grid-template-columns: 1fr; }
   .how-step { padding-bottom: 1.15rem; }
+  .location-grid { grid-template-columns: 1fr; }
   .drone-inner { grid-template-columns: 1fr; gap: 2.5rem; }
   .why-grid { grid-template-columns: repeat(2,1fr); }
   .faq-cols { grid-template-columns: 1fr; }
@@ -735,6 +853,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .hero-info-bar { gap: 1.2rem; padding: 0.8rem 1.2rem; }
   .review-slide { flex-basis: calc((100% - 1.2rem) / 2); }
   .bundle-highlight { grid-template-columns: 1fr; }
+  .bundle-media-stack { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 760px) {
   nav { padding: 0.75rem 0.95rem; gap: 0.65rem; }
@@ -749,6 +868,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .how-title { font-size: 2.35rem; }
   .how-step h3 { font-size: 1.08rem; }
   .how-step p { font-size: 0.88rem; }
+  .how-step-icon { width: 62px; height: 62px; border-radius: 18px; }
+  .how-step-svg { width: 34px; height: 34px; }
   .how-arrow {
     display: inline-flex;
     top: auto;
@@ -786,6 +907,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .fleet-title-row { flex-direction: column; align-items: start; }
   .fleet-stat { text-align: left; }
   .fleet-price-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bundle-media-stack { grid-template-columns: 1fr; }
+  .bundle-media { min-height: 200px; }
   .why-grid { grid-template-columns: 1fr; }
   .why-hero { padding: 1.25rem 1rem 1.15rem; border-radius: 22px; margin-bottom: 1.4rem; }
   .why-title { font-size: 2.6rem; }
@@ -800,6 +923,9 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .review-slide { flex-basis: 100%; }
   .reviews-controls { align-items: flex-start; }
   .reviews-nav { width: 100%; justify-content: space-between; }
+  .directions-card,
+  .map-card { padding: 1.25rem 1.1rem; }
+  .map-embed iframe { min-height: 320px; }
 }
 </style>
 
@@ -966,16 +1092,26 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
       </div>
     </div>
     <div class="bundle-highlight">
-      <div>
+      <div class="bundle-media-stack">
+        <div class="bundle-media">
+          <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/66a08829bf892e0763e15ed4.jpeg" alt="Yamaha jet skis ready at Lake Lewisville">
+        </div>
+        <div class="bundle-media">
+          <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/66c4486780910831f7c4fbf0.jpeg" alt="Shoreline Aquatics boat rental ready for the lake">
+        </div>
+      </div>
+      <div class="bundle-copy">
         <h3>Want the bundle instead?</h3>
-        <p>Customers can now combine Yamaha jet skis and the boat in one request. Choose the fleet size on the homepage, then finish the date, waiver, and details on the booking page.</p>
+        <p>Pair Yamaha jet skis with the boat in one request so the whole group can ride, lounge, and stay together for the full lake day.</p>
         <div class="bundle-badges">
           <span class="bundle-badge">Jet skis + boat</span>
           <span class="bundle-badge">Captain included</span>
           <span class="bundle-badge">Built for bigger groups</span>
         </div>
+        <div class="bundle-action">
+          <a href="#booking" class="btn-primary">Build a Bundle</a>
+        </div>
       </div>
-      <div><a href="#booking" class="btn-primary">Build a Bundle</a></div>
     </div>
   </div>
 </section>
@@ -1026,13 +1162,24 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <div><div class="calc-option-name">3 Hours</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="4" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub">Most popular</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub"><strong>Most Popular</strong></div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="6" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub">Best value</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub"><strong>Best Value</strong></div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="8" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">Full Day (8 Hours)</div><div class="calc-option-sub">Full day</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">Full Day (8 Hours)</div></div><div class="calc-check"></div>
+            </div>
+          </div>
+          <div class="calc-addon-box">
+            <div class="calc-addon-label">3 · Add Aerial Drone Coverage</div>
+            <div class="calc-select-group" id="js-drone-opts">
+              <div class="calc-option selected" data-drone="no" onclick="selectOpt('js-drone-opts',this);calcPrice()">
+                <div><div class="calc-option-name">No drone coverage</div></div><div class="calc-check"></div>
+              </div>
+              <div class="calc-option" data-drone="yes" onclick="selectOpt('js-drone-opts',this);calcPrice()">
+                <div><div class="calc-option-name">Add drone highlight video</div><div class="calc-option-sub">+$50</div></div><div class="calc-check"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1075,13 +1222,24 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <div><div class="calc-option-name">3 Hours</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option selected" data-hours="4" onclick="selectOpt('bt-dur-opts',this);calcBoatPrice()">
-              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub">Most popular</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub"><strong>Most Popular</strong></div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="6" onclick="selectOpt('bt-dur-opts',this);calcBoatPrice()">
               <div><div class="calc-option-name">6 Hours</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="8" onclick="selectOpt('bt-dur-opts',this);calcBoatPrice()">
-              <div><div class="calc-option-name">Full Day (8 Hours)</div><div class="calc-option-sub">Best value</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">Full Day (8 Hours)</div><div class="calc-option-sub"><strong>Best Value</strong></div></div><div class="calc-check"></div>
+            </div>
+          </div>
+          <div class="calc-addon-box">
+            <div class="calc-addon-label">2 · Add Aerial Drone Coverage</div>
+            <div class="calc-select-group" id="bt-drone-opts">
+              <div class="calc-option selected" data-drone="no" onclick="selectOpt('bt-drone-opts',this);calcBoatPrice()">
+                <div><div class="calc-option-name">No drone coverage</div></div><div class="calc-check"></div>
+              </div>
+              <div class="calc-option" data-drone="yes" onclick="selectOpt('bt-drone-opts',this);calcBoatPrice()">
+                <div><div class="calc-option-name">Add drone highlight video</div><div class="calc-option-sub">+$50</div></div><div class="calc-check"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1138,13 +1296,24 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <div><div class="calc-option-name">3 Hours</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="4" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
-              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub">Most popular</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub"><strong>Most Popular</strong></div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="6" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
-              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub">Best value</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub"><strong>Best Value</strong></div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="8" onclick="selectOpt('bd-dur-opts',this);calcBundlePrice()">
-              <div><div class="calc-option-name">Full Day (8 Hours)</div><div class="calc-option-sub">Full day bundle</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">Full Day (8 Hours)</div></div><div class="calc-check"></div>
+            </div>
+          </div>
+          <div class="calc-addon-box">
+            <div class="calc-addon-label">3 · Add Aerial Drone Coverage</div>
+            <div class="calc-select-group" id="bd-drone-opts">
+              <div class="calc-option selected" data-drone="no" onclick="selectOpt('bd-drone-opts',this);calcBundlePrice()">
+                <div><div class="calc-option-name">No drone coverage</div></div><div class="calc-check"></div>
+              </div>
+              <div class="calc-option" data-drone="yes" onclick="selectOpt('bd-drone-opts',this);calcBundlePrice()">
+                <div><div class="calc-option-name">Add drone highlight video</div><div class="calc-option-sub">+$50</div></div><div class="calc-check"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1226,30 +1395,66 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
       <div class="how-grid">
         <div class="how-step">
           <div class="how-step-num">1</div>
+          <div class="how-step-icon" aria-hidden="true">
+            <svg class="how-step-svg" viewBox="0 0 48 48">
+              <path d="M7 30c8-10 26-10 34 0"></path>
+              <path d="M10 34h28"></path>
+              <path d="M14 26l6-7 5 4 9-11"></path>
+            </svg>
+          </div>
           <h3>Choose Your Experience</h3>
           <p>Jet skis, boat, or bundle. Start with the option that fits the crew and lock in the setup before moving to the booking page.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
           <div class="how-step-num">2</div>
+          <div class="how-step-icon" aria-hidden="true">
+            <svg class="how-step-svg" viewBox="0 0 48 48">
+              <rect x="8" y="10" width="32" height="28" rx="5"></rect>
+              <path d="M15 8v8M33 8v8M8 19h32"></path>
+              <path d="M16 27h6M26 27h6M16 33h6"></path>
+            </svg>
+          </div>
           <h3>Pick Your Date &amp; Time</h3>
           <p>Book instantly online, choose the rental date on the calendar, and send Shoreline the exact time window that works best.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
           <div class="how-step-num">3</div>
+          <div class="how-step-icon" aria-hidden="true">
+            <svg class="how-step-svg" viewBox="0 0 48 48">
+              <path d="M12 16h24"></path>
+              <path d="M12 24h24"></path>
+              <path d="M12 32h14"></path>
+              <path d="M32 29l3 3 7-8"></path>
+            </svg>
+          </div>
           <h3>Customize Your Day</h3>
           <p>Add drinks, photos, or VIP upgrades. Customers can also tack on aerial drone coverage while they finish the request.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
           <div class="how-step-num">4</div>
+          <div class="how-step-icon" aria-hidden="true">
+            <svg class="how-step-svg" viewBox="0 0 48 48">
+              <path d="M10 33c0-7 5-12 12-12s12 5 12 12"></path>
+              <circle cx="22" cy="16" r="6"></circle>
+              <path d="M34 17l4 4 6-8"></path>
+            </svg>
+          </div>
           <h3>Show Up &amp; Ride</h3>
           <p>We handle the rest. Meet Shoreline at the launch, get the walkthrough, and get on the water without a messy check-in.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
           <div class="how-step-num">5</div>
+          <div class="how-step-icon" aria-hidden="true">
+            <svg class="how-step-svg" viewBox="0 0 48 48">
+              <path d="M10 14h28v20H10z"></path>
+              <path d="M18 21l6 4 6-4"></path>
+              <path d="M17 33h14"></path>
+            </svg>
+          </div>
           <h3>Get Your Content &amp; Come Back</h3>
           <p>Memories plus discounts for next time, so great riders can come back faster and repeat bookings feel easy.</p>
         </div>
@@ -1320,14 +1525,34 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   <div class="section-inner">
     <div class="section-tag">Location</div>
     <h2>Shoreline Aquatics &ndash; Arrival Instructions</h2>
-    <div class="directions-card">
-      <p>The address, hours, and phone number already sit at the top of the site. Here’s the simple arrival walkthrough customers actually need once they are on the way.</p>
-      <div class="directions-list">
-        <div class="direction-step"><div class="direction-index">1</div><div class="direction-copy">Proceed down Main Street until you pass the storage units on your left.</div></div>
-        <div class="direction-step"><div class="direction-index">2</div><div class="direction-copy">Continue straight ahead and enter the park.</div></div>
-        <div class="direction-step"><div class="direction-index">3</div><div class="direction-copy">Upon entering, make an immediate left.</div></div>
-        <div class="direction-step"><div class="direction-index">4</div><div class="direction-copy">Follow the road straight to the boat ramp.</div></div>
-        <div class="direction-step"><div class="direction-index">5</div><div class="direction-copy">The cabanas will be on your left &mdash; Shoreline Aquatics and the jet skis will be located in this area.</div></div>
+    <div class="location-grid">
+      <div class="directions-card">
+        <div class="location-address">
+          <span class="address-pill">2000 Main St, Hickory Creek, TX</span>
+          <a class="address-pill" href="https://www.google.com/maps/dir/?api=1&destination=2000+Main+St+Hickory+Creek+TX" target="_blank" rel="noreferrer">Open in Maps</a>
+        </div>
+        <p>The address is here too, but these are the actual arrival directions your customers need once they are on the way.</p>
+        <div class="directions-list">
+          <div class="direction-step"><div class="direction-index">1</div><div class="direction-copy">Proceed down Main Street until you pass the storage units on your left.</div></div>
+          <div class="direction-step"><div class="direction-index">2</div><div class="direction-copy">Continue straight ahead and enter the park.</div></div>
+          <div class="direction-step"><div class="direction-index">3</div><div class="direction-copy">Upon entering, make an immediate left.</div></div>
+          <div class="direction-step"><div class="direction-index">4</div><div class="direction-copy">Follow the road straight to the boat ramp.</div></div>
+          <div class="direction-step"><div class="direction-index">5</div><div class="direction-copy">The cabanas will be on your left &mdash; Shoreline Aquatics and the jet skis will be located in this area.</div></div>
+        </div>
+      </div>
+      <div class="map-card">
+        <div>
+          <h3>Meet Us At The Launch</h3>
+          <p>Use the map for the exact address, then follow the instructions beside it once you enter the park.</p>
+        </div>
+        <div class="map-embed">
+          <iframe
+            title="Shoreline Aquatics map"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            src="https://www.google.com/maps?q=2000+Main+St+Hickory+Creek+TX&output=embed">
+          </iframe>
+        </div>
       </div>
     </div>
   </div>
@@ -1542,34 +1767,44 @@ function getSelected(groupId, attr) {
   return el ? el.dataset[attr] : null;
 }
 
+function getDroneSelection(groupId) {
+  return (getSelected(groupId, 'drone') || 'no') === 'yes';
+}
+
 function calcPrice() {
   const craft = getSelected('js-craft-opts', 'craft') || 'jetski2';
   const hours = parseInt(getSelected('js-dur-opts','hours')) || 2;
-  const price = PRICING[craft]?.[hours] || 0;
+  const drone = getDroneSelection('js-drone-opts');
+  const basePrice = PRICING[craft]?.[hours] || 0;
+  const price = basePrice + (drone ? 50 : 0);
   const name = CRAFT_NAMES[craft] || craft;
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hrs';
   document.getElementById('js-price').textContent = '$'+price.toLocaleString();
-  document.getElementById('js-desc').textContent = name+' · '+hLabel;
+  document.getElementById('js-desc').textContent = name+' · '+hLabel+(drone ? ' · Drone added' : '');
   document.getElementById('js-book-btn').textContent = 'Continue to Calendar & Waiver →';
   document.getElementById('js-book-btn').href = buildBookingUrl({
     type: 'jetski',
     craft,
     hours,
+    drone: drone ? 'yes' : 'no',
     total: price
   });
 }
 
 function calcBoatPrice() {
   const hours = parseInt(getSelected('bt-dur-opts','hours')) || 4;
-  const price = PRICING.boat[hours] || 0;
+  const drone = getDroneSelection('bt-drone-opts');
+  const basePrice = PRICING.boat[hours] || 0;
+  const price = basePrice + (drone ? 50 : 0);
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hr'+(hours>1?'s':'');
   document.getElementById('bt-price').textContent = '$'+price.toLocaleString();
-  document.getElementById('bt-desc').textContent = 'Boat Rental · '+hLabel+' · Up to 10 guests';
+  document.getElementById('bt-desc').textContent = 'Boat Rental · '+hLabel+' · Up to 10 guests'+(drone ? ' · Drone added' : '');
   document.getElementById('bt-book-btn').textContent = 'Continue to Calendar & Waiver →';
   document.getElementById('bt-book-btn').href = buildBookingUrl({
     type: 'boat',
     craft: 'boat',
     hours,
+    drone: drone ? 'yes' : 'no',
     total: price
   });
 }
@@ -1577,15 +1812,18 @@ function calcBoatPrice() {
 function calcBundlePrice() {
   const craft = getSelected('bd-craft-opts', 'craft') || 'bundle2';
   const hours = parseInt(getSelected('bd-dur-opts', 'hours')) || 2;
-  const price = PRICING[craft]?.[hours] || 0;
+  const drone = getDroneSelection('bd-drone-opts');
+  const basePrice = PRICING[craft]?.[hours] || 0;
+  const price = basePrice + (drone ? 50 : 0);
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hrs';
   document.getElementById('bd-price').textContent = '$'+price.toLocaleString();
-  document.getElementById('bd-desc').textContent = `${CRAFT_NAMES[craft]} · ${hLabel}`;
+  document.getElementById('bd-desc').textContent = `${CRAFT_NAMES[craft]} · ${hLabel}${drone ? ' · Drone added' : ''}`;
   document.getElementById('bd-book-btn').textContent = 'Continue to Calendar & Waiver →';
   document.getElementById('bd-book-btn').href = buildBookingUrl({
     type: 'bundle',
     craft,
     hours,
+    drone: drone ? 'yes' : 'no',
     total: price
   });
 }

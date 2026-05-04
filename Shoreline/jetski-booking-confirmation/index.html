@@ -143,6 +143,49 @@ p {
   gap: 12px;
   margin-top: 28px;
 }
+.next-steps-card {
+  margin-top: 26px;
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid rgba(245, 166, 35, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.12), transparent 36%),
+    rgba(255, 255, 255, 0.04);
+}
+.next-steps-card h2 {
+  font-size: 2rem;
+}
+.next-steps-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.next-step {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 1rem 1rem 0.95rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.next-step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #08111f;
+  background: var(--gold);
+}
+.next-step strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #ffffff;
+}
 .btn {
   border: 0;
   border-radius: 999px;
@@ -206,8 +249,8 @@ p {
 
     <div class="card">
       <div class="eyebrow">Confirmation</div>
-      <h1>Review And Pay The <span style="color: var(--gold);">Booking Deposit</span></h1>
-      <p>
+      <h1 id="page-title">Review And Pay The <span style="color: var(--gold);">Booking Deposit</span></h1>
+      <p id="page-copy">
         Your rental details are ready. Pay the $50 booking deposit through Stripe to hold the slot, or use the fallback contact buttons if Shoreline needs to handle the reservation manually.
       </p>
 
@@ -238,6 +281,29 @@ p {
           <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
           <a class="btn btn-ghost" id="copy-link" href="#">Copy request text</a>
           <a class="btn btn-ghost" href="../jetski-booking/">Edit request</a>
+        </div>
+
+        <div class="next-steps-card" id="next-steps-card" hidden>
+          <h2>What Happens Next</h2>
+          <p>Your booking deposit is on file. Here’s the clean handoff from payment to launch day.</p>
+          <div class="next-steps-list">
+            <div class="next-step">
+              <div class="next-step-num">1</div>
+              <div><strong>Shoreline locks in the request</strong><span>Your request for <span id="next-package"></span> on <span id="next-date"></span> at <span id="next-time"></span> is now the active booking hold.</span></div>
+            </div>
+            <div class="next-step">
+              <div class="next-step-num">2</div>
+              <div><strong>We reach back out through your preferred contact</strong><span>Expect Shoreline to confirm final details through <span id="next-contact"></span> if anything needs to be tightened before launch.</span></div>
+            </div>
+            <div class="next-step">
+              <div class="next-step-num">3</div>
+              <div><strong>Arrive at the launch with your ID</strong><span>Meet Shoreline Aquatics at 2000 Main St, Hickory Creek, TX and follow the arrival instructions already shown on the main site.</span></div>
+            </div>
+            <div class="next-step">
+              <div class="next-step-num">4</div>
+              <div><strong>Handle the rest at check-in</strong><span>The remaining balance and any refundable damage deposit that applies to the package will be handled before you head onto the water.</span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -350,6 +416,25 @@ function updatePaymentUi(booking) {
   stripeButton.removeAttribute("aria-disabled");
 }
 
+function updateThankYouUi(booking) {
+  const paid = booking?.paymentStatus === "paid" || booking?.deposit;
+  const title = document.getElementById("page-title");
+  const copy = document.getElementById("page-copy");
+  const nextStepsCard = document.getElementById("next-steps-card");
+
+  if (!title || !copy || !nextStepsCard) return;
+
+  if (paid) {
+    title.innerHTML = `Thanks, You're <span style="color: var(--gold);">Booked In</span>`;
+    copy.textContent = "Your booking deposit is paid. Use the details below as your thank-you page and next-step checklist before launch day.";
+    nextStepsCard.hidden = false;
+  } else {
+    title.innerHTML = `Review And Pay The <span style="color: var(--gold);">Booking Deposit</span>`;
+    copy.textContent = "Your rental details are ready. Pay the $50 booking deposit through Stripe to hold the slot, or use the fallback contact buttons if Shoreline needs to handle the reservation manually.";
+    nextStepsCard.hidden = true;
+  }
+}
+
 function showBooking(booking) {
   activeBooking = booking;
   const message = buildMessage(booking);
@@ -365,7 +450,12 @@ function showBooking(booking) {
   setText("summary-total", `$${Number(booking.total || 0).toLocaleString()}`);
   setText("summary-customer", `${booking.name} · ${booking.phone}`);
   setText("summary-contact", booking.contactMethod);
+  setText("next-package", `${booking.craftLabel} · ${booking.durationLabel}`);
+  setText("next-date", booking.date);
+  setText("next-time", booking.time);
+  setText("next-contact", booking.contactMethod);
   updatePaymentUi(booking);
+  updateThankYouUi(booking);
 
   document.getElementById("sms-link").href = smsHref;
   document.getElementById("email-link").href = `mailto:${CONTACT_EMAIL}?subject=${emailSubject}&body=${emailBody}`;
