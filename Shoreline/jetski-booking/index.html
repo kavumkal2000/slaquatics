@@ -589,6 +589,27 @@ h1 span { color: var(--gold); }
 .waiver-copy {
   margin-bottom: 16px;
 }
+.waiver-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+.waiver-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.72rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 166, 35, 0.22);
+  background: rgba(245, 166, 35, 0.1);
+  color: var(--gold);
+  text-decoration: none;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
 .waiver-contact-grid {
   margin-bottom: 18px;
 }
@@ -739,6 +760,7 @@ h1 span { color: var(--gold); }
         </div>
       </a>
       <div class="top-actions">
+        <a class="btn btn-ghost" href="../waiver/">Waiver</a>
         <a class="btn btn-ghost" href="../privacy-policy/">Privacy Policy</a>
         <a class="btn btn-primary" href="tel:4696937164">Call (469) 693-7164</a>
       </div>
@@ -872,14 +894,17 @@ h1 span { color: var(--gold); }
               <div class="block-label">Waiver</div>
               <h3>Rider info and waiver in one step</h3>
               <div class="waiver-copy">
-                Name, phone, email, and the signed waiver all flow together here so the rider does not have to fill out the same details in multiple places. If Shoreline already has this rider on file, the CRM can still prefill the saved info below.
+                Name, phone, email, date of birth, and the signed waiver all flow together here so the rider does not have to fill out the same details in multiple places. If Shoreline already has this rider on file, the CRM can still prefill the saved info below.
+              </div>
+              <div class="waiver-links">
+                <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">Open the full waiver page</a>
               </div>
               <div class="waiver-box">
-                <p>By submitting this request, the rider confirms they understand Shoreline Aquatics is preparing a watercraft rental that includes safety gear and a launch walkthrough, but riding still comes with normal on-the-water risk.</p>
+                <p><strong>Assumption and acknowledgement of risks and release of liability.</strong> By submitting this request, the rider confirms they understand Shoreline Aquatics is preparing a watercraft rental that includes safety gear and a launch walkthrough, but riding still comes with normal on-the-water risk.</p>
                 <div class="waiver-bullets">
-                  <div class="waiver-bullet"><div class="waiver-dot">1</div><div>The rider accepts responsibility for operating the equipment safely and following Shoreline instructions.</div></div>
-                  <div class="waiver-bullet"><div class="waiver-dot">2</div><div>The rider understands the refundable damage deposit is <strong>$200 per ski</strong> for jet ski rentals and jet ski bundles.</div></div>
-                  <div class="waiver-bullet"><div class="waiver-dot">3</div><div>The rider authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
+                  <div class="waiver-bullet"><div class="waiver-dot">1</div><div>All watercraft are used at the renter’s and renter’s guests’ own risk, including weather, wakes, collisions, equipment issues, and operator error.</div></div>
+                  <div class="waiver-bullet"><div class="waiver-dot">2</div><div>The rider accepts responsibility for operating the equipment safely, following Shoreline instructions, and understanding the refundable damage deposit is <strong>$200 per ski</strong> for jet ski rentals and jet ski bundles.</div></div>
+                  <div class="waiver-bullet"><div class="waiver-dot">3</div><div>The rider releases Shoreline Aquatics LLC from claims tied to normal participation risks and authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
                 </div>
               </div>
               <div class="field-grid waiver-contact-grid">
@@ -894,6 +919,10 @@ h1 span { color: var(--gold); }
                 <div class="field">
                   <label for="email">Email</label>
                   <input id="email" name="email" type="email" placeholder="name@example.com">
+                </div>
+                <div class="field">
+                  <label for="date-of-birth">Date of birth</label>
+                  <input id="date-of-birth" name="dateOfBirth" type="date" required>
                 </div>
                 <div class="field">
                   <label for="contact-method">Preferred contact</label>
@@ -919,8 +948,16 @@ h1 span { color: var(--gold); }
                   <input id="waiver-damage" name="waiverDamage" type="checkbox" required>
                   <label for="waiver-damage">I understand the refundable damage deposit is $200 per ski and that Shoreline may document equipment condition before and after the rental.</label>
                 </div>
+                <div class="check-row">
+                  <input id="waiver-verify" name="waiverVerify" type="checkbox" required>
+                  <label for="waiver-verify">I verify I completed the above information accurately and agree to all Shoreline waiver terms and conditions.</label>
+                </div>
               </div>
               <div class="field-grid">
+                <div class="field">
+                  <label for="waiver-initials">Participant initials</label>
+                  <input id="waiver-initials" name="waiverInitials" type="text" maxlength="6" placeholder="Initial here" required>
+                </div>
                 <div class="field">
                   <label for="signature">Digital signature</label>
                   <input id="signature" name="signature" type="text" placeholder="Type full legal name" required>
@@ -1293,6 +1330,9 @@ function applyCustomerPrefill(customer) {
   if (customer.waiverOnFile) {
     qs('waiver-risk').checked = true;
     qs('waiver-damage').checked = true;
+    qs('waiver-verify').checked = Boolean(customer.waiverVerified);
+    if (!qs('date-of-birth').value) qs('date-of-birth').value = customer.dateOfBirth || '';
+    if (!qs('waiver-initials').value.trim()) qs('waiver-initials').value = customer.waiverInitials || '';
     if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
     if (!qs('signature-date').value) qs('signature-date').value = todayLocalIso();
     if (!qs('emergency-name').value.trim()) qs('emergency-name').value = customer.emergencyName || '';
@@ -1350,6 +1390,9 @@ function createBookingPayload() {
     waiver: {
       acceptedRisk: qs('waiver-risk').checked,
       acceptedDamage: qs('waiver-damage').checked,
+      verified: qs('waiver-verify').checked,
+      dateOfBirth: qs('date-of-birth').value,
+      initials: qs('waiver-initials').value.trim(),
       signature: qs('signature').value.trim(),
       signatureDate: qs('signature-date').value,
       emergencyName: qs('emergency-name').value.trim(),
@@ -1367,6 +1410,9 @@ function validatePayload(payload) {
   }
   if (!payload.waiver.acceptedRisk || !payload.waiver.acceptedDamage) {
     return 'Please confirm the waiver terms before continuing.';
+  }
+  if (!payload.waiver.verified || !payload.waiver.dateOfBirth || !payload.waiver.initials) {
+    return 'Please complete the date of birth, participant initials, and verification for the waiver.';
   }
   if (!payload.waiver.signature || !payload.waiver.signatureDate) {
     return 'Please provide the rider signature and waiver date.';
@@ -1454,7 +1500,12 @@ qs('phone').addEventListener('blur', () => lookupReturningCustomer());
 qs('email').addEventListener('blur', () => lookupReturningCustomer());
 qs('booking-form').addEventListener('submit', handleSubmit);
 qs('name').addEventListener('blur', () => {
-  if (!qs('signature').value.trim()) qs('signature').value = qs('name').value.trim();
+  const fullName = qs('name').value.trim();
+  if (!qs('signature').value.trim()) qs('signature').value = fullName;
+  if (!qs('waiver-initials').value.trim() && fullName) {
+    const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('');
+    qs('waiver-initials').value = initials;
+  }
 });
 
 qs('date').value = todayLocalIso();

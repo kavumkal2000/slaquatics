@@ -408,8 +408,32 @@ function sanitizePublicCustomer(customer = {}) {
     waiverOnFile: Boolean(customer.waiverSignedAt || customer.waiver?.signedAt || customer.waiverSignature),
     waiverSignedAt: String(customer.waiverSignedAt || customer.waiver?.signedAt || ''),
     waiverSignature: String(customer.waiverSignature || customer.waiver?.signature || ''),
+    dateOfBirth: String(customer.dateOfBirth || customer.waiver?.dateOfBirth || ''),
+    waiverInitials: String(customer.waiverInitials || customer.waiver?.initials || ''),
+    waiverVerified: Boolean(customer.waiverVerified || customer.waiver?.verified),
     emergencyName: String(customer.emergencyName || customer.waiver?.emergencyName || ''),
     emergencyPhone: String(customer.emergencyPhone || customer.waiver?.emergencyPhone || '')
+  };
+}
+
+function applyWaiverToCustomer(customer, waiver = {}, fallbackDate = '', now = new Date().toISOString()) {
+  customer.dateOfBirth = String(waiver.dateOfBirth || customer.dateOfBirth || '').trim();
+  customer.waiverSignedAt = String(waiver.signatureDate || fallbackDate || customer.waiverSignedAt || now.split('T')[0]).trim();
+  customer.waiverSignature = String(waiver.signature || customer.waiverSignature || '').trim();
+  customer.waiverInitials = String(waiver.initials || customer.waiverInitials || '').trim();
+  customer.waiverVerified = Boolean(waiver.verified || customer.waiverVerified);
+  customer.emergencyName = String(waiver.emergencyName || customer.emergencyName || '').trim();
+  customer.emergencyPhone = String(waiver.emergencyPhone || customer.emergencyPhone || '').trim();
+  customer.waiver = {
+    acceptedRisk: Boolean(waiver.acceptedRisk),
+    acceptedDamage: Boolean(waiver.acceptedDamage),
+    signature: customer.waiverSignature,
+    signedAt: customer.waiverSignedAt,
+    dateOfBirth: customer.dateOfBirth,
+    initials: customer.waiverInitials,
+    verified: customer.waiverVerified,
+    emergencyName: customer.emergencyName,
+    emergencyPhone: customer.emergencyPhone
   };
 }
 
@@ -533,18 +557,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
   customer.lastActivity = now;
   customer.source = customer.source || 'Website Booking';
   customer.importSource = customer.importSource || 'website';
-  customer.waiverSignedAt = String(payload.waiver.signatureDate || payload.date || now.split('T')[0]).trim();
-  customer.waiverSignature = String(payload.waiver.signature || '').trim();
-  customer.emergencyName = String(payload.waiver.emergencyName || '').trim();
-  customer.emergencyPhone = String(payload.waiver.emergencyPhone || '').trim();
-  customer.waiver = {
-    acceptedRisk: true,
-    acceptedDamage: true,
-    signature: customer.waiverSignature,
-    signedAt: customer.waiverSignedAt,
-    emergencyName: customer.emergencyName,
-    emergencyPhone: customer.emergencyPhone
-  };
+  applyWaiverToCustomer(customer, payload.waiver, payload.date, now);
 
   if (!existingCustomer) {
     state.customers.push(customer);
@@ -597,6 +610,65 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
 
   updateCustomerRollup(state, customer);
   return { state, customer, booking, existingCustomer, existingBooking, pricing };
+}
+
+function upsertWaiverOnlyFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  const firstName = String(payload.firstName || '').trim();
+  const lastName = String(payload.lastName || '').trim();
+  const phone = String(payload.phone || '').trim();
+  const email = String(payload.email || '').trim();
+  const signature = String(payload.signature || '').trim();
+  const dateOfBirth = String(payload.dateOfBirth || '').trim();
+  const initials = String(payload.initials || '').trim();
+
+  if (!firstName || !lastName || !phone || !email || !dateOfBirth || !signature || !initials) {
+    throw new Error('First name, last name, phone, email, date of birth, initials, and signature are required.');
+  }
+  if (!payload.acceptedAgreement || !payload.verified) {
+    throw new Error('Agreement and verification are both required.');
+  }
+
+  const existingCustomer = findMatchingCustomer(state, { phone, email });
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: `${firstName} ${lastName}`.trim(),
+    phone,
+    email,
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Website Waiver',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = `${firstName} ${lastName}`.trim();
+  customer.phone = phone;
+  customer.email = email;
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Website Waiver';
+  customer.importSource = customer.importSource || 'website';
+  applyWaiverToCustomer(customer, {
+    acceptedRisk: true,
+    acceptedDamage: true,
+    dateOfBirth,
+    initials,
+    verified: true,
+    signature,
+    signatureDate: String(payload.signatureDate || now.split('T')[0]).trim()
+  }, String(payload.signatureDate || now.split('T')[0]).trim(), now);
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  updateCustomerRollup(state, customer);
+  return { state, customer, existingCustomer };
 }
 
 function findBookingForStripeSession(state, session = {}) {
@@ -929,6 +1001,28 @@ async function handleApi(request, response, pathname) {
     } catch (error) {
       sendPublicJson(response, request, 400, {
         error: error.message || 'Could not save the booking request.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/waiver' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { customer, existingCustomer } = upsertWaiverOnlyFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        matchedExistingCustomer: Boolean(existingCustomer),
+        customer: publicCustomerPayload(customer)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the waiver.'
       });
       return true;
     }

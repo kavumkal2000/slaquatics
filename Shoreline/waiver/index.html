@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Complete the Shoreline Aquatics rental waiver online before your rental day.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://slaquatics.com/waiver/">
+<title>Rental Waiver | Shoreline Aquatics</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'DM Sans',sans-serif;
+  color:#fff;
+  background:
+    radial-gradient(circle at top right, rgba(245,166,35,0.16), transparent 24%),
+    radial-gradient(circle at top left, rgba(15,184,224,0.12), transparent 26%),
+    linear-gradient(180deg,#07111d 0%,#0b1930 45%,#102642 100%);
+}
+a{color:inherit}
+:root{
+  --gold:#f5a623;
+  --orange:#e8841a;
+  --panel:rgba(12,27,48,0.92);
+  --line:rgba(255,255,255,0.1);
+  --muted:rgba(255,255,255,0.68);
+  --success:#98f5c5;
+  --danger:#ff9c9c;
+}
+.shell{max-width:1220px;margin:0 auto;padding:32px 24px 64px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:28px
+}
+.brand{display:flex;align-items:center;gap:14px;text-decoration:none}
+.brand-mark{
+  width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--gold),var(--orange));color:#08111f;
+  font-family:'Bebas Neue',cursive;font-size:1.55rem;letter-spacing:.08em
+}
+.brand-copy strong{display:block;font-size:1rem;letter-spacing:.08em;text-transform:uppercase}
+.brand-copy span{font-size:.82rem;color:var(--muted)}
+.top-actions{display:flex;flex-wrap:wrap;gap:12px}
+.btn{
+  border:0;border-radius:999px;padding:.82rem 1.18rem;font-size:.82rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;
+  transition:transform .18s ease,background .18s ease,border-color .18s ease
+}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--gold);color:#08111f}
+.btn-primary:hover{background:var(--orange)}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.24)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.hero-card,.form-card,.legal-card,.success-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:28px;
+  box-shadow:0 28px 80px rgba(0,0,0,.28)
+}
+.hero-card{padding:34px 34px 30px;margin-bottom:22px}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;color:var(--gold);font-size:.76rem;
+  text-transform:uppercase;letter-spacing:.18em
+}
+.eyebrow::before{content:"";width:28px;height:1px;background:currentColor}
+h1,h2,h3{
+  margin:0;font-family:'Bebas Neue',cursive;letter-spacing:.04em;line-height:.96
+}
+h1{margin-top:16px;font-size:clamp(3rem,6vw,5rem)}
+h2{font-size:2rem}
+.hero-copy{
+  margin-top:18px;max-width:820px;color:var(--muted);font-size:1rem;line-height:1.75
+}
+.hero-pills{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
+.hero-pill{
+  border-radius:999px;padding:.78rem 1rem;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);font-size:.86rem
+}
+.content-grid{display:grid;grid-template-columns:minmax(0,.98fr) minmax(320px,.92fr);gap:24px}
+.form-card,.legal-card,.success-card{padding:28px}
+.section-copy,.status,.legal-copy,.legal-list,.success-copy{color:var(--muted);line-height:1.7}
+.section-copy{margin-top:12px}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px}
+.field{display:flex;flex-direction:column;gap:8px}
+.field.full{grid-column:1/-1}
+.field label{
+  font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.78)
+}
+.field input,.field textarea{
+  width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;padding:.92rem 1rem;color:#fff;font-family:'DM Sans',sans-serif;font-size:.92rem
+}
+.field input:focus,.field textarea:focus{
+  outline:none;border-color:rgba(245,166,35,.45);box-shadow:0 0 0 3px rgba(245,166,35,.12)
+}
+.check-list{display:grid;gap:12px;margin:20px 0}
+.check-row{
+  display:grid;grid-template-columns:20px minmax(0,1fr);gap:12px;align-items:start;
+  padding:.95rem 1rem;border-radius:16px;background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08)
+}
+.check-row label{color:rgba(255,255,255,.82);font-size:.9rem;line-height:1.7}
+.legal-card{display:grid;gap:18px}
+.legal-copy p{margin:0 0 14px}
+.legal-section{
+  border-radius:20px;padding:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
+}
+.legal-section h3{font-size:1.6rem;margin-bottom:12px}
+.legal-list{display:grid;gap:12px}
+.legal-item{
+  display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;align-items:start
+}
+.legal-index{
+  width:30px;height:30px;border-radius:999px;display:grid;place-items:center;
+  background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.22);color:var(--gold);
+  font-size:.78rem;font-weight:700
+}
+.sub-risk-list{margin:10px 0 0 0;padding-left:20px;color:rgba(255,255,255,.78)}
+.sub-risk-list li{margin-bottom:6px}
+.status{min-height:1.4rem;margin:8px 0 14px;font-size:.88rem;color:var(--danger)}
+.status.success{color:var(--success)}
+.success-card{display:none;margin-top:22px}
+.success-card.show{display:block}
+.success-card h2{margin-bottom:10px}
+.footer-note{margin-top:16px;font-size:.82rem;color:var(--muted);line-height:1.6}
+@media (max-width:980px){
+  .content-grid,.field-grid{grid-template-columns:1fr}
+  .shell{padding:22px 16px 48px}
+  .hero-card,.form-card,.legal-card,.success-card{padding:24px;border-radius:22px}
+}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <a class="brand" href="../">
+        <div class="brand-mark">SA</div>
+        <div class="brand-copy">
+          <strong>Shoreline Aquatics</strong>
+          <span>Lake Lewisville jet ski and boat rentals</span>
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="btn btn-ghost" href="../jetski-booking/">Booking</a>
+        <a class="btn btn-primary" href="tel:4696937164">Call (469) 693-7164</a>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="eyebrow">Rental Waiver</div>
+      <h1>Complete The Shoreline <span style="color:var(--gold)">Waiver Online</span></h1>
+      <div class="hero-copy">
+        This is the same Shoreline Aquatics rental waiver language from the existing waiver page, now pulled into the main website and styled to match the rest of the booking experience. Once it is submitted, the rider record and waiver details can be saved into Shoreline Ops.
+      </div>
+      <div class="hero-pills">
+        <span class="hero-pill">Same Shoreline waiver terms</span>
+        <span class="hero-pill">Styled like the main website</span>
+        <span class="hero-pill">CRM-connected submission</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div>
+        <div class="form-card">
+          <h2>Responsible Party Details</h2>
+          <div class="section-copy">
+            Fill this out before the rental day. If Shoreline already has this rider on file, the phone or email lookup can prefill the waiver details that were already saved.
+          </div>
+
+          <form id="waiver-form">
+            <div class="field-grid">
+              <div class="field">
+                <label for="first-name">First name</label>
+                <input id="first-name" name="firstName" type="text" required>
+              </div>
+              <div class="field">
+                <label for="last-name">Last name</label>
+                <input id="last-name" name="lastName" type="text" required>
+              </div>
+              <div class="field">
+                <label for="phone">Cell phone</label>
+                <input id="phone" name="phone" type="tel" placeholder="(469) 555-0000" required>
+              </div>
+              <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" required>
+              </div>
+              <div class="field">
+                <label for="date-of-birth">Date of birth</label>
+                <input id="date-of-birth" name="dateOfBirth" type="date" required>
+              </div>
+              <div class="field">
+                <label for="signature-date">Waiver date</label>
+                <input id="signature-date" name="signatureDate" type="date" required>
+              </div>
+              <div class="field">
+                <label for="initials">Participant initials</label>
+                <input id="initials" name="initials" type="text" maxlength="6" required>
+              </div>
+              <div class="field">
+                <label for="signature">Responsible party signature</label>
+                <input id="signature" name="signature" type="text" placeholder="Type full legal name" required>
+              </div>
+            </div>
+
+            <div class="check-list">
+              <div class="check-row">
+                <input id="accepted-agreement" name="acceptedAgreement" type="checkbox" required>
+                <label for="accepted-agreement">I have read this assumption and acknowledgement of risks and release of liability agreement and I agree with the terms and conditions above.</label>
+              </div>
+              <div class="check-row">
+                <input id="verified" name="verified" type="checkbox" required>
+                <label for="verified">I, the responsible party, verify I completed the above information accurately and agree to all Shoreline waiver terms and conditions.</label>
+              </div>
+            </div>
+
+            <div class="status" id="waiver-status"></div>
+            <button class="btn btn-primary" type="submit">Submit Waiver</button>
+            <div class="footer-note">
+              Submitting this waiver stores the rider details and signed waiver in Shoreline Ops. If the rider later books through the booking page, Shoreline can reuse the waiver details already on file.
+            </div>
+          </form>
+        </div>
+
+        <div class="success-card" id="success-card">
+          <h2>Waiver Saved</h2>
+          <div class="success-copy">
+            The waiver is now on file for this rider. The next step is the booking page if the rental still needs to be requested.
+          </div>
+          <div class="top-actions" style="margin-top:16px">
+            <a class="btn btn-primary" href="../jetski-booking/">Continue to booking</a>
+            <a class="btn btn-ghost" href="../">Back to homepage</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="legal-card">
+        <div class="eyebrow">Legal Terms</div>
+        <h2>Assumption And Acknowledgement Of Risks And Release Of Liability</h2>
+        <div class="legal-copy">
+          <p>I HAVE READ THIS ASSUMPTION AND ACKNOWLEDGEMENT OF RISKS AND RELEASE OF LIABILITY AGREEMENT on the front and back of this contract. I UNDERSTAND THAT BY SIGNING THIS RENTAL CONTRACT, AND IN CONSIDERATION OF MY BEING ABLE TO PARTICIPATE IN, AND USE, THE JET SKIS RENTED BY Shoreline Rentals, I HEREBY RELEASE, WAIVE, AND DISCHARGE Shoreline Rentals LLC, OF ALL VALUABLE LEGAL RIGHTS I MAY HAVE AGAINST ITS OWNER AND GUIDES AND OPERATORS, OR THEIR EMPLOYEES AGENTS, SERVANTS, OR ASSIGNS.</p>
+          <p>In consideration, for being allowed by Shoreline Aquatics LLC, to participate in watersport events and activities, and/or being provided with watersport recreational property, equipment or services, for myself and any minor children for whom I am parent, legal guardian or otherwise responsible, and for my/our heirs, personal representatives or assigns, I acknowledge that I have read, understood and agreed with any and all provisions listed throughout this document, as evidenced by my signature and initials below.</p>
+        </div>
+
+        <div class="legal-section">
+          <h3>Agreement</h3>
+          <div class="legal-list">
+            <div class="legal-item">
+              <div class="legal-index">1</div>
+              <div>All watercraft are used at the renter’s and renter’s guests and/or passengers risk.</div>
+            </div>
+            <div class="legal-item">
+              <div class="legal-index">2</div>
+              <div>
+                Acknowledgement of risks. I acknowledge that some, but not all, of the risks of participation on the watersport activity include:
+                <ul class="sub-risk-list">
+                  <li>Changing water flow, tides, currents, wave action, and ships’ wakes.</li>
+                  <li>Collision with participants, the watercraft, other watercraft, or man-made or natural objects.</li>
+                  <li>Wind shear, inclement weather, lightning, and extremes of weather or temperature.</li>
+                  <li>Ability to operate equipment, swim, follow directions, and maintain physical coordination.</li>
+                  <li>Collision, capsizing, sinking, exposure to the elements, hypothermia, and/or drowning.</li>
+                  <li>The presence of insects and marine life forms, some of which are poisonous.</li>
+                  <li>Equipment failure or operator error.</li>
+                  <li>Sun-related injuries or illness, including sunburn, sunstroke, and dehydration.</li>
+                  <li>Fatigue, chill, or dizziness that may diminish reaction time and increase the risk of an accident.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="legal-item">
+              <div class="legal-index">3</div>
+              <div>Express assumption of risk and responsibility. I agree to assume responsibility for all risks of the activity, whether identified above or not, even those risks arising out of the negligence of the company named above.</div>
+            </div>
+            <div class="legal-item">
+              <div class="legal-index">4</div>
+              <div>Release. I release the company, its principals, directors, officers, agents, employees and volunteers, their insurers, and each land owner, municipal agency, or governmental agency upon whose property any activity is conducted, and their insurers, from any and all claims, actions, suits, proceedings, costs, expenses, damages, and liabilities, including attorney’s fees.</div>
+            </div>
+            <div class="legal-item">
+              <div class="legal-index">5</div>
+              <div>Responsibility. I agree to assume full responsibility for physical damages to the vessel during my time of possession of the vehicle, including cartage expenses, repairs, and downtime where applicable.</div>
+            </div>
+            <div class="legal-item">
+              <div class="legal-index">6</div>
+              <div>Adherence to rules. I agree to follow all instructions and commands of the company. Failure to comply may result in immediate termination of the rental and forfeiture of monies paid or due. Payments of all fees are due no later than the end of the rental.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const OPS_PUBLIC_API = window.location.protocol === 'file:'
+  ? 'https://shoreline-aquatics-ops.onrender.com'
+  : (
+      window.location.hostname.includes('shoreline-aquatics-ops') ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === 'localhost'
+    )
+      ? window.location.origin
+      : 'https://shoreline-aquatics-ops.onrender.com';
+
+function qs(id) {
+  return document.getElementById(id);
+}
+
+function todayLocalIso() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function normalizePhoneKey(value = '') {
+  return String(value).replace(/\D/g, '');
+}
+
+function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function buildLookupUrl() {
+  const phone = qs('phone').value.trim();
+  const email = qs('email').value.trim();
+  const params = new URLSearchParams();
+  if (phone) params.set('phone', phone);
+  if (email) params.set('email', email);
+  return `${OPS_PUBLIC_API}/api/public/customer-lookup?${params.toString()}`;
+}
+
+function splitName(fullName = '') {
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  return {
+    first: parts[0] || '',
+    last: parts.slice(1).join(' ')
+  };
+}
+
+let lastLookupKey = '';
+
+async function lookupExistingRider(force = false) {
+  const phone = qs('phone').value.trim();
+  const email = qs('email').value.trim();
+  if (!phone && !email) return;
+
+  const lookupKey = `${normalizePhoneKey(phone)}|${normalizeEmail(email)}`;
+  if (!force && lookupKey === lastLookupKey) return;
+  lastLookupKey = lookupKey;
+
+  try {
+    const response = await fetch(buildLookupUrl(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    if (!response.ok) return;
+    const payload = await response.json().catch(() => ({}));
+    if (!payload.found || !payload.customer) return;
+
+    const customer = payload.customer;
+    const nameParts = splitName(customer.name);
+    if (!qs('first-name').value.trim()) qs('first-name').value = nameParts.first;
+    if (!qs('last-name').value.trim()) qs('last-name').value = nameParts.last;
+    if (!qs('date-of-birth').value) qs('date-of-birth').value = customer.dateOfBirth || '';
+    if (!qs('initials').value.trim()) qs('initials').value = customer.waiverInitials || '';
+    if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
+    if (customer.waiverOnFile) {
+      qs('accepted-agreement').checked = true;
+      qs('verified').checked = Boolean(customer.waiverVerified);
+    }
+  } catch (error) {
+    console.warn('Waiver lookup skipped:', error);
+  }
+}
+
+function buildPayload() {
+  return {
+    firstName: qs('first-name').value.trim(),
+    lastName: qs('last-name').value.trim(),
+    phone: qs('phone').value.trim(),
+    email: qs('email').value.trim(),
+    dateOfBirth: qs('date-of-birth').value,
+    initials: qs('initials').value.trim(),
+    acceptedAgreement: qs('accepted-agreement').checked,
+    verified: qs('verified').checked,
+    signature: qs('signature').value.trim(),
+    signatureDate: qs('signature-date').value
+  };
+}
+
+async function submitWaiver(event) {
+  event.preventDefault();
+  const status = qs('waiver-status');
+  const payload = buildPayload();
+
+  status.textContent = 'Saving waiver to Shoreline Ops...';
+  status.classList.remove('success');
+
+  try {
+    const response = await fetch(`${OPS_PUBLIC_API}/api/public/waiver`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.error || 'Could not save the waiver.');
+    }
+
+    localStorage.setItem('sla_standalone_waiver', JSON.stringify({
+      ...payload,
+      savedAt: new Date().toISOString()
+    }));
+
+    status.textContent = 'Waiver saved successfully.';
+    status.classList.add('success');
+    qs('success-card').classList.add('show');
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  } catch (error) {
+    status.textContent = error.message || 'Could not save the waiver.';
+    status.classList.remove('success');
+  }
+}
+
+qs('phone').addEventListener('blur', () => lookupExistingRider());
+qs('email').addEventListener('blur', () => lookupExistingRider());
+qs('first-name').addEventListener('blur', () => {
+  const first = qs('first-name').value.trim();
+  const last = qs('last-name').value.trim();
+  if (!qs('initials').value.trim()) {
+    qs('initials').value = `${first[0] || ''}${last[0] || ''}`.toUpperCase();
+  }
+  if (!qs('signature').value.trim() && first) {
+    qs('signature').value = `${first}${last ? ` ${last}` : ''}`.trim();
+  }
+});
+qs('last-name').addEventListener('blur', () => {
+  const first = qs('first-name').value.trim();
+  const last = qs('last-name').value.trim();
+  if (!qs('initials').value.trim()) {
+    qs('initials').value = `${first[0] || ''}${last[0] || ''}`.toUpperCase();
+  }
+  if (!qs('signature').value.trim() && (first || last)) {
+    qs('signature').value = `${first}${last ? ` ${last}` : ''}`.trim();
+  }
+});
+qs('waiver-form').addEventListener('submit', submitWaiver);
+qs('signature-date').value = todayLocalIso();
+</script>
+</body>
+</html>
