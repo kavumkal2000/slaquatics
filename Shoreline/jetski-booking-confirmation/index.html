@@ -52,7 +52,6 @@ a{color:inherit}
 .btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.24)}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
 .hero,
-.hero-note-grid,
 .content-grid,
 .form-stack,
 .field-grid,
@@ -108,12 +107,6 @@ h3{font-size:1.75rem}
   line-height:1.72
 }
 .hero-copy{margin-top:18px;max-width:760px;font-size:1rem}
-.hero-note-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:24px}
-.hero-note{
-  border-radius:18px;padding:1rem 1rem .95rem;background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.82);font-size:.88rem;line-height:1.6
-}
-.hero-note strong{display:block;color:#fff;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
 .info-card{display:grid;gap:14px;align-content:start}
 .section-copy{margin-top:12px}
 .info-list{gap:10px}
@@ -204,7 +197,7 @@ h3{font-size:1.75rem}
 }
 .empty[hidden]{display:none}
 @media (max-width:980px){
-  .hero,.content-grid,.hero-note-grid,.field-grid{grid-template-columns:1fr}
+  .hero,.content-grid,.field-grid{grid-template-columns:1fr}
   .summary-card{position:static}
   .shell{padding:22px 16px 48px}
   .hero-card,.info-card,.form-card,.summary-card,.match-card,.empty,.field-block,.waiver-card,.legal-box{
@@ -239,20 +232,6 @@ h3{font-size:1.75rem}
         <h1>Complete The <span class="accent">Waiver</span> And Pay The Deposit</h1>
         <div class="hero-copy">
           This is the final booking step before the thank-you page. Fill in the rider details, complete the waiver, and pay the $50 booking deposit to hold the rental date.
-        </div>
-        <div class="hero-note-grid">
-          <div class="hero-note">
-            <strong>Step 1</strong>
-            Confirm the rider name, phone number, email, and the party size for this reservation.
-          </div>
-          <div class="hero-note">
-            <strong>Step 2</strong>
-            Complete the digital waiver so Shoreline can keep it on file for this booking and future returns.
-          </div>
-          <div class="hero-note">
-            <strong>Step 3</strong>
-            Pay the $50 booking deposit. After that, the next page becomes the thank-you page with arrival directions.
-          </div>
         </div>
       </div>
 
