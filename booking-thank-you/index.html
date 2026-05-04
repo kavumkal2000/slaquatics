@@ -13,18 +13,20 @@
 :root{
   --gold:#f5a623;
   --orange:#e8841a;
-  --panel:rgba(12,27,48,0.92);
-  --line:rgba(255,255,255,0.1);
-  --muted:rgba(255,255,255,0.68);
+  --ink:#0b1c30;
+  --panel:rgba(255,255,255,0.84);
+  --line:rgba(11,28,48,0.1);
+  --muted:rgba(11,28,48,0.66);
+  --shadow:rgba(13,37,61,0.14);
 }
 body{
   margin:0;
   font-family:'DM Sans',sans-serif;
-  color:#fff;
+  color:var(--ink);
   background:
     radial-gradient(circle at top right, rgba(245,166,35,0.14), transparent 24%),
     radial-gradient(circle at top left, rgba(15,184,224,0.12), transparent 24%),
-    linear-gradient(180deg,#08111f 0%,#0b1930 46%,#102642 100%);
+    linear-gradient(180deg,#f5fbff 0%,#edf6fb 46%,#f8fbfd 100%);
 }
 a{color:inherit}
 .shell{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
@@ -48,7 +50,7 @@ a{color:inherit}
 .btn:hover{transform:translateY(-1px)}
 .btn-primary{background:var(--gold);color:#08111f}
 .btn-primary:hover{background:var(--orange)}
-.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.24)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid rgba(11,28,48,.18)}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
 .hero,
 .summary-grid,
@@ -57,7 +59,7 @@ a{color:inherit}
 .hero{grid-template-columns:minmax(0,1.05fr) minmax(300px,.8fr);gap:24px;margin-bottom:24px}
 .card,.empty{
   background:var(--panel);border:1px solid var(--line);border-radius:28px;
-  padding:28px;box-shadow:0 28px 80px rgba(0,0,0,.28)
+  padding:28px;box-shadow:0 28px 80px var(--shadow);backdrop-filter:blur(18px)
 }
 .eyebrow,.block-label{
   display:inline-flex;align-items:center;gap:10px;color:var(--gold);
@@ -80,7 +82,7 @@ h3{font-size:1.7rem}
 .summary-title{margin-top:8px;font-size:1rem;font-weight:700}
 .summary-grid{gap:12px;margin-top:22px}
 .summary-row{
-  display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.9rem
+  display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid rgba(11,28,48,.08);font-size:.9rem
 }
 .summary-row:last-child{border-bottom:0;padding-bottom:0}
 .summary-row span{color:var(--muted)}
@@ -93,17 +95,17 @@ h3{font-size:1.7rem}
 .step-list{gap:12px;margin-top:18px}
 .step{
   display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;
-  padding:1rem;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
+  padding:1rem;border-radius:18px;background:rgba(11,28,48,.04);border:1px solid rgba(11,28,48,.08)
 }
 .step-num{
   width:34px;height:34px;border-radius:999px;display:grid;place-items:center;
   color:#08111f;background:var(--gold);font-size:.82rem;font-weight:700
 }
-.step strong{display:block;color:#fff;margin-bottom:4px}
+.step strong{display:block;color:var(--ink);margin-bottom:4px}
 .arrival-list{margin-top:16px;display:grid;gap:10px}
 .arrival-item{
-  padding:.95rem 1rem;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  color:rgba(255,255,255,.82);font-size:.92rem;line-height:1.7
+  padding:.95rem 1rem;border-radius:16px;background:rgba(11,28,48,.04);border:1px solid rgba(11,28,48,.08);
+  color:rgba(11,28,48,.82);font-size:.92rem;line-height:1.7
 }
 .address-card{
   margin-top:18px;border-radius:20px;padding:18px;background:rgba(245,166,35,.08);
@@ -201,9 +203,9 @@ h3{font-size:1.7rem}
         <div class="card">
           <div class="block-label">Arrival Directions</div>
           <h2>Shoreline Aquatics launch</h2>
-          <div class="arrival-copy">The launch meeting spot is at <strong style="color:#fff">2000 Main St, Hickory Creek, TX</strong>. Use the directions below once you arrive near the park entrance.</div>
+          <div class="arrival-copy">The launch meeting spot is at <strong style="color:var(--ink)">2000 Main St, Hickory Creek, TX</strong>. Use the directions below once you arrive near the park entrance.</div>
           <div class="address-card">
-            <strong style="display:block;color:#fff;margin-bottom:6px">Address</strong>
+            <strong style="display:block;color:var(--ink);margin-bottom:6px">Address</strong>
             2000 Main St, Hickory Creek, TX
           </div>
           <div class="arrival-list">

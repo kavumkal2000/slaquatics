@@ -13,20 +13,23 @@
 :root{
   --gold:#f5a623;
   --orange:#e8841a;
-  --panel:rgba(12,27,48,0.92);
-  --line:rgba(255,255,255,0.1);
-  --muted:rgba(255,255,255,0.68);
-  --success:#98f5c5;
-  --danger:#ff9c9c;
+  --ink:#0b1c30;
+  --ink-soft:rgba(11,28,48,0.82);
+  --panel:rgba(255,255,255,0.84);
+  --line:rgba(11,28,48,0.1);
+  --muted:rgba(11,28,48,0.66);
+  --success:#237a51;
+  --danger:#b64d4d;
+  --shadow:rgba(13,37,61,0.14);
 }
 body{
   margin:0;
   font-family:'DM Sans',sans-serif;
-  color:#fff;
+  color:var(--ink);
   background:
     radial-gradient(circle at top right, rgba(245,166,35,0.16), transparent 24%),
     radial-gradient(circle at top left, rgba(15,184,224,0.12), transparent 26%),
-    linear-gradient(180deg,#07111d 0%,#0b1930 45%,#102642 100%);
+    linear-gradient(180deg,#f5fbff 0%,#edf6fb 45%,#f8fbfd 100%);
 }
 a{color:inherit}
 .shell{max-width:1220px;margin:0 auto;padding:32px 24px 64px}
@@ -50,7 +53,7 @@ a{color:inherit}
 .btn:hover{transform:translateY(-1px)}
 .btn-primary{background:var(--gold);color:#08111f}
 .btn-primary:hover{background:var(--orange)}
-.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.24)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid rgba(11,28,48,.18)}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
 .hero,
 .hero-note-grid,
@@ -76,7 +79,8 @@ a{color:inherit}
   background:var(--panel);
   border:1px solid var(--line);
   border-radius:28px;
-  box-shadow:0 28px 80px rgba(0,0,0,.28)
+  box-shadow:0 28px 80px var(--shadow);
+  backdrop-filter:blur(18px)
 }
 .hero-card{padding:34px 34px 30px}
 .info-card,
@@ -118,15 +122,15 @@ h3{font-size:1.75rem}
 .hero-note{
   border-radius:18px;
   padding:1rem 1rem .95rem;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-  color:rgba(255,255,255,.82);
+  background:rgba(11,28,48,.04);
+  border:1px solid rgba(11,28,48,.08);
+  color:var(--ink-soft);
   font-size:.88rem;
   line-height:1.6
 }
 .hero-note strong{
   display:block;
-  color:#fff;
+  color:var(--ink);
   font-size:.76rem;
   letter-spacing:.12em;
   text-transform:uppercase;
@@ -148,9 +152,9 @@ h3{font-size:1.75rem}
 .info-item{
   padding:.82rem .95rem;
   border-radius:14px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-  color:rgba(255,255,255,.82);
+  background:rgba(11,28,48,.04);
+  border:1px solid rgba(11,28,48,.08);
+  color:var(--ink-soft);
   font-size:.9rem;
   line-height:1.65
 }
@@ -158,17 +162,17 @@ h3{font-size:1.75rem}
 .field-block,
 .waiver-card,
 .legal-section{
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.68);
+  border:1px solid rgba(11,28,48,.08);
   border-radius:24px;
   padding:22px
 }
 .waiver-card{
   background:
-    radial-gradient(circle at top right, rgba(245,166,35,.12), transparent 34%),
-    linear-gradient(180deg, rgba(15,32,64,.96) 0%, rgba(10,26,43,.96) 100%);
+    radial-gradient(circle at top right, rgba(245,166,35,.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(236,246,251,.98) 100%);
   border-color:rgba(245,166,35,.24);
-  box-shadow:0 24px 70px rgba(0,0,0,.22)
+  box-shadow:0 24px 70px rgba(13,37,61,.12)
 }
 .field-grid{
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -180,16 +184,16 @@ h3{font-size:1.75rem}
   font-size:.78rem;
   text-transform:uppercase;
   letter-spacing:.12em;
-  color:rgba(255,255,255,.78)
+  color:rgba(11,28,48,.72)
 }
 .field input,
 .field textarea{
   width:100%;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(11,28,48,.12);
   border-radius:14px;
   padding:.92rem 1rem;
-  color:#fff;
+  color:var(--ink);
   font-family:'DM Sans',sans-serif;
   font-size:.92rem
 }
@@ -207,10 +211,10 @@ h3{font-size:1.75rem}
   align-items:start;
   padding:.95rem 1rem;
   border-radius:16px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08)
+  background:rgba(11,28,48,.04);
+  border:1px solid rgba(11,28,48,.08)
 }
-.check-row label{color:rgba(255,255,255,.82);font-size:.9rem;line-height:1.7}
+.check-row label{color:var(--ink-soft);font-size:.9rem;line-height:1.7}
 .legal-card{display:grid;gap:18px}
 .legal-copy p{margin:0 0 14px}
 .legal-list{gap:12px}
@@ -225,7 +229,7 @@ h3{font-size:1.75rem}
   background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.22);color:var(--gold);
   font-size:.78rem;font-weight:700
 }
-.sub-risk-list{margin:10px 0 0 0;padding-left:20px;color:rgba(255,255,255,.78)}
+.sub-risk-list{margin:10px 0 0 0;padding-left:20px;color:rgba(11,28,48,.78)}
 .sub-risk-list li{margin-bottom:6px}
 .status{min-height:1.4rem;margin:12px 0 14px;font-size:.88rem;color:var(--danger)}
 .status.success{color:var(--success)}

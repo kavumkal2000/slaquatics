@@ -15,23 +15,27 @@ body {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
   background:
-    radial-gradient(circle at top right, rgba(245, 166, 35, 0.18), transparent 26%),
-    linear-gradient(180deg, #07111d 0%, #0a1a2b 50%, #102642 100%);
-  color: #ffffff;
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.16), transparent 26%),
+    radial-gradient(circle at top left, rgba(15, 184, 224, 0.14), transparent 30%),
+    linear-gradient(180deg, #f5fbff 0%, #ecf6fb 52%, #f8fbfd 100%);
+  color: var(--ink);
 }
 a { color: inherit; }
 :root {
   --navy: #08111f;
   --deep: #0c1b30;
-  --panel: rgba(15, 32, 64, 0.92);
-  --panel-soft: rgba(255, 255, 255, 0.04);
+  --ink: #0b1c30;
+  --ink-soft: rgba(11, 28, 48, 0.82);
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-soft: rgba(11, 28, 48, 0.04);
   --gold: #f5a623;
   --orange: #e8841a;
   --wave: #0fb8e0;
-  --line: rgba(255, 255, 255, 0.1);
-  --muted: rgba(255, 255, 255, 0.68);
-  --danger: #ff8b8b;
-  --success: #98f5c5;
+  --line: rgba(11, 28, 48, 0.1);
+  --muted: rgba(11, 28, 48, 0.66);
+  --danger: #b64d4d;
+  --success: #237a51;
+  --shadow: rgba(13, 37, 61, 0.14);
 }
 .shell {
   max-width: 1280px;
@@ -98,8 +102,8 @@ a { color: inherit; }
 .btn-primary:hover { background: var(--orange); }
 .btn-ghost {
   background: transparent;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: var(--ink);
+  border: 1px solid rgba(11, 28, 48, 0.18);
 }
 .btn-ghost:hover {
   border-color: var(--gold);
@@ -121,7 +125,8 @@ a { color: inherit; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 28px;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 28px 80px var(--shadow);
+  backdrop-filter: blur(18px);
 }
 .hero-card {
   padding: 34px 34px 30px;
@@ -168,15 +173,15 @@ h1 span { color: var(--gold); }
 .hero-note {
   border-radius: 18px;
   padding: 1rem 1rem 0.95rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.82);
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
+  color: var(--ink-soft);
   font-size: 0.88rem;
   line-height: 1.6;
 }
 .hero-note strong {
   display: block;
-  color: #ffffff;
+  color: var(--ink);
   font-size: 0.76rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -189,11 +194,11 @@ h1 span { color: var(--gold); }
   margin-top: 24px;
 }
 .contact-pill {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
   border-radius: 999px;
   padding: 0.78rem 1rem;
-  color: #ffffff;
+  color: var(--ink);
   text-decoration: none;
   font-size: 0.88rem;
 }
@@ -242,7 +247,7 @@ h1 span { color: var(--gold); }
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(11, 28, 48, 0.08);
   font-size: 0.9rem;
 }
 .summary-row:last-child {
@@ -273,15 +278,15 @@ h1 span { color: var(--gold); }
 .info-item {
   padding: 0.82rem 0.95rem;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
 }
 .match-card {
   display: none;
   border-color: rgba(15, 184, 224, 0.3);
   background:
-    radial-gradient(circle at top right, rgba(15, 184, 224, 0.1), transparent 46%),
-    rgba(15, 32, 64, 0.92);
+    radial-gradient(circle at top right, rgba(15, 184, 224, 0.12), transparent 46%),
+    rgba(255, 255, 255, 0.9);
 }
 .match-card.show { display: block; }
 .match-chip-row {
@@ -318,9 +323,9 @@ h1 span { color: var(--gold); }
   margin: 24px 0 22px;
 }
 .type-btn {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
+  border: 1px solid rgba(11, 28, 48, 0.12);
+  background: rgba(11, 28, 48, 0.04);
+  color: var(--ink);
   padding: 0.8rem 1rem;
   border-radius: 999px;
   font-size: 0.78rem;
@@ -342,17 +347,17 @@ h1 span { color: var(--gold); }
 .field-block,
 .calendar-card,
 .waiver-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(11, 28, 48, 0.08);
   border-radius: 24px;
   padding: 22px;
 }
 .calendar-card {
   background:
-    radial-gradient(circle at top right, rgba(245, 166, 35, 0.12), transparent 34%),
-    linear-gradient(180deg, rgba(15, 32, 64, 0.96) 0%, rgba(10, 26, 43, 0.96) 100%);
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 246, 251, 0.98) 100%);
   border-color: rgba(245, 166, 35, 0.24);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 24px 70px rgba(13, 37, 61, 0.12);
 }
 .calendar-card h3 {
   font-size: 2rem;
@@ -390,17 +395,17 @@ h1 span { color: var(--gold); }
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(11, 28, 48, 0.72);
 }
 .field input,
 .field select,
 .field textarea {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 28, 48, 0.12);
   border-radius: 14px;
   padding: 0.92rem 1rem;
-  color: #ffffff;
+  color: var(--ink);
   font-family: 'DM Sans', sans-serif;
   font-size: 0.92rem;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
@@ -413,7 +418,8 @@ h1 span { color: var(--gold); }
   box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.12);
 }
 .field select option {
-  background: #0c1b30;
+  background: #ffffff;
+  color: var(--ink);
 }
 .field textarea {
   resize: vertical;
@@ -427,8 +433,8 @@ h1 span { color: var(--gold); }
 }
 .calendar-frame,
 .calendar-summary {
-  background: rgba(8, 17, 31, 0.52);
-  border: 1px solid rgba(245, 166, 35, 0.22);
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(11, 28, 48, 0.08);
   border-radius: 22px;
   padding: 18px;
 }
@@ -456,9 +462,9 @@ h1 span { color: var(--gold); }
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
+  border: 1px solid rgba(11, 28, 48, 0.12);
+  background: rgba(11, 28, 48, 0.04);
+  color: var(--ink);
   cursor: pointer;
   font-size: 0.95rem;
 }
@@ -484,7 +490,7 @@ h1 span { color: var(--gold); }
 }
 .calendar-weekday {
   text-align: center;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(11, 28, 48, 0.42);
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -492,9 +498,9 @@ h1 span { color: var(--gold); }
 .calendar-day {
   min-height: 92px;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #ffffff;
+  border: 1px solid rgba(11, 28, 48, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--ink);
   text-align: left;
   padding: 0.75rem 0.7rem;
   display: flex;
@@ -539,7 +545,7 @@ h1 span { color: var(--gold); }
 .calendar-day-meta {
   font-size: 0.72rem;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.56);
+  color: rgba(11, 28, 48, 0.56);
 }
 .calendar-picked {
   display: inline-flex;
@@ -571,20 +577,20 @@ h1 span { color: var(--gold); }
 .calendar-mini-item {
   border-radius: 14px;
   padding: 0.88rem 0.95rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
 }
 .calendar-mini-item strong {
   display: block;
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(11, 28, 48, 0.6);
   margin-bottom: 4px;
 }
 .calendar-mini-item span {
   font-size: 0.92rem;
-  color: #ffffff;
+  color: var(--ink);
 }
 .waiver-copy {
   margin-bottom: 16px;
@@ -629,13 +635,13 @@ h1 span { color: var(--gold); }
 .waiver-box {
   border-radius: 18px;
   border: 1px solid rgba(245, 166, 35, 0.16);
-  background: rgba(8, 17, 31, 0.34);
+  background: rgba(255, 255, 255, 0.72);
   padding: 16px;
   margin-bottom: 16px;
 }
 .waiver-box p {
   margin: 0 0 10px;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--ink-soft);
   font-size: 0.9rem;
   line-height: 1.72;
 }
@@ -648,7 +654,7 @@ h1 span { color: var(--gold); }
   grid-template-columns: 22px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
-  color: rgba(255, 255, 255, 0.74);
+  color: rgba(11, 28, 48, 0.74);
   font-size: 0.86rem;
   line-height: 1.65;
 }
@@ -676,8 +682,8 @@ h1 span { color: var(--gold); }
   align-items: start;
   padding: 0.9rem 0.95rem;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
 }
 .check-row input {
   margin-top: 2px;
@@ -685,7 +691,7 @@ h1 span { color: var(--gold); }
 .check-row label {
   font-size: 0.9rem;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--ink-soft);
 }
 .status {
   min-height: 1.4rem;

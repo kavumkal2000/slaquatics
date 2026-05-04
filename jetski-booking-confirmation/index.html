@@ -13,19 +13,23 @@
 :root{
   --gold:#f5a623;
   --orange:#e8841a;
-  --panel:rgba(12,27,48,0.92);
-  --line:rgba(255,255,255,0.1);
-  --muted:rgba(255,255,255,0.68);
-  --success:#98f5c5;
-  --danger:#ff9c9c;
+  --ink:#0b1c30;
+  --ink-soft:rgba(11,28,48,0.82);
+  --panel:rgba(255,255,255,0.84);
+  --line:rgba(11,28,48,0.1);
+  --muted:rgba(11,28,48,0.66);
+  --success:#237a51;
+  --danger:#b64d4d;
+  --shadow:rgba(13,37,61,0.14);
 }
 body{
   margin:0;
   font-family:'DM Sans',sans-serif;
-  color:#fff;
+  color:var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(15,184,224,0.16), transparent 24%),
-    linear-gradient(180deg, #08111f 0%, #0b1930 48%, #102642 100%);
+    radial-gradient(circle at top left, rgba(15,184,224,0.14), transparent 24%),
+    radial-gradient(circle at top right, rgba(245,166,35,0.14), transparent 24%),
+    linear-gradient(180deg, #f5fbff 0%, #edf6fb 48%, #f8fbfd 100%);
 }
 a{color:inherit}
 .shell{max-width:1220px;margin:0 auto;padding:32px 24px 64px}
@@ -49,7 +53,7 @@ a{color:inherit}
 .btn:hover{transform:translateY(-1px)}
 .btn-primary{background:var(--gold);color:#08111f}
 .btn-primary:hover{background:var(--orange)}
-.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.24)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid rgba(11,28,48,.18)}
 .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
 .hero,
 .content-grid,
@@ -73,7 +77,8 @@ a{color:inherit}
   background:var(--panel);
   border:1px solid var(--line);
   border-radius:28px;
-  box-shadow:0 28px 80px rgba(0,0,0,.28)
+  box-shadow:0 28px 80px var(--shadow);
+  backdrop-filter:blur(18px)
 }
 .hero-card,
 .info-card,
@@ -111,8 +116,8 @@ h3{font-size:1.75rem}
 .section-copy{margin-top:12px}
 .info-list{gap:10px}
 .info-item{
-  padding:.82rem .95rem;border-radius:14px;background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.82);font-size:.9rem;line-height:1.65
+  padding:.82rem .95rem;border-radius:14px;background:rgba(11,28,48,.04);
+  border:1px solid rgba(11,28,48,.08);color:var(--ink-soft);font-size:.9rem;line-height:1.65
 }
 .content-grid{grid-template-columns:minmax(0,1.02fr) minmax(300px,.82fr);gap:24px}
 .form-card h2,.summary-card h2,.match-card h2{font-size:1.95rem}
@@ -120,36 +125,36 @@ h3{font-size:1.75rem}
 .field-block,
 .waiver-card,
 .legal-box{
-  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:22px
+  background:rgba(255,255,255,.68);border:1px solid rgba(11,28,48,.08);border-radius:24px;padding:22px
 }
 .waiver-card{
   background:
-    radial-gradient(circle at top right, rgba(245,166,35,.12), transparent 34%),
-    linear-gradient(180deg, rgba(15,32,64,.96) 0%, rgba(10,26,43,.96) 100%);
+    radial-gradient(circle at top right, rgba(245,166,35,.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(236,246,251,.98) 100%);
   border-color:rgba(245,166,35,.24);
-  box-shadow:0 24px 70px rgba(0,0,0,.22)
+  box-shadow:0 24px 70px rgba(13,37,61,.12)
 }
 .field-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .field{display:flex;flex-direction:column;gap:8px}
 .field.full{grid-column:1/-1}
 .field label{
-  font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.78)
+  font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(11,28,48,.72)
 }
 .field input,.field select,.field textarea{
-  width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-  border-radius:14px;padding:.92rem 1rem;color:#fff;font-family:'DM Sans',sans-serif;font-size:.92rem
+  width:100%;background:rgba(255,255,255,.92);border:1px solid rgba(11,28,48,.12);
+  border-radius:14px;padding:.92rem 1rem;color:var(--ink);font-family:'DM Sans',sans-serif;font-size:.92rem
 }
 .field input:focus,.field select:focus,.field textarea:focus{
   outline:none;border-color:rgba(245,166,35,.45);box-shadow:0 0 0 3px rgba(245,166,35,.12)
 }
 .field textarea{min-height:120px;resize:vertical}
-.field select option{background:#0c1b30}
+.field select option{background:#fff;color:var(--ink)}
 .check-list{gap:12px;margin:18px 0 0}
 .check-row{
   display:grid;grid-template-columns:20px minmax(0,1fr);gap:12px;align-items:start;
-  padding:.95rem 1rem;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
+  padding:.95rem 1rem;border-radius:16px;background:rgba(11,28,48,.04);border:1px solid rgba(11,28,48,.08)
 }
-.check-row label{color:rgba(255,255,255,.82);font-size:.9rem;line-height:1.7}
+.check-row label{color:var(--ink-soft);font-size:.9rem;line-height:1.7}
 .waiver-link{
   display:inline-flex;align-items:center;gap:8px;padding:.72rem .95rem;border-radius:999px;
   border:1px solid rgba(245,166,35,.22);background:rgba(245,166,35,.1);color:var(--gold);
@@ -159,7 +164,7 @@ h3{font-size:1.75rem}
 .legal-list{gap:10px;margin-top:12px}
 .legal-item{
   display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;
-  color:rgba(255,255,255,.74);font-size:.86rem;line-height:1.65
+  color:rgba(11,28,48,.74);font-size:.86rem;line-height:1.65
 }
 .legal-dot{
   width:22px;height:22px;border-radius:999px;background:rgba(245,166,35,.12);
@@ -172,14 +177,14 @@ h3{font-size:1.75rem}
 .summary-title{margin-top:8px;font-size:1rem;font-weight:700}
 .summary-grid{gap:12px;margin-top:22px}
 .summary-row{
-  display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.9rem
+  display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid rgba(11,28,48,.08);font-size:.9rem
 }
 .summary-row:last-child{border-bottom:0;padding-bottom:0}
 .summary-row span{color:var(--muted)}
 .summary-row strong{text-align:right}
 .status{
   min-height:1.4rem;margin:14px 0 0;font-size:.9rem;padding:14px 16px;border-radius:16px;
-  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)
+  background:rgba(11,28,48,.04);border:1px solid rgba(11,28,48,.08)
 }
 .status.success{color:#aaf4cb;border-color:rgba(91,219,151,.32);background:rgba(91,219,151,.08)}
 .status.warn{color:#ffe29f;border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.1)}
@@ -187,7 +192,7 @@ h3{font-size:1.75rem}
 .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
 .match-card{
   display:none;border-color:rgba(15,184,224,.3);
-  background:radial-gradient(circle at top right, rgba(15,184,224,.1), transparent 46%), rgba(15,32,64,.92)
+  background:radial-gradient(circle at top right, rgba(15,184,224,.1), transparent 46%), rgba(255,255,255,.9)
 }
 .match-card.show{display:block}
 .match-chip-row{grid-template-columns:repeat(auto-fit,minmax(110px,max-content));gap:8px;margin-top:14px}
