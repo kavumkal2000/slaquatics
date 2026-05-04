@@ -34,7 +34,7 @@ claude "change the hero headline"
 - ✅ All internal anchor links verified working
 - ✅ Calculator handles all craft/duration combinations correctly
 - ✅ Ops app JS bugs fixed (page navigation, reminder tabs)
-- ✅ Ops app data persists via localStorage (survives page refresh)
+- ✅ Ops app data persists in the private Shoreline ops backend (shared across signed-in sessions)
 - ✅ Back-to-top button on website
 - ✅ Active nav highlight on scroll
 - ✅ PWA meta tags on ops app (add to phone home screen)

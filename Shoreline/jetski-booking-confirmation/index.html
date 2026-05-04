@@ -218,7 +218,7 @@ h3{font-size:1.75rem}
         </div>
       </a>
       <div class="top-actions">
-        <a class="btn btn-ghost" href="../jetski-booking/">Back To Calendar</a>
+        <a class="btn btn-ghost" id="back-to-calendar-link" href="../jetski-booking/">Back To Calendar</a>
         <a class="btn btn-primary" href="tel:4696937164">Call (469) 693-7164</a>
       </div>
     </div>
@@ -238,7 +238,7 @@ h3{font-size:1.75rem}
       <h2>Start with the calendar first.</h2>
       <p>No booking details are saved yet. Head back to the calendar page, choose the rental date, and the waiver and deposit step will be ready here.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="../jetski-booking/">Go To Booking Calendar</a>
+        <a class="btn btn-primary" id="empty-calendar-link" href="../jetski-booking/">Go To Booking Calendar</a>
       </div>
     </div>
 
@@ -393,17 +393,16 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-function readBooking() {
-  try {
-    return JSON.parse(localStorage.getItem("sla_booking_request") || "null");
-  } catch {
-    return null;
+async function loadBookingByToken(token) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'We could not load your booking details right now.');
   }
-}
-
-function saveBooking(booking) {
-  if (!booking) return;
-  localStorage.setItem("sla_booking_request", JSON.stringify(booking));
+  return payload.booking || null;
 }
 
 function formatCurrency(value) {
@@ -486,6 +485,7 @@ function mergeBooking(base, incoming = {}) {
   return {
     ...(base || {}),
     ...(incoming || {}),
+    publicToken: incoming.publicToken || base?.publicToken || '',
     paymentStatus: incoming.paymentStatus || base?.paymentStatus || 'unpaid',
     depositAmount: incoming.depositAmount || base?.depositAmount || 50,
     deposit: typeof incoming.deposit === "boolean" ? incoming.deposit : Boolean(base?.deposit)
@@ -656,7 +656,7 @@ async function lookupReturningCustomer(force = false) {
 }
 
 function createPayload(requireBase = true) {
-  const base = activeBooking || readBooking();
+  const base = activeBooking;
   if (!base && requireBase) return null;
   return {
     ...(base || {}),
@@ -738,6 +738,10 @@ function showBooking(booking) {
   populateForm(activeBooking);
   updatePaymentUi(activeBooking);
   updateContactLinks();
+  const bookingToken = activeBooking.publicToken ? encodeURIComponent(activeBooking.publicToken) : '';
+  const calendarHref = bookingToken ? `../jetski-booking/?booking=${bookingToken}` : '../jetski-booking/';
+  qs('back-to-calendar-link').href = calendarHref;
+  qs('empty-calendar-link').href = calendarHref;
   qs('empty-state').hidden = true;
   qs('request-wrap').hidden = false;
 }
@@ -770,17 +774,18 @@ async function handleStripeCheckout(event) {
     const result = await syncBookingToOps(payload);
     activeBooking = mergeBooking(payload, {
       id: result.bookingId || payload.id,
+      publicToken: result.bookingToken || result.booking?.publicToken || payload.publicToken,
       paymentStatus: result.booking?.paymentStatus || 'unpaid',
       depositAmount: result.booking?.depositAmount || 50
     });
     activeBooking.syncMeta = {
       synced: true,
       bookingId: result.bookingId || null,
+      bookingToken: result.bookingToken || activeBooking.publicToken || null,
       customerId: result.customer?.id || null,
       matchedExistingCustomer: Boolean(result.matchedExistingCustomer),
       waiverStored: Boolean(result.waiverStored)
     };
-    saveBooking(activeBooking);
     populateSummary(activeBooking);
     updateContactLinks();
 
@@ -805,7 +810,6 @@ async function handleStripeCheckout(event) {
 
     if (checkout.alreadyPaid) {
       activeBooking = mergeBooking(activeBooking, checkout.booking || { paymentStatus: 'paid', deposit: true });
-      saveBooking(activeBooking);
       updatePaymentUi(activeBooking);
       setStatus('This booking deposit is already marked as paid.', 'success');
       return;
@@ -851,15 +855,23 @@ qs('signature-date').value = new Date().toISOString().slice(0, 10);
 
 (async function init() {
   const params = new URLSearchParams(window.location.search);
-  const storedBooking = readBooking();
+  const bookingToken = params.get('booking');
 
-  if (!storedBooking) {
+  if (!bookingToken) {
     qs('empty-state').hidden = false;
     qs('request-wrap').hidden = true;
     return;
   }
 
-  showBooking(storedBooking);
+  try {
+    const booking = await loadBookingByToken(bookingToken);
+    showBooking(booking);
+  } catch (error) {
+    qs('empty-state').hidden = false;
+    qs('request-wrap').hidden = true;
+    qs('empty-state').querySelector('p').textContent = error.message || 'We could not load your booking details right now.';
+    return;
+  }
   await loadStripeAvailability();
 
   if (params.get('payment') === 'cancelled') {
@@ -868,7 +880,7 @@ qs('signature-date').value = new Date().toISOString().slice(0, 10);
   }
 
   if (params.get('session_id')) {
-    window.location.href = `../booking-thank-you/?session_id=${encodeURIComponent(params.get('session_id'))}`;
+    window.location.href = `../booking-thank-you/?session_id=${encodeURIComponent(params.get('session_id'))}&booking=${encodeURIComponent(bookingToken)}`;
     return;
   }
 

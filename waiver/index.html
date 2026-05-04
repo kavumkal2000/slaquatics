@@ -570,11 +570,6 @@ async function submitWaiver(event) {
       throw new Error(body.error || 'We could not save your waiver right now.');
     }
 
-    localStorage.setItem('sla_standalone_waiver', JSON.stringify({
-      ...payload,
-      savedAt: new Date().toISOString()
-    }));
-
     status.textContent = 'Waiver saved successfully.';
     status.classList.add('success');
     qs('success-card').classList.add('show');

@@ -29,7 +29,7 @@ Groups → Drone → Why Us → Map → FAQ → Instagram → CTA → Footer
 
 ## Ops app sections (ops.html)
 Dashboard → Bookings → CRM → Margins → Fuel Log → Maintenance → Re-engagement
-Data persists via localStorage. Connect to Supabase for multi-device sync.
+Data persists in the private Shoreline ops backend so bookings, customers, invoices, and notes sync across signed-in sessions.
 
 ## Deploy
 Push to GitHub → connect to Render → Static Site → publish dir: .

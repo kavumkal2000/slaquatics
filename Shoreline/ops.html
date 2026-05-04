@@ -366,7 +366,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="topbar-title" id="page-title">Dashboard</div>
   <div class="topbar-right">
     <span style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
-    <span class="ops-mode-pill browser" id="ops-mode-pill">Browser-only</span>
+    <span class="ops-mode-pill browser" id="ops-mode-pill">Checking sync</span>
     <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
     <button class="btn btn-primary" onclick="openModal('booking-modal')">+ New Booking</button>
   </div>
@@ -537,8 +537,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <input type="file" id="crm-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleCRMImport(event)">
   <div class="import-panel">
     <div>
-      <div class="title" id="crm-import-title">Secure Browser-Only Import</div>
-      <div class="copy" id="crm-import-summary">Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser's local storage and are not published into the live website code.</div>
+      <div class="title" id="crm-import-title">Secure Synced Import</div>
+      <div class="copy" id="crm-import-summary">Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records are saved into the private Shoreline ops service and synced across signed-in sessions.</div>
     </div>
     <div class="import-pill" id="crm-import-pill">No CRM import yet</div>
   </div>
@@ -981,59 +981,19 @@ function updateModeBadge() {
     pill.className = 'ops-mode-pill server';
     logoutBtn.style.display = 'inline-flex';
   } else {
-    pill.textContent = 'Browser-only';
+    pill.textContent = 'Private service required';
     pill.className = 'ops-mode-pill browser';
     logoutBtn.style.display = 'none';
   }
 }
 function readLocalBackup() {
-  try {
-    const next = {};
-    const b = localStorage.getItem(LOCAL_KEYS.bookings); if (b) next.bookings = JSON.parse(b);
-    const c = localStorage.getItem(LOCAL_KEYS.customers); if (c) next.customers = JSON.parse(c);
-    const e = localStorage.getItem(LOCAL_KEYS.expenses); if (e) next.expenses = JSON.parse(e);
-    const f = localStorage.getItem(LOCAL_KEYS.fuelLog); if (f) next.fuelLog = JSON.parse(f);
-    const m = localStorage.getItem(LOCAL_KEYS.maintLog); if (m) next.maintLog = JSON.parse(m);
-    const iv = localStorage.getItem(LOCAL_KEYS.invoices); if (iv) next.invoices = JSON.parse(iv);
-    const cl = localStorage.getItem(LOCAL_KEYS.communicationsLog); if (cl) next.communicationsLog = JSON.parse(cl);
-    const rr = localStorage.getItem(LOCAL_KEYS.reviewRequests); if (rr) next.reviewRequests = JSON.parse(rr);
-    const rv = localStorage.getItem(LOCAL_KEYS.reviews); if (rv) next.reviews = JSON.parse(rv);
-    const sp = localStorage.getItem(LOCAL_KEYS.socialPosts); if (sp) next.socialPosts = JSON.parse(sp);
-    const i = localStorage.getItem(LOCAL_KEYS.importMeta); if (i) next.importMeta = JSON.parse(i);
-    const iim = localStorage.getItem(LOCAL_KEYS.invoiceImportMeta); if (iim) next.invoiceImportMeta = JSON.parse(iim);
-    return next;
-  } catch (error) {
-    console.warn('localStorage unavailable', error);
-    return {};
-  }
+  return {};
 }
 function writeLocalBackup() {
-  try {
-    dedupeCustomers();
-    localStorage.setItem(LOCAL_KEYS.bookings, JSON.stringify(bookings));
-    localStorage.setItem(LOCAL_KEYS.customers, JSON.stringify(customers));
-    localStorage.setItem(LOCAL_KEYS.expenses, JSON.stringify(expenses));
-    localStorage.setItem(LOCAL_KEYS.fuelLog, JSON.stringify(fuelLog));
-    localStorage.setItem(LOCAL_KEYS.maintLog, JSON.stringify(maintLog));
-    localStorage.setItem(LOCAL_KEYS.invoices, JSON.stringify(invoices));
-    localStorage.setItem(LOCAL_KEYS.communicationsLog, JSON.stringify(communicationsLog));
-    localStorage.setItem(LOCAL_KEYS.reviewRequests, JSON.stringify(reviewRequests));
-    localStorage.setItem(LOCAL_KEYS.reviews, JSON.stringify(reviews));
-    localStorage.setItem(LOCAL_KEYS.socialPosts, JSON.stringify(socialPosts));
-    localStorage.setItem(LOCAL_KEYS.importMeta, JSON.stringify(importMeta));
-    localStorage.setItem(LOCAL_KEYS.invoiceImportMeta, JSON.stringify(invoiceImportMeta));
-  } catch (error) {
-    console.warn('localStorage unavailable', error);
-  }
+  return;
 }
 function shouldPromoteBackup(serverState, backupState) {
-  const backupCustomers = Array.isArray(backupState?.customers) ? backupState.customers.length : 0;
-  const serverCustomers = Array.isArray(serverState?.customers) ? serverState.customers.length : 0;
-  const backupInvoices = Array.isArray(backupState?.invoices) ? backupState.invoices.length : 0;
-  const serverInvoices = Array.isArray(serverState?.invoices) ? serverState.invoices.length : 0;
-  const crmNeedsPromotion = Boolean(backupState?.importMeta?.importedAt) && (!serverState?.importMeta?.importedAt || backupCustomers > serverCustomers);
-  const invoiceNeedsPromotion = Boolean(backupState?.invoiceImportMeta?.importedAt) && (!serverState?.invoiceImportMeta?.importedAt || backupInvoices > serverInvoices);
-  return crmNeedsPromotion || invoiceNeedsPromotion;
+  return false;
 }
 async function requestJson(path, options = {}) {
   const headers = { Accept: 'application/json', ...(options.headers || {}) };
@@ -1069,7 +1029,6 @@ async function detectBackendSession() {
 }
 async function saveData(options = {}) {
   dedupeCustomers();
-  writeLocalBackup();
   if (!backendAvailable) return;
   try {
     await requestJson('/api/ops/state', {
@@ -1083,14 +1042,11 @@ async function saveData(options = {}) {
   }
 }
 async function loadData() {
-  const backupState = readLocalBackup();
   const session = await detectBackendSession();
   if (!session.available) {
     backendAvailable = false;
     updateModeBadge();
-    applyState(backupState);
-    dedupeCustomers();
-    return true;
+    throw new Error('Private Shoreline storage is unavailable right now.');
   }
   if (!session.authenticated) {
     window.location.href = '/ops-login.html';
@@ -1102,13 +1058,6 @@ async function loadData() {
   const serverState = payload?.state || {};
   applyState(serverState);
   dedupeCustomers();
-  if (shouldPromoteBackup(serverState, backupState)) {
-    applyState(backupState);
-    dedupeCustomers();
-    await saveData({silent:true});
-    showToast('✅ Migrated browser-only ops data into the private synced app');
-  }
-  writeLocalBackup();
   return true;
 }
 async function loadIntegrationStatus() {
@@ -1123,7 +1072,7 @@ async function loadIntegrationStatus() {
 }
 async function logout() {
   if (!backendAvailable) {
-    showToast('ℹ️ Browser-only mode has no server session to log out of');
+    showToast('ℹ️ No private Shoreline session is active right now.');
     return;
   }
   try {
@@ -1802,17 +1751,15 @@ function renderImportSummary() {
   const pill = document.getElementById('crm-import-pill');
   const title = document.getElementById('crm-import-title');
   if (!summary || !pill || !title) return;
-  title.textContent = backendAvailable ? 'Secure Synced Import' : 'Secure Browser-Only Import';
+  title.textContent = 'Secure Synced Import';
   if (!importMeta.importedAt) {
-    summary.textContent = backendAvailable
-      ? 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records are saved into the private Shoreline ops service and synced across signed-in sessions.'
-      : 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records stay in this browser\'s local storage and are not published into the live website code.';
+    summary.textContent = 'Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records are saved into the private Shoreline ops service and synced across signed-in sessions.';
     pill.textContent = 'No CRM import yet';
     return;
   }
   const importedAt = new Date(importMeta.importedAt).toLocaleString();
   const typeLabel = importMeta.lastType === 'opportunities' ? 'Bookings import' : 'Customers import';
-  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} ${backendAvailable ? 'Data is stored in the private Shoreline ops service.' : 'Data is stored only in this browser.'}`;
+  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} Data is stored in the private Shoreline ops service.`;
   pill.textContent = `${importMeta.recordCount} rows imported`;
 }
 function renderInvoiceImportSummary() {
@@ -1820,16 +1767,14 @@ function renderInvoiceImportSummary() {
   const pill = document.getElementById('invoice-import-pill');
   const title = document.getElementById('invoice-import-title');
   if (!summary || !pill || !title) return;
-  title.textContent = backendAvailable ? 'Synced Invoice Import' : 'Browser-Only Invoice Import';
+  title.textContent = 'Synced Invoice Import';
   if (!invoiceImportMeta.importedAt) {
-    summary.textContent = backendAvailable
-      ? 'Import the Admin Tribe invoice export here to keep a full payment history inside the private Shoreline ops service.'
-      : 'Import the Admin Tribe invoice export here to review invoice history in this browser.';
+    summary.textContent = 'Import the Admin Tribe invoice export here to keep a full payment history inside the private Shoreline ops service.';
     pill.textContent = 'No invoice import yet';
     return;
   }
   const importedAt = new Date(invoiceImportMeta.importedAt).toLocaleString();
-  summary.textContent = `Invoices from ${invoiceImportMeta.fileName} on ${importedAt}: ${invoiceImportMeta.added} added, ${invoiceImportMeta.updated} updated. ${backendAvailable ? 'Data is stored in the private Shoreline ops service.' : 'Data is stored only in this browser.'}`;
+  summary.textContent = `Invoices from ${invoiceImportMeta.fileName} on ${importedAt}: ${invoiceImportMeta.added} added, ${invoiceImportMeta.updated} updated. Data is stored in the private Shoreline ops service.`;
   pill.textContent = `${invoiceImportMeta.recordCount} rows imported`;
 }
 function filterCRM(input) {
@@ -3214,17 +3159,6 @@ function daysSince(dateStr) {
 function today() { return new Date().toISOString().split('T')[0]; }
 
 // ── INIT ──
-// Clear old empty localStorage on version update
-try {
-  const versionKey = 'sla_version';
-  const storedVersion = localStorage.getItem(versionKey);
-  if (storedVersion && storedVersion !== 'v6') {
-    ['sla_bookings', 'sla_customers', 'sla_expenses', 'sla_fuel', 'sla_maint', 'sla_invoices', 'sla_comms', 'sla_review_requests', 'sla_reviews', 'sla_social_posts', 'sla_import_meta', 'sla_invoice_import_meta'].forEach((key) => {
-      if (localStorage.getItem(key) === '[]') localStorage.removeItem(key);
-    });
-  }
-  localStorage.setItem(versionKey, 'v6');
-} catch(e){}
 async function bootApp() {
   let ready = false;
   try {

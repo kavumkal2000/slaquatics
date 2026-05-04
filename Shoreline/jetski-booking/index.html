@@ -756,6 +756,7 @@ h1 span { color: var(--gold); }
         </p>
 
         <form id="booking-form">
+          <input id="booking-token" type="hidden" value="">
           <div class="form-stack">
             <div class="calendar-card">
               <div class="block-label">Calendar</div>
@@ -1121,7 +1122,7 @@ function applyQueryDefaults() {
     setType(type);
   } else if (craft === 'boat') {
     setType('boat');
-  } else if (craft.startsWith('bundle')) {
+  } else if (craft && craft.startsWith('bundle')) {
     setType('bundle');
   }
 
@@ -1149,6 +1150,7 @@ function createBookingPayload() {
   const base = buildBookingPayloadBase();
   return {
     ...base,
+    publicToken: qs('booking-token').value.trim(),
     date: qs('date').value,
     time: qs('time').value,
     location: 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX',
@@ -1156,6 +1158,65 @@ function createBookingPayload() {
     partySize: '',
     notes: ''
   };
+}
+
+async function saveDraftBooking(payload) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking-draft`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || 'We could not save your booking details right now.');
+  }
+  return body.booking || null;
+}
+
+async function loadDraftBooking(token) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body.error || 'We could not load your booking details right now.');
+  }
+  return body.booking || null;
+}
+
+function applyDraftBooking(booking) {
+  if (!booking) return;
+  const tokenField = qs('booking-token');
+  if (tokenField) tokenField.value = booking.publicToken || '';
+
+  if (booking.craftKey && Object.prototype.hasOwnProperty.call(CRAFT_LABELS, booking.craftKey)) {
+    if (booking.craftKey === 'boat') {
+      setType('boat');
+    } else if (booking.craftKey.startsWith('bundle')) {
+      setType('bundle');
+    } else {
+      setType('jetski');
+    }
+    qs('craft').value = booking.craftKey;
+    populateDurationOptions(Number(booking.duration || 0));
+  }
+
+  qs('drone').value = booking.drone ? 'yes' : 'no';
+  if (booking.date) {
+    selectedBookingDate = booking.date;
+    qs('date').value = booking.date;
+    const parsed = parseLocalIsoDate(booking.date);
+    if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+  }
+  if (booking.time) {
+    qs('time').value = booking.time;
+  }
+  updateSummary();
+  renderCalendar();
 }
 
 function validatePayload(payload) {
@@ -1181,15 +1242,24 @@ async function handleSubmit(event) {
   status.textContent = 'Saving your booking details...';
   status.classList.remove('success');
 
-  localStorage.setItem('sla_booking_request', JSON.stringify({
-    ...payload,
-    paymentStatus: 'unpaid',
-    depositAmount: 50
-  }));
+  try {
+    const booking = await saveDraftBooking({
+      ...payload,
+      paymentStatus: 'unpaid',
+      depositAmount: 50
+    });
+    if (!booking?.publicToken) {
+      throw new Error('Booking draft was saved, but no booking token was returned.');
+    }
+    qs('booking-token').value = booking.publicToken;
 
-  status.textContent = 'Booking details saved. Opening the waiver and deposit page...';
-  status.classList.add('success');
-  window.location.href = '../jetski-booking-confirmation/';
+    status.textContent = 'Booking details saved. Opening the waiver and deposit page...';
+    status.classList.add('success');
+    window.location.href = `../jetski-booking-confirmation/?booking=${encodeURIComponent(booking.publicToken)}`;
+  } catch (submitError) {
+    status.textContent = submitError.message || 'We could not save your booking right now.';
+    status.classList.remove('success');
+  }
 }
 
 document.querySelectorAll('.type-btn').forEach((button) => {
@@ -1212,10 +1282,23 @@ qs('booking-form').addEventListener('submit', handleSubmit);
 qs('date').value = todayLocalIso();
 qs('time').value = '10:00';
 selectedBookingDate = qs('date').value;
-setType('jetski');
-applyQueryDefaults();
-renderCalendar();
-updateSummary();
+(async function initBookingPage() {
+  setType('jetski');
+  const params = new URLSearchParams(window.location.search);
+  const bookingToken = params.get('booking');
+  if (bookingToken) {
+    try {
+      const booking = await loadDraftBooking(bookingToken);
+      applyDraftBooking(booking);
+      return;
+    } catch (error) {
+      console.warn('Booking draft load failed:', error);
+    }
+  }
+  applyQueryDefaults();
+  renderCalendar();
+  updateSummary();
+})();
 </script>
 </body>
 </html>

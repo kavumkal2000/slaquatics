@@ -376,6 +376,10 @@ function nextId(items = []) {
   return items.reduce((max, item) => Math.max(max, Number(item?.id || 0)), 0) + 1;
 }
 
+function createPublicToken() {
+  return crypto.randomBytes(18).toString('base64url');
+}
+
 function parseIsoDate(value) {
   if (!value) return null;
   const parsed = new Date(`${String(value)}T00:00:00`);
@@ -462,6 +466,17 @@ function findMatchingBooking(state, payload = {}) {
   )) || null;
 }
 
+function findBookingByPublicToken(state, token = '') {
+  const normalized = String(token || '').trim();
+  if (!normalized) return null;
+  return state.bookings.find((booking) => String(booking.publicToken || '').trim() === normalized) || null;
+}
+
+function ensureBookingPublicToken(booking) {
+  if (!booking.publicToken) booking.publicToken = createPublicToken();
+  return booking.publicToken;
+}
+
 function updateCustomerRollup(state, customer) {
   const phoneKey = phoneDigits(customer.phone);
   const emailKey = normalizeEmail(customer.email);
@@ -477,6 +492,49 @@ function updateCustomerRollup(state, customer) {
 
 function publicCustomerPayload(customer) {
   return sanitizePublicCustomer(customer);
+}
+
+function publicBookingPayload(booking = {}) {
+  return {
+    id: Number(booking.id || 0),
+    publicToken: String(booking.publicToken || ''),
+    name: String(booking.name || '').trim(),
+    phone: String(booking.phone || '').trim(),
+    email: String(booking.email || '').trim(),
+    craft: String(booking.craft || '').trim(),
+    craftKey: String(booking.craftKey || '').trim(),
+    craftLabel: String(booking.craftLabel || '').trim(),
+    duration: Number(booking.duration || 0),
+    durationLabel: String(booking.durationLabel || '').trim(),
+    total: Number(booking.total || 0),
+    baseTotal: Number(booking.baseTotal || 0),
+    drone: Boolean(booking.drone),
+    droneAmount: Number(booking.droneAmount || 0),
+    date: String(booking.date || '').trim(),
+    time: String(booking.time || '').trim(),
+    location: String(booking.location || '').trim(),
+    contactMethod: String(booking.contactMethod || 'text').trim(),
+    partySize: String(booking.partySize || '').trim(),
+    notes: String(booking.notes || '').trim(),
+    status: String(booking.status || 'pending').trim(),
+    source: String(booking.source || '').trim(),
+    customerId: Number(booking.customerId || 0),
+    waiverAccepted: Boolean(booking.waiverAccepted),
+    waiver: booking.waiver && typeof booking.waiver === 'object'
+      ? {
+          acceptedRisk: Boolean(booking.waiver.acceptedRisk),
+          acceptedDamage: Boolean(booking.waiver.acceptedDamage),
+          verified: Boolean(booking.waiver.verified),
+          dateOfBirth: String(booking.waiver.dateOfBirth || '').trim(),
+          initials: String(booking.waiver.initials || '').trim(),
+          signature: String(booking.waiver.signature || '').trim(),
+          signatureDate: String(booking.waiver.signedAt || booking.waiver.signatureDate || '').trim(),
+          emergencyName: String(booking.waiver.emergencyName || '').trim(),
+          emergencyPhone: String(booking.waiver.emergencyPhone || '').trim()
+        }
+      : null,
+    ...bookingPaymentSummary(booking)
+  };
 }
 
 function publicCraftKey(type = '', craft = '') {
@@ -523,6 +581,51 @@ function bookingPaymentSummary(booking = {}) {
   };
 }
 
+function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  if (!payload?.date || !payload?.time) {
+    throw new Error('A rental date and start time are required.');
+  }
+
+  const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
+  const existingBooking = findBookingByPublicToken(state, payload.publicToken);
+  const booking = existingBooking || {
+    id: nextId(state.bookings),
+    status: 'draft',
+    deposit: false,
+    paymentStatus: 'unpaid',
+    createdAt: now,
+    source: 'Website Draft'
+  };
+
+  booking.name = String(payload.name || booking.name || '').trim();
+  booking.phone = String(payload.phone || booking.phone || '').trim();
+  booking.email = String(payload.email || booking.email || '').trim();
+  booking.craft = publicCraftKey(pricing.type, pricing.craft);
+  booking.craftKey = pricing.craft;
+  booking.craftLabel = pricing.craftLabel;
+  booking.duration = pricing.duration;
+  booking.durationLabel = pricing.durationLabel;
+  booking.total = Number((pricing.totalAmount / 100).toFixed(2));
+  booking.baseTotal = Number((pricing.baseAmount / 100).toFixed(2));
+  booking.drone = pricing.drone;
+  booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
+  booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
+  booking.date = String(payload.date || '').trim();
+  booking.time = String(payload.time || '').trim();
+  booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX').trim();
+  booking.contactMethod = String(payload.contactMethod || booking.contactMethod || 'text').trim();
+  booking.partySize = String(payload.partySize || booking.partySize || '').trim();
+  booking.notes = String(payload.notes || booking.notes || '').trim();
+  booking.updatedAt = now;
+  ensureBookingPublicToken(booking);
+
+  if (!existingBooking) {
+    state.bookings.push(booking);
+  }
+
+  return { state, booking, existingBooking, pricing };
+}
+
 function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
   if (!payload?.name || !payload?.phone || !payload?.date || !payload?.time) {
     throw new Error('Customer name, phone number, requested date, and start time are required.');
@@ -563,7 +666,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     state.customers.push(customer);
   }
 
-  const existingBooking = findMatchingBooking(state, {
+  const existingBooking = findBookingByPublicToken(state, payload.publicToken) || findMatchingBooking(state, {
     ...payload,
     craftLabel: pricing.craftLabel,
     duration: pricing.duration
@@ -602,6 +705,11 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
   booking.emergencyPhone = customer.emergencyPhone;
   booking.waiverAccepted = true;
   booking.paymentStatus = booking.deposit ? 'paid' : String(booking.paymentStatus || 'unpaid');
+  booking.waiver = {
+    ...(customer.waiver || {}),
+    signatureDate: customer.waiverSignedAt
+  };
+  ensureBookingPublicToken(booking);
 
   if (!existingBooking) {
     booking.createdAt = now;
@@ -689,6 +797,9 @@ function applyStripeSessionToBooking(state, session = {}, now = new Date().toISO
   const booking = findBookingForStripeSession(state, session);
   if (!booking) return null;
 
+  if (session?.metadata?.bookingToken && !booking.publicToken) {
+    booking.publicToken = String(session.metadata.bookingToken);
+  }
   booking.paymentSessionId = String(session.id || booking.paymentSessionId || '');
   booking.paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : String(booking.paymentIntentId || '');
   booking.depositAmount = Number(((session.amount_total || BOOKING_DEPOSIT_CENTS) / 100).toFixed(2));
@@ -974,6 +1085,48 @@ async function handleApi(request, response, pathname) {
     return true;
   }
 
+  if (pathname === '/api/public/booking' && request.method === 'GET') {
+    const token = String(requestUrl.searchParams.get('token') || '').trim();
+    if (!token) {
+      sendPublicJson(response, request, 400, { error: 'A booking token is required.' });
+      return true;
+    }
+
+    const state = await stateStore.read();
+    const booking = findBookingByPublicToken(state, token);
+    if (!booking) {
+      sendPublicJson(response, request, 404, { error: 'Booking not found.' });
+      return true;
+    }
+
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      booking: publicBookingPayload(booking)
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/booking-draft' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { booking } = upsertDraftBookingFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        booking: publicBookingPayload(booking)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the booking draft.'
+      });
+      return true;
+    }
+  }
+
   if (pathname === '/api/public/booking-request' && request.method === 'POST') {
     try {
       const payload = JSON.parse(await readRequestBody(request) || '{}');
@@ -985,17 +1138,11 @@ async function handleApi(request, response, pathname) {
       sendPublicJson(response, request, 200, {
         ok: true,
         bookingId: booking.id,
+        bookingToken: booking.publicToken,
         matchedExistingCustomer: Boolean(existingCustomer),
         waiverStored: true,
         customer: publicCustomerPayload(customer),
-        booking: {
-          id: booking.id,
-          craftLabel: booking.craftLabel,
-          durationLabel: booking.durationLabel,
-          total: booking.total,
-          depositAmount: Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100),
-          paymentStatus: booking.paymentStatus || 'unpaid'
-        }
+        booking: publicBookingPayload(booking)
       });
       return true;
     } catch (error) {
@@ -1068,11 +1215,12 @@ async function handleApi(request, response, pathname) {
         booking.time
       ].filter(Boolean);
       const description = descriptionParts.join(' · ');
+      const bookingToken = ensureBookingPublicToken(booking);
 
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
-        success_url: `${siteOrigin}/booking-thank-you/?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteOrigin}/jetski-booking-confirmation/?payment=cancelled`,
+        success_url: `${siteOrigin}/booking-thank-you/?session_id={CHECKOUT_SESSION_ID}&booking=${encodeURIComponent(bookingToken)}`,
+        cancel_url: `${siteOrigin}/jetski-booking-confirmation/?payment=cancelled&booking=${encodeURIComponent(bookingToken)}`,
         customer_email: booking.email || undefined,
         billing_address_collection: 'auto',
         phone_number_collection: { enabled: true },
@@ -1107,6 +1255,7 @@ async function handleApi(request, response, pathname) {
         },
         metadata: {
           bookingId: String(booking.id),
+          bookingToken,
           customerId: String(booking.customerId || ''),
           craft: pricing.craft,
           craftLabel: booking.craftLabel,
@@ -1135,6 +1284,7 @@ async function handleApi(request, response, pathname) {
         checkoutUrl: session.url,
         sessionId: session.id,
         bookingId: booking.id,
+        bookingToken,
         amountDue: Number((BOOKING_DEPOSIT_CENTS / 100).toFixed(2))
       });
       return true;
@@ -1179,24 +1329,10 @@ async function handleApi(request, response, pathname) {
           amountTotal: Number(((session.amount_total || 0) / 100).toFixed(2)),
           customerEmail: session.customer_details?.email || session.customer_email || '',
           customerName: session.customer_details?.name || '',
-          bookingId: session.metadata?.bookingId || session.client_reference_id || ''
+          bookingId: session.metadata?.bookingId || session.client_reference_id || '',
+          bookingToken: session.metadata?.bookingToken || ''
         },
-        booking: booking ? {
-          id: booking.id,
-          name: booking.name,
-          phone: booking.phone,
-          email: booking.email,
-          craftLabel: booking.craftLabel,
-          durationLabel: booking.durationLabel,
-          total: booking.total,
-          date: booking.date,
-          time: booking.time,
-          location: booking.location,
-          contactMethod: booking.contactMethod,
-          partySize: booking.partySize,
-          drone: booking.drone,
-          ...bookingPaymentSummary(booking)
-        } : null
+        booking: booking ? publicBookingPayload(booking) : null
       });
       return true;
     } catch (error) {

@@ -232,17 +232,16 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-function readBooking() {
-  try {
-    return JSON.parse(localStorage.getItem("sla_booking_request") || "null");
-  } catch {
-    return null;
+async function loadBookingByToken(token) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not load your booking details.');
   }
-}
-
-function saveBooking(booking) {
-  if (!booking) return;
-  localStorage.setItem("sla_booking_request", JSON.stringify(booking));
+  return payload.booking || null;
 }
 
 function formatCurrency(value) {
@@ -322,23 +321,22 @@ function showBooking(booking) {
 
 (async function init() {
   const params = new URLSearchParams(window.location.search);
-  const storedBooking = readBooking();
   const sessionId = params.get('session_id');
+  const bookingToken = params.get('booking');
 
-  if (!storedBooking && !sessionId) {
+  if (!bookingToken && !sessionId) {
     qs('empty-state').hidden = false;
     return;
   }
 
-  let booking = storedBooking;
+  let booking = null;
 
   if (sessionId) {
     try {
       const payload = await verifyCheckoutSession(sessionId);
-      booking = mergeBooking(storedBooking, payload.booking || {});
+      booking = mergeBooking(booking, payload.booking || {});
       booking.paymentStatus = payload.session?.paymentStatus || booking.paymentStatus;
       booking.deposit = booking.paymentStatus === 'paid' || Boolean(booking.deposit);
-      saveBooking(booking);
 
       if (booking.paymentStatus !== 'paid') {
         qs('empty-state').hidden = false;
@@ -348,6 +346,16 @@ function showBooking(booking) {
     } catch (error) {
       qs('empty-state').hidden = false;
       qs('empty-state').querySelector('p').textContent = error.message || 'We could not verify the booking payment right now.';
+      return;
+    }
+  }
+
+  if (!booking && bookingToken) {
+    try {
+      booking = await loadBookingByToken(bookingToken);
+    } catch (error) {
+      qs('empty-state').hidden = false;
+      qs('empty-state').querySelector('p').textContent = error.message || 'We could not load the booking details right now.';
       return;
     }
   }
