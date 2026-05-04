@@ -261,6 +261,15 @@ function formatContactMethod(value = '') {
   return 'Text message';
 }
 
+function formatTimeLabel(value = '') {
+  const [hourText = '', minuteText = '00'] = String(value).split(':');
+  const hour = Number(hourText);
+  if (Number.isNaN(hour)) return value || '-';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = hour % 12 || 12;
+  return `${twelveHour}:${minuteText} ${suffix}`;
+}
+
 function buildMessage(booking) {
   return [
     `Hi Shoreline Aquatics, I’m checking on this paid booking.`,
@@ -269,7 +278,7 @@ function buildMessage(booking) {
     `Phone: ${booking.phone}`,
     `Package: ${booking.craftLabel}`,
     `Date: ${booking.date}`,
-    `Time: ${booking.time}`
+    `Time: ${formatTimeLabel(booking.time)}`
   ].join("\n");
 }
 
@@ -304,13 +313,13 @@ function showBooking(booking) {
   setText('summary-total', formatCurrency(booking.total || 0));
   setText('summary-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('summary-date', booking.date || '-');
-  setText('summary-time', booking.time || '-');
+  setText('summary-time', formatTimeLabel(booking.time));
   setText('summary-location', booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
   setText('summary-contact', formatContactMethod(booking.contactMethod));
   setText('next-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('next-date', booking.date || '-');
-  setText('next-time', booking.time || '-');
+  setText('next-time', formatTimeLabel(booking.time));
   setText('next-contact', formatContactMethod(booking.contactMethod));
   qs('sms-link').href = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(buildMessage(booking))}`;
   qs('thankyou-wrap').hidden = false;

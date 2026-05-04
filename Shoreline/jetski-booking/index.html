@@ -766,34 +766,6 @@ h1 span { color: var(--gold); }
       </div>
     </div>
 
-    <div class="hero">
-      <div class="hero-card">
-        <h1>Choose The Day. Review The Package. <span>Continue To Waiver.</span></h1>
-        <p class="hero-copy">
-          This page keeps the flow simple. Pick the rental day and start time first, review the package summary underneath, then continue to the waiver and deposit page.
-        </p>
-        <div class="contact-strip">
-          <a class="contact-pill" href="tel:4696937164">Call or text: (469) 693-7164</a>
-          <a class="contact-pill" href="mailto:shorelinerentals3@gmail.com">shorelinerentals3@gmail.com</a>
-          <span class="contact-pill">Launch: 2000 Main St, Hickory Creek, TX</span>
-        </div>
-        <div class="hero-note-grid">
-          <div class="hero-note">
-            <strong>Step 1</strong>
-            Pick the rental day first so the date and time are locked before anything else.
-          </div>
-          <div class="hero-note">
-            <strong>Step 2</strong>
-            Review the package summary underneath the calendar and make sure the selection looks right.
-          </div>
-          <div class="hero-note">
-            <strong>Step 3</strong>
-            Continue to the next page for the waiver, rider details, and deposit payment.
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="content-grid">
       <div class="form-card">
         <h2 class="section-title">Pick the rental date first</h2>
@@ -844,7 +816,17 @@ h1 span { color: var(--gold); }
                     </div>
                     <div class="field">
                       <label for="time">Preferred start time</label>
-                      <input id="time" name="time" type="time" value="09:00" required>
+                      <select id="time" name="time" required>
+                        <option value="10:00">10:00 AM</option>
+                        <option value="11:00">11:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="13:00">1:00 PM</option>
+                        <option value="14:00">2:00 PM</option>
+                        <option value="15:00">3:00 PM</option>
+                        <option value="16:00">4:00 PM</option>
+                        <option value="17:00">5:00 PM</option>
+                        <option value="18:00">6:00 PM</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -860,7 +842,7 @@ h1 span { color: var(--gold); }
               <div class="summary-grid">
                 <div class="summary-row"><span>Duration</span><strong id="summary-duration">2 hours</strong></div>
                 <div class="summary-row"><span>Rental date</span><strong id="summary-date">Today</strong></div>
-                <div class="summary-row"><span>Start time</span><strong id="summary-time">09:00</strong></div>
+                <div class="summary-row"><span>Start time</span><strong id="summary-time">10:00 AM</strong></div>
                 <div class="summary-row"><span>Booking deposit</span><strong>$50</strong></div>
                 <div class="summary-row"><span id="summary-extra-label">Damage deposit</span><strong id="summary-extra-value">$200 per ski</strong></div>
               </div>
@@ -983,6 +965,15 @@ function formatSelectedDate(iso) {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+function formatTimeLabel(value = '') {
+  const [hourText = '', minuteText = '00'] = String(value).split(':');
+  const hour = Number(hourText);
+  if (Number.isNaN(hour)) return value || 'Choose a time';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = hour % 12 || 12;
+  return `${twelveHour}:${minuteText} ${suffix}`;
+}
+
 function isJetSkiType(craft) {
   return craft.startsWith('jetski');
 }
@@ -1057,7 +1048,7 @@ function updateSummary() {
   const durationLabel = payload.durationLabel;
   const droneEnabled = payload.drone;
   const selectedDateText = formatSelectedDate(selectedBookingDate);
-  const selectedTime = qs('time').value || '09:00';
+  const selectedTime = formatTimeLabel(qs('time').value || '10:00');
 
   qs('summary-total').textContent = formatCurrency(payload.total);
   qs('summary-title').textContent = payload.craftLabel;
@@ -1242,6 +1233,7 @@ qs('date').addEventListener('change', (event) => {
 qs('booking-form').addEventListener('submit', handleSubmit);
 
 qs('date').value = todayLocalIso();
+qs('time').value = '10:00';
 selectedBookingDate = qs('date').value;
 setType('jetski');
 applyQueryDefaults();

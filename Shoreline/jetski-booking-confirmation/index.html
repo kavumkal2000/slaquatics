@@ -476,6 +476,15 @@ function formatContactMethod(value = '') {
   return 'Text message';
 }
 
+function formatTimeLabel(value = '') {
+  const [hourText = '', minuteText = '00'] = String(value).split(':');
+  const hour = Number(hourText);
+  if (Number.isNaN(hour)) return value || '-';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = hour % 12 || 12;
+  return `${twelveHour}:${minuteText} ${suffix}`;
+}
+
 function normalizePhoneKey(value = '') {
   return String(value).replace(/\D/g, '');
 }
@@ -511,7 +520,7 @@ function buildMessage(booking) {
     `Package: ${booking.craftLabel}`,
     `Duration: ${booking.durationLabel}`,
     `Date: ${booking.date}`,
-    `Time: ${booking.time}`,
+    `Time: ${formatTimeLabel(booking.time)}`,
     `Party size: ${booking.partySize || "Not provided"}`,
     `Aerial drone coverage: ${booking.drone ? "Yes" : "No"}`,
     `Meeting spot: ${booking.location || "To be confirmed"}`,
@@ -552,7 +561,7 @@ function populateSummary(booking) {
       ? 'Your lake-day bundle is ready for the waiver and deposit step.'
       : 'Your Yamaha jet ski rental is ready for the waiver and deposit step.');
   setText("summary-date", booking.date || '-');
-  setText("summary-time", booking.time || '-');
+  setText("summary-time", formatTimeLabel(booking.time));
   setText("summary-location", booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
   setText("summary-party", booking.partySize || '2');
   setText("summary-contact", formatContactMethod(booking.contactMethod));
