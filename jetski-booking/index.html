@@ -15,9 +15,9 @@ body {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
   background:
-    radial-gradient(circle at top right, rgba(245, 166, 35, 0.16), transparent 26%),
-    radial-gradient(circle at top left, rgba(15, 184, 224, 0.14), transparent 30%),
-    linear-gradient(180deg, #f5fbff 0%, #ecf6fb 52%, #f8fbfd 100%);
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.2), transparent 24%),
+    radial-gradient(circle at top left, rgba(15, 184, 224, 0.16), transparent 28%),
+    linear-gradient(180deg, #dbe9ef 0%, #e6f0f4 42%, #dfeaf0 100%);
   color: var(--ink);
 }
 a { color: inherit; }
@@ -26,8 +26,8 @@ a { color: inherit; }
   --deep: #0c1b30;
   --ink: #0b1c30;
   --ink-soft: rgba(11, 28, 48, 0.82);
-  --panel: rgba(255, 255, 255, 0.82);
-  --panel-soft: rgba(11, 28, 48, 0.04);
+  --panel: rgba(245, 249, 251, 0.78);
+  --panel-soft: rgba(11, 28, 48, 0.05);
   --gold: #f5a623;
   --orange: #e8841a;
   --wave: #0fb8e0;
@@ -325,15 +325,15 @@ h1 span { color: var(--gold); }
 .field-block,
 .calendar-card,
 .waiver-card {
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(243, 248, 250, 0.72);
   border: 1px solid rgba(11, 28, 48, 0.08);
   border-radius: 24px;
   padding: 22px;
 }
 .calendar-card {
   background:
-    radial-gradient(circle at top right, rgba(245, 166, 35, 0.14), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(236, 246, 251, 0.98) 100%);
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(244, 248, 250, 0.98) 0%, rgba(225, 236, 241, 0.98) 100%);
   border-color: rgba(245, 166, 35, 0.24);
   box-shadow: 0 24px 70px rgba(13, 37, 61, 0.12);
 }
@@ -411,7 +411,7 @@ h1 span { color: var(--gold); }
 }
 .calendar-frame,
 .calendar-summary {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(246, 250, 252, 0.82);
   border: 1px solid rgba(11, 28, 48, 0.08);
   border-radius: 22px;
   padding: 18px;
@@ -477,7 +477,7 @@ h1 span { color: var(--gold); }
   min-height: 92px;
   border-radius: 16px;
   border: 1px solid rgba(11, 28, 48, 0.08);
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(248, 251, 252, 0.8);
   color: var(--ink);
   text-align: left;
   padding: 0.75rem 0.7rem;
@@ -613,9 +613,36 @@ h1 span { color: var(--gold); }
 .waiver-box {
   border-radius: 18px;
   border: 1px solid rgba(245, 166, 35, 0.16);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(246, 250, 252, 0.78);
   padding: 16px;
   margin-bottom: 16px;
+}
+.summary-highlight {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+.summary-highlight-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
+}
+.summary-highlight-item strong {
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(11, 28, 48, 0.6);
+}
+.summary-highlight-item span {
+  text-align: right;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 .waiver-box p {
   margin: 0 0 10px;
@@ -742,7 +769,7 @@ h1 span { color: var(--gold); }
         </div>
     </a>
       <div class="top-actions">
-        <a class="btn btn-ghost" href="../waiver/">Waiver</a>
+        <a class="btn btn-ghost" href="../waiver/">Contact + Waiver</a>
         <a class="btn btn-ghost" href="../privacy-policy/">Privacy Policy</a>
         <a class="btn btn-primary" href="tel:4696937164">Call (469) 693-7164</a>
       </div>
@@ -752,7 +779,7 @@ h1 span { color: var(--gold); }
       <div class="form-card">
         <h2 class="section-title">Pick the rental date first</h2>
         <p class="section-copy">
-          Choose the date and start time here. The next page handles the waiver, contact details, and the booking deposit.
+          Choose the date and start time here. The next page combines the rider contact form, waiver, and deposit in one step.
         </p>
 
         <form id="booking-form">
@@ -765,7 +792,7 @@ h1 span { color: var(--gold); }
                   <div class="calendar-head">
                     <div>
                       <h3>Choose the rental day first</h3>
-                      <p>Pick the exact day up front so the rest of the booking stays centered around the right rental date.</p>
+                      <p>Pick the day up front so the rest of the booking stays locked to the right rental date.</p>
                     </div>
                     <div class="calendar-nav">
                       <button type="button" aria-label="Previous month" onclick="shiftCalendarMonth(-1)">←</button>
@@ -787,7 +814,7 @@ h1 span { color: var(--gold); }
                 <div class="calendar-summary">
                   <div class="calendar-picked"><span>Selected</span><span id="calendar-pill-date">Today</span></div>
                   <div class="calendar-big-date" id="calendar-big-date">Today</div>
-                  <p id="calendar-copy">Choose the date that works best, then continue to the waiver and deposit page.</p>
+                  <p id="calendar-copy">Choose the date that works best, then continue to the contact, waiver, and deposit page.</p>
                   <div class="calendar-mini">
                     <div class="calendar-mini-item">
                       <strong>Requested date</strong>
@@ -822,6 +849,16 @@ h1 span { color: var(--gold); }
               <div class="summary-total" id="summary-total">$300</div>
               <div class="summary-title" id="summary-title">2 Yamaha Jet Skis</div>
               <div class="summary-note" id="summary-note">2 hour rental with 2 Yamaha jet skis, life jackets, a full tank, and safety briefing included.</div>
+              <div class="summary-highlight">
+                <div class="summary-highlight-item">
+                  <strong id="summary-rate-label">Hourly rate</strong>
+                  <span id="summary-rate">$75/hr per ski</span>
+                </div>
+                <div class="summary-highlight-item">
+                  <strong id="summary-value-label">Savings</strong>
+                  <span id="summary-value">Base rate</span>
+                </div>
+              </div>
               <div class="summary-grid">
                 <div class="summary-row"><span>Duration</span><strong id="summary-duration">2 hours</strong></div>
                 <div class="summary-row"><span>Rental date</span><strong id="summary-date">Today</strong></div>
@@ -845,9 +882,9 @@ h1 span { color: var(--gold); }
           </div>
 
           <div class="status" id="form-status"></div>
-          <button class="btn btn-primary" type="submit">Continue To Waiver &amp; Deposit</button>
+          <button class="btn btn-primary" type="submit">Continue To Contact + Waiver</button>
           <div class="footer-note">
-            The next page is where the rider fills out the waiver, confirms contact details, and pays the $50 booking deposit.
+            The next page combines the contact form, waiver, and $50 booking deposit in one clean step.
           </div>
         </form>
       </div>
@@ -964,6 +1001,32 @@ function isBundleType(craft) {
   return craft.startsWith('bundle');
 }
 
+function getJetSkiCount(craft) {
+  if (!craft) return 0;
+  if (craft.startsWith('jetski')) return parseInt(craft.replace('jetski', ''), 10) || 0;
+  if (craft.startsWith('bundle')) return parseInt(craft.replace('bundle', ''), 10) || 0;
+  return 0;
+}
+
+function getHourlyRateLabel(craft, duration, basePrice) {
+  if (craft === 'boat') return '$120/hr';
+  if (isBundleType(craft)) return 'Custom bundle pricing';
+  const jetSkiCount = getJetSkiCount(craft);
+  if (!jetSkiCount || !duration) return 'Included in package';
+  const hourlyRate = Math.round(basePrice / jetSkiCount / duration);
+  return `$${hourlyRate}/hr per ski`;
+}
+
+function getSavingsLabel(craft, duration, basePrice) {
+  if (craft === 'boat') return 'Captain included';
+  if (isBundleType(craft)) return 'Boat + captain built in';
+  const jetSkiCount = getJetSkiCount(craft);
+  if (!jetSkiCount || duration <= 2) return 'Base rate';
+  const baseRateTotal = 75 * jetSkiCount * duration;
+  const savings = Math.max(0, baseRateTotal - basePrice);
+  return savings > 0 ? `Save $${savings.toLocaleString()} total` : 'Base rate';
+}
+
 function getCraftLabelForType(type) {
   if (type === 'boat') return 'Boat rental option';
   if (type === 'bundle') return 'Bundle size';
@@ -1029,6 +1092,7 @@ function updateSummary() {
   const duration = payload.duration;
   const durationLabel = payload.durationLabel;
   const droneEnabled = payload.drone;
+  const baseTotal = PRICING[craft]?.[duration] || 0;
   const selectedDateText = formatSelectedDate(selectedBookingDate);
   const selectedTime = formatTimeLabel(qs('time').value || '10:00');
 
@@ -1037,15 +1101,21 @@ function updateSummary() {
   qs('summary-duration').textContent = durationLabel;
   qs('summary-date').textContent = selectedDateText;
   qs('summary-time').textContent = selectedTime;
+  qs('summary-rate').textContent = getHourlyRateLabel(craft, duration, baseTotal);
+  qs('summary-value').textContent = getSavingsLabel(craft, duration, baseTotal);
 
   if (craft === 'boat') {
     qs('summary-note').textContent = `Boat rental with captain included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ' Life jackets and a full tank are included.'}`;
-    qs('summary-extra-label').textContent = 'Captain';
-    qs('summary-extra-value').textContent = 'Included';
+    qs('summary-rate-label').textContent = 'Hourly rate';
+    qs('summary-value-label').textContent = 'Included';
   } else if (isBundleType(craft)) {
     qs('summary-note').textContent = `${durationLabel} bundle with Yamaha jet skis, the captained boat, life jackets, fuel, and briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
+    qs('summary-rate-label').textContent = 'Bundle rate';
+    qs('summary-value-label').textContent = 'Included';
   } else {
     qs('summary-note').textContent = `${durationLabel} rental with ${payload.craftLabel.toLowerCase()}, life jackets, a full tank, and a safety briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
+    qs('summary-rate-label').textContent = 'Hourly rate';
+    qs('summary-value-label').textContent = 'Savings';
   }
 }
 
@@ -1054,7 +1124,7 @@ function renderCalendarSummary() {
   qs('calendar-pill-date').textContent = formatted;
   qs('calendar-big-date').textContent = formatted;
   qs('calendar-selected-inline').textContent = formatted;
-  qs('calendar-copy').textContent = `Selected rental day: ${formatted}. Exact launch time and notes stay editable below.`;
+  qs('calendar-copy').textContent = `Selected rental day: ${formatted}. Exact launch time and package summary stay editable below.`;
   updateSummary();
 }
 
@@ -1253,7 +1323,7 @@ async function handleSubmit(event) {
     }
     qs('booking-token').value = booking.publicToken;
 
-    status.textContent = 'Booking details saved. Opening the waiver and deposit page...';
+    status.textContent = 'Booking details saved. Opening the contact, waiver, and deposit page...';
     status.classList.add('success');
     window.location.href = `../jetski-booking-confirmation/?booking=${encodeURIComponent(booking.publicToken)}`;
   } catch (submitError) {

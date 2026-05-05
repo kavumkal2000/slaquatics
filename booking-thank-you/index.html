@@ -14,7 +14,7 @@
   --gold:#f5a623;
   --orange:#e8841a;
   --ink:#0b1c30;
-  --panel:rgba(255,255,255,0.84);
+  --panel:rgba(245,249,251,0.8);
   --line:rgba(11,28,48,0.1);
   --muted:rgba(11,28,48,0.66);
   --shadow:rgba(13,37,61,0.14);
@@ -24,9 +24,9 @@ body{
   font-family:'DM Sans',sans-serif;
   color:var(--ink);
   background:
-    radial-gradient(circle at top right, rgba(245,166,35,0.14), transparent 24%),
-    radial-gradient(circle at top left, rgba(15,184,224,0.12), transparent 24%),
-    linear-gradient(180deg,#f5fbff 0%,#edf6fb 46%,#f8fbfd 100%);
+    radial-gradient(circle at top right, rgba(245,166,35,0.18), transparent 24%),
+    radial-gradient(circle at top left, rgba(15,184,224,0.16), transparent 26%),
+    linear-gradient(180deg,#dbe9ef 0%,#e6f0f4 42%,#dfeaf0 100%);
 }
 a{color:inherit}
 .shell{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
@@ -137,7 +137,7 @@ h3{font-size:1.7rem}
       <p>Head back to the booking flow and finish the deposit step again if you still need help.</p>
       <div class="top-actions" style="margin-top:16px">
         <a class="btn btn-primary" href="../jetski-booking/">Go To Booking Calendar</a>
-        <a class="btn btn-ghost" href="../jetski-booking-confirmation/">Back To Waiver &amp; Deposit</a>
+        <a class="btn btn-ghost" href="../jetski-booking-confirmation/">Back To Contact + Waiver</a>
       </div>
     </div>
 
@@ -340,7 +340,7 @@ function showBooking(booking) {
 
       if (booking.paymentStatus !== 'paid') {
         qs('empty-state').hidden = false;
-        qs('empty-state').querySelector('p').textContent = 'The payment has not finished clearing yet. Head back to the waiver and deposit page if you need to try again.';
+        qs('empty-state').querySelector('p').textContent = 'The payment has not finished clearing yet. Head back to the contact, waiver, and deposit page if you need to try again.';
         return;
       }
     } catch (error) {

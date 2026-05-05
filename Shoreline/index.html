@@ -386,16 +386,19 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 }
 .how-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
   gap: 1.5rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
+  flex-direction: column;
+  text-align: center;
 }
 .how-title-wrap {
   display: flex;
   align-items: center;
   gap: 0.9rem;
+  justify-content: center;
 }
 .how-icon {
   width: 56px;
@@ -416,10 +419,12 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   letter-spacing: 0.05em;
 }
 .how-intro {
-  max-width: 520px;
+  max-width: 620px;
   color: rgba(255,255,255,0.72);
   font-size: 0.95rem;
   line-height: 1.72;
+  margin: 0 auto;
+  text-align: center;
 }
 .how-grid {
   display: grid;
@@ -435,6 +440,8 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   padding: 2rem 1.2rem 1.45rem;
   min-height: 100%;
   overflow: visible;
+  text-align: center;
+  align-items: center;
 }
 .how-step::before {
   content: '';
@@ -466,7 +473,7 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(245,166,35,0.18);
   display: flex;
@@ -538,7 +545,7 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   max-width: 860px;
   margin: 0 auto 2.2rem;
   padding: 1.8rem 2rem 1.55rem;
-  text-align: left;
+  text-align: center;
   background:
     linear-gradient(180deg, rgba(12,27,48,0.96) 0%, rgba(8,17,31,0.96) 100%);
   border: 1px solid rgba(255,255,255,0.08);
@@ -562,6 +569,9 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   color: rgba(255,255,255,0.72);
   font-size: clamp(0.98rem, 1.6vw, 1.14rem);
   line-height: 1.7;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
 }
 .why-grid {
   display: grid;
@@ -577,8 +587,8 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   padding: 1.35rem 1.35rem 1.45rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
+  text-align: center;
   min-height: 100%;
   box-shadow: 0 24px 40px rgba(0,0,0,0.18);
   transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
@@ -602,13 +612,15 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.9rem;
   margin-bottom: 1.1rem;
+  flex-direction: column;
 }
 .why-item-index {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   color: rgba(255,255,255,0.5);
   font-size: 0.72rem;
@@ -950,7 +962,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .bundle-media-stack { grid-template-columns: 1fr; }
   .bundle-media { min-height: 200px; }
   .why-grid { grid-template-columns: 1fr; }
-  .why-hero { padding: 1.25rem 1rem 1.15rem; border-radius: 22px; margin-bottom: 1.4rem; text-align: left; }
+  .why-hero { padding: 1.25rem 1rem 1.15rem; border-radius: 22px; margin-bottom: 1.4rem; text-align: center; }
   .why-title { font-size: 2.6rem; }
   .why-subtitle { font-size: 0.95rem; }
   .why-item { padding: 1.45rem 1.1rem 1.2rem; border-radius: 24px; }
@@ -1162,7 +1174,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   <div class="section-inner">
     <div class="section-tag">Book Your Rental</div>
     <h2>Choose The Package First</h2>
-    <p class="section-sub" style="margin-bottom:2rem;">Choose your rental, select the hours, and continue to booking for your date, waiver, and deposit.</p>
+    <p class="section-sub" style="margin-bottom:2rem;">Choose your rental, compare the hourly value, and continue into the booking flow for the date, contact + waiver, and deposit.</p>
     <div class="calc-wrap">
       <div class="calc-tabs">
         <button class="calc-tab-btn active" id="tab-jetski" onclick="switchCalcTab('jetski')">
@@ -1197,19 +1209,19 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <div class="calc-col-label">2 · Choose your duration</div>
           <div class="calc-select-group" id="js-dur-opts">
             <div class="calc-option selected" data-hours="2" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">2 Hours</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">2 Hours</div><div class="calc-option-sub">$75/hr per ski</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="3" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">3 Hours</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">3 Hours</div><div class="calc-option-sub">$75/hr per ski</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="4" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub"><strong>Most Popular</strong></div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">4 Hours</div><div class="calc-option-sub"><strong>Most Popular</strong> · $70/hr per ski</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="6" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub"><strong>Best Value</strong></div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">6 Hours</div><div class="calc-option-sub"><strong>Best Value</strong> · $60/hr per ski</div></div><div class="calc-check"></div>
             </div>
             <div class="calc-option" data-hours="8" onclick="selectOpt('js-dur-opts',this);calcPrice()">
-              <div><div class="calc-option-name">Full Day (8 Hours)</div></div><div class="calc-check"></div>
+              <div><div class="calc-option-name">Full Day (8 Hours)</div><div class="calc-option-sub">$56/hr per ski</div></div><div class="calc-check"></div>
             </div>
           </div>
           <div class="calc-addon-box">
@@ -1228,7 +1240,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <div class="calc-result-box">
             <div class="calc-result-label">Your Total</div>
             <div class="calc-result-price" id="js-price">$300</div>
-            <div class="calc-result-desc" id="js-desc">2 Yamaha Jet Skis · 2hrs</div>
+            <div class="calc-result-desc" id="js-desc">2 Yamaha Jet Skis · 2hrs · $75/hr per ski</div>
             <div class="calc-deposit-row">
               <div class="calc-deposit-item"><div class="dl">Booking deposit</div><div class="dv" style="color:var(--gold);">$50</div></div>
             </div>
@@ -1243,8 +1255,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Safety Briefing</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=jetski&craft=jetski2&hours=2&total=300" class="calc-book-btn" id="js-book-btn">Continue to Calendar &amp; Waiver →</a>
-          <p class="price-match">💰 Found a lower price? <span>We'll match it.</span></p>
+          <a href="./jetski-booking/?type=jetski&craft=jetski2&hours=2&total=300" class="calc-book-btn" id="js-book-btn">Continue to Calendar &amp; Contact + Waiver →</a>
+          <p class="price-match" id="js-savings-note">Base rate is $75/hr per ski.</p>
         </div>
       </div>
 
@@ -1304,7 +1316,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Up to 10 Guests</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=boat&craft=boat&hours=4&total=480" class="calc-book-btn" id="bt-book-btn">Continue to Calendar &amp; Waiver →</a>
+          <a href="./jetski-booking/?type=boat&craft=boat&hours=4&total=480" class="calc-book-btn" id="bt-book-btn">Continue to Calendar &amp; Contact + Waiver →</a>
           <p class="price-match">Easy hourly pricing with the captain already included.</p>
         </div>
       </div>
@@ -1377,7 +1389,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Cooler</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=bundle&craft=bundle2&hours=2&total=540" class="calc-book-btn" id="bd-book-btn">Continue to Calendar &amp; Waiver →</a>
+          <a href="./jetski-booking/?type=bundle&craft=bundle2&hours=2&total=540" class="calc-book-btn" id="bd-book-btn">Continue to Calendar &amp; Contact + Waiver →</a>
           <p class="price-match">💰 Found a lower price? <span>We'll match it.</span></p>
         </div>
       </div>
@@ -1429,7 +1441,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <div class="how-icon">🧭</div>
           <div class="how-title">How It Works</div>
         </div>
-        <div class="how-intro">A simple five-step flow so customers know exactly what happens from choosing the package to coming back for the next lake day.</div>
+        <div class="how-intro">Five quick steps from picking the rental to showing up ready for the water.</div>
       </div>
       <div class="how-grid">
         <div class="how-step">
@@ -1442,7 +1454,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </svg>
           </div>
           <h3>Choose Your Experience</h3>
-          <p>Jet skis, boat, or bundle. Start with the option that fits the crew and lock in the setup before moving to the booking page.</p>
+          <p>Pick jet skis, the boat, or the full bundle for your crew.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
@@ -1455,7 +1467,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </svg>
           </div>
           <h3>Pick Your Date &amp; Time</h3>
-          <p>Book instantly online, choose the rental date on the calendar, and send Shoreline the exact time window that works best.</p>
+          <p>Choose the day and start time that works best for your group.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
@@ -1468,8 +1480,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <path d="M32 29l3 3 7-8"></path>
             </svg>
           </div>
-          <h3>Customize Your Day</h3>
-          <p>Add drinks, photos, or VIP upgrades. Customers can also tack on aerial drone coverage while they finish the request.</p>
+          <h3>Add Extras</h3>
+          <p>Add aerial drone coverage if you want a highlight video from the day.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
@@ -1481,8 +1493,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <path d="M34 17l4 4 6-8"></path>
             </svg>
           </div>
-          <h3>Show Up &amp; Ride</h3>
-          <p>We handle the rest. Meet Shoreline at the launch, get the walkthrough, and get on the water without a messy check-in.</p>
+          <h3>Finish Contact + Waiver</h3>
+          <p>Complete the rider form, sign the waiver, and pay the booking deposit.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
@@ -1494,8 +1506,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <path d="M17 33h14"></path>
             </svg>
           </div>
-          <h3>Get Your Content &amp; Come Back</h3>
-          <p>Memories plus discounts for next time, so great riders can come back faster and repeat bookings feel easy.</p>
+          <h3>Show Up &amp; Ride</h3>
+          <p>Follow the directions, check in fast, and get on the water.</p>
         </div>
       </div>
     </div>
@@ -1508,7 +1520,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="why-hero">
       <div class="section-tag">Why Choose Us</div>
       <h2 class="why-title">Why Choose Us?</h2>
-      <p class="why-subtitle">We Have The Best Rates and Added Perks in the Area</p>
+      <p class="why-subtitle">Straight pricing, clean equipment, and a smooth Lake Lewisville launch.</p>
     </div>
     <div class="why-grid">
       <div class="why-item">
@@ -1523,8 +1535,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </svg>
           </div>
         </div>
-        <h3>Unbeatable Rates</h3>
-        <p>We keep pricing aggressive so more people can get on the water. If someone finds a better local rate, Shoreline can still work to match it.</p>
+        <h3>Great Value</h3>
+        <p>Clear pricing with stronger hourly value on the longer rentals.</p>
       </div>
       <div class="why-item">
         <div class="why-item-top">
@@ -1536,8 +1548,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </svg>
           </div>
         </div>
-        <h3>Delivered to Lake Lewisville</h3>
-        <p>Everything is staged right at Lake Lewisville so the crew can meet Shoreline there, check in fast, and get on the water without confusion.</p>
+        <h3>Lake Lewisville Launch</h3>
+        <p>Meet Shoreline at the launch and get on the water without a confusing handoff.</p>
       </div>
       <div class="why-item">
         <div class="why-item-top">
@@ -1550,8 +1562,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </svg>
           </div>
         </div>
-        <h3>Exceptional Service &amp; Amenities</h3>
-        <p>Rentals include the helpful extras people actually use: life jackets, full tank, a cooler, a clear walkthrough, and optional add-ons like drone coverage.</p>
+        <h3>What’s Included</h3>
+        <p>Life jackets, fuel, captain on boat rentals, and a simple safety walkthrough.</p>
       </div>
       <div class="why-item">
         <div class="why-item-top">
@@ -1565,8 +1577,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </svg>
           </div>
         </div>
-        <h3>We Care</h3>
-        <p>Our equipment is kept ready, the safety talk stays clear, and the goal is simple: make sure people feel taken care of so they want to book again.</p>
+        <h3>Easy Repeat Booking</h3>
+        <p>Saved rider info and a clean follow-up process make the next booking faster.</p>
       </div>
     </div>
   </div>
@@ -1768,7 +1780,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <li><a href="#reviews">Reviews</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="#location">Arrival Directions</a></li>
-        <li><a href="./waiver/">Rental Waiver</a></li>
+        <li><a href="./waiver/">Contact + Waiver</a></li>
         <li><a href="./privacy-policy/">Privacy Policy</a></li>
       </ul>
     </div>
@@ -1824,6 +1836,32 @@ function getDroneSelection(groupId) {
   return (getSelected(groupId, 'drone') || 'no') === 'yes';
 }
 
+function getJetSkiCount(craft) {
+  if (!craft) return 0;
+  if (craft.startsWith('jetski')) return parseInt(craft.replace('jetski', ''), 10) || 0;
+  if (craft.startsWith('bundle')) return parseInt(craft.replace('bundle', ''), 10) || 0;
+  return 0;
+}
+
+function getHourlyRateLabel(craft, hours, basePrice) {
+  if (craft === 'boat') return '$120/hr';
+  const jetSkiCount = getJetSkiCount(craft);
+  if (!jetSkiCount || !hours) return '';
+  const hourlyRate = Math.round(basePrice / jetSkiCount / hours);
+  return `$${hourlyRate}/hr per ski`;
+}
+
+function getSavingsLabel(craft, hours, basePrice) {
+  if (!craft.startsWith('jetski')) return '';
+  const jetSkiCount = getJetSkiCount(craft);
+  if (!jetSkiCount || hours <= 2) return 'Base rate is $75/hr per ski.';
+  const baseRateTotal = 75 * jetSkiCount * hours;
+  const savings = Math.max(0, baseRateTotal - basePrice);
+  return savings > 0
+    ? `Save $${savings.toLocaleString()} total compared with the 2-hour rate.`
+    : 'Base rate is $75/hr per ski.';
+}
+
 function calcPrice() {
   const craft = getSelected('js-craft-opts', 'craft') || 'jetski2';
   const hours = parseInt(getSelected('js-dur-opts','hours')) || 2;
@@ -1833,8 +1871,9 @@ function calcPrice() {
   const name = CRAFT_NAMES[craft] || craft;
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hrs';
   document.getElementById('js-price').textContent = '$'+price.toLocaleString();
-  document.getElementById('js-desc').textContent = name+' · '+hLabel+(drone ? ' · Drone added' : '');
-  document.getElementById('js-book-btn').textContent = 'Continue to Calendar & Waiver →';
+  document.getElementById('js-desc').textContent = `${name} · ${hLabel} · ${getHourlyRateLabel(craft, hours, basePrice)}${drone ? ' · Drone added' : ''}`;
+  document.getElementById('js-book-btn').textContent = 'Continue to Calendar & Contact + Waiver →';
+  document.getElementById('js-savings-note').textContent = getSavingsLabel(craft, hours, basePrice);
   document.getElementById('js-book-btn').href = buildBookingUrl({
     type: 'jetski',
     craft,
@@ -1852,7 +1891,7 @@ function calcBoatPrice() {
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hr'+(hours>1?'s':'');
   document.getElementById('bt-price').textContent = '$'+price.toLocaleString();
   document.getElementById('bt-desc').textContent = 'Boat Rental · '+hLabel+' · Up to 10 guests'+(drone ? ' · Drone added' : '');
-  document.getElementById('bt-book-btn').textContent = 'Continue to Calendar & Waiver →';
+  document.getElementById('bt-book-btn').textContent = 'Continue to Calendar & Contact + Waiver →';
   document.getElementById('bt-book-btn').href = buildBookingUrl({
     type: 'boat',
     craft: 'boat',
@@ -1871,7 +1910,7 @@ function calcBundlePrice() {
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hrs';
   document.getElementById('bd-price').textContent = '$'+price.toLocaleString();
   document.getElementById('bd-desc').textContent = `${CRAFT_NAMES[craft]} · ${hLabel}${drone ? ' · Drone added' : ''}`;
-  document.getElementById('bd-book-btn').textContent = 'Continue to Calendar & Waiver →';
+  document.getElementById('bd-book-btn').textContent = 'Continue to Calendar & Contact + Waiver →';
   document.getElementById('bd-book-btn').href = buildBookingUrl({
     type: 'bundle',
     craft,

@@ -6,7 +6,7 @@
 <meta name="description" content="Complete the Shoreline Aquatics waiver, review your rental details, and pay the booking deposit.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking-confirmation/">
-<title>Waiver & Deposit | Shoreline Aquatics</title>
+<title>Contact, Waiver & Deposit | Shoreline Aquatics</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box}
@@ -15,7 +15,7 @@
   --orange:#e8841a;
   --ink:#0b1c30;
   --ink-soft:rgba(11,28,48,0.82);
-  --panel:rgba(255,255,255,0.84);
+  --panel:rgba(245,249,251,0.8);
   --line:rgba(11,28,48,0.1);
   --muted:rgba(11,28,48,0.66);
   --success:#237a51;
@@ -27,9 +27,9 @@ body{
   font-family:'DM Sans',sans-serif;
   color:var(--ink);
   background:
-    radial-gradient(circle at top left, rgba(15,184,224,0.14), transparent 24%),
-    radial-gradient(circle at top right, rgba(245,166,35,0.14), transparent 24%),
-    linear-gradient(180deg, #f5fbff 0%, #edf6fb 48%, #f8fbfd 100%);
+    radial-gradient(circle at top left, rgba(15,184,224,0.16), transparent 26%),
+    radial-gradient(circle at top right, rgba(245,166,35,0.18), transparent 24%),
+    linear-gradient(180deg, #dbe9ef 0%, #e6f0f4 42%, #dfeaf0 100%);
 }
 a{color:inherit}
 .shell{max-width:1220px;margin:0 auto;padding:32px 24px 64px}
@@ -119,12 +119,12 @@ h3{font-size:1.75rem}
 .field-block,
 .waiver-card,
 .legal-box{
-  background:rgba(255,255,255,.68);border:1px solid rgba(11,28,48,.08);border-radius:24px;padding:22px
+  background:rgba(243,248,250,.74);border:1px solid rgba(11,28,48,.08);border-radius:24px;padding:22px
 }
 .waiver-card{
   background:
-    radial-gradient(circle at top right, rgba(245,166,35,.14), transparent 34%),
-    linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(236,246,251,.98) 100%);
+    radial-gradient(circle at top right, rgba(245,166,35,.16), transparent 34%),
+    linear-gradient(180deg, rgba(244,248,250,.98) 0%, rgba(225,236,241,.98) 100%);
   border-color:rgba(245,166,35,.24);
   box-shadow:0 24px 70px rgba(13,37,61,.12)
 }
@@ -225,10 +225,10 @@ h3{font-size:1.75rem}
 
     <div class="hero">
       <div class="hero-card">
-        <div class="eyebrow">Waiver & Deposit</div>
-        <h1>Complete The <span class="accent">Waiver</span> And Pay The Deposit</h1>
+        <div class="eyebrow">Contact + Waiver</div>
+        <h1>Complete The <span class="accent">Contact, Waiver</span> And Deposit</h1>
         <div class="hero-copy">
-          This is the final booking step before the thank-you page. Fill in the rider details, complete the waiver, and pay the $50 booking deposit to hold the rental date.
+          This is the final booking step before the thank-you page. Fill in the rider contact details, complete the waiver, and pay the $50 booking deposit to hold the rental date.
         </div>
       </div>
     </div>
@@ -236,7 +236,7 @@ h3{font-size:1.75rem}
     <div class="empty" id="empty-state" hidden>
       <div class="block-label">No Booking Yet</div>
       <h2>Start with the calendar first.</h2>
-      <p>No booking details are saved yet. Head back to the calendar page, choose the rental date, and the waiver and deposit step will be ready here.</p>
+      <p>No booking details are saved yet. Head back to the calendar page, choose the rental date, and the combined contact + waiver step will be ready here.</p>
       <div class="actions">
         <a class="btn btn-primary" id="empty-calendar-link" href="../jetski-booking/">Go To Booking Calendar</a>
       </div>
@@ -244,8 +244,8 @@ h3{font-size:1.75rem}
 
     <div class="content-grid" id="request-wrap" hidden>
       <div class="form-card">
-        <div class="block-label">Rider Details</div>
-        <h2>Complete the rider info and waiver</h2>
+        <div class="block-label">Contact + Waiver</div>
+        <h2>Complete the rider details and waiver</h2>
         <div class="section-copy">
           Finish the form below, then pay the booking deposit to move into the thank-you page and arrival instructions.
         </div>
@@ -307,7 +307,7 @@ h3{font-size:1.75rem}
               <div class="section-copy">
                 The rider confirms the normal on-the-water risks and Shoreline’s safety instructions before checkout.
               </div>
-              <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">View full waiver</a>
+              <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">Direct contact + waiver link</a>
 
               <div class="legal-box">
                 <div class="mini-kicker">Agreement Summary</div>
@@ -496,10 +496,10 @@ function populateSummary(booking) {
   setText("summary-total", formatCurrency(booking.total || 0));
   setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
   setText("summary-note", booking.craft === 'boat'
-    ? 'Your boat rental with captain included is ready for the waiver and deposit step.'
+    ? 'Your boat rental with captain included is ready for the contact, waiver, and deposit step.'
     : booking.craft?.startsWith('bundle')
-      ? 'Your lake-day bundle is ready for the waiver and deposit step.'
-      : 'Your Yamaha jet ski rental is ready for the waiver and deposit step.');
+      ? 'Your lake-day bundle is ready for the contact, waiver, and deposit step.'
+      : 'Your Yamaha jet ski rental is ready for the contact, waiver, and deposit step.');
   setText("summary-date", booking.date || '-');
   setText("summary-time", formatTimeLabel(booking.time));
   setText("summary-location", booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
@@ -767,8 +767,8 @@ async function handleStripeCheckout(event) {
   const stripeButton = qs('stripe-link');
   stripeButton.setAttribute('aria-disabled', 'true');
   stripeButton.disabled = true;
-  stripeButton.textContent = 'Saving waiver...';
-  setStatus('Saving the rider details and waiver before checkout...');
+  stripeButton.textContent = 'Saving contact + waiver...';
+  setStatus('Saving the rider contact details and waiver before checkout...');
 
   try {
     const result = await syncBookingToOps(payload);
