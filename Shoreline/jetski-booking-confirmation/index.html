@@ -279,20 +279,8 @@ h3{font-size:1.75rem}
                   <input id="date-of-birth" name="dateOfBirth" type="date" required>
                 </div>
                 <div class="field">
-                  <label for="contact-method">Preferred contact</label>
-                  <select id="contact-method" name="contactMethod">
-                    <option value="text">Text message</option>
-                    <option value="call">Phone call</option>
-                    <option value="email">Email</option>
-                  </select>
-                </div>
-                <div class="field">
                   <label for="party-size">Party size</label>
                   <input id="party-size" name="partySize" type="number" min="1" max="20" value="2">
-                </div>
-                <div class="field full">
-                  <label for="location">Launch or meeting spot</label>
-                  <input id="location" name="location" type="text" value="Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX">
                 </div>
                 <div class="field full">
                   <label for="notes">Notes</label>
@@ -307,7 +295,7 @@ h3{font-size:1.75rem}
               <div class="section-copy">
                 The rider confirms the normal on-the-water risks and Shoreline’s safety instructions before checkout.
               </div>
-              <a class="waiver-link" href="../waiver/" target="_blank" rel="noreferrer">Direct contact + waiver link</a>
+              <a class="waiver-link" href="../waiver/#terms" target="_blank" rel="noreferrer">View full waiver terms</a>
 
               <div class="legal-box">
                 <div class="mini-kicker">Agreement Summary</div>
@@ -345,14 +333,6 @@ h3{font-size:1.75rem}
                 <div class="field">
                   <label for="signature-date">Waiver date</label>
                   <input id="signature-date" name="signatureDate" type="date" required>
-                </div>
-                <div class="field">
-                  <label for="emergency-name">Emergency contact name</label>
-                  <input id="emergency-name" name="emergencyName" type="text" placeholder="Optional but recommended">
-                </div>
-                <div class="field">
-                  <label for="emergency-phone">Emergency contact phone</label>
-                  <input id="emergency-phone" name="emergencyPhone" type="tel" placeholder="(469) 555-0000">
                 </div>
               </div>
             </div>
@@ -513,9 +493,7 @@ function populateForm(booking) {
   if (booking.name) qs('name').value = booking.name;
   if (booking.phone) qs('phone').value = booking.phone;
   if (booking.email) qs('email').value = booking.email;
-  if (booking.contactMethod) qs('contact-method').value = booking.contactMethod;
   if (booking.partySize) qs('party-size').value = booking.partySize;
-  if (booking.location) qs('location').value = booking.location;
   if (booking.notes) qs('notes').value = booking.notes;
   if (booking.waiver?.dateOfBirth) qs('date-of-birth').value = booking.waiver.dateOfBirth;
   if (booking.waiver?.acceptedRisk) qs('waiver-risk').checked = true;
@@ -524,8 +502,6 @@ function populateForm(booking) {
   if (booking.waiver?.initials) qs('waiver-initials').value = booking.waiver.initials;
   if (booking.waiver?.signature) qs('signature').value = booking.waiver.signature;
   if (booking.waiver?.signatureDate) qs('signature-date').value = booking.waiver.signatureDate;
-  if (booking.waiver?.emergencyName) qs('emergency-name').value = booking.waiver.emergencyName;
-  if (booking.waiver?.emergencyPhone) qs('emergency-phone').value = booking.waiver.emergencyPhone;
 }
 
 function updatePaymentUi(booking) {
@@ -616,8 +592,6 @@ function applyCustomerPrefill(customer) {
     if (!qs('waiver-initials').value.trim()) qs('waiver-initials').value = customer.waiverInitials || '';
     if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
     if (!qs('signature-date').value) qs('signature-date').value = new Date().toISOString().slice(0, 10);
-    if (!qs('emergency-name').value.trim()) qs('emergency-name').value = customer.emergencyName || '';
-    if (!qs('emergency-phone').value.trim()) qs('emergency-phone').value = customer.emergencyPhone || '';
   }
 
   showMatchedCustomer(customer);
@@ -663,8 +637,8 @@ function createPayload(requireBase = true) {
     name: qs('name').value.trim(),
     phone: qs('phone').value.trim(),
     email: qs('email').value.trim(),
-    location: qs('location').value.trim(),
-    contactMethod: qs('contact-method').value,
+    location: base?.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX',
+    contactMethod: base?.contactMethod || matchedCustomer?.contactMethod || 'text',
     partySize: qs('party-size').value,
     notes: qs('notes').value.trim(),
     crmMatchId: matchedCustomer?.id || base?.crmMatchId || null,
@@ -676,8 +650,8 @@ function createPayload(requireBase = true) {
       initials: qs('waiver-initials').value.trim(),
       signature: qs('signature').value.trim(),
       signatureDate: qs('signature-date').value,
-      emergencyName: qs('emergency-name').value.trim(),
-      emergencyPhone: qs('emergency-phone').value.trim()
+      emergencyName: '',
+      emergencyPhone: ''
     }
   };
 }
@@ -844,7 +818,7 @@ qs('name').addEventListener('blur', () => {
   }
   updateContactLinks();
 });
-['contact-method','party-size','location','notes','waiver-risk','waiver-damage','waiver-verify','date-of-birth','waiver-initials','signature','signature-date','emergency-name','emergency-phone'].forEach((id) => {
+['party-size','notes','waiver-risk','waiver-damage','waiver-verify','date-of-birth','waiver-initials','signature','signature-date'].forEach((id) => {
   const element = qs(id);
   if (!element) return;
   element.addEventListener('change', updateContactLinks);
