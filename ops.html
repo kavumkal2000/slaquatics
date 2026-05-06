@@ -611,13 +611,25 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="import-panel">
     <div>
       <div class="title">LandAirSea device registry</div>
-      <div class="copy">Keep each tracker’s serial number, monthly plan, transaction details, and assigned ski or boat in one place. This is device management inside Shoreline Ops, not the live GPS map feed.</div>
+      <div class="copy">Save each tracker’s ShareSpot link, serial number, plan, billing details, and assigned ski or boat in one place. Use the live panel below to open the current tracker map inside ops or jump out to LandAirSea when needed.</div>
     </div>
     <div class="import-pill" id="tracking-summary-pill">No trackers added yet</div>
   </div>
+  <div class="compose-grid" style="margin-bottom:1rem;">
+    <div class="list-card">
+      <h3>Selected live tracker</h3>
+      <p>Choose a device below to view the saved ShareSpot link, billing details, and latest assignment without leaving ops.</p>
+      <div class="list-stack" id="tracking-selected-card" style="margin-top:1rem;"></div>
+    </div>
+    <div class="list-card">
+      <h3>Live map</h3>
+      <p>If LandAirSea allows embedding for your ShareSpot link, it will load below. If not, use the open button to view the live location in a new tab.</p>
+      <div id="tracking-live-map" style="margin-top:1rem;"></div>
+    </div>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Device</th><th>Assigned asset</th><th>Provider & Plan</th><th>Billing</th><th>Transaction</th><th>Status</th></tr></thead>
+      <thead><tr><th>Device</th><th>Assigned asset</th><th>Provider & Plan</th><th>Billing</th><th>Transaction</th><th>Status & Live</th></tr></thead>
       <tbody id="tracking-table"></tbody>
     </table>
   </div>
@@ -952,6 +964,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Transaction ID</label><input type="text" id="t-transaction-id" placeholder="121609359673"></div>
         <div class="form-group"><label>Authorization code</label><input type="text" id="t-auth-code" placeholder="924498"></div>
         <div class="form-group"><label>Transaction date</label><input type="datetime-local" id="t-transaction-date"></div>
+        <div class="form-group"><label>ShareSpot / live map URL</label><input type="url" id="t-share-url" placeholder="https://..." ></div>
+        <div class="form-group"><label>Last location check-in</label><input type="datetime-local" id="t-last-checkin"></div>
         <div class="form-group"><label>Account / contact name</label><input type="text" id="t-contact-name" placeholder="Zain Jamal"></div>
         <div class="form-group"><label>Contact email</label><input type="email" id="t-contact-email" placeholder="shorelinerentals3@gmail.com"></div>
         <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="t-notes" placeholder="Install notes, renewal reminders, or any LandAirSea details to keep with this tracker."></textarea></div>
@@ -1232,6 +1246,8 @@ const TRACKER_SEED = [
     transactionId: '121609356865',
     authorizationCode: '457546',
     transactionDate: '2026-05-05T14:49',
+    shareSpotUrl: '',
+    lastCheckIn: '',
     contactName: 'Zain Jamal',
     contactEmail: 'shorelinerentals3@gmail.com',
     notes: 'Imported from LandAirSea activation email.'
@@ -1251,12 +1267,15 @@ const TRACKER_SEED = [
     transactionId: '121609359673',
     authorizationCode: '924498',
     transactionDate: '2026-05-05T18:51',
+    shareSpotUrl: '',
+    lastCheckIn: '',
     contactName: 'Zain Jamal',
     contactEmail: 'shorelinerentals3@gmail.com',
     notes: 'Imported from LandAirSea activation email.'
   }
 ];
 let trackers = TRACKER_SEED.map((tracker) => ({...tracker}));
+let selectedTrackerId = null;
 
 let invoices = [];
 let communicationsLog = [];
@@ -2503,6 +2522,17 @@ function trackerDateLabel(value) {
   if (!parsed) return '—';
   return parsed.toLocaleString([], {month:'short', day:'numeric', year:'numeric'});
 }
+function getSelectedTracker() {
+  const current = trackers.find((tracker) => tracker.id === selectedTrackerId);
+  if (current) return current;
+  const preferred = trackers.find((tracker) => tracker.shareSpotUrl) || trackers[0] || null;
+  if (preferred) selectedTrackerId = preferred.id;
+  return preferred;
+}
+function openTrackerLiveMap(id) {
+  selectedTrackerId = id;
+  renderTracking();
+}
 function renderTracking() {
   const activeTrackers = trackers.filter((tracker) => String(tracker.status || '').toLowerCase() === 'active');
   const assignedTrackers = trackers.filter((tracker) => String(tracker.assignedAsset || '').trim());
@@ -2526,6 +2556,9 @@ function renderTracking() {
   const spareMetaEl = document.getElementById('tracking-kpi-spare-meta');
   const summaryEl = document.getElementById('tracking-summary-pill');
   const tableEl = document.getElementById('tracking-table');
+  const selectedCardEl = document.getElementById('tracking-selected-card');
+  const liveMapEl = document.getElementById('tracking-live-map');
+  const selectedTracker = getSelectedTracker();
 
   if (activeEl) activeEl.textContent = activeTrackers.length.toLocaleString();
   if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live devices currently reporting` : 'No active tracker plans on file';
@@ -2536,6 +2569,42 @@ function renderTracking() {
   if (spareEl) spareEl.textContent = spareTrackers.length.toLocaleString();
   if (spareMetaEl) spareMetaEl.textContent = spareTrackers.length ? `${spareTrackers.length} device${spareTrackers.length === 1 ? '' : 's'} ready for install or reassignment` : 'Every saved tracker is assigned';
   if (summaryEl) summaryEl.textContent = trackers.length ? `${trackers.length} tracker${trackers.length === 1 ? '' : 's'} · ${moneyLabel(monthlyCost)}/mo` : 'No trackers added yet';
+  if (selectedCardEl) {
+    selectedCardEl.innerHTML = selectedTracker ? `
+      <div class="list-row">
+        <div class="list-row-main">
+          <strong>${escapeHtml(selectedTracker.name || 'Unnamed tracker')}</strong>
+          <div class="sub">${escapeHtml(selectedTracker.assignedAsset || 'Unassigned / spare')} · ${escapeHtml(selectedTracker.provider || 'LandAirSea')} · ${escapeHtml(selectedTracker.model || 'Unknown model')}</div>
+          <div class="sub">Serial ${escapeHtml(selectedTracker.serialNumber || '—')} · ${escapeHtml(selectedTracker.trackingPlan || 'No tracking plan')}</div>
+          <div class="sub">Last check-in ${escapeHtml(trackerDateLabel(selectedTracker.lastCheckIn))} · Monthly ${moneyLabel(selectedTracker.monthlyFee || 0)}</div>
+        </div>
+        <div class="list-row-actions">
+          ${trackerStatusBadge(selectedTracker.status)}
+          ${selectedTracker.shareSpotUrl ? `<a class="btn btn-primary btn-sm" href="${escapeHtml(selectedTracker.shareSpotUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">Open live map</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.55;cursor:default;">No ShareSpot link</span>'}
+        </div>
+      </div>
+      <div class="list-row">
+        <div class="list-row-main">
+          <strong>Billing + account details</strong>
+          <div class="sub">${escapeHtml(selectedTracker.paymentPlan || 'No payment plan')} · ${escapeHtml(selectedTracker.contactName || 'No contact name')} · ${escapeHtml(selectedTracker.contactEmail || 'No contact email')}</div>
+          <div class="sub">Txn ${escapeHtml(selectedTracker.transactionId || '—')} · Auth ${escapeHtml(selectedTracker.authorizationCode || '—')} · Activated ${escapeHtml(trackerDateLabel(selectedTracker.transactionDate))}</div>
+          ${selectedTracker.notes ? `<div class="sub">${escapeHtml(selectedTracker.notes)}</div>` : ''}
+        </div>
+      </div>
+    ` : '<div class="empty"><div class="icon">📡</div><p>Save a tracker to start live monitoring.</p></div>';
+  }
+  if (liveMapEl) {
+    liveMapEl.innerHTML = selectedTracker?.shareSpotUrl ? `
+      <div style="border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;background:rgba(255,255,255,0.03);">
+        <iframe src="${escapeHtml(selectedTracker.shareSpotUrl)}" title="Tracker live map" style="width:100%;height:420px;border:0;background:#0b1727;"></iframe>
+      </div>
+      <div class="compose-actions" style="margin-top:0.75rem;">
+        <a class="btn btn-primary btn-sm" href="${escapeHtml(selectedTracker.shareSpotUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">Open ShareSpot</a>
+        <button class="btn btn-ghost btn-sm" onclick="renderTracking()">Refresh panel</button>
+      </div>
+      <p class="note-soft" style="margin-top:0.75rem;">If LandAirSea blocks iframe embedding for this link, use <strong>Open ShareSpot</strong> to view the live location in a full tab.</p>
+    ` : '<div class="empty"><div class="icon">🛰️</div><p>Add a ShareSpot link to a tracker and it will appear here as a live map panel.</p></div>';
+  }
 
   if (!tableEl) return;
   const ordered = sortNewestFirst(trackers, (tracker) => tracker.transactionDate || tracker.createdAt || '');
@@ -2561,7 +2630,12 @@ function renderTracking() {
         <div>${tracker.transactionId ? `Txn ${escapeHtml(tracker.transactionId)}` : 'No transaction saved'}</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${tracker.authorizationCode ? `Auth ${escapeHtml(tracker.authorizationCode)} · ` : ''}${escapeHtml(trackerDateLabel(tracker.transactionDate))}</div>
       </td>
-      <td>${trackerStatusBadge(tracker.status)}</td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-start;">
+          ${trackerStatusBadge(tracker.status)}
+          <button class="btn btn-ghost btn-sm" onclick="openTrackerLiveMap(${Number(tracker.id)})">${tracker.shareSpotUrl ? 'View live map' : 'Select tracker'}</button>
+        </div>
+      </td>
     </tr>
   `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">📡</div><p>No trackers saved yet. Add the first LandAirSea device here.</p></div></td></tr>';
 }
@@ -2587,11 +2661,14 @@ function saveTracker() {
     transactionId: document.getElementById('t-transaction-id').value.trim(),
     authorizationCode: document.getElementById('t-auth-code').value.trim(),
     transactionDate: document.getElementById('t-transaction-date').value.trim(),
+    shareSpotUrl: document.getElementById('t-share-url').value.trim(),
+    lastCheckIn: document.getElementById('t-last-checkin').value.trim(),
     contactName: document.getElementById('t-contact-name').value.trim(),
     contactEmail: document.getElementById('t-contact-email').value.trim(),
     notes: document.getElementById('t-notes').value.trim(),
     createdAt: new Date().toISOString()
   });
+  selectedTrackerId = trackers[0]?.id || null;
   saveData();
   closeModal('tracking-modal');
   renderTracking();
@@ -2599,7 +2676,7 @@ function saveTracker() {
   [
     't-name','t-provider','t-model','t-serial','t-payment-plan','t-tracking-plan',
     't-monthly-fee','t-activation-fee','t-transaction-id','t-auth-code',
-    't-transaction-date','t-contact-name','t-contact-email','t-notes'
+    't-transaction-date','t-share-url','t-last-checkin','t-contact-name','t-contact-email','t-notes'
   ].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('t-provider').value = 'LandAirSea';
   document.getElementById('t-model').value = 'FiftyFour';
