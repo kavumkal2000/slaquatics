@@ -352,6 +352,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <button class="nav-item" onclick="showPage('expenses',this)"><span class="icon">💸</span><span>Expenses</span></button>
   <button class="nav-item" onclick="showPage('fuel',this)"><span class="icon">⛽</span><span>Fuel Log</span></button>
   <button class="nav-item" onclick="showPage('maintenance',this)"><span class="icon">🔧</span><span>Maintenance</span></button>
+  <button class="nav-item" onclick="showPage('tracking',this)"><span class="icon">📡</span><span>Tracking</span></button>
   <div class="nav-section">Growth</div>
   <button class="nav-item" onclick="showPage('comms',this)"><span class="icon">💬</span><span>Comms</span></button>
   <button class="nav-item" onclick="showPage('reviews',this)"><span class="icon">⭐</span><span>Reviews</span></button>
@@ -591,6 +592,33 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <table>
       <thead><tr><th>Equipment</th><th>Service type</th><th>Date</th><th>Hours at service</th><th>Cost</th><th>Notes</th></tr></thead>
       <tbody id="maint-log"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ TRACKING ═══ -->
+<div class="page" id="page-tracking">
+  <div class="section-head">
+    <h2>GPS Tracking</h2>
+    <button class="btn btn-primary btn-sm" onclick="openModal('tracking-modal')">+ Add Tracker</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">Active devices</div><div class="value" id="tracking-kpi-active">0</div><div class="delta up" id="tracking-kpi-active-meta">0 units actively assigned</div></div>
+    <div class="kpi-card"><div class="label">Monthly tracking cost</div><div class="value" style="color:var(--amber);" id="tracking-kpi-monthly">$0</div><div class="delta warn" id="tracking-kpi-monthly-meta">Recurring device plans</div></div>
+    <div class="kpi-card"><div class="label">Assigned to fleet</div><div class="value" style="color:var(--green);" id="tracking-kpi-assigned">0</div><div class="delta up" id="tracking-kpi-assigned-meta">Trackers tied to a ski or boat</div></div>
+    <div class="kpi-card"><div class="label">Unassigned / spare</div><div class="value" style="color:var(--wave);" id="tracking-kpi-spare">0</div><div class="delta warn" id="tracking-kpi-spare-meta">Ready for install or reassignment</div></div>
+  </div>
+  <div class="import-panel">
+    <div>
+      <div class="title">LandAirSea device registry</div>
+      <div class="copy">Keep each tracker’s serial number, monthly plan, transaction details, and assigned ski or boat in one place. This is device management inside Shoreline Ops, not the live GPS map feed.</div>
+    </div>
+    <div class="import-pill" id="tracking-summary-pill">No trackers added yet</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Device</th><th>Assigned asset</th><th>Provider & Plan</th><th>Billing</th><th>Transaction</th><th>Status</th></tr></thead>
+      <tbody id="tracking-table"></tbody>
     </table>
   </div>
 </div>
@@ -889,6 +917,53 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
 </div>
 
+<!-- TRACKING MODAL -->
+<div class="modal-overlay" id="tracking-modal">
+  <div class="modal" style="width:min(760px,92vw);">
+    <div class="modal-head"><h3>Add Tracker</h3><button class="modal-close" onclick="closeModal('tracking-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid full">
+        <div class="form-group"><label>Device label</label><input type="text" id="t-name" placeholder="Yamaha VX #1 tracker"></div>
+        <div class="form-group"><label>Provider</label><input type="text" id="t-provider" value="LandAirSea"></div>
+        <div class="form-group"><label>Model</label><input type="text" id="t-model" value="FiftyFour"></div>
+        <div class="form-group"><label>Serial number</label><input type="text" id="t-serial" placeholder="8882529198"></div>
+        <div class="form-group"><label>Assigned asset</label>
+          <select id="t-asset">
+            <option value="">Unassigned / spare</option>
+            <option>Yamaha VX #1</option>
+            <option>Yamaha VX #2</option>
+            <option>Boat</option>
+            <option>Trailer</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="t-status">
+            <option value="active">Active</option>
+            <option value="spare">Spare</option>
+            <option value="installing">Installing</option>
+            <option value="inactive">Inactive</option>
+            <option value="lost">Lost</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Payment plan</label><input type="text" id="t-payment-plan" value="Monthly"></div>
+        <div class="form-group"><label>Tracking plan</label><input type="text" id="t-tracking-plan" value="180 second updates"></div>
+        <div class="form-group"><label>Monthly fee</label><input type="number" id="t-monthly-fee" placeholder="19.95" step="0.01"></div>
+        <div class="form-group"><label>Activation fee</label><input type="number" id="t-activation-fee" placeholder="0.00" step="0.01"></div>
+        <div class="form-group"><label>Transaction ID</label><input type="text" id="t-transaction-id" placeholder="121609359673"></div>
+        <div class="form-group"><label>Authorization code</label><input type="text" id="t-auth-code" placeholder="924498"></div>
+        <div class="form-group"><label>Transaction date</label><input type="datetime-local" id="t-transaction-date"></div>
+        <div class="form-group"><label>Account / contact name</label><input type="text" id="t-contact-name" placeholder="Zain Jamal"></div>
+        <div class="form-group"><label>Contact email</label><input type="email" id="t-contact-email" placeholder="shorelinerentals3@gmail.com"></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="t-notes" placeholder="Install notes, renewal reminders, or any LandAirSea details to keep with this tracker."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('tracking-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTracker()">Save Tracker</button>
+    </div>
+  </div>
+</div>
+
 <!-- CRM PASTE MODAL -->
 <div class="modal-overlay" id="crm-paste-modal">
   <div class="modal" style="width:min(760px,92vw);">
@@ -918,6 +993,7 @@ const LOCAL_KEYS = {
   expenses: 'sla_expenses',
   fuelLog: 'sla_fuel',
   maintLog: 'sla_maint',
+  trackers: 'sla_trackers',
   invoices: 'sla_invoices',
   communicationsLog: 'sla_comms',
   reviewRequests: 'sla_review_requests',
@@ -945,6 +1021,7 @@ function snapshotState() {
     expenses,
     fuelLog,
     maintLog,
+    trackers,
     invoices,
     communicationsLog,
     reviewRequests,
@@ -960,6 +1037,7 @@ function applyState(nextState = {}) {
   if (Array.isArray(nextState.expenses)) expenses = nextState.expenses;
   if (Array.isArray(nextState.fuelLog)) fuelLog = nextState.fuelLog;
   if (Array.isArray(nextState.maintLog)) maintLog = nextState.maintLog;
+  if (Array.isArray(nextState.trackers)) trackers = nextState.trackers;
   if (Array.isArray(nextState.invoices)) invoices = nextState.invoices;
   if (Array.isArray(nextState.communicationsLog)) communicationsLog = nextState.communicationsLog;
   if (Array.isArray(nextState.reviewRequests)) reviewRequests = nextState.reviewRequests;
@@ -1138,6 +1216,48 @@ let maintLog = [
   {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'},
 ];
 
+const TRACKER_SEED = [
+  {
+    id: 1,
+    name: 'Yamaha VX #1 Tracker',
+    provider: 'LandAirSea',
+    model: 'FiftyFour',
+    serialNumber: '8882529198',
+    assignedAsset: 'Yamaha VX #1',
+    status: 'active',
+    paymentPlan: 'Monthly',
+    trackingPlan: '180 second updates',
+    monthlyFee: 19.95,
+    activationFee: 0,
+    transactionId: '121609356865',
+    authorizationCode: '457546',
+    transactionDate: '2026-05-05T14:49',
+    contactName: 'Zain Jamal',
+    contactEmail: 'shorelinerentals3@gmail.com',
+    notes: 'Imported from LandAirSea activation email.'
+  },
+  {
+    id: 2,
+    name: 'Yamaha VX #2 Tracker',
+    provider: 'LandAirSea',
+    model: 'FiftyFour',
+    serialNumber: '8882529189',
+    assignedAsset: 'Yamaha VX #2',
+    status: 'active',
+    paymentPlan: 'Monthly',
+    trackingPlan: '180 second updates',
+    monthlyFee: 19.95,
+    activationFee: 0,
+    transactionId: '121609359673',
+    authorizationCode: '924498',
+    transactionDate: '2026-05-05T18:51',
+    contactName: 'Zain Jamal',
+    contactEmail: 'shorelinerentals3@gmail.com',
+    notes: 'Imported from LandAirSea activation email.'
+  }
+];
+let trackers = TRACKER_SEED.map((tracker) => ({...tracker}));
+
 let invoices = [];
 let communicationsLog = [];
 let reviewRequests = [];
@@ -1253,6 +1373,12 @@ function bookingTotalValue(booking) {
 }
 function bookingTotalLabel(booking) {
   return `$${bookingTotalValue(booking).toLocaleString()}`;
+}
+function moneyLabel(value) {
+  return `$${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
+    maximumFractionDigits: 2
+  })}`;
 }
 function dateValue(value) {
   if (!value || value === 'N/A' || value === 'TBD') return null;
@@ -2068,7 +2194,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement'};
   document.getElementById('page-title').textContent = titles[id]||id;
   if(id==='bookings') renderBookings();
   if(id==='invoices') renderInvoices();
@@ -2076,6 +2202,7 @@ function showPage(id, btn) {
   if(id==='expenses') renderExpenses();
   if(id==='fuel') renderFuel();
   if(id==='maintenance') renderMaint();
+  if(id==='tracking') renderTracking();
   if(id==='comms') renderCommsPanel();
   if(id==='reviews') renderReviewHub();
   if(id==='social') renderSocialQueue();
@@ -2357,6 +2484,129 @@ function filterByStatus(status, btn) {
 function statusBadge(s) {
   const map={confirmed:'badge-confirmed',pending:'badge-pending',noshow:'badge-noshow',completed:'badge-completed',cancelled:'badge-cancelled'};
   return `<span class="badge ${map[s]||''}">${s}</span>`;
+}
+function trackerStatusBadge(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  const className = normalized === 'active'
+    ? 'badge-confirmed'
+    : normalized === 'spare'
+      ? 'badge-completed'
+      : normalized === 'installing'
+        ? 'badge-pending'
+        : normalized === 'lost'
+          ? 'badge-noshow'
+          : 'badge-cancelled';
+  return `<span class="badge ${className}">${escapeHtml(status || 'Unknown')}</span>`;
+}
+function trackerDateLabel(value) {
+  const parsed = dateValue(value);
+  if (!parsed) return '—';
+  return parsed.toLocaleString([], {month:'short', day:'numeric', year:'numeric'});
+}
+function renderTracking() {
+  const activeTrackers = trackers.filter((tracker) => String(tracker.status || '').toLowerCase() === 'active');
+  const assignedTrackers = trackers.filter((tracker) => String(tracker.assignedAsset || '').trim());
+  const spareTrackers = trackers.filter((tracker) => {
+    const status = String(tracker.status || '').toLowerCase();
+    return !String(tracker.assignedAsset || '').trim() || status === 'spare';
+  });
+  const monthlyCost = trackers.reduce((sum, tracker) => {
+    const status = String(tracker.status || '').toLowerCase();
+    if (status === 'inactive' || status === 'lost') return sum;
+    return sum + Number(tracker.monthlyFee || 0);
+  }, 0);
+
+  const activeEl = document.getElementById('tracking-kpi-active');
+  const activeMetaEl = document.getElementById('tracking-kpi-active-meta');
+  const monthlyEl = document.getElementById('tracking-kpi-monthly');
+  const monthlyMetaEl = document.getElementById('tracking-kpi-monthly-meta');
+  const assignedEl = document.getElementById('tracking-kpi-assigned');
+  const assignedMetaEl = document.getElementById('tracking-kpi-assigned-meta');
+  const spareEl = document.getElementById('tracking-kpi-spare');
+  const spareMetaEl = document.getElementById('tracking-kpi-spare-meta');
+  const summaryEl = document.getElementById('tracking-summary-pill');
+  const tableEl = document.getElementById('tracking-table');
+
+  if (activeEl) activeEl.textContent = activeTrackers.length.toLocaleString();
+  if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live devices currently reporting` : 'No active tracker plans on file';
+  if (monthlyEl) monthlyEl.textContent = moneyLabel(monthlyCost);
+  if (monthlyMetaEl) monthlyMetaEl.textContent = `${trackers.filter((tracker) => Number(tracker.monthlyFee || 0) > 0).length} recurring tracker plan${trackers.length === 1 ? '' : 's'}`;
+  if (assignedEl) assignedEl.textContent = assignedTrackers.length.toLocaleString();
+  if (assignedMetaEl) assignedMetaEl.textContent = assignedTrackers.length ? `${assignedTrackers.length} device${assignedTrackers.length === 1 ? '' : 's'} tied to the fleet` : 'No devices assigned to the fleet yet';
+  if (spareEl) spareEl.textContent = spareTrackers.length.toLocaleString();
+  if (spareMetaEl) spareMetaEl.textContent = spareTrackers.length ? `${spareTrackers.length} device${spareTrackers.length === 1 ? '' : 's'} ready for install or reassignment` : 'Every saved tracker is assigned';
+  if (summaryEl) summaryEl.textContent = trackers.length ? `${trackers.length} tracker${trackers.length === 1 ? '' : 's'} · ${moneyLabel(monthlyCost)}/mo` : 'No trackers added yet';
+
+  if (!tableEl) return;
+  const ordered = sortNewestFirst(trackers, (tracker) => tracker.transactionDate || tracker.createdAt || '');
+  tableEl.innerHTML = ordered.length ? ordered.map((tracker) => `
+    <tr>
+      <td>
+        <strong>${escapeHtml(tracker.name || 'Unnamed tracker')}</strong>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.model || 'Unknown model')}${tracker.serialNumber ? ` · S/N ${escapeHtml(tracker.serialNumber)}` : ''}</div>
+      </td>
+      <td>
+        <strong>${escapeHtml(tracker.assignedAsset || 'Unassigned / spare')}</strong>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.contactName || tracker.contactEmail || 'No account contact saved')}</div>
+      </td>
+      <td>
+        <div>${escapeHtml(tracker.provider || 'Unknown provider')}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.paymentPlan || 'No payment plan')}${tracker.trackingPlan ? ` · ${escapeHtml(tracker.trackingPlan)}` : ''}</div>
+      </td>
+      <td>
+        <div style="color:var(--amber);font-weight:500;">${moneyLabel(tracker.monthlyFee || 0)}/mo</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Activation ${moneyLabel(tracker.activationFee || 0)}</div>
+      </td>
+      <td>
+        <div>${tracker.transactionId ? `Txn ${escapeHtml(tracker.transactionId)}` : 'No transaction saved'}</div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${tracker.authorizationCode ? `Auth ${escapeHtml(tracker.authorizationCode)} · ` : ''}${escapeHtml(trackerDateLabel(tracker.transactionDate))}</div>
+      </td>
+      <td>${trackerStatusBadge(tracker.status)}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">📡</div><p>No trackers saved yet. Add the first LandAirSea device here.</p></div></td></tr>';
+}
+function saveTracker() {
+  const name = document.getElementById('t-name').value.trim();
+  const serialNumber = document.getElementById('t-serial').value.trim();
+  if (!name || !serialNumber) {
+    showToast('⚠️ Add a device label and serial number');
+    return;
+  }
+  trackers.unshift({
+    id: nextId(trackers),
+    name,
+    provider: document.getElementById('t-provider').value.trim() || 'LandAirSea',
+    model: document.getElementById('t-model').value.trim() || 'FiftyFour',
+    serialNumber,
+    assignedAsset: document.getElementById('t-asset').value.trim(),
+    status: document.getElementById('t-status').value || 'active',
+    paymentPlan: document.getElementById('t-payment-plan').value.trim(),
+    trackingPlan: document.getElementById('t-tracking-plan').value.trim(),
+    monthlyFee: Number(document.getElementById('t-monthly-fee').value || 0),
+    activationFee: Number(document.getElementById('t-activation-fee').value || 0),
+    transactionId: document.getElementById('t-transaction-id').value.trim(),
+    authorizationCode: document.getElementById('t-auth-code').value.trim(),
+    transactionDate: document.getElementById('t-transaction-date').value.trim(),
+    contactName: document.getElementById('t-contact-name').value.trim(),
+    contactEmail: document.getElementById('t-contact-email').value.trim(),
+    notes: document.getElementById('t-notes').value.trim(),
+    createdAt: new Date().toISOString()
+  });
+  saveData();
+  closeModal('tracking-modal');
+  renderTracking();
+  showToast('📡 Tracker saved');
+  [
+    't-name','t-provider','t-model','t-serial','t-payment-plan','t-tracking-plan',
+    't-monthly-fee','t-activation-fee','t-transaction-id','t-auth-code',
+    't-transaction-date','t-contact-name','t-contact-email','t-notes'
+  ].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('t-provider').value = 'LandAirSea';
+  document.getElementById('t-model').value = 'FiftyFour';
+  document.getElementById('t-payment-plan').value = 'Monthly';
+  document.getElementById('t-tracking-plan').value = '180 second updates';
+  document.getElementById('t-asset').selectedIndex = 0;
+  document.getElementById('t-status').value = 'active';
 }
 
 async function updateStatus(id, status) {
@@ -3164,6 +3414,10 @@ async function bootApp() {
   try {
     ready = await loadData();
     if (!ready) return;
+    if (!trackers.length) {
+      trackers = TRACKER_SEED.map((tracker) => ({...tracker}));
+      await saveData({silent:true});
+    }
     await loadIntegrationStatus();
   } catch (error) {
     console.error('Ops boot failed:', error);
@@ -3179,6 +3433,7 @@ async function bootApp() {
     renderInvoices();
     renderCRM();
     renderExpenses();
+    renderTracking();
     renderCommsPanel();
     renderReviewHub();
     renderSocialQueue();
