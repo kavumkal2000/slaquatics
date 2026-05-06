@@ -381,27 +381,6 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 }
 .fleet-media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.45s ease; }
 .fleet-card:hover .fleet-media img { transform: scale(1.04); }
-.customer-shot {
-  width: 100%;
-  height: 100%;
-  background-image: url('./assets/images/shoreline-customer-moments.png');
-  background-repeat: no-repeat;
-  transition: transform 0.45s ease;
-}
-.fleet-card:hover .customer-shot,
-.ig-tile:hover .customer-shot { transform: scale(1.04); }
-.customer-shot--group {
-  background-size: 155% auto;
-  background-position: 50% 0%;
-}
-.customer-shot--left {
-  background-size: 225% auto;
-  background-position: 0% 100%;
-}
-.customer-shot--right {
-  background-size: 225% auto;
-  background-position: 100% 100%;
-}
 .fleet-body { padding: 1.9rem 1.9rem 2rem; display: flex; flex-direction: column; gap: 1rem; flex: 1; }
 .fleet-badge { display: inline-flex; align-items: center; gap: 0.45rem; width: fit-content; background: rgba(245,166,35,0.12); border: 1px solid rgba(245,166,35,0.28); color: var(--gold); font-size: 0.7rem; padding: 0.3rem 0.9rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.12em; }
 .fleet-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; min-height: 74px; }
@@ -1268,7 +1247,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="fleet-grid">
       <div class="fleet-card" id="jetski">
         <div class="fleet-media">
-          <div class="customer-shot customer-shot--group" role="img" aria-label="Shoreline customers getting ready on Yamaha jet skis at Lake Lewisville"></div>
+          <img src="./assets/images/shoreline-customer-group-wide.png" alt="Shoreline customers getting ready on Yamaha jet skis at Lake Lewisville">
         </div>
         <div class="fleet-body">
           <div class="fleet-badge">2 to 4 Yamaha Jet Skis</div>
@@ -1327,7 +1306,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="bundle-highlight">
       <div class="bundle-media-stack">
         <div class="bundle-media">
-          <div class="customer-shot customer-shot--left" role="img" aria-label="Shoreline riders enjoying a Yamaha jet ski on Lake Lewisville"></div>
+          <img src="./assets/images/shoreline-customer-duo.png" alt="Shoreline riders enjoying a Yamaha jet ski on Lake Lewisville">
         </div>
         <div class="bundle-media">
           <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/66c4486780910831f7c4fbf0.jpeg" alt="Shoreline Aquatics boat rental ready for the lake">
@@ -1898,9 +1877,9 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
       <a href="https://www.instagram.com/shoreline__aquatics" target="_blank" class="btn-ghost">Follow on Instagram</a>
     </div>
     <div class="ig-grid">
-      <div class="ig-tile"><div class="customer-shot customer-shot--group" role="img" aria-label="Shoreline group getting ready on jet skis"></div></div>
-      <div class="ig-tile"><div class="customer-shot customer-shot--left" role="img" aria-label="Two customers smiling on a Yamaha jet ski"></div></div>
-      <div class="ig-tile"><div class="customer-shot customer-shot--right" role="img" aria-label="Customers riding jet skis on Lake Lewisville"></div></div>
+      <div class="ig-tile"><img src="./assets/images/shoreline-customer-group-wide.png" alt="Shoreline group getting ready on jet skis"></div>
+      <div class="ig-tile"><img src="./assets/images/shoreline-customer-duo.png" alt="Two customers smiling on a Yamaha jet ski"></div>
+      <div class="ig-tile"><img src="./assets/images/shoreline-customer-riders.png" alt="Customers riding jet skis on Lake Lewisville"></div>
       <div class="ig-tile"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg" alt="Jet ski rental"></div>
       <div class="ig-tile"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Aerial drone coverage"></div>
       <div class="ig-tile"><img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Drone"></div>
