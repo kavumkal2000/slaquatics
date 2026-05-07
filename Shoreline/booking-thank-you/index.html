@@ -147,9 +147,9 @@ h3{font-size:1.7rem}
           <div class="eyebrow">Thank You</div>
           <h1>You're <span class="accent">Booked In</span></h1>
           <div class="hero-copy">
-            Your booking deposit is paid and your Shoreline request is now on file. Keep this page handy for the arrival directions and next steps before your lake day.
+            Your $50 booking deposit and $5 processing fee are paid, and your Shoreline request is now on file. Keep this page handy for the arrival directions and next steps before your lake day.
           </div>
-          <div class="status" id="payment-status">Booking deposit paid successfully.</div>
+          <div class="status" id="payment-status">Booking payment paid successfully.</div>
         </div>
 
         <div class="card">
@@ -163,6 +163,9 @@ h3{font-size:1.7rem}
             <div class="summary-row"><span>Meeting spot</span><strong id="summary-location">-</strong></div>
             <div class="summary-row"><span>Customer</span><strong id="summary-customer">-</strong></div>
             <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact">-</strong></div>
+            <div class="summary-row"><span>Deposit</span><strong id="summary-deposit">$50</strong></div>
+            <div class="summary-row"><span>Processing fee</span><strong id="summary-processing-fee">$5</strong></div>
+            <div class="summary-row"><span>Paid today</span><strong id="summary-paid-today">$55</strong></div>
           </div>
         </div>
       </div>
@@ -286,6 +289,8 @@ function mergeBooking(base, incoming = {}) {
     ...(incoming || {}),
     paymentStatus: incoming.paymentStatus || base?.paymentStatus || 'unpaid',
     depositAmount: incoming.depositAmount || base?.depositAmount || 50,
+    processingFeeAmount: incoming.processingFeeAmount || base?.processingFeeAmount || 5,
+    amountDueToday: incoming.amountDueToday || base?.amountDueToday || 55,
     deposit: typeof incoming.deposit === "boolean" ? incoming.deposit : Boolean(base?.deposit)
   };
 }
@@ -310,6 +315,10 @@ function showBooking(booking) {
   setText('summary-location', booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
   setText('summary-contact', formatContactMethod(booking.contactMethod));
+  setText('summary-deposit', formatCurrency(booking.depositAmount || 50));
+  setText('summary-processing-fee', formatCurrency(booking.processingFeeAmount || 5));
+  setText('summary-paid-today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5))));
+  setText('payment-status', `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5)))}`);
   setText('next-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('next-date', booking.date || '-');
   setText('next-time', formatTimeLabel(booking.time));

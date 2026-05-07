@@ -37,6 +37,7 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const PUBLIC_SITE_URL = String(process.env.PUBLIC_SITE_URL || 'https://slaquatics.onrender.com').replace(/\/+$/, '');
 const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
+const PROCESSING_FEE_CENTS = 500;
 const DRONE_ADDON_CENTS = 5000;
 const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
@@ -691,8 +692,12 @@ function stripeWebhookConfigured() {
 }
 
 function bookingPaymentSummary(booking = {}) {
+  const depositAmount = Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100);
+  const processingFeeAmount = Number(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100);
   return {
-    depositAmount: Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100),
+    depositAmount,
+    processingFeeAmount,
+    amountDueToday: Number(booking.amountDueToday || (depositAmount + processingFeeAmount)),
     paymentStatus: String(booking.paymentStatus || (booking.deposit ? 'paid' : 'unpaid')),
     paymentSessionId: String(booking.paymentSessionId || ''),
     paymentCompletedAt: String(booking.paymentCompletedAt || ''),
@@ -714,7 +719,7 @@ function bookingConfirmationText(booking = {}) {
   return [
     `Hi ${firstName(booking.name)},`,
     '',
-    `Your Shoreline Aquatics booking deposit is confirmed and your rental date is reserved.`,
+    `Your Shoreline Aquatics booking payment is confirmed and your rental date is reserved.`,
     '',
     'Booking details',
     `Package: ${booking.craftLabel || 'Rental package'}`,
@@ -726,6 +731,8 @@ function bookingConfirmationText(booking = {}) {
     `Aerial drone coverage: ${booking.drone ? 'Included' : 'Not included'}`,
     `Quoted total: ${formatCurrency(booking.total || 0)}`,
     `Deposit received: ${formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100)}`,
+    `Processing fee: ${formatCurrency(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)}`,
+    `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)))}`,
     `Remaining balance: ${formatCurrency(remainingBalance)}`,
     '',
     'What happens next',
@@ -753,7 +760,7 @@ function bookingConfirmationHtml(booking = {}) {
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
       <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
         <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
-        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">Your booking deposit is confirmed</h1>
+        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">Your booking payment is confirmed</h1>
         <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(firstName(booking.name))}, your rental date is locked in and Shoreline has everything needed for launch day.</p>
       </div>
       <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
@@ -768,6 +775,8 @@ function bookingConfirmationHtml(booking = {}) {
           <tr><td style="padding:8px 0;color:#5a6b85;">Drone coverage</td><td style="padding:8px 0;text-align:right;font-weight:700;">${booking.drone ? 'Included' : 'Not included'}</td></tr>
           <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
           <tr><td style="padding:8px 0;color:#5a6b85;">Deposit received</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0f8b53;">${htmlEscape(formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Processing fee</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Paid today</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))))}</td></tr>
           <tr><td style="padding:8px 0;color:#5a6b85;">Remaining balance</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(remainingBalance))}</td></tr>
         </table>
 
@@ -835,6 +844,8 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
   booking.drone = pricing.drone;
   booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
   booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
+  booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
+  booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
   booking.date = String(payload.date || '').trim();
   booking.time = String(payload.time || '').trim();
   booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX').trim();
@@ -925,6 +936,8 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
   booking.drone = pricing.drone;
   booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
   booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
+  booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
+  booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
   booking.date = String(payload.date || '').trim();
   booking.time = String(payload.time || '').trim();
   booking.location = String(payload.location || '').trim();
@@ -1037,7 +1050,9 @@ function applyStripeSessionToBooking(state, session = {}, now = new Date().toISO
   }
   booking.paymentSessionId = String(session.id || booking.paymentSessionId || '');
   booking.paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : String(booking.paymentIntentId || '');
-  booking.depositAmount = Number(((session.amount_total || BOOKING_DEPOSIT_CENTS) / 100).toFixed(2));
+  booking.depositAmount = Number((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
+  booking.processingFeeAmount = Number((session?.metadata?.processingFeeAmount || booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100));
+  booking.amountDueToday = Number(((session.amount_total || ((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS))) / 100).toFixed(2));
   booking.paymentStatus = String(session.payment_status || booking.paymentStatus || 'pending');
   booking.deposit = booking.paymentStatus === 'paid';
   booking.paymentCompletedAt = booking.deposit ? now : String(booking.paymentCompletedAt || '');
@@ -1563,6 +1578,20 @@ async function handleApi(request, response, pathname) {
                 }
               }
             }
+          },
+          {
+            quantity: 1,
+            price_data: {
+              currency: 'usd',
+              unit_amount: PROCESSING_FEE_CENTS,
+              product_data: {
+                name: 'Processing Fee',
+                description: 'Secure checkout and card processing fee',
+                metadata: {
+                  bookingId: String(booking.id)
+                }
+              }
+            }
           }
         ],
         payment_intent_data: {
@@ -1586,12 +1615,14 @@ async function handleApi(request, response, pathname) {
           date: booking.date,
           time: booking.time,
           totalQuote: String(booking.total),
-          depositAmount: String((BOOKING_DEPOSIT_CENTS / 100).toFixed(2))
+          depositAmount: String((BOOKING_DEPOSIT_CENTS / 100).toFixed(2)),
+          processingFeeAmount: String((PROCESSING_FEE_CENTS / 100).toFixed(2)),
+          amountDueToday: String(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2))
         },
         client_reference_id: String(booking.id),
         custom_text: {
           submit: {
-            message: 'Today you are paying the $50 booking deposit. The remaining balance is handled with Shoreline before launch.'
+            message: 'Today you are paying the $50 booking deposit plus a $5 processing fee. The remaining rental balance is handled with Shoreline before launch.'
           }
         }
       });
@@ -1599,6 +1630,8 @@ async function handleApi(request, response, pathname) {
       booking.paymentStatus = 'pending';
       booking.paymentSessionId = String(session.id || '');
       booking.depositAmount = Number((BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
+      booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
+      booking.amountDueToday = Number(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2));
       booking.updatedAt = now;
       await stateStore.write(state);
 
@@ -1608,7 +1641,7 @@ async function handleApi(request, response, pathname) {
         sessionId: session.id,
         bookingId: booking.id,
         bookingToken,
-        amountDue: Number((BOOKING_DEPOSIT_CENTS / 100).toFixed(2))
+        amountDue: Number(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2))
       });
       return true;
     } catch (error) {

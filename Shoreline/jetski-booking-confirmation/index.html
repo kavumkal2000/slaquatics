@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Complete the Shoreline Aquatics waiver, review your rental details, and pay the booking deposit.">
+<meta name="description" content="Complete the Shoreline Aquatics waiver, review your rental details, and pay the $50 booking deposit plus a $5 processing fee.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking-confirmation/">
 <title>Contact, Waiver & Deposit | Shoreline Aquatics</title>
@@ -184,6 +184,11 @@ h3{font-size:1.75rem}
 .status.success{color:#aaf4cb;border-color:rgba(91,219,151,.32);background:rgba(91,219,151,.08)}
 .status.warn{color:#ffe29f;border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.1)}
 .status.error{color:#ffb3b3;border-color:rgba(255,120,120,.32);background:rgba(255,120,120,.08)}
+.payment-note{
+  margin-top:16px;padding:16px 18px;border-radius:18px;
+  background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.2);color:var(--ink-soft);line-height:1.7
+}
+.payment-note strong{color:var(--ink)}
 .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
 .match-card{
   display:none;border-color:rgba(15,184,224,.3);
@@ -229,7 +234,7 @@ h3{font-size:1.75rem}
         <div class="eyebrow">Contact + Waiver</div>
         <h1>Complete The <span class="accent">Contact, Waiver</span> And Deposit</h1>
         <div class="hero-copy">
-          This is the final booking step before the thank-you page. Fill in the rider contact details, complete the waiver, and pay the $50 booking deposit to hold the rental date.
+          This is the final booking step before the thank-you page. Fill in the rider contact details, complete the waiver, and pay the $50 booking deposit plus a $5 processing fee to hold the rental date.
         </div>
       </div>
     </div>
@@ -248,7 +253,7 @@ h3{font-size:1.75rem}
         <div class="block-label">Contact + Waiver</div>
         <h2>Complete the rider details and waiver</h2>
         <div class="section-copy">
-          Finish the form below, then pay the booking deposit to move into the thank-you page and arrival instructions.
+          Finish the form below, then pay the deposit and processing fee to move into the thank-you page and arrival instructions.
         </div>
 
         <div class="match-card" id="match-card">
@@ -339,10 +344,14 @@ h3{font-size:1.75rem}
             </div>
           </div>
 
-          <div class="status" id="copy-status">Finish the form, then pay the booking deposit to hold the rental date.</div>
+          <div class="payment-note">
+            <strong>Pay today:</strong> $55 total. That includes a $50 booking deposit and a $5 processing fee. The remaining rental balance is handled directly with Shoreline before launch.
+          </div>
+
+          <div class="status" id="copy-status">Finish the form, then pay $55 today to hold the rental date.</div>
 
           <div class="actions">
-            <button class="btn btn-primary" id="stripe-link" type="submit">Pay $50 deposit</button>
+            <button class="btn btn-primary" id="stripe-link" type="submit">Pay $55 today</button>
           </div>
         </form>
       </div>
@@ -446,7 +455,7 @@ function buildMessage(booking) {
     `Meeting spot: ${booking.location || "To be confirmed"}`,
     `Preferred contact: ${booking.contactMethod}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
-    `Booking deposit: ${booking.paymentStatus === "paid" || booking.deposit ? "Paid" : "$50 due to hold the slot"}`,
+    `Booking payment: ${booking.paymentStatus === "paid" || booking.deposit ? "$55 paid ($50 deposit + $5 processing fee)" : "$55 due today ($50 deposit + $5 processing fee)"}`,
     `Notes: ${booking.notes || "None"}`
   ].join("\n");
 }
@@ -469,6 +478,8 @@ function mergeBooking(base, incoming = {}) {
     publicToken: incoming.publicToken || base?.publicToken || '',
     paymentStatus: incoming.paymentStatus || base?.paymentStatus || 'unpaid',
     depositAmount: incoming.depositAmount || base?.depositAmount || 50,
+    processingFeeAmount: incoming.processingFeeAmount || base?.processingFeeAmount || 5,
+    amountDueToday: incoming.amountDueToday || base?.amountDueToday || 55,
     deposit: typeof incoming.deposit === "boolean" ? incoming.deposit : Boolean(base?.deposit)
   };
 }
@@ -507,10 +518,12 @@ function populateForm(booking) {
 
 function updatePaymentUi(booking) {
   const depositAmount = Number(booking?.depositAmount || 50);
+  const processingFeeAmount = Number(booking?.processingFeeAmount || 5);
+  const amountDueToday = Number(booking?.amountDueToday || (depositAmount + processingFeeAmount));
   const paymentStatus = booking?.paymentStatus === "paid" || booking?.deposit
-    ? "Deposit paid"
+    ? `Paid today: ${formatCurrency(amountDueToday)}`
     : booking?.paymentStatus === "pending"
-      ? "Checkout started"
+      ? `Checkout started for ${formatCurrency(amountDueToday)}`
       : booking?.paymentStatus === "expired"
         ? "Checkout expired"
         : "Not paid yet";
@@ -527,13 +540,13 @@ function updatePaymentUi(booking) {
   }
 
   if (booking?.paymentStatus === "paid" || booking?.deposit) {
-    stripeButton.textContent = "Deposit paid";
+    stripeButton.textContent = `Paid ${formatCurrency(amountDueToday)}`;
     stripeButton.setAttribute("aria-disabled", "true");
     stripeButton.disabled = true;
     return;
   }
 
-  stripeButton.textContent = `Pay ${formatCurrency(depositAmount)} deposit`;
+  stripeButton.textContent = `Pay ${formatCurrency(amountDueToday)} today`;
   stripeButton.removeAttribute("aria-disabled");
   stripeButton.disabled = false;
 }
@@ -751,7 +764,9 @@ async function handleStripeCheckout(event) {
       id: result.bookingId || payload.id,
       publicToken: result.bookingToken || result.booking?.publicToken || payload.publicToken,
       paymentStatus: result.booking?.paymentStatus || 'unpaid',
-      depositAmount: result.booking?.depositAmount || 50
+      depositAmount: result.booking?.depositAmount || 50,
+      processingFeeAmount: result.booking?.processingFeeAmount || 5,
+      amountDueToday: result.booking?.amountDueToday || 55
     });
     activeBooking.syncMeta = {
       synced: true,
@@ -764,7 +779,7 @@ async function handleStripeCheckout(event) {
     populateSummary(activeBooking);
     updateContactLinks();
 
-    setStatus('Opening secure checkout for your booking deposit...');
+    setStatus('Opening secure checkout for your $50 deposit and $5 processing fee...');
     stripeButton.textContent = 'Opening Stripe...';
 
     const response = await fetch(`${OPS_PUBLIC_API}/api/public/create-checkout-session`, {
@@ -786,7 +801,7 @@ async function handleStripeCheckout(event) {
     if (checkout.alreadyPaid) {
       activeBooking = mergeBooking(activeBooking, checkout.booking || { paymentStatus: 'paid', deposit: true });
       updatePaymentUi(activeBooking);
-      setStatus('This booking deposit is already marked as paid.', 'success');
+      setStatus('This booking payment is already marked as paid.', 'success');
       return;
     }
 
@@ -859,7 +874,7 @@ qs('signature-date').value = new Date().toISOString().slice(0, 10);
     return;
   }
 
-  setStatus('Finish the rider form below, then pay the booking deposit to hold the selected rental date.');
+  setStatus('Finish the rider form below, then pay $55 today to hold the selected rental date.');
 })();
 </script>
 </body>
