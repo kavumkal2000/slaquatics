@@ -51,6 +51,13 @@ const ARRIVAL_INSTRUCTIONS = [
   'Follow the road straight to the boat ramp.',
   'The cabanas will be on your left — Shoreline Aquatics and the jet skis will be located in this area.'
 ];
+const SAFETY_BRIEFING_POINTS = [
+  'Life jackets stay on for every rider from launch to return.',
+  'The driver keeps the safety lanyard clipped in while operating the jet ski.',
+  'No alcohol or drugs. If you are impaired, you do not ride.',
+  'Idle out from the launch and stay slow near docks, swimmers, boats, and shoreline.',
+  'If weather changes or anything feels wrong, slow down, stop safely, and call Shoreline.'
+];
 const PRICING_CENTS = {
   jetski2: { 2: 30000, 3: 45000, 4: 56000, 6: 72000, 8: 90000 },
   jetski3: { 2: 45000, 3: 67500, 4: 84000, 6: 108000, 8: 135000 },
@@ -715,6 +722,7 @@ function bookingRemainingBalance(booking = {}) {
 
 function bookingConfirmationText(booking = {}) {
   const arrivalLines = ARRIVAL_INSTRUCTIONS.map((line, index) => `${index + 1}. ${line}`).join('\n');
+  const safetyLines = SAFETY_BRIEFING_POINTS.map((line, index) => `${index + 1}. ${line}`).join('\n');
   const remainingBalance = bookingRemainingBalance(booking);
   return [
     `Hi ${firstName(booking.name)},`,
@@ -740,6 +748,9 @@ function bookingConfirmationText(booking = {}) {
     '- Shoreline provides life jackets, fuel, cooler space, and the safety briefing before launch.',
     '- The remaining balance is handled directly with Shoreline before you head out on the water.',
     '',
+    'Quick safety briefing',
+    safetyLines,
+    '',
     'Arrival instructions',
     arrivalLines,
     '',
@@ -756,6 +767,7 @@ function bookingConfirmationText(booking = {}) {
 function bookingConfirmationHtml(booking = {}) {
   const remainingBalance = bookingRemainingBalance(booking);
   const arrivalList = ARRIVAL_INSTRUCTIONS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
+  const safetyList = SAFETY_BRIEFING_POINTS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
   return `
     <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
       <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
@@ -786,6 +798,13 @@ function bookingConfirmationHtml(booking = {}) {
             <li>Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.</li>
             <li>Life jackets, fuel, cooler space, and the pre-launch safety briefing are included.</li>
             <li>The remaining balance is handled directly with Shoreline before you head out on the water.</li>
+          </ul>
+        </div>
+
+        <div style="margin-top:18px;padding:18px;border-radius:18px;background:#f5f8fc;">
+          <h2 style="margin:0 0 10px;font-size:18px;">Quick safety briefing</h2>
+          <ul style="margin:0;padding-left:18px;">
+            ${safetyList}
           </ul>
         </div>
 

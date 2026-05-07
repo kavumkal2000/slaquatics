@@ -845,6 +845,72 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .review-dot.active { width: 28px; background: var(--gold); }
 
 /* ── MAP ── */
+.safety-section {
+  background:
+    radial-gradient(circle at top left, rgba(15,184,224,0.12), transparent 24%),
+    linear-gradient(180deg, #08111f 0%, #0a1730 52%, #091421 100%);
+}
+.safety-shell {
+  background: linear-gradient(180deg, rgba(10,25,46,0.98) 0%, rgba(8,20,38,0.98) 100%);
+  border: 1px solid rgba(245,166,35,0.16);
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: 0 24px 54px rgba(0,0,0,0.26);
+}
+.safety-head {
+  max-width: 760px;
+  margin: 0 auto 2rem;
+  text-align: center;
+}
+.safety-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.safety-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 1.2rem 1.15rem;
+}
+.safety-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.8rem;
+}
+.safety-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(245,166,35,0.12);
+  border: 1px solid rgba(245,166,35,0.22);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.2rem;
+  letter-spacing: 0.05em;
+}
+.safety-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--white);
+}
+.safety-card p {
+  margin: 0;
+  color: rgba(255,255,255,0.74);
+  line-height: 1.72;
+  font-size: 0.92rem;
+}
+.safety-note {
+  margin-top: 1.4rem;
+  text-align: center;
+  color: rgba(255,255,255,0.64);
+  font-size: 0.88rem;
+}
+
 .map-section { background: var(--deep); }
 .location-grid {
   display: grid;
@@ -1006,6 +1072,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .addon-content { padding: 1.5rem; }
   .how-grid { grid-template-columns: 1fr; }
   .how-step { padding: 1.85rem 1.1rem 1.15rem; }
+  .safety-grid { grid-template-columns: 1fr; }
   .location-grid { grid-template-columns: 1fr; }
   .drone-inner { grid-template-columns: 1fr; gap: 2.5rem; }
   .why-grid { grid-template-columns: repeat(2,1fr); }
@@ -1739,6 +1806,46 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <h3>Easy Repeat Booking</h3>
         <p>Saved rider info and a clean follow-up process make the next booking faster.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- SAFETY BRIEFING -->
+<section id="safety" class="safety-section">
+  <div class="section-inner">
+    <div class="safety-shell">
+      <div class="safety-head">
+        <div class="section-tag" style="justify-content:center;">Safety Briefing</div>
+        <h2>Know These Rules Before You Ride</h2>
+        <p class="section-sub" style="max-width:760px;margin:0 auto;opacity:0.9;text-align:center;">Every rental comes with an in-person walkthrough at launch. These are the main rules Shoreline wants every rider to know before heading onto the water.</p>
+      </div>
+      <div class="safety-grid">
+        <div class="safety-card">
+          <div class="safety-card-top"><div class="safety-num">1</div><h3>Life jackets stay on</h3></div>
+          <p>Every rider keeps their life jacket on from launch to return.</p>
+        </div>
+        <div class="safety-card">
+          <div class="safety-card-top"><div class="safety-num">2</div><h3>Driver clips in</h3></div>
+          <p>The driver keeps the safety lanyard attached while operating the jet ski.</p>
+        </div>
+        <div class="safety-card">
+          <div class="safety-card-top"><div class="safety-num">3</div><h3>No alcohol or drugs</h3></div>
+          <p>No one operates the equipment under the influence. If you are impaired, you do not ride.</p>
+        </div>
+        <div class="safety-card">
+          <div class="safety-card-top"><div class="safety-num">4</div><h3>Idle out from shore</h3></div>
+          <p>Leave the launch slowly and stay off plane near the ramp, docks, swimmers, and shoreline.</p>
+        </div>
+        <div class="safety-card">
+          <div class="safety-card-top"><div class="safety-num">5</div><h3>Keep your distance</h3></div>
+          <p>Give other boats and riders space. Stay alert, look around often, and avoid sharp close passes.</p>
+        </div>
+        <div class="safety-card">
+          <div class="safety-card-top"><div class="safety-num">6</div><h3>Slow down if anything feels off</h3></div>
+          <p>If weather changes, a rider falls off, or equipment feels wrong, slow down, stop safely, and call Shoreline.</p>
+        </div>
+      </div>
+      <div class="safety-note">Shoreline will still walk every rider through launch, return, and operating basics before you leave the dock.</div>
     </div>
   </div>
 </section>
