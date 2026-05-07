@@ -7,6 +7,7 @@
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking/">
 <title>Book a Rental | Shoreline Aquatics</title>
+<link rel="preconnect" href="https://shoreline-aquatics-ops.onrender.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
@@ -403,6 +404,14 @@ h1 span { color: var(--gold); }
   resize: vertical;
   min-height: 120px;
 }
+.field-hint {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.field-hint.warn { color: #a86917; }
+.field-hint.error { color: var(--danger); }
+.field-hint.success { color: var(--success); }
 .calendar-shell {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.8fr);
@@ -837,6 +846,7 @@ h1 span { color: var(--gold); }
                         <option value="17:00">5:00 PM</option>
                         <option value="18:00">6:00 PM</option>
                       </select>
+                      <div class="field-hint" id="availability-note" hidden></div>
                     </div>
                   </div>
                 </div>
@@ -939,6 +949,13 @@ let calendarMonthCursor = null;
 let selectedBookingDate = '';
 let matchedCustomer = null;
 let lastLookupKey = '';
+let bookingTouched = false;
+let backendWarmPromise = null;
+let activeAvailabilityRequest = 0;
+let draftAutoSaveTimer = null;
+let draftSavePromise = null;
+let lastSavedDraftKey = '';
+let lastSavedDraft = null;
 
 function qs(id) {
   return document.getElementById(id);
@@ -1001,6 +1018,10 @@ function isBundleType(craft) {
   return craft.startsWith('bundle');
 }
 
+function craftUsesBoat(craft) {
+  return craft === 'boat' || isBundleType(craft);
+}
+
 function getJetSkiCount(craft) {
   if (!craft) return 0;
   if (craft.startsWith('jetski')) return parseInt(craft.replace('jetski', ''), 10) || 0;
@@ -1047,6 +1068,120 @@ function buildBookingPayloadBase() {
     total,
     drone
   };
+}
+
+function buildDraftComparableKey(payload = {}) {
+  return JSON.stringify({
+    type: payload.type || currentType,
+    craft: payload.craft || '',
+    duration: Number(payload.duration || 0),
+    drone: Boolean(payload.drone),
+    date: String(payload.date || ''),
+    time: String(payload.time || ''),
+    location: String(payload.location || '')
+  });
+}
+
+function setAvailabilityNote(message = '', tone = '') {
+  const note = qs('availability-note');
+  if (!note) return;
+  if (!message) {
+    note.hidden = true;
+    note.textContent = '';
+    note.className = 'field-hint';
+    return;
+  }
+  note.hidden = false;
+  note.textContent = message;
+  note.className = `field-hint${tone ? ` ${tone}` : ''}`;
+}
+
+function refreshTimeOptions(blockedTimes = []) {
+  const blocked = new Set(blockedTimes);
+  const timeSelect = qs('time');
+  const options = Array.from(timeSelect.options);
+
+  options.forEach((option) => {
+    if (!option.dataset.baseLabel) option.dataset.baseLabel = option.textContent;
+    const unavailable = blocked.has(option.value);
+    option.disabled = unavailable;
+    option.textContent = unavailable
+      ? `${option.dataset.baseLabel} · Unavailable`
+      : option.dataset.baseLabel;
+  });
+
+  if (timeSelect.value && blocked.has(timeSelect.value)) {
+    const firstAvailable = options.find((option) => !option.disabled);
+    timeSelect.value = firstAvailable ? firstAvailable.value : '';
+  }
+}
+
+function prewarmOps() {
+  if (backendWarmPromise) return backendWarmPromise;
+  backendWarmPromise = fetch(`${OPS_PUBLIC_API}/api/public/integrations/status`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  }).catch(() => null);
+  return backendWarmPromise;
+}
+
+async function refreshBoatAvailability(options = {}) {
+  const payload = createBookingPayload();
+  const requestId = ++activeAvailabilityRequest;
+
+  if (!payload.date || !payload.duration) {
+    refreshTimeOptions([]);
+    setAvailabilityNote('');
+    return;
+  }
+
+  if (!craftUsesBoat(payload.craft)) {
+    refreshTimeOptions([]);
+    setAvailabilityNote('');
+    return;
+  }
+
+  if (!options.quiet) {
+    setAvailabilityNote('Checking live boat availability for this day...');
+  }
+
+  try {
+    await prewarmOps();
+    const params = new URLSearchParams({
+      date: payload.date,
+      duration: String(payload.duration),
+      craft: payload.craft
+    });
+    if (payload.publicToken) params.set('booking', payload.publicToken);
+
+    const response = await fetch(`${OPS_PUBLIC_API}/api/public/availability?${params.toString()}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    });
+    const body = await response.json().catch(() => ({}));
+    if (requestId !== activeAvailabilityRequest) return;
+    if (!response.ok) {
+      throw new Error(body.error || 'Could not check boat availability right now.');
+    }
+
+    const blockedTimes = Array.isArray(body.blockedTimes) ? body.blockedTimes : [];
+    const availableTimes = Array.isArray(body.availableTimes) ? body.availableTimes : [];
+    refreshTimeOptions(blockedTimes);
+
+    if (!availableTimes.length) {
+      setAvailabilityNote('The boat is fully booked for the available start times on this day. Choose another date.', 'error');
+    } else if (blockedTimes.length) {
+      setAvailabilityNote(`${blockedTimes.length} boat start time${blockedTimes.length === 1 ? '' : 's'} already booked for this day.`, 'warn');
+    } else {
+      setAvailabilityNote('All boat start times are open for this date.', 'success');
+    }
+  } catch (error) {
+    if (requestId !== activeAvailabilityRequest) return;
+    refreshTimeOptions([]);
+    setAvailabilityNote(error.message || 'Could not check boat availability right now.', 'warn');
+  } finally {
+    if (requestId === activeAvailabilityRequest) updateSummary();
+  }
 }
 
 function setType(type) {
@@ -1119,6 +1254,42 @@ function updateSummary() {
   }
 }
 
+async function persistDraftBooking(options = {}) {
+  const payload = createBookingPayload();
+  const draftKey = buildDraftComparableKey(payload);
+
+  if (!payload.date || !payload.time || !payload.craft || !payload.duration) return null;
+  if (!options.force && lastSavedDraftKey === draftKey && qs('booking-token').value.trim()) {
+    return lastSavedDraft;
+  }
+
+  await prewarmOps();
+  const booking = await saveDraftBooking({
+    ...payload,
+    paymentStatus: 'unpaid',
+    depositAmount: 50
+  });
+
+  if (booking?.publicToken) {
+    qs('booking-token').value = booking.publicToken;
+    lastSavedDraftKey = draftKey;
+    lastSavedDraft = booking;
+  }
+
+  return booking;
+}
+
+function scheduleDraftSave() {
+  if (!bookingTouched) return;
+  window.clearTimeout(draftAutoSaveTimer);
+  draftAutoSaveTimer = window.setTimeout(() => {
+    draftSavePromise = persistDraftBooking().catch((error) => {
+      console.warn('Draft autosave skipped:', error);
+      return null;
+    });
+  }, 260);
+}
+
 function renderCalendarSummary() {
   const formatted = formatSelectedDate(selectedBookingDate);
   qs('calendar-pill-date').textContent = formatted;
@@ -1172,6 +1343,9 @@ function selectCalendarDate(iso) {
   const date = parseLocalIsoDate(iso);
   if (date) calendarMonthCursor = new Date(date.getFullYear(), date.getMonth(), 1);
   renderCalendar();
+  bookingTouched = true;
+  refreshBoatAvailability({ quiet: true });
+  scheduleDraftSave();
 }
 
 function shiftCalendarMonth(delta) {
@@ -1285,8 +1459,15 @@ function applyDraftBooking(booking) {
   if (booking.time) {
     qs('time').value = booking.time;
   }
+  lastSavedDraft = booking;
+  lastSavedDraftKey = buildDraftComparableKey({
+    ...booking,
+    type: currentType,
+    craft: booking.craftKey || booking.craft
+  });
   updateSummary();
   renderCalendar();
+  refreshBoatAvailability({ quiet: true });
 }
 
 function validatePayload(payload) {
@@ -1313,11 +1494,15 @@ async function handleSubmit(event) {
   status.classList.remove('success');
 
   try {
-    const booking = await saveDraftBooking({
-      ...payload,
-      paymentStatus: 'unpaid',
-      depositAmount: 50
-    });
+    await prewarmOps();
+    if (draftSavePromise) {
+      await draftSavePromise.catch(() => null);
+    }
+
+    const booking = (lastSavedDraftKey === buildDraftComparableKey(payload) && qs('booking-token').value.trim())
+      ? lastSavedDraft
+      : await persistDraftBooking({ force: true });
+
     if (!booking?.publicToken) {
       throw new Error('Booking draft was saved, but no booking token was returned.');
     }
@@ -1333,19 +1518,45 @@ async function handleSubmit(event) {
 }
 
 document.querySelectorAll('.type-btn').forEach((button) => {
-  button.addEventListener('click', () => setType(button.dataset.type));
+  button.addEventListener('click', () => {
+    setType(button.dataset.type);
+    bookingTouched = true;
+    refreshBoatAvailability({ quiet: true });
+    scheduleDraftSave();
+  });
 });
 
-qs('craft').addEventListener('change', () => populateDurationOptions());
-qs('duration').addEventListener('change', updateSummary);
-qs('drone').addEventListener('change', updateSummary);
-qs('time').addEventListener('change', updateSummary);
+qs('craft').addEventListener('change', () => {
+  populateDurationOptions();
+  bookingTouched = true;
+  refreshBoatAvailability({ quiet: true });
+  scheduleDraftSave();
+});
+qs('duration').addEventListener('change', () => {
+  updateSummary();
+  bookingTouched = true;
+  refreshBoatAvailability({ quiet: true });
+  scheduleDraftSave();
+});
+qs('drone').addEventListener('change', () => {
+  updateSummary();
+  bookingTouched = true;
+  scheduleDraftSave();
+});
+qs('time').addEventListener('change', () => {
+  updateSummary();
+  bookingTouched = true;
+  scheduleDraftSave();
+});
 qs('date').addEventListener('change', (event) => {
   if (!event.target.value) return;
   selectedBookingDate = event.target.value;
   const parsed = parseLocalIsoDate(selectedBookingDate);
   if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
   renderCalendar();
+  bookingTouched = true;
+  refreshBoatAvailability({ quiet: true });
+  scheduleDraftSave();
 });
 qs('booking-form').addEventListener('submit', handleSubmit);
 
@@ -1354,6 +1565,7 @@ qs('time').value = '10:00';
 selectedBookingDate = qs('date').value;
 (async function initBookingPage() {
   setType('jetski');
+  void prewarmOps();
   const params = new URLSearchParams(window.location.search);
   const bookingToken = params.get('booking');
   if (bookingToken) {
@@ -1368,6 +1580,7 @@ selectedBookingDate = qs('date').value;
   applyQueryDefaults();
   renderCalendar();
   updateSummary();
+  refreshBoatAvailability({ quiet: true });
 })();
 </script>
 </body>

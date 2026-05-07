@@ -38,6 +38,7 @@ const PUBLIC_SITE_URL = String(process.env.PUBLIC_SITE_URL || 'https://slaquatic
 const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
 const DRONE_ADDON_CENTS = 5000;
+const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
 const SHORELINE_PHONE_LINK = '4696937164';
 const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
@@ -411,6 +412,85 @@ function formatTimeLabel(value = '') {
   return `${twelveHour}:${minuteText} ${suffix}`;
 }
 
+function timeToMinutes(value = '') {
+  const [hourText = '', minuteText = '00'] = String(value || '').split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return NaN;
+  return (hour * 60) + minute;
+}
+
+function craftUsesBoat(craft = '') {
+  const normalized = normalizeCraftKey(craft);
+  return normalized === 'boat' || normalized.startsWith('bundle');
+}
+
+function bookingBlocksAvailability(booking = {}) {
+  const status = String(booking.status || '').trim().toLowerCase();
+  return Boolean(
+    booking.date &&
+    booking.time &&
+    Number(booking.duration || 0) > 0 &&
+    !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status)
+  );
+}
+
+function intervalsOverlap(startMinutesA, durationHoursA, startMinutesB, durationHoursB) {
+  const endMinutesA = startMinutesA + (Number(durationHoursA || 0) * 60);
+  const endMinutesB = startMinutesB + (Number(durationHoursB || 0) * 60);
+  return startMinutesA < endMinutesB && startMinutesB < endMinutesA;
+}
+
+function findBoatConflicts(state, options = {}) {
+  const requestedDate = String(options.date || '').trim();
+  const requestedTime = String(options.time || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  const requestedStart = timeToMinutes(requestedTime);
+  const ignoredId = Number(options.bookingId || 0);
+  const ignoredToken = String(options.publicToken || '').trim();
+
+  if (!requestedDate || !requestedTime || !requestedDuration || Number.isNaN(requestedStart)) {
+    return [];
+  }
+
+  return state.bookings.filter((booking) => {
+    if (!bookingBlocksAvailability(booking)) return false;
+    if (String(booking.date || '').trim() !== requestedDate) return false;
+    if (!craftUsesBoat(String(booking.craftKey || booking.craft || ''))) return false;
+    if (ignoredId && Number(booking.id || 0) === ignoredId) return false;
+    if (ignoredToken && String(booking.publicToken || '').trim() === ignoredToken) return false;
+
+    const bookingStart = timeToMinutes(booking.time);
+    const bookingDuration = Number(booking.duration || 0);
+    if (Number.isNaN(bookingStart) || !bookingDuration) return false;
+
+    return intervalsOverlap(requestedStart, requestedDuration, bookingStart, bookingDuration);
+  });
+}
+
+function blockedBoatStartTimes(state, options = {}) {
+  const requestedDate = String(options.date || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  if (!requestedDate || !requestedDuration) return [];
+
+  return PUBLIC_BOOKING_START_TIMES.filter((time) => (
+    findBoatConflicts(state, {
+      ...options,
+      date: requestedDate,
+      time,
+      duration: requestedDuration
+    }).length > 0
+  ));
+}
+
+function assertBoatAvailability(state, options = {}) {
+  if (!craftUsesBoat(options.craft)) return;
+  const conflicts = findBoatConflicts(state, options);
+  if (conflicts.length) {
+    throw new Error('That boat time is already booked. Please choose a different start time.');
+  }
+}
+
 function nextId(items = []) {
   return items.reduce((max, item) => Math.max(max, Number(item?.id || 0)), 0) + 1;
 }
@@ -723,8 +803,16 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
     throw new Error('A rental date and start time are required.');
   }
 
-  const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
   const existingBooking = findBookingByPublicToken(state, payload.publicToken);
+  const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
+  assertBoatAvailability(state, {
+    craft: pricing.craft,
+    date: payload.date,
+    time: payload.time,
+    duration: pricing.duration,
+    publicToken: existingBooking?.publicToken || payload.publicToken,
+    bookingId: existingBooking?.id
+  });
   const booking = existingBooking || {
     id: nextId(state.bookings),
     status: 'draft',
@@ -772,6 +860,21 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
   }
 
   const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
+  const tokenBooking = findBookingByPublicToken(state, payload.publicToken);
+  const matchedBooking = findMatchingBooking(state, {
+    ...payload,
+    craftLabel: pricing.craftLabel,
+    duration: pricing.duration
+  });
+  const existingBooking = tokenBooking || matchedBooking;
+  assertBoatAvailability(state, {
+    craft: pricing.craft,
+    date: payload.date,
+    time: payload.time,
+    duration: pricing.duration,
+    publicToken: existingBooking?.publicToken || payload.publicToken,
+    bookingId: existingBooking?.id
+  });
   const existingCustomer = findMatchingCustomer(state, payload);
   const customer = existingCustomer || {
     id: nextId(state.customers),
@@ -803,11 +906,6 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     state.customers.push(customer);
   }
 
-  const existingBooking = findBookingByPublicToken(state, payload.publicToken) || findMatchingBooking(state, {
-    ...payload,
-    craftLabel: pricing.craftLabel,
-    duration: pricing.duration
-  });
   const booking = existingBooking || {
     id: nextId(state.bookings),
     status: 'pending',
@@ -1280,6 +1378,53 @@ async function handleApi(request, response, pathname) {
     sendPublicJson(response, request, 200, {
       ok: true,
       booking: publicBookingPayload(booking)
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/availability' && request.method === 'GET') {
+    const date = String(requestUrl.searchParams.get('date') || '').trim();
+    const craft = normalizeCraftKey(requestUrl.searchParams.get('craft') || '');
+    const duration = Number(requestUrl.searchParams.get('duration') || 0);
+    const publicToken = String(
+      requestUrl.searchParams.get('booking') ||
+      requestUrl.searchParams.get('token') ||
+      ''
+    ).trim();
+
+    if (!date || !duration) {
+      sendPublicJson(response, request, 400, {
+        error: 'A rental date and duration are required to check availability.'
+      });
+      return true;
+    }
+
+    const requiresBoat = craftUsesBoat(craft);
+    if (!requiresBoat) {
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        requiresBoat: false,
+        blockedTimes: [],
+        availableTimes: [...PUBLIC_BOOKING_START_TIMES],
+        nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || ''
+      });
+      return true;
+    }
+
+    const state = await stateStore.read();
+    const blockedTimes = blockedBoatStartTimes(state, {
+      date,
+      duration,
+      publicToken
+    });
+    const availableTimes = PUBLIC_BOOKING_START_TIMES.filter((time) => !blockedTimes.includes(time));
+
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      requiresBoat: true,
+      blockedTimes,
+      availableTimes,
+      nextOpenTime: availableTimes[0] || ''
     });
     return true;
   }
