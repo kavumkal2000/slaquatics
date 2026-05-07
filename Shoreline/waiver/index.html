@@ -226,6 +226,7 @@ h3{font-size:1.75rem}
     border-radius:22px
   }
 }
+.content-grid.terms-only{grid-template-columns:1fr}
 </style>
 </head>
 <body>
@@ -556,6 +557,32 @@ qs('last-name').addEventListener('blur', () => {
 });
 qs('waiver-form').addEventListener('submit', submitWaiver);
 qs('signature-date').value = todayLocalIso();
+
+(function initTermsOnlyMode() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('view') !== 'terms') return;
+
+  const formColumn = document.querySelector('.form-column');
+  const contentGrid = document.querySelector('.content-grid');
+  const heroCopy = document.querySelector('.hero-copy');
+  const heroTitle = document.querySelector('.hero-card h1');
+  const bookingButton = document.querySelector('.top-actions .btn-ghost');
+
+  if (formColumn) formColumn.hidden = true;
+  if (contentGrid) contentGrid.classList.add('terms-only');
+  if (heroTitle) heroTitle.innerHTML = 'Full Shoreline <span class="accent">Waiver Terms</span>';
+  if (heroCopy) {
+    heroCopy.textContent = 'Read the full waiver terms below. Return to booking when you are ready to sign and pay the deposit.';
+  }
+  if (bookingButton) bookingButton.textContent = 'Back to Booking';
+
+  const terms = document.getElementById('terms');
+  if (terms) {
+    requestAnimationFrame(() => {
+      terms.scrollIntoView({ block: 'start' });
+    });
+  }
+})();
 </script>
 </body>
 </html>
