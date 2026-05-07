@@ -539,7 +539,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       <input class="search-input" placeholder="Search customers..." oninput="filterCRM(this)">
       <button class="btn btn-ghost btn-sm" onclick="triggerCRMImport()">Import Admin Tribe CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('crm-paste-modal')">Paste CRM CSV</button>
-      <button class="btn btn-primary btn-sm" onclick="openModal('customer-modal')">+ Add Customer</button>
+      <button class="btn btn-primary btn-sm" onclick="openCustomerModal()">+ Add Customer</button>
     </div>
   </div>
   <input type="file" id="crm-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleCRMImport(event)">
@@ -892,24 +892,33 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 <!-- CUSTOMER MODAL -->
 <div class="modal-overlay" id="customer-modal">
-  <div class="modal" style="width:440px;">
-    <div class="modal-head"><h3>Add Customer</h3><button class="modal-close" onclick="closeModal('customer-modal')">×</button></div>
+  <div class="modal" style="width:560px;">
+    <div class="modal-head"><h3 id="customer-modal-title">Add Customer</h3><button class="modal-close" onclick="closeModal('customer-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
+        <input type="hidden" id="c-id">
         <div class="form-group"><label>Name</label><input type="text" id="c-name" placeholder="First Last"></div>
         <div class="form-group"><label>Phone</label><input type="tel" id="c-phone" placeholder="(469) 555-0000"></div>
-        <div class="form-group" style="grid-column:1/-1;"><label>Email</label><input type="email" id="c-email" placeholder="email@example.com"></div>
-        <div class="form-group"><label>Source</label>
-          <select id="c-source"><option>Instagram</option><option>Google</option><option>Referral</option><option>Facebook</option><option>Walk-in</option><option>Other</option></select>
-        </div>
+        <div class="form-group"><label>Email</label><input type="email" id="c-email" placeholder="email@example.com"></div>
+        <div class="form-group"><label>Company</label><input type="text" id="c-company" placeholder="Business or group name"></div>
+        <div class="form-group"><label>Source</label><input type="text" id="c-source" placeholder="Instagram, Google, referral, walk-in"></div>
         <div class="form-group"><label>Tag</label>
           <select id="c-tag"><option value="">None</option><option value="vip">VIP</option><option value="group">Group organizer</option><option value="repeat">Repeat customer</option></select>
         </div>
+        <div class="form-group" style="grid-column:1/-1;"><label>CRM Tags</label><input type="text" id="c-crm-tags" placeholder="vip, birthday, referral"></div>
+        <div class="form-group"><label>Bookings</label><input type="number" min="0" id="c-bookings" value="0"></div>
+        <div class="form-group"><label>Total spent</label><input type="number" min="0" step="0.01" id="c-total-spent" value="0"></div>
+        <div class="form-group"><label>Last booking</label><input type="date" id="c-last-booking"></div>
+        <div class="form-group"><label>Last activity</label><input type="date" id="c-last-activity"></div>
+        <div class="form-group"><label>Waiver signed</label><input type="date" id="c-waiver-signed"></div>
+        <div class="form-group"><label>Emergency name</label><input type="text" id="c-emergency-name" placeholder="Optional"></div>
+        <div class="form-group"><label>Emergency phone</label><input type="tel" id="c-emergency-phone" placeholder="Optional"></div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="c-notes" placeholder="Internal notes, preferences, booking history, follow-up context"></textarea></div>
       </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('customer-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+      <button class="btn btn-primary" id="customer-save-button" onclick="saveCustomer()">Save Customer</button>
     </div>
   </div>
 </div>
@@ -1302,6 +1311,7 @@ let communicationsLog = [];
 let reviewRequests = [];
 let reviews = [];
 let socialPosts = [];
+let editingCustomerId = null;
 
 const equipment = [
   {name:'Yamaha VX #1',hours:88,serviceInterval:100,lastService:'2026-03-10'},
@@ -2253,6 +2263,57 @@ function showPage(id, btn) {
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+function resetCustomerForm() {
+  editingCustomerId = null;
+  document.getElementById('c-id').value = '';
+  document.getElementById('c-name').value = '';
+  document.getElementById('c-phone').value = '';
+  document.getElementById('c-email').value = '';
+  document.getElementById('c-company').value = '';
+  document.getElementById('c-source').value = 'Instagram';
+  document.getElementById('c-tag').value = '';
+  document.getElementById('c-crm-tags').value = '';
+  document.getElementById('c-bookings').value = '0';
+  document.getElementById('c-total-spent').value = '0';
+  document.getElementById('c-last-booking').value = '';
+  document.getElementById('c-last-activity').value = '';
+  document.getElementById('c-waiver-signed').value = '';
+  document.getElementById('c-emergency-name').value = '';
+  document.getElementById('c-emergency-phone').value = '';
+  document.getElementById('c-notes').value = '';
+  document.getElementById('customer-modal-title').textContent = 'Add Customer';
+  document.getElementById('customer-save-button').textContent = 'Save Customer';
+}
+function openCustomerModal(customerId = null) {
+  resetCustomerForm();
+  if (customerId !== null) {
+    const customer = customers.find((item) => Number(item.id) === Number(customerId));
+    if (!customer) {
+      showToast('⚠️ Customer record not found');
+      return;
+    }
+    editingCustomerId = Number(customer.id);
+    document.getElementById('c-id').value = String(customer.id);
+    document.getElementById('c-name').value = customer.name || '';
+    document.getElementById('c-phone').value = customer.phone || '';
+    document.getElementById('c-email').value = customer.email || '';
+    document.getElementById('c-company').value = customer.company || '';
+    document.getElementById('c-source').value = customer.source || '';
+    document.getElementById('c-tag').value = customer.tag || '';
+    document.getElementById('c-crm-tags').value = customer.crmTags || '';
+    document.getElementById('c-bookings').value = String(Number(customer.bookings) || 0);
+    document.getElementById('c-total-spent').value = String(Number(customer.totalSpent) || 0);
+    document.getElementById('c-last-booking').value = inputDateValue(customer.lastBooking);
+    document.getElementById('c-last-activity').value = inputDateValue(customer.lastActivity);
+    document.getElementById('c-waiver-signed').value = inputDateValue(customer.waiverSignedAt);
+    document.getElementById('c-emergency-name').value = customer.emergencyName || '';
+    document.getElementById('c-emergency-phone').value = customer.emergencyPhone || '';
+    document.getElementById('c-notes').value = customer.crmNotes || '';
+    document.getElementById('customer-modal-title').textContent = 'Edit Customer';
+    document.getElementById('customer-save-button').textContent = 'Save Changes';
+  }
+  openModal('customer-modal');
+}
 
 // ── TOAST ──
 function showToast(msg) {
@@ -2367,6 +2428,10 @@ function isoFromDate(date) {
 function parseIsoDate(iso) {
   const parts = localDateParts(iso);
   return parts ? new Date(parts.year, parts.month, parts.day) : null;
+}
+function inputDateValue(value) {
+  const parsed = dateValue(value);
+  return parsed ? isoFromDate(parsed) : '';
 }
 
 function monthStart(date) {
@@ -2834,7 +2899,7 @@ function renderInvoices() {
 function renderCRM() {
   const filteredCustomers = customers.filter((customer) => {
     if (!crmSearchQuery) return true;
-    return [customer.name, customer.phone, customer.email, customer.source, customer.crmTags]
+    return [customer.name, customer.phone, customer.email, customer.company, customer.source, customer.crmTags, customer.crmNotes, customer.emergencyName]
       .join(' ')
       .toLowerCase()
       .includes(crmSearchQuery);
@@ -2862,6 +2927,8 @@ function renderCRM() {
       </div>
       <div class="customer-actions">
         ${c.tag==='vip'?'<span class="badge badge-vip">VIP</span>':c.tag==='repeat'?'<span class="badge badge-completed">Repeat</span>':''}
+        <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${Number(c.id)})">Delete</button>
         ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">📞 Call</span>'}
         ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">💬 Text</span>'}
         ${c.email ? `<a href="mailto:${encodeURIComponent(c.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">✉️ Email</span>'}
@@ -2869,18 +2936,67 @@ function renderCRM() {
     </div>`).join('') || '<div class="empty"><div class="icon">🔎</div><p>No customers match this search.</p></div>';
 }
 
-function saveCustomer() {
+async function saveCustomer() {
   const name = document.getElementById('c-name').value.trim();
   if(!name) { showToast('⚠️ Enter a name'); return; }
-  customers.push({id:nextId(customers),name,phone:document.getElementById('c-phone').value,email:document.getElementById('c-email').value,bookings:0,totalSpent:0,lastBooking:'N/A',source:document.getElementById('c-source').value,tag:document.getElementById('c-tag').value});
-  saveData();
+  const customerId = editingCustomerId || Number(document.getElementById('c-id').value) || null;
+  const payload = {
+    name,
+    phone: document.getElementById('c-phone').value.trim(),
+    email: document.getElementById('c-email').value.trim(),
+    company: document.getElementById('c-company').value.trim(),
+    source: document.getElementById('c-source').value.trim(),
+    tag: document.getElementById('c-tag').value,
+    crmTags: document.getElementById('c-crm-tags').value.trim(),
+    bookings: Math.max(0, Number(document.getElementById('c-bookings').value) || 0),
+    totalSpent: Math.max(0, Number(document.getElementById('c-total-spent').value) || 0),
+    lastBooking: document.getElementById('c-last-booking').value || 'N/A',
+    lastActivity: document.getElementById('c-last-activity').value || '',
+    waiverSignedAt: document.getElementById('c-waiver-signed').value || '',
+    emergencyName: document.getElementById('c-emergency-name').value.trim(),
+    emergencyPhone: document.getElementById('c-emergency-phone').value.trim(),
+    crmNotes: document.getElementById('c-notes').value.trim()
+  };
+  if (customerId) {
+    const customer = customers.find((item) => Number(item.id) === Number(customerId));
+    if (!customer) {
+      showToast('⚠️ Customer record not found');
+      return;
+    }
+    Object.assign(customer, payload);
+  } else {
+    customers.unshift({
+      id: nextId(customers),
+      ...payload,
+      createdAt: new Date().toISOString(),
+      importSource: 'manual',
+      crmFields: {}
+    });
+  }
+  await saveData();
   closeModal('customer-modal');
-  showToast('✅ Customer added');
+  showToast(customerId ? '✅ Customer updated' : '✅ Customer added');
   renderCRM();
   renderCommsPanel();
-  ['c-name','c-phone','c-email'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('c-source').selectedIndex = 0;
-  document.getElementById('c-tag').selectedIndex = 0;
+  resetCustomerForm();
+}
+async function deleteCustomer(customerId) {
+  const customer = customers.find((item) => Number(item.id) === Number(customerId));
+  if (!customer) {
+    showToast('⚠️ Customer record not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete ${customer.name} from the CRM? Existing bookings and invoices will stay in place.`);
+  if (!confirmed) return;
+  customers = customers.filter((item) => Number(item.id) !== Number(customerId));
+  if (editingCustomerId && Number(editingCustomerId) === Number(customerId)) {
+    closeModal('customer-modal');
+    resetCustomerForm();
+  }
+  await saveData();
+  renderCRM();
+  renderCommsPanel();
+  showToast('🗑️ Customer removed');
 }
 
 // ── EXPENSES ──
