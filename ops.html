@@ -222,11 +222,34 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 /* CRM */
 .crm-grid{display:flex;flex-direction:column;gap:1rem;}
+.crm-kpi-grid{margin-bottom:1rem;}
+.crm-workspace{margin-bottom:1rem;}
+.crm-workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.9rem;flex-wrap:wrap;margin-bottom:0.9rem;}
+.crm-workspace-head p{font-size:0.8rem;color:var(--muted);line-height:1.6;max-width:620px;}
+.crm-chip-row{display:flex;gap:0.55rem;flex-wrap:wrap;margin-bottom:0.85rem;}
+.crm-chip{
+  border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--muted);
+  border-radius:999px;padding:0.5rem 0.8rem;font-size:0.76rem;letter-spacing:0.08em;text-transform:uppercase;
+  cursor:pointer;transition:all 0.18s;font-family:'DM Sans',sans-serif;
+}
+.crm-chip:hover{border-color:rgba(26,158,212,0.35);color:var(--white);}
+.crm-chip.active{background:rgba(26,158,212,0.14);border-color:rgba(26,158,212,0.4);color:var(--wave);}
+.crm-summary-line{font-size:0.78rem;color:var(--muted);line-height:1.6;}
 .customer-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.2rem 1.25rem;transition:all 0.2s;display:grid;grid-template-columns:minmax(0,1.7fr) auto;gap:1rem;align-items:center;}
 .customer-card:hover{border-color:rgba(26,158,212,0.4);transform:translateY(-2px);}
 .customer-main{display:flex;align-items:flex-start;gap:0.85rem;min-width:0;}
 .customer-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:500;flex-shrink:0;}
 .customer-name{font-size:0.95rem;font-weight:500;margin-bottom:0.2rem;}
+.customer-flags{display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.15rem 0 0.55rem;}
+.customer-flag{
+  display:inline-flex;align-items:center;gap:0.35rem;padding:0.22rem 0.58rem;border-radius:999px;
+  font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);color:var(--muted);
+}
+.customer-flag.followup{border-color:rgba(245,158,11,0.28);background:rgba(245,158,11,0.12);color:var(--amber);}
+.customer-flag.waiver{border-color:rgba(239,68,68,0.28);background:rgba(239,68,68,0.12);color:var(--red);}
+.customer-flag.ready{border-color:rgba(16,185,129,0.26);background:rgba(16,185,129,0.12);color:var(--green);}
+.customer-flag.value{border-color:rgba(139,92,246,0.28);background:rgba(139,92,246,0.12);color:#c4b5fd;}
 .customer-meta{font-size:0.78rem;color:var(--muted);margin-bottom:0.45rem;line-height:1.55;}
 .customer-stats{display:flex;gap:1rem;flex-wrap:wrap;}
 .customer-stat .num{font-size:1rem;font-weight:500;color:var(--wave);}
@@ -325,7 +348,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .toast.show{transform:translateY(0);opacity:1;}
 
 /* RESPONSIVE */
-@media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.maint-grid{grid-template-columns:1fr 1fr;}.topbar{padding:0.9rem 1rem;align-items:flex-start;gap:0.75rem;}.topbar-right{flex-wrap:wrap;justify-content:flex-end;}.ops-mode-pill{font-size:0.66rem;}.customer-card{grid-template-columns:1fr;}.customer-actions{justify-content:flex-start;}.compose-grid{grid-template-columns:1fr;}.mini-kpis{grid-template-columns:1fr;}}
+@media(max-width:900px){.sidebar{width:60px;}.sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:none;}.nav-item{justify-content:center;padding:0.7rem;}.main{margin-left:60px;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.maint-grid{grid-template-columns:1fr 1fr;}.topbar{padding:0.9rem 1rem;align-items:flex-start;gap:0.75rem;}.topbar-right{flex-wrap:wrap;justify-content:flex-end;}.ops-mode-pill{font-size:0.66rem;}.customer-card{grid-template-columns:1fr;}.customer-actions{justify-content:flex-start;}.compose-grid{grid-template-columns:1fr;}.mini-kpis{grid-template-columns:1fr;}.crm-workspace-head{flex-direction:column;}.crm-kpi-grid{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:1100px){.calendar-shell{grid-template-columns:1fr;}.agenda-item{flex-direction:column;}.agenda-item-right{align-items:flex-start;}}
 @media(max-width:900px){.calendar-day{min-height:92px;padding:0.65rem 0.55rem 0.55rem;}.calendar-month-label{min-width:auto;}}
 @media(max-width:640px){.calendar-head,.agenda-head{align-items:flex-start;}.calendar-nav{width:100%;justify-content:space-between;}.calendar-weekdays,.calendar-grid{gap:0.3rem;}.calendar-day{min-height:84px;padding:0.55rem 0.45rem;}.calendar-day-num{font-size:0.84rem;}.calendar-day-meta{font-size:0.66rem;}.calendar-pill{padding:0.2rem 0.42rem;font-size:0.62rem;}.calendar-day-count{min-width:20px;height:20px;font-size:0.68rem;}}
@@ -549,6 +572,38 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       <div class="copy" id="crm-import-summary">Export Contacts or Opportunities from Admin Tribe, then import the CSV here. Records are saved into the private Shoreline ops service and synced across signed-in sessions.</div>
     </div>
     <div class="import-pill" id="crm-import-pill">No CRM import yet</div>
+  </div>
+  <div class="kpi-grid crm-kpi-grid">
+    <div class="kpi-card"><div class="label">Total customers</div><div class="value" id="crm-kpi-total">0</div><div class="delta up" id="crm-kpi-total-meta">All saved contacts</div></div>
+    <div class="kpi-card"><div class="label">Need follow-up</div><div class="value" style="color:var(--amber);" id="crm-kpi-followup">0</div><div class="delta warn" id="crm-kpi-followup-meta">No recent booking or touchpoint</div></div>
+    <div class="kpi-card"><div class="label">Waivers on file</div><div class="value" style="color:var(--green);" id="crm-kpi-waiver">0</div><div class="delta up" id="crm-kpi-waiver-meta">Ready for faster check-in</div></div>
+    <div class="kpi-card"><div class="label">Best customers</div><div class="value" style="color:var(--wave);" id="crm-kpi-best">0</div><div class="delta up" id="crm-kpi-best-meta">VIP, repeat, or high-value riders</div></div>
+  </div>
+  <div class="list-card crm-workspace">
+    <div class="crm-workspace-head">
+      <div>
+        <h3>Run the customer list</h3>
+        <p>Use this view to see who needs follow-up, who still needs a waiver, and who is worth rebooking first.</p>
+      </div>
+      <div class="crm-toolbar">
+        <label style="display:flex;align-items:center;gap:0.55rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">
+          Sort
+          <select id="crm-sort" onchange="setCRMSort(this.value)">
+            <option value="recent">Recent activity</option>
+            <option value="spend">Highest spend</option>
+            <option value="bookings">Most bookings</option>
+            <option value="name">Name A-Z</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="crm-chip-row" id="crm-filter-row">
+      <button class="crm-chip active" onclick="setCRMFilter('all', this)">All customers</button>
+      <button class="crm-chip" onclick="setCRMFilter('followup', this)">Need follow-up</button>
+      <button class="crm-chip" onclick="setCRMFilter('waiver', this)">Waiver needed</button>
+      <button class="crm-chip" onclick="setCRMFilter('best', this)">Best customers</button>
+    </div>
+    <div class="crm-summary-line" id="crm-summary-line">Loading customer summary...</div>
   </div>
   <div class="crm-grid" id="crm-grid"></div>
 </div>
@@ -1235,6 +1290,8 @@ let customers = [
 let importMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let invoiceImportMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let crmSearchQuery = '';
+let crmViewFilter = 'all';
+let crmSortMode = 'recent';
 let invoiceSearchQuery = '';
 let invoicePeriodFilter = 'month';
 let invoiceDateFrom = '';
@@ -1954,6 +2011,18 @@ function renderInvoiceImportSummary() {
 }
 function filterCRM(input) {
   crmSearchQuery = String(input?.value || '').trim().toLowerCase();
+  renderCRM();
+}
+function setCRMFilter(filter, btn) {
+  crmViewFilter = filter;
+  if (btn) {
+    document.querySelectorAll('#crm-filter-row .crm-chip').forEach((chip) => chip.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  renderCRM();
+}
+function setCRMSort(value) {
+  crmSortMode = value || 'recent';
   renderCRM();
 }
 function filterInvoices(input) {
@@ -2896,26 +2965,97 @@ function renderInvoices() {
 }
 
 // ── CRM ──
+function customerHasWaiver(customer) {
+  return Boolean(String(customer.waiverSignedAt || '').trim());
+}
+function customerNeedsFollowUp(customer) {
+  if ((Number(customer.bookings) || 0) === 0) return true;
+  const recentDays = Math.min(daysSince(customer.lastActivity), daysSince(customer.lastBooking));
+  return recentDays >= 30;
+}
+function customerIsBest(customer) {
+  const totalSpent = Number(customer.totalSpent) || 0;
+  const bookingsCount = Number(customer.bookings) || 0;
+  const tags = `${customer.tag || ''} ${customer.crmTags || ''}`.toLowerCase();
+  return totalSpent >= 1000 || bookingsCount >= 2 || tags.includes('vip') || tags.includes('repeat');
+}
+function customerLastTouchLabel(customer) {
+  const lastTouch = customer.lastActivity || customer.lastBooking || customer.createdAt || '';
+  if (!lastTouch) return 'No recent activity saved';
+  const days = daysSince(lastTouch);
+  if (days === 999) return 'No recent activity saved';
+  return days === 0 ? 'Touched today' : `Touched ${days}d ago`;
+}
+function crmFilterMatches(customer) {
+  if (crmViewFilter === 'followup') return customerNeedsFollowUp(customer);
+  if (crmViewFilter === 'waiver') return !customerHasWaiver(customer);
+  if (crmViewFilter === 'best') return customerIsBest(customer);
+  return true;
+}
+function sortCustomersForCRM(list) {
+  const items = [...list];
+  if (crmSortMode === 'spend') {
+    return items.sort((left, right) => (Number(right.totalSpent) || 0) - (Number(left.totalSpent) || 0));
+  }
+  if (crmSortMode === 'bookings') {
+    return items.sort((left, right) => (Number(right.bookings) || 0) - (Number(left.bookings) || 0) || (Number(right.totalSpent) || 0) - (Number(left.totalSpent) || 0));
+  }
+  if (crmSortMode === 'name') {
+    return items.sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+  }
+  return sortNewestFirst(items, (customer) => customer.lastActivity || customer.createdAt || customer.lastBooking);
+}
 function renderCRM() {
-  const filteredCustomers = customers.filter((customer) => {
+  const searchedCustomers = customers.filter((customer) => {
     if (!crmSearchQuery) return true;
     return [customer.name, customer.phone, customer.email, customer.company, customer.source, customer.crmTags, customer.crmNotes, customer.emergencyName]
       .join(' ')
       .toLowerCase()
       .includes(crmSearchQuery);
   });
-  const orderedCustomers = sortNewestFirst(filteredCustomers, (customer) => customer.lastActivity || customer.createdAt || customer.lastBooking);
+  const filteredCustomers = searchedCustomers.filter(crmFilterMatches);
+  const orderedCustomers = sortCustomersForCRM(filteredCustomers);
+  const totalCustomers = customers.length;
+  const followUpCount = customers.filter(customerNeedsFollowUp).length;
+  const waiverCount = customers.filter(customerHasWaiver).length;
+  const bestCount = customers.filter(customerIsBest).length;
+  const summaryEl = document.getElementById('crm-summary-line');
+  const sortEl = document.getElementById('crm-sort');
+  if (sortEl && sortEl.value !== crmSortMode) sortEl.value = crmSortMode;
+  if (document.getElementById('crm-kpi-total')) document.getElementById('crm-kpi-total').textContent = totalCustomers.toLocaleString();
+  if (document.getElementById('crm-kpi-total-meta')) document.getElementById('crm-kpi-total-meta').textContent = `${searchedCustomers.length} match the current search`;
+  if (document.getElementById('crm-kpi-followup')) document.getElementById('crm-kpi-followup').textContent = followUpCount.toLocaleString();
+  if (document.getElementById('crm-kpi-followup-meta')) document.getElementById('crm-kpi-followup-meta').textContent = followUpCount ? `${followUpCount} customers need outreach` : 'No overdue outreach right now';
+  if (document.getElementById('crm-kpi-waiver')) document.getElementById('crm-kpi-waiver').textContent = waiverCount.toLocaleString();
+  if (document.getElementById('crm-kpi-waiver-meta')) document.getElementById('crm-kpi-waiver-meta').textContent = `${Math.max(totalCustomers - waiverCount, 0)} still need waiver collection`;
+  if (document.getElementById('crm-kpi-best')) document.getElementById('crm-kpi-best').textContent = bestCount.toLocaleString();
+  if (document.getElementById('crm-kpi-best-meta')) document.getElementById('crm-kpi-best-meta').textContent = bestCount ? `${bestCount} customers worth rebooking first` : 'No VIP or repeat riders tagged yet';
+  if (summaryEl) {
+    const filterLabel = crmViewFilter === 'followup'
+      ? 'customers who need follow-up'
+      : crmViewFilter === 'waiver'
+        ? 'customers who still need a waiver'
+        : crmViewFilter === 'best'
+          ? 'best customers to prioritize'
+          : 'customers in the CRM';
+    summaryEl.textContent = `${orderedCustomers.length} ${filterLabel}${crmSearchQuery ? ` for “${crmSearchQuery}”` : ''}. Sort is set to ${crmSortMode === 'recent' ? 'recent activity' : crmSortMode === 'spend' ? 'highest spend' : crmSortMode === 'bookings' ? 'most bookings' : 'name A-Z'}.`;
+  }
   document.getElementById('crm-grid').innerHTML = orderedCustomers.map((c,i) => `
     <div class="customer-card">
       <div class="customer-main">
         <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
         <div>
           <div class="customer-name">${escapeHtml(c.name)}</div>
+          <div class="customer-flags">
+            ${customerNeedsFollowUp(c) ? '<span class="customer-flag followup">Follow-up due</span>' : '<span class="customer-flag ready">Recently active</span>'}
+            ${customerHasWaiver(c) ? '<span class="customer-flag ready">Waiver on file</span>' : '<span class="customer-flag waiver">Waiver needed</span>'}
+            ${customerIsBest(c) ? '<span class="customer-flag value">Best customer</span>' : ''}
+          </div>
           <div class="customer-meta">${c.phone ? `<a href="tel:${phoneHref(c.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(c.phone)}</a>` : 'No phone on file'}${c.email ? ` · ${escapeHtml(c.email)}` : ''}</div>
       </div>
         <div>
           <div class="customer-meta">${[c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ') || 'Imported CRM profile'}</div>
-          ${(c.createdAt || c.lastActivity || c.lastBooking) ? `<div class="customer-meta">Newest activity ${escapeHtml(c.lastActivity || c.createdAt || c.lastBooking || '—')} · Last booking ${escapeHtml(c.lastBooking || '—')}</div>` : ''}
+          ${(c.createdAt || c.lastActivity || c.lastBooking) ? `<div class="customer-meta">${escapeHtml(customerLastTouchLabel(c))} · Last booking ${escapeHtml(c.lastBooking || '—')}</div>` : ''}
           ${c.waiverSignedAt ? `<div class="customer-meta">Waiver on file · ${escapeHtml(c.waiverSignedAt)}${c.emergencyName ? ` · Emergency: ${escapeHtml(c.emergencyName)}` : ''}</div>` : ''}
           ${c.crmNotes ? `<div class="customer-meta">${escapeHtml(shortText(c.crmNotes))}</div>` : ''}
           <div class="customer-stats">
