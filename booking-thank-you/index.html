@@ -230,7 +230,7 @@ h3{font-size:1.7rem}
           <div class="hero-copy">
             Your $50 booking deposit and $5 processing fee are paid, and your Shoreline request is now on file. <strong>Watch for a confirmation text or email</strong> if Shoreline needs to send final timing details before your lake day.
           </div>
-          <div class="status" id="payment-status">Booking payment paid successfully.</div>
+          <div class="status" id="payment-status">Payment received. Watch for your confirmation text or email.</div>
         </div>
 
         <div class="card media-card">
@@ -278,8 +278,7 @@ h3{font-size:1.7rem}
             <div class="summary-row"><span>Start time</span><strong id="summary-time">-</strong></div>
             <div class="summary-row"><span>Meeting spot</span><strong id="summary-location">-</strong></div>
             <div class="summary-row"><span>Customer</span><strong id="summary-customer">-</strong></div>
-            <div class="summary-row"><span>Preferred contact</span><strong id="summary-contact">-</strong></div>
-            <div class="summary-row"><span>Deposit</span><strong id="summary-deposit">$50</strong></div>
+            <div class="summary-row"><span>Deposit credit</span><strong id="summary-deposit">$50</strong></div>
             <div class="summary-row"><span>Processing fee</span><strong id="summary-processing-fee">$5</strong></div>
             <div class="summary-row"><span>Paid today</span><strong id="summary-paid-today">$55</strong></div>
           </div>
@@ -348,12 +347,6 @@ function formatCurrency(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
-function formatContactMethod(value = '') {
-  if (value === 'call') return 'Phone call';
-  if (value === 'email') return 'Email';
-  return 'Text message';
-}
-
 function formatTimeLabel(value = '') {
   const [hourText = '', minuteText = '00'] = String(value).split(':');
   const hour = Number(hourText);
@@ -409,18 +402,15 @@ function showBooking(booking) {
   setText('summary-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('summary-date', booking.date || '-');
   setText('summary-time', formatTimeLabel(booking.time));
-  setText('summary-location', booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
+  setText('summary-location', booking.location || 'Shoreline Aquatics launch, 2000 Main St, Hickory Creek, TX');
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
-  setText('summary-contact', formatContactMethod(booking.contactMethod));
   setText('summary-deposit', formatCurrency(booking.depositAmount || 50));
   setText('summary-processing-fee', formatCurrency(booking.processingFeeAmount || 5));
   setText('summary-paid-today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5))));
-  setText('payment-status', `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5)))}`);
-  setText('confirm-contact-method', `${formatContactMethod(booking.contactMethod)} follow-up`);
+  setText('payment-status', `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5)))}. Watch for your confirmation text or email.`);
   setText('next-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('next-date', booking.date || '-');
   setText('next-time', formatTimeLabel(booking.time));
-  setText('next-contact', formatContactMethod(booking.contactMethod));
   qs('sms-link').href = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(buildMessage(booking))}`;
   qs('thankyou-wrap').hidden = false;
   qs('empty-state').hidden = true;
@@ -447,7 +437,7 @@ function showBooking(booking) {
 
       if (booking.paymentStatus !== 'paid') {
         qs('empty-state').hidden = false;
-        qs('empty-state').querySelector('p').textContent = 'The payment has not finished clearing yet. Head back to the contact, waiver, and deposit page if you need to try again.';
+        qs('empty-state').querySelector('p').textContent = 'The payment has not finished clearing yet. Head back to the contact, waiver, and checkout page if you need to try again.';
         return;
       }
     } catch (error) {

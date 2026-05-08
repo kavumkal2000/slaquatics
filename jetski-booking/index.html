@@ -788,7 +788,7 @@ h1 span { color: var(--gold); }
       <div class="form-card">
         <h2 class="section-title">Pick the rental date first</h2>
         <p class="section-copy">
-          Choose the date and start time here. The next page combines the rider contact form, waiver, and deposit in one step.
+          Choose the date and start time here. The next page combines the rider contact form, waiver, and $55 checkout in one step.
         </p>
 
         <form id="booking-form">
@@ -823,7 +823,7 @@ h1 span { color: var(--gold); }
                 <div class="calendar-summary">
                   <div class="calendar-picked"><span>Selected</span><span id="calendar-pill-date">Today</span></div>
                   <div class="calendar-big-date" id="calendar-big-date">Today</div>
-                  <p id="calendar-copy">Choose the date that works best, then continue to the contact, waiver, and deposit page.</p>
+                  <p id="calendar-copy">Choose the date that works best, then continue to the contact, waiver, and $55 checkout page.</p>
                   <div class="calendar-mini">
                     <div class="calendar-mini-item">
                       <strong>Requested date</strong>
@@ -873,7 +873,7 @@ h1 span { color: var(--gold); }
                 <div class="summary-row"><span>Duration</span><strong id="summary-duration">2 hours</strong></div>
                 <div class="summary-row"><span>Rental date</span><strong id="summary-date">Today</strong></div>
                 <div class="summary-row"><span>Start time</span><strong id="summary-time">10:00 AM</strong></div>
-                <div class="summary-row"><span>Booking deposit</span><strong>$50</strong></div>
+                <div class="summary-row"><span>Due today</span><strong>$55</strong></div>
               </div>
               <div class="footer-note" style="margin-top:18px">
                 Need to change the package? Head back to the homepage booking section before continuing.
@@ -894,7 +894,7 @@ h1 span { color: var(--gold); }
           <div class="status" id="form-status"></div>
           <button class="btn btn-primary" type="submit">Continue To Contact + Waiver</button>
           <div class="footer-note">
-            The next page combines the contact form, waiver, and $50 booking deposit in one clean step.
+            The next page combines the contact form, waiver, and $55 checkout in one clean step.
           </div>
         </form>
       </div>
@@ -1508,7 +1508,7 @@ async function handleSubmit(event) {
     }
     qs('booking-token').value = booking.publicToken;
 
-    status.textContent = 'Booking details saved. Opening the contact, waiver, and deposit page...';
+    status.textContent = 'Booking details saved. Opening the contact, waiver, and checkout page...';
     status.classList.add('success');
     window.location.href = `../jetski-booking-confirmation/?booking=${encodeURIComponent(booking.publicToken)}`;
   } catch (submitError) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Complete the Shoreline Aquatics waiver, review your rental details, and pay the $50 booking deposit plus a $5 processing fee.">
+<meta name="description" content="Complete the Shoreline Aquatics waiver, review your rental details, and pay $55 today. That includes a $50 booking deposit and a $5 processing fee.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking-confirmation/">
 <title>Contact, Waiver & Deposit | Shoreline Aquatics</title>
@@ -234,7 +234,7 @@ h3{font-size:1.75rem}
         <div class="eyebrow">Contact + Waiver</div>
         <h1>Complete The <span class="accent">Contact, Waiver</span> And Deposit</h1>
         <div class="hero-copy">
-          This is the final booking step before the thank-you page. Fill in the rider contact details, complete the waiver, and pay the $50 booking deposit plus a $5 processing fee to hold the rental date.
+          This is the final booking step before the thank-you page. Fill in the rider contact details, complete the waiver, and pay $55 today to hold the rental date. That includes a $50 booking deposit and a $5 processing fee.
         </div>
       </div>
     </div>
@@ -242,7 +242,7 @@ h3{font-size:1.75rem}
     <div class="empty" id="empty-state" hidden>
       <div class="block-label">No Booking Yet</div>
       <h2>Start with the calendar first.</h2>
-      <p>No booking details are saved yet. Head back to the calendar page, choose the rental date, and the combined contact + waiver step will be ready here.</p>
+      <p>No booking details are saved yet. Head back to the calendar page, choose the rental date, and the combined contact + waiver + checkout step will be ready here.</p>
       <div class="actions">
         <a class="btn btn-primary" id="empty-calendar-link" href="../jetski-booking/">Go To Booking Calendar</a>
       </div>
@@ -253,7 +253,7 @@ h3{font-size:1.75rem}
         <div class="block-label">Contact + Waiver</div>
         <h2>Complete the rider details and waiver</h2>
         <div class="section-copy">
-          Finish the form below, then pay the deposit and processing fee to move into the thank-you page and arrival instructions.
+          Finish the form below, then pay $55 today to move into the thank-you page and arrival instructions.
         </div>
 
         <div class="match-card" id="match-card">
@@ -274,7 +274,7 @@ h3{font-size:1.75rem}
                 </div>
                 <div class="field">
                   <label for="phone">Phone</label>
-                  <input id="phone" name="phone" type="tel" placeholder="(469) 555-0000" required>
+                    <input id="phone" name="phone" type="tel" placeholder="Best phone number" required>
                 </div>
                 <div class="field">
                   <label for="email">Email</label>
@@ -399,12 +399,6 @@ function formatCurrency(value) {
   return `$${Number(value || 0).toLocaleString()}`;
 }
 
-function formatContactMethod(value = '') {
-  if (value === 'call') return 'Phone call';
-  if (value === 'email') return 'Email';
-  return 'Text message';
-}
-
 function formatTimeLabel(value = '') {
   const [hourText = '', minuteText = '00'] = String(value).split(':');
   const hour = Number(hourText);
@@ -453,7 +447,6 @@ function buildMessage(booking) {
     `Party size: ${booking.partySize || "Not provided"}`,
     `Aerial drone coverage: ${booking.drone ? "Yes" : "No"}`,
     `Meeting spot: ${booking.location || "To be confirmed"}`,
-    `Preferred contact: ${booking.contactMethod}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
     `Booking payment: ${booking.paymentStatus === "paid" || booking.deposit ? "$55 paid ($50 deposit + $5 processing fee)" : "$55 due today ($50 deposit + $5 processing fee)"}`,
     `Notes: ${booking.notes || "None"}`
@@ -488,16 +481,14 @@ function populateSummary(booking) {
   setText("summary-total", formatCurrency(booking.total || 0));
   setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
   setText("summary-note", booking.craft === 'boat'
-    ? 'Your boat rental with captain included is ready for the contact, waiver, and deposit step.'
+    ? 'Your boat rental with captain included is ready for the contact, waiver, and checkout step.'
     : booking.craft?.startsWith('bundle')
-      ? 'Your lake-day bundle is ready for the contact, waiver, and deposit step.'
-      : 'Your Yamaha jet ski rental is ready for the contact, waiver, and deposit step.');
+      ? 'Your lake-day bundle is ready for the contact, waiver, and checkout step.'
+      : 'Your Yamaha jet ski rental is ready for the contact, waiver, and checkout step.');
   setText("summary-date", booking.date || '-');
   setText("summary-time", formatTimeLabel(booking.time));
   setText("summary-location", booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
   setText("summary-party", booking.partySize || '2');
-  setText("summary-contact", formatContactMethod(booking.contactMethod));
-
 }
 
 function populateForm(booking) {

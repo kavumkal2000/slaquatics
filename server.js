@@ -743,7 +743,7 @@ function bookingConfirmationText(booking = {}) {
     `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)))}`,
     `Remaining balance: ${formatCurrency(remainingBalance)}`,
     '',
-    'What happens next',
+    'Launch notes',
     '- Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.',
     '- Shoreline provides life jackets, fuel, cooler space, and the safety briefing before launch.',
     '- The remaining balance is handled directly with Shoreline before you head out on the water.',
@@ -793,7 +793,7 @@ function bookingConfirmationHtml(booking = {}) {
         </table>
 
         <div style="margin-top:24px;padding:18px;border-radius:18px;background:#f5f8fc;">
-          <h2 style="margin:0 0 10px;font-size:18px;">What happens next</h2>
+          <h2 style="margin:0 0 10px;font-size:18px;">Launch notes</h2>
           <ul style="margin:0;padding-left:18px;">
             <li>Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.</li>
             <li>Life jackets, fuel, cooler space, and the pre-launch safety briefing are included.</li>
