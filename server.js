@@ -941,6 +941,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     status: 'pending',
     deposit: false
   };
+  const existingStatus = String(booking.status || '').trim().toLowerCase();
 
   booking.name = customer.name;
   booking.phone = customer.phone;
@@ -965,6 +966,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
   booking.notes = String(payload.notes || '').trim();
   booking.customerId = customer.id;
   booking.source = 'Website Booking';
+  booking.status = ['confirmed', 'completed'].includes(existingStatus) ? booking.status : 'pending';
   booking.updatedAt = now;
   booking.waiverSignedAt = customer.waiverSignedAt;
   booking.waiverSignature = customer.waiverSignature;

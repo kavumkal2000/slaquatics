@@ -441,11 +441,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dashboard">
-  <div class="alerts" id="dashboard-alerts">
-    <div class="alert danger"><span class="alert-icon">🚨</span><div class="alert-text"><strong>2 bookings tomorrow</strong> — $50 deposits not yet confirmed. Call to verify.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
-    <div class="alert warn"><span class="alert-icon">⚠️</span><div class="alert-text"><strong>Yamaha VX #2</strong> is nearing its next service window. Knock it out before the next packed weekend.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
-    <div class="alert info"><span class="alert-icon">💡</span><div class="alert-text"><strong>Memorial Day weekend</strong> in 18 days — consider raising weekend rates 15–20% and promoting group packages now.</div><button class="alert-dismiss" onclick="this.closest('.alert').remove()">×</button></div>
-  </div>
+  <div class="alerts" id="dashboard-alerts"></div>
 
   <div class="kpi-grid">
     <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);" id="dashboard-kpi-pending">0</div><div class="delta warn" id="dashboard-kpi-pending-meta">Waiting on follow-up</div></div>
@@ -1023,7 +1019,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       <div class="form-grid">
         <input type="hidden" id="c-id">
         <div class="form-group"><label>Name</label><input type="text" id="c-name" placeholder="First Last"></div>
-        <div class="form-group"><label>Phone</label><input type="tel" id="c-phone" placeholder="(469) 555-0000"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="c-phone" placeholder="Customer phone number"></div>
         <div class="form-group"><label>Email</label><input type="email" id="c-email" placeholder="email@example.com"></div>
         <div class="form-group"><label>Company</label><input type="text" id="c-company" placeholder="Business or group name"></div>
         <div class="form-group"><label>Source</label><input type="text" id="c-source" placeholder="Instagram, Google, referral, walk-in"></div>
@@ -1338,25 +1334,9 @@ const PRICING = {
 const CRAFT_NAMES = {yamaha:'Yamaha Jet Ski Package',seadoo:'4 Yamaha Jet Skis',boat:'Boat Rental',bundle:'Jet Ski + Boat Bundle',imported:'Imported booking'};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
-let bookings = [
-  {id:1,name:'Marcus R.',phone:'(214) 555-0181',email:'marcus@email.com',craft:'yamaha',duration:4,date:'2026-04-22',time:'09:00',drone:true,status:'confirmed',deposit:true,notes:'Group of 4, birthday'},
-  {id:2,name:'Ashley L.',phone:'(972) 555-0344',email:'ashley@email.com',craft:'yamaha',duration:2,date:'2026-04-22',time:'13:00',drone:false,status:'pending',deposit:false,notes:''},
-  {id:3,name:'James T.',phone:'(469) 555-0092',email:'james@email.com',craft:'boat',duration:4,date:'2026-04-24',time:'10:00',drone:true,status:'confirmed',deposit:true,notes:'Family of 8'},
-  {id:4,name:'Sandra P.',phone:'(817) 555-0228',email:'sandra@email.com',craft:'yamaha',duration:8,date:'2026-04-19',time:'08:30',drone:true,status:'completed',deposit:true,notes:''},
-  {id:5,name:'Derek K.',phone:'(214) 555-0416',email:'derek@email.com',craft:'yamaha',duration:3,date:'2026-04-18',time:'11:00',drone:false,status:'noshow',deposit:false,notes:'No answer on day-of call'},
-  {id:6,name:'Christina N.',phone:'(469) 555-0073',email:'christina@email.com',craft:'boat',duration:6,date:'2026-04-17',time:'09:00',drone:false,status:'completed',deposit:true,notes:''},
-];
+let bookings = [];
 
-let customers = [
-  {id:1,name:'Alex Harper',phone:'(214) 555-0180',email:'alex@example.com',bookings:2,totalSpent:860,lastBooking:'2026-04-09',source:'Google',tag:'repeat'},
-  {id:2,name:'Jordan Lee',phone:'(972) 555-0194',email:'jordan@example.com',bookings:1,totalSpent:300,lastBooking:'2026-04-05',source:'Instagram',tag:''},
-  {id:3,name:'Taylor Brooks',phone:'(469) 555-0162',email:'taylor@example.com',bookings:1,totalSpent:600,lastBooking:'2026-04-05',source:'Referral',tag:'repeat'},
-  {id:4,name:'Casey Morgan',phone:'(817) 555-0118',email:'casey@example.com',bookings:1,totalSpent:330,lastBooking:'2026-03-31',source:'Google',tag:''},
-  {id:5,name:'Riley Bennett',phone:'(512) 555-0141',email:'riley@example.com',bookings:3,totalSpent:1800,lastBooking:'2026-03-26',source:'Instagram',tag:'vip'},
-  {id:6,name:'Cameron Ellis',phone:'(903) 555-0127',email:'cameron@example.com',bookings:1,totalSpent:500,lastBooking:'2026-03-25',source:'Facebook',tag:''},
-  {id:7,name:'Morgan Hayes',phone:'(254) 555-0176',email:'morgan@example.com',bookings:2,totalSpent:1100,lastBooking:'2026-03-20',source:'Referral',tag:'repeat'},
-  {id:8,name:'Avery Collins',phone:'(210) 555-0153',email:'avery@example.com',bookings:2,totalSpent:1600,lastBooking:'2026-03-18',source:'Direct',tag:'vip'},
-];
+let customers = [];
 let importMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let invoiceImportMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let crmSearchQuery = '';
@@ -1368,70 +1348,13 @@ let invoiceDateFrom = '';
 let invoiceDateTo = '';
 let editingInvoiceId = null;
 
-let expenses = [
-  {id:1,date:'2026-04-07',category:'delivery',name:'Trailer fuel and launch run',amount:65,notes:'Little Elm pickup'},
-  {id:2,date:'2026-04-10',category:'marketing',name:'Instagram promotion',amount:85,notes:'Weekend promo push'},
-  {id:3,date:'2026-04-14',category:'maintenance',name:'Life jacket replacements',amount:120,notes:'Two adult vests'}
-];
+let expenses = [];
 
-let fuelLog = [
-  {craft:'Yamaha VX #2',date:'2026-04-19',gallons:4.2,ppg:3.89,hours:8,ref:'Sandra P.'},
-  {craft:'Yamaha VX #1',date:'2026-04-18',gallons:1.8,ppg:3.89,hours:3,ref:'Derek K.'},
-  {craft:'Boat',date:'2026-04-17',gallons:3.5,ppg:3.89,hours:6,ref:'Christina N.'},
-  {craft:'Boat',date:'2026-04-15',gallons:6.1,ppg:3.89,hours:4,ref:'James T.'},
-];
+let fuelLog = [];
 
-let maintLog = [
-  {craft:'Yamaha VX #1',type:'Oil change',date:'2026-03-10',hours:80,cost:45,notes:'Mobil 1 10W-30'},
-  {craft:'Yamaha VX #2',type:'Full service',date:'2026-03-15',hours:95,cost:180,notes:'Pre-season service'},
-  {craft:'Boat',type:'Impeller check',date:'2026-04-01',hours:110,cost:0,notes:'Looked good, no replacement needed'},
-];
+let maintLog = [];
 
-const TRACKER_SEED = [
-  {
-    id: 1,
-    name: 'Yamaha VX #1 Tracker',
-    provider: 'LandAirSea',
-    model: 'FiftyFour',
-    serialNumber: '8882529198',
-    assignedAsset: 'Yamaha VX #1',
-    status: 'active',
-    paymentPlan: 'Monthly',
-    trackingPlan: '180 second updates',
-    monthlyFee: 19.95,
-    activationFee: 0,
-    transactionId: '121609356865',
-    authorizationCode: '457546',
-    transactionDate: '2026-05-05T14:49',
-    shareSpotUrl: '',
-    lastCheckIn: '',
-    contactName: 'Zain Jamal',
-    contactEmail: 'shorelinerentals3@gmail.com',
-    notes: 'Imported from LandAirSea activation email.'
-  },
-  {
-    id: 2,
-    name: 'Yamaha VX #2 Tracker',
-    provider: 'LandAirSea',
-    model: 'FiftyFour',
-    serialNumber: '8882529189',
-    assignedAsset: 'Yamaha VX #2',
-    status: 'active',
-    paymentPlan: 'Monthly',
-    trackingPlan: '180 second updates',
-    monthlyFee: 19.95,
-    activationFee: 0,
-    transactionId: '121609359673',
-    authorizationCode: '924498',
-    transactionDate: '2026-05-05T18:51',
-    shareSpotUrl: '',
-    lastCheckIn: '',
-    contactName: 'Zain Jamal',
-    contactEmail: 'shorelinerentals3@gmail.com',
-    notes: 'Imported from LandAirSea activation email.'
-  }
-];
-let trackers = TRACKER_SEED.map((tracker) => ({...tracker}));
+let trackers = [];
 let selectedTrackerId = null;
 
 let invoices = [];
