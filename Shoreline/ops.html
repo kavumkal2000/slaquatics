@@ -881,8 +881,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Craft</label>
           <select id="b-craft" onchange="calcBookingPrice()">
             <option value="">Select craft</option>
-            <option value="yamaha">2 Yamaha Jet Skis</option>
+            <option value="jetski2">2 Yamaha Jet Skis</option>
+            <option value="jetski3">3 Yamaha Jet Skis</option>
+            <option value="jetski4">4 Yamaha Jet Skis</option>
             <option value="boat">Boat Rental</option>
+            <option value="bundle2">2 Jet Skis + Boat</option>
+            <option value="bundle3">3 Jet Skis + Boat</option>
+            <option value="bundle4">4 Jet Skis + Boat</option>
           </select>
         </div>
         <div class="form-group"><label>Duration</label>
@@ -1327,11 +1332,28 @@ async function logout() {
 }
 // ── DATA ──
 const PRICING = {
+  jetski2:{2:300,3:450,4:560,6:720,8:900},
+  jetski3:{2:450,3:675,4:840,6:1080,8:1350},
+  jetski4:{2:600,3:900,4:1120,6:1440,8:1800},
+  boat:{1:120,2:240,3:360,4:480,6:720,8:960},
+  bundle2:{2:540,3:810,4:1040,6:1440,8:1860},
+  bundle3:{2:690,3:1035,4:1320,6:1800,8:2310},
+  bundle4:{2:840,3:1260,4:1600,6:2160,8:2760},
   yamaha:{2:300,3:450,4:560,6:720,8:900},
-  seadoo:{2:600,3:900,4:1120,6:1360,8:1600},
-  boat:{1:120,2:240,3:360,4:480,6:720,8:960}
+  seadoo:{2:600,3:900,4:1120,6:1440,8:1800}
 };
-const CRAFT_NAMES = {yamaha:'Yamaha Jet Ski Package',seadoo:'4 Yamaha Jet Skis',boat:'Boat Rental',bundle:'Jet Ski + Boat Bundle',imported:'Imported booking'};
+const CRAFT_NAMES = {
+  jetski2:'2 Yamaha Jet Skis',
+  jetski3:'3 Yamaha Jet Skis',
+  jetski4:'4 Yamaha Jet Skis',
+  boat:'Boat Rental',
+  bundle2:'2 Jet Skis + Boat',
+  bundle3:'3 Jet Skis + Boat',
+  bundle4:'4 Jet Skis + Boat',
+  yamaha:'2 Yamaha Jet Skis',
+  seadoo:'4 Yamaha Jet Skis',
+  imported:'Imported booking'
+};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
 let bookings = [];
@@ -1591,9 +1613,17 @@ function mapImportedStatus(stage, status) {
 }
 function guessCraftFromText(text) {
   const raw = String(text || '').toLowerCase();
-  if (raw.includes('boat')) return 'boat';
-  if (/4\s*(jet|ski)|4\s*skis|seadoo/.test(raw)) return 'seadoo';
-  if (/2\s*(jet|ski)|2\s*skis|yamaha/.test(raw)) return 'yamaha';
+  const mentionsBoat = raw.includes('boat') || raw.includes('pontoon');
+  const mentionsFour = /4\s*(jet|ski)|4\s*skis|four\s*(jet|ski)|seadoo/.test(raw);
+  const mentionsThree = /3\s*(jet|ski)|3\s*skis|three\s*(jet|ski)/.test(raw);
+  const mentionsTwo = /2\s*(jet|ski)|2\s*skis|two\s*(jet|ski)|yamaha/.test(raw);
+  if (mentionsBoat && mentionsFour) return 'bundle4';
+  if (mentionsBoat && mentionsThree) return 'bundle3';
+  if (mentionsBoat && mentionsTwo) return 'bundle2';
+  if (mentionsBoat) return 'boat';
+  if (mentionsFour) return 'jetski4';
+  if (mentionsThree) return 'jetski3';
+  if (mentionsTwo) return 'jetski2';
   return 'imported';
 }
 function guessDurationFromText(text) {
@@ -2582,6 +2612,11 @@ function calcBookingPrice() {
   const drone = document.getElementById('b-drone').value === 'yes';
   if(!craft || !dur) { document.getElementById('booking-total').textContent='$0'; document.getElementById('booking-breakdown').textContent='Select craft and duration'; return; }
   const base = PRICING[craft]?.[dur] || 0;
+  if (!base) {
+    document.getElementById('booking-total').textContent='$0';
+    document.getElementById('booking-breakdown').textContent='That duration is not available for this package';
+    return;
+  }
   const total = base + (drone ? 50 : 0);
   document.getElementById('booking-total').textContent = '$'+total.toLocaleString();
   document.getElementById('booking-breakdown').textContent = CRAFT_NAMES[craft]+' · '+dur+(dur===8?' hrs (full day)':'hrs')+(drone?' + Drone ($50)':'');
@@ -2593,7 +2628,9 @@ async function saveBooking() {
   const craft = document.getElementById('b-craft').value;
   const dur = parseInt(document.getElementById('b-duration').value);
   if(!name||!craft||!dur) { showToast('⚠️ Fill in name, craft, and duration'); return; }
-  const bookingValue = (PRICING[craft]?.[dur] || 0) + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
+  const baseValue = PRICING[craft]?.[dur] || 0;
+  if (!baseValue) { showToast('⚠️ That duration is not available for this package'); return; }
+  const bookingValue = baseValue + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
   const existingBooking = editingBookingId
     ? bookings.find((booking) => Number(booking.id) === Number(editingBookingId))
     : null;
