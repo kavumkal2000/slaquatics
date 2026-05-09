@@ -2824,6 +2824,19 @@ function bookingIsArchived(booking = {}) {
   return ['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(normalizeBookingStatusValue(booking.status));
 }
 
+function bookingHasCompletedWebsiteRequest(booking = {}) {
+  return Boolean(
+    Number(booking.customerId || 0) > 0 ||
+    booking.waiverAccepted ||
+    String(booking.waiverSignedAt || '').trim() ||
+    String(booking.waiverSignature || '').trim() ||
+    (booking.waiver && typeof booking.waiver === 'object' && (
+      String(booking.waiver.signature || '').trim() ||
+      String(booking.waiver.signatureDate || '').trim()
+    ))
+  );
+}
+
 function bookingShowsOnSchedule(booking = {}) {
   if (!booking || !parseIsoDate(booking.date)) return false;
   const status = normalizeBookingStatusValue(booking.status);
@@ -2831,8 +2844,9 @@ function bookingShowsOnSchedule(booking = {}) {
   if (booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid') return true;
   if (status === 'confirmed' || status === 'completed') return true;
   const source = bookingSourceValue(booking);
-  if (String(booking.publicToken || '').trim()) return false;
-  if (source === 'website booking' || source === 'website draft') return false;
+  if (source === 'website draft') return false;
+  if (source === 'website booking') return bookingHasCompletedWebsiteRequest(booking);
+  if (String(booking.publicToken || '').trim()) return bookingHasCompletedWebsiteRequest(booking);
   return true;
 }
 
