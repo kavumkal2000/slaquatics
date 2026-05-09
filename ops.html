@@ -816,7 +816,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
       </div>
       <div style="margin-top:1rem;">
         <label for="social-link">Link</label>
-        <input id="social-link" type="text" value="https://slaquatics.onrender.com/" placeholder="https://...">
+        <input id="social-link" type="text" value="https://slaquatics.com/" placeholder="https://...">
       </div>
       <div class="network-pills">
         <span class="network-pill">Instagram</span>
@@ -845,7 +845,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="tabs">
     <button class="tab active" onclick="switchReminderTab('overdue',this)">Overdue for return</button>
     <button class="tab" onclick="switchReminderTab('upcoming',this)">Upcoming reminders</button>
-    <button class="tab" onclick="switchReminderTab('campaigns',this)">Seasonal campaigns</button>
+    <button class="tab" onclick="switchReminderTab('campaigns',this)">Campaign templates</button>
   </div>
   <div id="reminder-overdue">
     <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Customers who haven't booked in 30+ days — send a re-engagement offer.</p>
@@ -856,7 +856,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div id="upcoming-reminders"></div>
   </div>
   <div id="reminder-campaigns" style="display:none;">
-    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Seasonal campaigns to fill peak weekends.</p>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Reusable text and email templates for slow weekdays, busy weekends, and repeat riders.</p>
     <div id="campaigns-list"></div>
   </div>
 </div>
@@ -1075,7 +1075,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Device label</label><input type="text" id="t-name" placeholder="Yamaha VX #1 tracker"></div>
         <div class="form-group"><label>Provider</label><input type="text" id="t-provider" value="LandAirSea"></div>
         <div class="form-group"><label>Model</label><input type="text" id="t-model" value="FiftyFour"></div>
-        <div class="form-group"><label>Serial number</label><input type="text" id="t-serial" placeholder="8882529198"></div>
+        <div class="form-group"><label>Serial number</label><input type="text" id="t-serial" placeholder="Tracker serial number"></div>
         <div class="form-group"><label>Assigned asset</label>
           <select id="t-asset">
             <option value="">Unassigned / spare</option>
@@ -1096,15 +1096,15 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         </div>
         <div class="form-group"><label>Payment plan</label><input type="text" id="t-payment-plan" value="Monthly"></div>
         <div class="form-group"><label>Tracking plan</label><input type="text" id="t-tracking-plan" value="180 second updates"></div>
-        <div class="form-group"><label>Monthly fee</label><input type="number" id="t-monthly-fee" placeholder="19.95" step="0.01"></div>
-        <div class="form-group"><label>Activation fee</label><input type="number" id="t-activation-fee" placeholder="0.00" step="0.01"></div>
-        <div class="form-group"><label>Transaction ID</label><input type="text" id="t-transaction-id" placeholder="121609359673"></div>
-        <div class="form-group"><label>Authorization code</label><input type="text" id="t-auth-code" placeholder="924498"></div>
+        <div class="form-group"><label>Monthly fee</label><input type="number" id="t-monthly-fee" placeholder="Monthly device fee" step="0.01"></div>
+        <div class="form-group"><label>Activation fee</label><input type="number" id="t-activation-fee" placeholder="Activation fee" step="0.01"></div>
+        <div class="form-group"><label>Transaction ID</label><input type="text" id="t-transaction-id" placeholder="Provider transaction ID"></div>
+        <div class="form-group"><label>Authorization code</label><input type="text" id="t-auth-code" placeholder="Provider auth code"></div>
         <div class="form-group"><label>Transaction date</label><input type="datetime-local" id="t-transaction-date"></div>
         <div class="form-group"><label>ShareSpot / live map URL</label><input type="url" id="t-share-url" placeholder="https://..." ></div>
         <div class="form-group"><label>Last location check-in</label><input type="datetime-local" id="t-last-checkin"></div>
-        <div class="form-group"><label>Account / contact name</label><input type="text" id="t-contact-name" placeholder="Zain Jamal"></div>
-        <div class="form-group"><label>Contact email</label><input type="email" id="t-contact-email" placeholder="shorelinerentals3@gmail.com"></div>
+        <div class="form-group"><label>Account / contact name</label><input type="text" id="t-contact-name" placeholder="Tracker account contact"></div>
+        <div class="form-group"><label>Contact email</label><input type="email" id="t-contact-email" placeholder="tracker-account@example.com"></div>
         <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="t-notes" placeholder="Install notes, renewal reminders, or any LandAirSea details to keep with this tracker."></textarea></div>
       </div>
     </div>
@@ -1985,7 +1985,7 @@ function renderImportSummary() {
   }
   const importedAt = new Date(importMeta.importedAt).toLocaleString();
   const typeLabel = importMeta.lastType === 'opportunities' ? 'Bookings import' : 'Customers import';
-  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated.${importMeta.replacedSeed ? ' Seed demo contacts were replaced.' : ''} Data is stored in the private Shoreline ops service.`;
+  summary.textContent = `${typeLabel} from ${importMeta.fileName} on ${importedAt}: ${importMeta.added} added, ${importMeta.updated} updated. Data is stored in the private Shoreline ops service.`;
   pill.textContent = `${importMeta.recordCount} rows imported`;
 }
 function renderInvoiceImportSummary() {
@@ -3979,6 +3979,12 @@ function copySocialCaption() {
   navigator.clipboard?.writeText(payload);
   showToast('📋 Caption copied');
 }
+function copyCampaignTemplate(message) {
+  const text = String(message || '').trim();
+  if (!text) return;
+  navigator.clipboard?.writeText(text);
+  showToast('📋 Campaign template copied');
+}
 function copySavedSocial(postId) {
   const post = socialPosts.find((item) => item.id === postId);
   if (!post) return;
@@ -4086,8 +4092,8 @@ function renderReminders() {
       </div>
     </div>`).join('') : '<div class="empty"><div class="icon">🎉</div><p>No customers overdue for re-engagement!</p></div>';
 
-  document.getElementById('upcoming-reminders').innerHTML = `
-    ${bookings.filter(b=>b.status==='confirmed').map(b=>`
+  const upcoming = bookings.filter(b=>b.status==='confirmed');
+  document.getElementById('upcoming-reminders').innerHTML = upcoming.length ? upcoming.map(b=>`
     <div class="reminder-card">
       <div class="reminder-icon">📅</div>
       <div class="reminder-body">
@@ -4097,22 +4103,22 @@ function renderReminders() {
       <div class="reminder-action">
         ${b.phone ? `<a href="sms:${phoneHref(b.phone)}?body=${encodeURIComponent(`Hey ${firstName(b.name)}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${b.time}. Don't forget your ID! Questions? (469) 693-7164.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">Send reminder</span>'}
       </div>
-    </div>`).join('')}`;
+    </div>`).join('') : '<div class="empty"><div class="icon">🗓️</div><p>No confirmed rentals need reminders right now.</p></div>';
 
-  const campaigns = [
-    {name:'Memorial Day Weekend',date:'May 24–26',msg:'Book early for Memorial Day weekend — limited spots! 🚤',emoji:'🇺🇸',urgency:'18 days away'},
-    {name:'July 4th Package',date:'July 4',msg:'Celebrate the 4th on the water! Group packages available.',emoji:'🎆',urgency:'75 days away'},
-    {name:'Labor Day Finale',date:'Aug 30–Sep 1',msg:"Last big weekend of summer — don't miss it! Book now.",emoji:'☀️',urgency:'134 days away'},
+  const campaignTemplates = [
+    {name:'Slow weekday fill',channel:'Text or email',msg:'We have weekday jet ski and boat openings on Lake Lewisville this week. Want us to hold a time for your group?'},
+    {name:'Weekend group push',channel:'Text or email',msg:'Weekend lake slots are filling now. If you want jet skis, a boat, or the full bundle, reply and we can lock your time in.'},
+    {name:'Bring-them-back offer',channel:'Text only',msg:'Hey! It’s Shoreline Aquatics. We have a return-rider opening this week if you want back on the water. Reply and we’ll hold a slot for you.'},
   ];
-  document.getElementById('campaigns-list').innerHTML = campaigns.map(c=>`
+  document.getElementById('campaigns-list').innerHTML = campaignTemplates.map(c=>`
     <div class="reminder-card">
-      <div class="reminder-icon">${c.emoji}</div>
+      <div class="reminder-icon">📣</div>
       <div class="reminder-body">
-        <div class="name">${c.name} <span style="color:var(--amber);font-size:0.75rem;margin-left:0.5rem;">${c.urgency}</span></div>
-        <div class="detail">${c.date} · "${c.msg}"</div>
+        <div class="name">${c.name}</div>
+        <div class="detail">${c.channel} · "${c.msg}"</div>
       </div>
       <div class="reminder-action">
-        <button class="btn btn-primary btn-sm" onclick="showToast('📣 Campaign text copied — send to all customers!')">📋 Copy & send</button>
+        <button class="btn btn-primary btn-sm" data-message="${encodeURIComponent(c.msg)}" onclick="copyCampaignTemplate(decodeURIComponent(this.dataset.message))">📋 Copy template</button>
       </div>
     </div>`).join('');
 }
@@ -4162,10 +4168,6 @@ async function bootApp() {
   try {
     ready = await loadData();
     if (!ready) return;
-    if (!trackers.length) {
-      trackers = TRACKER_SEED.map((tracker) => ({...tracker}));
-      await saveData({silent:true});
-    }
     await loadIntegrationStatus();
   } catch (error) {
     console.error('Ops boot failed:', error);
