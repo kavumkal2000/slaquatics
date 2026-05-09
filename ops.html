@@ -2749,17 +2749,20 @@ function renderUpcoming() {
       )
     ))
     .slice(0,5);
-  document.getElementById('upcoming-bookings-table').innerHTML = rows.length ? rows.map(b => `
+  document.getElementById('upcoming-bookings-table').innerHTML = rows.length ? rows.map((b) => {
+    const paid = bookingIsPaid(b);
+    return `
     <tr>
       <td><strong>${escapeHtml(b.name)}</strong></td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
       <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
-      <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
+      <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">Dep ✓</button></td>
-    </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="icon">🗓️</div><p>No scheduled bookings yet.</p></div></td></tr>';
+      <td>${paid ? '<span style="color:var(--muted);font-size:0.78rem;">Covered</span>' : `<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">Dep ✓</button>`}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8"><div class="empty"><div class="icon">🗓️</div><p>No scheduled bookings yet.</p></div></td></tr>';
 }
 
 // ── RENDER ALL BOOKINGS ──
@@ -2824,11 +2827,18 @@ function bookingHasCompletedWebsiteRequest(booking = {}) {
   );
 }
 
+function bookingIsPaid(booking = {}) {
+  return Boolean(
+    booking.deposit ||
+    String(booking.paymentStatus || '').toLowerCase() === 'paid'
+  );
+}
+
 function bookingShowsOnSchedule(booking = {}) {
   if (!booking || !parseIsoDate(booking.date)) return false;
   const status = normalizeBookingStatusValue(booking.status);
   if (bookingIsArchived(booking)) return false;
-  if (booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid') return true;
+  if (bookingIsPaid(booking)) return true;
   if (status === 'confirmed' || status === 'completed') return true;
   const source = bookingSourceValue(booking);
   if (source === 'website draft') return false;
@@ -2842,7 +2852,7 @@ function scheduledBookings() {
 }
 
 function pendingOpsBookings() {
-  return scheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending' && !booking.deposit);
+  return scheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending' && !bookingIsPaid(booking));
 }
 
 function updatePendingBadge() {
@@ -3004,7 +3014,7 @@ function renderBookingCalendar() {
     const isOtherMonth = cellDate.getMonth() !== calendarMonthCursor.getMonth();
     const isToday = cellIso === today();
     const isSelected = cellIso === selectedCalendarDate;
-    const pendingCount = dayBookings.filter((booking) => booking.status === 'pending').length;
+    const pendingCount = dayBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending' && !bookingIsPaid(booking)).length;
 
     cells.push(`
       <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${dayBookings.length ? ' has-bookings' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" onclick="selectCalendarDate('${cellIso}')">
@@ -3030,7 +3040,9 @@ function renderBookings(filter) {
   const list = currentFilter==='all'
     ? bookings
     : bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
-  document.getElementById('bookings-table').innerHTML = list.map(b => `
+  document.getElementById('bookings-table').innerHTML = list.map((b) => {
+    const paid = bookingIsPaid(b);
+    return `
     <tr data-status="${b.status}">
       <td>
         <strong>${escapeHtml(b.name)}</strong>
@@ -3043,17 +3055,18 @@ function renderBookings(filter) {
       <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
-      <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
+      <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
         ${b.status==='pending'?`<button class="btn btn-success btn-sm" onclick="updateStatus(${b.id},'confirmed')">Confirm</button>`:''}
         ${b.status==='confirmed'?`<button class="btn btn-ghost btn-sm" onclick="updateStatus(${b.id},'completed')">Done</button>`:''}
-        ${!b.deposit?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
+        ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
         ${b.status!=='noshow'&&b.status!=='completed'?`<button class="btn btn-danger btn-sm" onclick="updateStatus(${b.id},'noshow')">No-show</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   renderBookingCalendar();
 }
 
@@ -4156,18 +4169,25 @@ function renderReminders() {
       </div>
     </div>`).join('') : '<div class="empty"><div class="icon">🎉</div><p>No customers overdue for re-engagement!</p></div>';
 
-  const upcoming = bookings.filter(b=>b.status==='confirmed');
+  const upcoming = scheduledBookings()
+    .filter((booking) => !['completed', 'noshow', 'no-show'].includes(normalizeBookingStatusValue(booking.status)))
+    .sort((left, right) => (
+      `${left.date || '9999-99-99'} ${bookingTimeValue(left.time)}`.localeCompare(
+        `${right.date || '9999-99-99'} ${bookingTimeValue(right.time)}`
+      )
+    ))
+    .slice(0, 8);
   document.getElementById('upcoming-reminders').innerHTML = upcoming.length ? upcoming.map(b=>`
     <div class="reminder-card">
       <div class="reminder-icon">📅</div>
       <div class="reminder-body">
         <div class="name">Reminder: ${escapeHtml(b.name)}</div>
-        <div class="detail">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(b.date)} at ${escapeHtml(b.time)}</div>
+        <div class="detail">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(b.date)} at ${escapeHtml(formatTimeLabel(b.time))}</div>
       </div>
       <div class="reminder-action">
-        ${b.phone ? `<a href="sms:${phoneHref(b.phone)}?body=${encodeURIComponent(`Hey ${firstName(b.name)}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${b.time}. Don't forget your ID! Questions? (469) 693-7164.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">Send reminder</span>'}
+        ${b.phone ? `<a href="sms:${phoneHref(b.phone)}?body=${encodeURIComponent(`Hey ${firstName(b.name)}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${formatTimeLabel(b.time)}. Don't forget your ID! Questions? (469) 693-7164.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">Send reminder</span>'}
       </div>
-    </div>`).join('') : '<div class="empty"><div class="icon">🗓️</div><p>No confirmed rentals need reminders right now.</p></div>';
+    </div>`).join('') : '<div class="empty"><div class="icon">🗓️</div><p>No scheduled rentals need reminders right now.</p></div>';
 
   const campaignTemplates = [
     {name:'Slow weekday fill',channel:'Text or email',msg:'We have weekday jet ski and boat openings on Lake Lewisville this week. Want us to hold a time for your group?'},
