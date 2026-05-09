@@ -877,7 +877,19 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Phone</label><input type="tel" id="b-phone" placeholder="Phone number"></div>
         <div class="form-group"><label>Email</label><input type="email" id="b-email" placeholder="email@example.com"></div>
         <div class="form-group"><label>Booking date</label><input type="date" id="b-date" oninput="calcBookingPrice()"></div>
-        <div class="form-group"><label>Start time</label><input type="time" id="b-time" value="10:00"></div>
+        <div class="form-group"><label>Start time</label>
+          <select id="b-time">
+            <option value="10:00">10:00 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="12:00">12:00 PM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="17:00">5:00 PM</option>
+            <option value="18:00">6:00 PM</option>
+          </select>
+        </div>
         <div class="form-group"><label>Craft</label>
           <select id="b-craft" onchange="calcBookingPrice()">
             <option value="">Select craft</option>
@@ -1478,6 +1490,16 @@ function formatTime(value) {
   if (parsed) return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
   const direct = String(value || '').trim();
   return /^\d{1,2}:\d{2}$/.test(direct) ? direct.padStart(5, '0') : '10:00';
+}
+function formatTimeLabel(value) {
+  const direct = String(value || '').trim();
+  if (!/^\d{1,2}:\d{2}$/.test(direct)) return direct || 'TBD';
+  const [hourText = '', minuteText = '00'] = direct.split(':');
+  const hour = Number(hourText);
+  if (Number.isNaN(hour)) return direct || 'TBD';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = hour % 12 || 12;
+  return `${twelveHour}:${minuteText} ${suffix}`;
 }
 function bookingCraftLabel(booking) {
   const craftKey = booking.craftKey || booking.craft;
@@ -2731,7 +2753,7 @@ function renderUpcoming() {
     <tr>
       <td><strong>${escapeHtml(b.name)}</strong></td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
-      <td>${escapeHtml(b.date)} ${escapeHtml(b.time)}</td>
+      <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
@@ -2943,7 +2965,7 @@ function renderBookingAgenda() {
     <div class="agenda-item">
       <div class="agenda-item-main">
         <strong>${escapeHtml(booking.name)}</strong>
-        <div class="agenda-item-meta">${escapeHtml(bookingCraftLabel(booking))} · ${escapeHtml(bookingDurationLabel(booking))} · ${escapeHtml(booking.time || 'TBD')}</div>
+        <div class="agenda-item-meta">${escapeHtml(bookingCraftLabel(booking))} · ${escapeHtml(bookingDurationLabel(booking))} · ${escapeHtml(formatTimeLabel(booking.time))}</div>
         <div class="agenda-item-meta">${booking.phone ? escapeHtml(booking.phone) : 'No phone on file'}${booking.drone ? ' · Drone coverage' : ''}</div>
       </div>
       <div class="agenda-item-right">
@@ -2992,7 +3014,7 @@ function renderBookingCalendar() {
         </div>
         <div class="calendar-day-meta">${dayBookings.length ? `${pendingCount} pending` : '&nbsp;'}</div>
         <div class="calendar-day-list">
-          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(booking.status)}"><span class="calendar-pill-dot"></span><span>${escapeHtml((booking.time || 'TBD').slice(0,5))} · ${escapeHtml(firstName(booking.name))}</span></div>`).join('')}
+          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(booking.status)}"><span class="calendar-pill-dot"></span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(booking.name))}</span></div>`).join('')}
           ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : ''}
         </div>
       </button>
@@ -3018,7 +3040,7 @@ function renderBookings(filter) {
       </td>
       <td>${b.phone ? `<a href="tel:${phoneHref(b.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(b.phone)}</a>` : '<span style="color:var(--muted);">—</span>'}</td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
-      <td>${escapeHtml(b.date)} ${escapeHtml(b.time)}</td>
+      <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
