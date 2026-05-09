@@ -517,6 +517,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <h2>Invoices</h2>
     <div class="crm-toolbar">
       <input class="search-input" placeholder="Search invoices..." oninput="filterInvoices(this)">
+      <button class="btn btn-primary btn-sm" onclick="openInvoiceModal()">+ Add Invoice</button>
       <button class="btn btn-ghost btn-sm" onclick="triggerInvoiceImport()">Import Admin Tribe Invoice CSV</button>
     </div>
   </div>
@@ -548,7 +549,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Items</th><th>Amount</th><th>Status</th></tr></thead>
+      <thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Items</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="invoice-table"></tbody>
     </table>
   </div>
@@ -893,6 +894,41 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('booking-modal')">Cancel</button>
       <button class="btn btn-primary" id="booking-save-button" onclick="saveBooking()">Confirm Booking</button>
+    </div>
+</div>
+</div>
+
+<!-- INVOICE MODAL -->
+<div class="modal-overlay" id="invoice-modal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-head">
+      <h3 id="invoice-modal-title">New Invoice</h3>
+      <button class="modal-close" onclick="closeModal('invoice-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Customer name</label><input type="text" id="i-customer-name" placeholder="First Last"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="i-customer-phone" placeholder="Phone number"></div>
+        <div class="form-group"><label>Email</label><input type="email" id="i-customer-email" placeholder="email@example.com"></div>
+        <div class="form-group"><label>Invoice title</label><input type="text" id="i-invoice-name" placeholder="Weekend walk-up rental"></div>
+        <div class="form-group"><label>Issue date</label><input type="date" id="i-issue-date"></div>
+        <div class="form-group"><label>Due date</label><input type="date" id="i-due-date"></div>
+        <div class="form-group"><label>Line item</label><input type="text" id="i-line-item" placeholder="Jet ski rental"></div>
+        <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Status</label>
+          <select id="i-status">
+            <option value="Paid">Paid</option>
+            <option value="Open">Open</option>
+            <option value="Draft">Draft</option>
+            <option value="Sent">Sent</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="i-notes" placeholder="Walk-up booking notes, payment method, or anything staff should know."></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('invoice-modal')">Cancel</button>
+      <button class="btn btn-primary" id="invoice-save-button" onclick="saveInvoice()">Save Invoice</button>
     </div>
   </div>
 </div>
@@ -1296,6 +1332,7 @@ let invoiceSearchQuery = '';
 let invoicePeriodFilter = 'month';
 let invoiceDateFrom = '';
 let invoiceDateTo = '';
+let editingInvoiceId = null;
 
 let expenses = [
   {id:1,date:'2026-04-07',category:'delivery',name:'Trailer fuel and launch run',amount:65,notes:'Little Elm pickup'},
@@ -2050,6 +2087,183 @@ function updateInvoiceFilters() {
     summaryEl.textContent = label;
   }
   renderInvoices();
+}
+function createManualInvoiceNumber() {
+  const datePart = today().replace(/-/g, '');
+  const existingCount = invoices.filter((invoice) => String(invoice.invoiceNumber || '').startsWith(`SLA-${datePart}-`)).length + 1;
+  return `SLA-${datePart}-${String(existingCount).padStart(3, '0')}`;
+}
+function resetInvoiceForm() {
+  editingInvoiceId = null;
+  document.getElementById('i-customer-name').value = '';
+  document.getElementById('i-customer-phone').value = '';
+  document.getElementById('i-customer-email').value = '';
+  document.getElementById('i-invoice-name').value = '';
+  document.getElementById('i-issue-date').value = today();
+  document.getElementById('i-due-date').value = today();
+  document.getElementById('i-line-item').value = '';
+  document.getElementById('i-total').value = '';
+  document.getElementById('i-status').value = 'Paid';
+  document.getElementById('i-notes').value = '';
+  document.getElementById('invoice-modal-title').textContent = 'New Invoice';
+  document.getElementById('invoice-save-button').textContent = 'Save Invoice';
+}
+function openInvoiceModal(invoiceId = null) {
+  resetInvoiceForm();
+  if (invoiceId !== null && invoiceId !== undefined) {
+    const invoice = invoices.find((item) => Number(item.id) === Number(invoiceId));
+    if (!invoice) {
+      showToast('⚠️ Invoice record not found');
+      return;
+    }
+    editingInvoiceId = Number(invoice.id);
+    document.getElementById('i-customer-name').value = invoice.customerName || '';
+    document.getElementById('i-customer-phone').value = invoice.customerPhone || '';
+    document.getElementById('i-customer-email').value = invoice.customerEmail || '';
+    document.getElementById('i-invoice-name').value = invoice.invoiceName || '';
+    document.getElementById('i-issue-date').value = invoice.issueDate || today();
+    document.getElementById('i-due-date').value = invoice.dueDate || invoice.issueDate || today();
+    document.getElementById('i-line-item').value = Array.isArray(invoice.lineItems) && invoice.lineItems[0] ? (invoice.lineItems[0].name || invoice.lineItems[0].description || '') : '';
+    document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
+    document.getElementById('i-status').value = invoice.status || 'Paid';
+    document.getElementById('i-notes').value = invoice.notes || '';
+    document.getElementById('invoice-modal-title').textContent = 'Edit Invoice';
+    document.getElementById('invoice-save-button').textContent = 'Save Changes';
+  }
+  openModal('invoice-modal');
+}
+async function saveInvoice() {
+  const customerName = document.getElementById('i-customer-name').value.trim();
+  const invoiceName = document.getElementById('i-invoice-name').value.trim();
+  const lineItemName = document.getElementById('i-line-item').value.trim();
+  const total = Math.max(0, Number(document.getElementById('i-total').value || 0));
+  if (!customerName || !invoiceName || !lineItemName || !total) {
+    showToast('⚠️ Enter the customer, invoice title, line item, and amount');
+    return;
+  }
+  const existingInvoice = editingInvoiceId
+    ? invoices.find((invoice) => Number(invoice.id) === Number(editingInvoiceId))
+    : null;
+  if (editingInvoiceId && !existingInvoice) {
+    showToast('⚠️ Invoice record not found');
+    return;
+  }
+
+  const issueDate = document.getElementById('i-issue-date').value || today();
+  const dueDate = document.getElementById('i-due-date').value || issueDate;
+  const status = document.getElementById('i-status').value || 'Paid';
+  const phone = document.getElementById('i-customer-phone').value.trim();
+  const email = document.getElementById('i-customer-email').value.trim();
+  const notes = document.getElementById('i-notes').value.trim();
+
+  const invoice = existingInvoice || {
+    id: nextId(invoices),
+    invoiceNumber: createManualInvoiceNumber(),
+    recurring: false,
+    lineItems: [],
+    rawFields: {},
+    importSource: 'manual',
+    liveMode: 'Manual',
+    createdAt: new Date().toISOString()
+  };
+
+  invoice.invoiceName = invoiceName;
+  invoice.customerName = customerName;
+  invoice.customerPhone = phone;
+  invoice.customerEmail = email;
+  invoice.issueDate = issueDate;
+  invoice.dueDate = dueDate;
+  invoice.subTotal = total;
+  invoice.discountAmount = 0;
+  invoice.taxAmount = 0;
+  invoice.total = total;
+  invoice.status = status;
+  invoice.notes = notes;
+  invoice.lineItems = [{
+    name: lineItemName,
+    description: notes,
+    amount: total,
+    quantity: 1,
+    currency: 'USD'
+  }];
+  invoice.rawFields = mergeCrmFields(invoice.rawFields, {
+    source: 'manual invoice',
+    notes
+  });
+
+  if (!existingInvoice) invoices.unshift(invoice);
+
+  let customer = customers.find((item) => (
+    (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(phone)) ||
+    (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(email)) ||
+    (normalizeName(item.name) && normalizeName(item.name) === normalizeName(customerName))
+  ));
+  if (customer) {
+    customer.name = customerName;
+    customer.phone = phone || customer.phone;
+    customer.email = email || customer.email;
+    customer.lastActivity = new Date().toISOString();
+    customer.source = customer.source || 'Manual Invoice';
+    customer.crmNotes = notes || customer.crmNotes || '';
+    customer.crmFields = mergeCrmFields(customer.crmFields, {
+      lastManualInvoiceNumber: invoice.invoiceNumber,
+      lastManualInvoiceStatus: status,
+      lastManualInvoiceTotal: String(total),
+      lastManualInvoiceDate: issueDate
+    });
+  } else {
+    customer = {
+      id: nextId(customers),
+      name: customerName,
+      phone,
+      email,
+      bookings: 0,
+      totalSpent: 0,
+      lastBooking: 'N/A',
+      source: 'Manual Invoice',
+      tag: '',
+      company: '',
+      crmTags: '',
+      createdAt: issueDate,
+      lastActivity: new Date().toISOString(),
+      crmNotes: notes,
+      crmFields: {
+        lastManualInvoiceNumber: invoice.invoiceNumber,
+        lastManualInvoiceStatus: status,
+        lastManualInvoiceTotal: String(total),
+        lastManualInvoiceDate: issueDate
+      }
+    };
+    customers.push(customer);
+  }
+  invoice.customerId = customer.id;
+
+  await saveData();
+  closeModal('invoice-modal');
+  resetInvoiceForm();
+  renderInvoices();
+  renderCRM();
+  renderDashboardMetrics();
+  renderCommsPanel();
+  showToast(existingInvoice ? '✅ Invoice updated' : '✅ Invoice saved');
+}
+async function deleteInvoice(invoiceId) {
+  const invoice = invoices.find((item) => Number(item.id) === Number(invoiceId));
+  if (!invoice) {
+    showToast('⚠️ Invoice record not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNumber || invoice.invoiceName}?`);
+  if (!confirmed) return;
+  invoices = invoices.filter((item) => Number(item.id) !== Number(invoiceId));
+  if (editingInvoiceId && Number(editingInvoiceId) === Number(invoiceId)) {
+    closeModal('invoice-modal');
+    resetInvoiceForm();
+  }
+  await saveData();
+  renderInvoices();
+  renderDashboardMetrics();
+  showToast('🗑️ Invoice removed');
 }
 function triggerCRMImport() {
   const fileInput = document.getElementById('crm-import-input');
@@ -3156,8 +3370,12 @@ function renderInvoices() {
       </td>
       <td style="color:var(--wave);font-weight:500;">$${Number(invoice.total || 0).toLocaleString()}</td>
       <td>${invoiceStatusBadge(invoice.status)}</td>
+      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${Number(invoice.id)})">Delete</button>
+      </td>
     </tr>
-  `).join('') : '<tr><td colspan="7"><div class="empty"><div class="icon">🧾</div><p>No invoices match this search yet.</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="8"><div class="empty"><div class="icon">🧾</div><p>No invoices match this search yet.</p></div></td></tr>';
 }
 
 // ── CRM ──
