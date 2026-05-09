@@ -2574,6 +2574,7 @@ function bookingShowsOnSchedule(booking = {}) {
   if (booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid') return true;
   if (status === 'confirmed' || status === 'completed') return true;
   const source = bookingSourceValue(booking);
+  if (String(booking.publicToken || '').trim()) return false;
   if (source === 'website booking' || source === 'website draft') return false;
   return true;
 }
@@ -2712,6 +2713,10 @@ function renderBookingAgenda() {
       <div class="agenda-item-right">
         <div style="color:var(--wave);font-weight:500;">${bookingTotalLabel(booking)}</div>
         ${statusBadge(booking.status)}
+        <div style="display:flex;gap:0.35rem;justify-content:flex-end;flex-wrap:wrap;margin-top:0.55rem;">
+          <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${booking.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteBooking(${booking.id})">Delete</button>
+        </div>
       </div>
     </div>
   `).join('');
