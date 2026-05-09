@@ -3046,6 +3046,7 @@ function renderBookings(filter) {
     : bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
   document.getElementById('bookings-table').innerHTML = list.map((b) => {
     const paid = bookingIsPaid(b);
+    const normalizedStatus = normalizeBookingStatusValue(b.status);
     return `
     <tr data-status="${b.status}">
       <td>
@@ -3063,10 +3064,10 @@ function renderBookings(filter) {
       <td>${statusBadge(b.status)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
-        ${b.status==='pending'?`<button class="btn btn-success btn-sm" onclick="updateStatus(${b.id},'confirmed')">Confirm</button>`:''}
-        ${b.status==='confirmed'?`<button class="btn btn-ghost btn-sm" onclick="updateStatus(${b.id},'completed')">Done</button>`:''}
+        ${normalizedStatus==='pending'?`<button class="btn btn-success btn-sm" onclick="updateStatus(${b.id},'confirmed')">Confirm</button>`:''}
+        ${normalizedStatus==='confirmed'?`<button class="btn btn-ghost btn-sm" onclick="updateStatus(${b.id},'completed')">Done</button>`:''}
         ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
-        ${b.status!=='noshow'&&b.status!=='completed'?`<button class="btn btn-danger btn-sm" onclick="updateStatus(${b.id},'noshow')">No-show</button>`:''}
+        ${!['noshow','no-show','completed'].includes(normalizedStatus)?`<button class="btn btn-danger btn-sm" onclick="updateStatus(${b.id},'noshow')">No-show</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
     </tr>`;
@@ -3274,7 +3275,7 @@ async function updateStatus(id, status) {
   booking.status = status;
   try {
     await saveData();
-    const reviewAutoSent = status === 'completed' && previousStatus !== 'completed'
+    const reviewAutoSent = normalizeBookingStatusValue(status) === 'completed' && normalizeBookingStatusValue(previousStatus) !== 'completed'
       ? await autoSendReviewForBooking(booking)
       : false;
     renderBookings();
@@ -3858,7 +3859,7 @@ function logCommunication() {
 
 // ── REVIEWS ──
 function ensureReviewRequestForBooking(booking) {
-  if (!booking || booking.status !== 'completed') return { request: null, created: false };
+  if (!booking || normalizeBookingStatusValue(booking.status) !== 'completed') return { request: null, created: false };
   const existing = reviewRequests.find((request) => request.bookingId === booking.id);
   if (existing) return { request: existing, created: false };
   if (reviews.some((review) => review.bookingId === booking.id)) return { request: null, created: false };
@@ -3876,7 +3877,7 @@ function ensureReviewRequestForBooking(booking) {
 }
 function ensureReviewRequestsForCompletedBookings() {
   let created = false;
-  bookings.filter((booking) => booking.status === 'completed').forEach((booking) => {
+  bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').forEach((booking) => {
     const result = ensureReviewRequestForBooking(booking);
     if (result.created) created = true;
   });
@@ -3891,7 +3892,7 @@ async function autoSendReviewForBooking(booking) {
   if (created) {
     await saveData({silent:true});
   }
-  if (!request || request.status === 'reviewed' || request.sentAt) return false;
+  if (!request || String(request.status || '').toLowerCase() === 'reviewed' || request.sentAt) return false;
   const canText = Boolean(integrations.smsConfigured && request.phone);
   const canEmail = Boolean(integrations.emailConfigured && request.email);
   const preferred = integrations.reviewChannel === 'email' ? 'email' : 'text';
@@ -3965,8 +3966,8 @@ function renderReviewHub() {
   if (queueChanged) {
     saveData({silent:true}).catch((error) => console.error('Review queue sync failed:', error));
   }
-  const pending = reviewRequests.filter((request) => request.status !== 'reviewed');
-  const completedRentals = bookings.filter((booking) => booking.status === 'completed').length;
+  const pending = reviewRequests.filter((request) => String(request.status || '').toLowerCase() !== 'reviewed');
+  const completedRentals = bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').length;
   const reviewRate = completedRentals ? Math.round((reviews.length / completedRentals) * 100) : 0;
   document.getElementById('reviews-kpi-pending').textContent = pending.length.toLocaleString();
   document.getElementById('reviews-kpi-complete').textContent = reviews.length.toLocaleString();
