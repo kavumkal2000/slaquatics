@@ -1627,9 +1627,7 @@ function revenueThisMonth() {
   return scheduledBookings().reduce((sum, booking) => {
     const bookingDate = dateValue(booking.date);
     if (!isSameMonth(bookingDate)) return sum;
-    const status = normalizeBookingStatusValue(booking.status);
-    const paid = booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid';
-    if (!(paid || status === 'confirmed' || status === 'completed')) return sum;
+    if (!bookingIsPaid(booking)) return sum;
     return sum + bookingTotalValue(booking);
   }, 0);
 }
@@ -3448,7 +3446,11 @@ function customerHasWaiver(customer) {
 }
 function customerNeedsFollowUp(customer) {
   if ((Number(customer.bookings) || 0) === 0) return true;
-  const recentDays = Math.min(daysSince(customer.lastActivity), daysSince(customer.lastBooking));
+  const lastActivityDays = dateValue(customer.lastActivity) ? daysSince(customer.lastActivity) : null;
+  const lastBookingDays = dateValue(customer.lastBooking) ? daysSince(customer.lastBooking) : null;
+  const dayCandidates = [lastActivityDays, lastBookingDays].filter((value) => Number.isFinite(value));
+  if (!dayCandidates.length) return false;
+  const recentDays = Math.min(...dayCandidates);
   return recentDays >= 30;
 }
 function customerIsBest(customer) {
@@ -3539,7 +3541,7 @@ function renderCRM() {
           <div class="customer-stats">
             <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>
             <div class="customer-stat"><div class="num">$${c.totalSpent.toLocaleString()}</div><div class="lbl">Total spent</div></div>
-            <div class="customer-stat"><div class="num">${c.lastBooking==='N/A'?'—':`${daysSince(c.lastBooking)}d`}</div><div class="lbl">Since last</div></div>
+            <div class="customer-stat"><div class="num">${dateValue(c.lastBooking)?`${daysSince(c.lastBooking)}d`:'—'}</div><div class="lbl">Since last</div></div>
           </div>
         </div>
       </div>
@@ -4161,7 +4163,12 @@ function saveMaint() {
 
 // ── REMINDERS ──
 function renderReminders() {
-  const overdue = customers.filter(c=>daysSince(c.lastBooking)>=30).sort((a,b)=>daysSince(b.lastBooking)-daysSince(a.lastBooking));
+  const overdue = customers
+    .filter((customer) => {
+      if (!dateValue(customer.lastBooking)) return false;
+      return daysSince(customer.lastBooking) >= 30;
+    })
+    .sort((a,b)=>daysSince(b.lastBooking)-daysSince(a.lastBooking));
   document.getElementById('overdue-list').innerHTML = overdue.length ? overdue.map(c=>`
     <div class="reminder-card">
       <div class="reminder-icon">👤</div>
