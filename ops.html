@@ -877,7 +877,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Phone</label><input type="tel" id="b-phone" placeholder="Phone number"></div>
         <div class="form-group"><label>Email</label><input type="email" id="b-email" placeholder="email@example.com"></div>
         <div class="form-group"><label>Booking date</label><input type="date" id="b-date" oninput="calcBookingPrice()"></div>
-        <div class="form-group"><label>Start time</label><input type="time" id="b-time" value="09:00"></div>
+        <div class="form-group"><label>Start time</label><input type="time" id="b-time" value="10:00"></div>
         <div class="form-group"><label>Craft</label>
           <select id="b-craft" onchange="calcBookingPrice()">
             <option value="">Select craft</option>
@@ -1477,10 +1477,11 @@ function formatTime(value) {
   const parsed = value instanceof Date ? value : parseFlexibleDate(value);
   if (parsed) return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
   const direct = String(value || '').trim();
-  return /^\d{1,2}:\d{2}$/.test(direct) ? direct.padStart(5, '0') : '09:00';
+  return /^\d{1,2}:\d{2}$/.test(direct) ? direct.padStart(5, '0') : '10:00';
 }
 function bookingCraftLabel(booking) {
-  return booking.craftLabel || CRAFT_NAMES[booking.craft] || 'Imported booking';
+  const craftKey = booking.craftKey || booking.craft;
+  return booking.craftLabel || CRAFT_NAMES[craftKey] || 'Imported booking';
 }
 function bookingDurationLabel(booking) {
   if (booking.durationLabel) return booking.durationLabel;
@@ -1491,7 +1492,8 @@ function bookingDurationLabel(booking) {
 function bookingTotalValue(booking) {
   const explicit = Number(booking.total);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
-  return (PRICING[booking.craft]?.[booking.duration] || 0) + (booking.drone ? 50 : 0);
+  const craftKey = booking.craftKey || booking.craft;
+  return (PRICING[craftKey]?.[booking.duration] || 0) + (booking.drone ? 50 : 0);
 }
 function bookingTotalLabel(booking) {
   return `$${bookingTotalValue(booking).toLocaleString()}`;
@@ -2656,7 +2658,7 @@ async function saveBooking() {
   bookingRecord.craftKey = craft;
   bookingRecord.duration = dur;
   bookingRecord.date = document.getElementById('b-date').value || 'TBD';
-  bookingRecord.time = document.getElementById('b-time').value || '09:00';
+  bookingRecord.time = document.getElementById('b-time').value || '10:00';
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
   bookingRecord.notes = document.getElementById('b-notes').value.trim();
   bookingRecord.total = bookingValue;
@@ -2855,7 +2857,7 @@ function resetBookingForm(defaultDate = '') {
   document.getElementById('b-phone').value = '';
   document.getElementById('b-email').value = '';
   document.getElementById('b-date').value = defaultDate || today();
-  document.getElementById('b-time').value = '09:00';
+  document.getElementById('b-time').value = '10:00';
   document.getElementById('b-craft').value = '';
   document.getElementById('b-duration').value = '';
   document.getElementById('b-drone').value = 'no';
@@ -2878,7 +2880,7 @@ function openBookingModal(bookingId = null, defaultDate = '') {
     document.getElementById('b-phone').value = booking.phone || '';
     document.getElementById('b-email').value = booking.email || '';
     document.getElementById('b-date').value = booking.date && booking.date !== 'TBD' ? booking.date : today();
-    document.getElementById('b-time').value = booking.time || '09:00';
+    document.getElementById('b-time').value = booking.time || '10:00';
     document.getElementById('b-craft').value = booking.craftKey || booking.craft || '';
     document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
     document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';

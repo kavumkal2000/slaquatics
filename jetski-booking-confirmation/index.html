@@ -478,11 +478,12 @@ function mergeBooking(base, incoming = {}) {
 }
 
 function populateSummary(booking) {
+  const craftKey = booking.craftKey || booking.craft || '';
   setText("summary-total", formatCurrency(booking.total || 0));
   setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
-  setText("summary-note", booking.craft === 'boat'
+  setText("summary-note", craftKey === 'boat'
     ? 'Your boat rental with captain included is ready for the contact, waiver, and checkout step.'
-    : booking.craft?.startsWith('bundle')
+    : craftKey.startsWith('bundle')
       ? 'Your lake-day bundle is ready for the contact, waiver, and checkout step.'
       : 'Your Yamaha jet ski rental is ready for the contact, waiver, and checkout step.');
   setText("summary-date", booking.date || '-');

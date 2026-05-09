@@ -665,9 +665,11 @@ function publicBookingPayload(booking = {}) {
 }
 
 function publicCraftKey(type = '', craft = '') {
+  const normalizedCraft = normalizeCraftKey(craft);
+  if (normalizedCraft) return normalizedCraft;
   if (type === 'boat') return 'boat';
-  if (type === 'bundle') return 'bundle';
-  return 'yamaha';
+  if (type === 'bundle') return 'bundle2';
+  return 'jetski2';
 }
 
 function stripTrailingSlash(value = '') {
