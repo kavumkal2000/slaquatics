@@ -1572,10 +1572,12 @@ function revenueThisMonth() {
   if (paidInvoices.length) {
     return paidInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
   }
-  return bookings.reduce((sum, booking) => {
+  return scheduledBookings().reduce((sum, booking) => {
     const bookingDate = dateValue(booking.date);
     if (!isSameMonth(bookingDate)) return sum;
-    if (['pending', 'noshow', 'cancelled'].includes(String(booking.status || '').toLowerCase())) return sum;
+    const status = normalizeBookingStatusValue(booking.status);
+    const paid = booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid';
+    if (!(paid || status === 'confirmed' || status === 'completed')) return sum;
     return sum + bookingTotalValue(booking);
   }, 0);
 }
@@ -2686,7 +2688,7 @@ function renderUpcoming() {
       )
     ))
     .slice(0,5);
-  document.getElementById('upcoming-bookings-table').innerHTML = rows.map(b => `
+  document.getElementById('upcoming-bookings-table').innerHTML = rows.length ? rows.map(b => `
     <tr>
       <td><strong>${escapeHtml(b.name)}</strong></td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
@@ -2696,7 +2698,7 @@ function renderUpcoming() {
       <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
       <td><button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">Dep ✓</button></td>
-    </tr>`).join('');
+    </tr>`).join('') : '<tr><td colspan="8"><div class="empty"><div class="icon">🗓️</div><p>No scheduled bookings yet.</p></div></td></tr>';
 }
 
 // ── RENDER ALL BOOKINGS ──
@@ -3036,6 +3038,7 @@ function openTrackerLiveMap(id) {
 function renderTracking() {
   const activeTrackers = trackers.filter((tracker) => String(tracker.status || '').toLowerCase() === 'active');
   const assignedTrackers = trackers.filter((tracker) => String(tracker.assignedAsset || '').trim());
+  const recurringPlans = trackers.filter((tracker) => Number(tracker.monthlyFee || 0) > 0);
   const spareTrackers = trackers.filter((tracker) => {
     const status = String(tracker.status || '').toLowerCase();
     return !String(tracker.assignedAsset || '').trim() || status === 'spare';
@@ -3063,7 +3066,7 @@ function renderTracking() {
   if (activeEl) activeEl.textContent = activeTrackers.length.toLocaleString();
   if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live devices currently reporting` : 'No active tracker plans on file';
   if (monthlyEl) monthlyEl.textContent = moneyLabel(monthlyCost);
-  if (monthlyMetaEl) monthlyMetaEl.textContent = `${trackers.filter((tracker) => Number(tracker.monthlyFee || 0) > 0).length} recurring tracker plan${trackers.length === 1 ? '' : 's'}`;
+  if (monthlyMetaEl) monthlyMetaEl.textContent = `${recurringPlans.length} recurring tracker plan${recurringPlans.length === 1 ? '' : 's'}`;
   if (assignedEl) assignedEl.textContent = assignedTrackers.length.toLocaleString();
   if (assignedMetaEl) assignedMetaEl.textContent = assignedTrackers.length ? `${assignedTrackers.length} device${assignedTrackers.length === 1 ? '' : 's'} tied to the fleet` : 'No devices assigned to the fleet yet';
   if (spareEl) spareEl.textContent = spareTrackers.length.toLocaleString();
@@ -3301,7 +3304,7 @@ function renderDashboardMetrics() {
   if (pendingEl) pendingEl.textContent = pendingDeposits.toLocaleString();
   if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} bookings still need deposit follow-up` : 'All open bookings have deposit coverage';
   if (revenueEl) revenueEl.textContent = `$${Math.round(revenue).toLocaleString()}`;
-  if (revenueMeta) revenueMeta.textContent = invoices.length ? 'Paid invoices collected this month' : 'Confirmed/completed bookings this month';
+  if (revenueMeta) revenueMeta.textContent = invoices.length ? 'Paid invoices collected this month' : 'Confirmed, completed, or paid bookings this month';
   if (profitEl) profitEl.textContent = `$${Math.round(profit).toLocaleString()}`;
   if (profitMeta) profitMeta.textContent = `$${Math.round(fuelSpend).toLocaleString()} fuel + $${Math.round(deliverySpend).toLocaleString()} delivery`;
   if (bookingsEl) bookingsEl.textContent = monthlyBookings.toLocaleString();
@@ -4145,7 +4148,7 @@ function renderBookingBars() {
     return {w:`Week ${index + 1}`,v:count};
   }).filter((week) => week.v > 0 || week.w !== 'Week 5');
   if (!weeks.length) weeks.push({w:'Week 1', v:0});
-  const max = Math.max(...weeks.map(w=>w.v));
+  const max = Math.max(...weeks.map(w=>w.v), 0) || 1;
   document.getElementById('booking-bars').innerHTML = weeks.map(w=>`
     <div class="bar-col">
       <div class="bar-val">${w.v}</div>
