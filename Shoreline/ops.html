@@ -434,7 +434,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <span style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
     <span class="ops-mode-pill browser" id="ops-mode-pill">Checking sync</span>
     <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
-    <button class="btn btn-primary" onclick="openBookingModal()">+ New Booking</button>
+    <button class="btn btn-primary" id="topbar-booking-action" onclick="openBookingModal()">+ New Booking</button>
   </div>
 </div>
 <div class="content">
@@ -528,12 +528,11 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="agenda-card">
       <div class="agenda-head">
-        <div>
+      <div>
           <h3>Selected Day</h3>
           <div class="agenda-date" id="calendar-agenda-date">Today</div>
           <div class="agenda-sub" id="calendar-agenda-sub">0 bookings scheduled</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openBookingForSelectedDate()">+ Add booking</button>
       </div>
       <div class="agenda-list" id="calendar-agenda-list"></div>
     </div>
@@ -2570,6 +2569,8 @@ function showPage(id, btn) {
   if(btn) btn.classList.add('active');
   const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement'};
   document.getElementById('page-title').textContent = titles[id]||id;
+  const topbarBookingAction = document.getElementById('topbar-booking-action');
+  if (topbarBookingAction) topbarBookingAction.style.display = id === 'bookings' ? 'none' : 'inline-flex';
   if(id==='bookings') renderBookings();
   if(id==='invoices') renderInvoices();
   if(id==='crm') renderCRM();
@@ -2970,7 +2971,7 @@ function renderBookingAgenda() {
     : 'No rentals scheduled yet';
 
   if (!dayBookings.length) {
-    agendaListEl.innerHTML = `<div class="agenda-empty">No one is booked for this date yet. Use <strong>+ Add booking</strong> to lock in a new rental for ${escapeHtml(dateIso)}.</div>`;
+    agendaListEl.innerHTML = `<div class="agenda-empty">No one is booked for this date yet on ${escapeHtml(dateIso)}.</div>`;
     return;
   }
 
