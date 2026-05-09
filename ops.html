@@ -375,7 +375,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
   <div class="nav-section">Main</div>
   <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span><span>Dashboard</span></button>
-  <button class="nav-item" onclick="showPage('bookings',this)"><span class="icon">📅</span><span>Bookings</span><span class="nav-badge" id="pending-badge">2</span></button>
+  <button class="nav-item" onclick="showPage('bookings',this)"><span class="icon">📅</span><span>Bookings</span><span class="nav-badge" id="pending-badge">0</span></button>
   <div class="nav-section">Business</div>
   <button class="nav-item" onclick="showPage('invoices',this)"><span class="icon">🧾</span><span>Invoices</span></button>
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
@@ -399,7 +399,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <span style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
     <span class="ops-mode-pill browser" id="ops-mode-pill">Checking sync</span>
     <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
-    <button class="btn btn-primary" onclick="openModal('booking-modal')">+ New Booking</button>
+    <button class="btn btn-primary" onclick="openBookingModal()">+ New Booking</button>
   </div>
 </div>
 <div class="content">
@@ -457,7 +457,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <h2>All Bookings</h2>
     <div style="display:flex;gap:0.6rem;align-items:center;">
       <input class="search-input" placeholder="Search bookings..." oninput="filterTable(this,'bookings-table')">
-      <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ New Booking</button>
+      <button class="btn btn-primary btn-sm" onclick="openBookingModal()">+ New Booking</button>
     </div>
   </div>
   <div class="tabs">
@@ -837,13 +837,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="modal-overlay" id="booking-modal">
   <div class="modal">
     <div class="modal-head">
-      <h3>New Booking</h3>
+      <h3 id="booking-modal-title">New Booking</h3>
       <button class="modal-close" onclick="closeModal('booking-modal')">×</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Customer name</label><input type="text" id="b-name" placeholder="First Last" oninput="calcBookingPrice()"></div>
-        <div class="form-group"><label>Phone</label><input type="tel" id="b-phone" placeholder="(469) 555-0000"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="b-phone" placeholder="Phone number"></div>
         <div class="form-group"><label>Email</label><input type="email" id="b-email" placeholder="email@example.com"></div>
         <div class="form-group"><label>Booking date</label><input type="date" id="b-date" oninput="calcBookingPrice()"></div>
         <div class="form-group"><label>Start time</label><input type="time" id="b-time" value="09:00"></div>
@@ -892,7 +892,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('booking-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveBooking()">Confirm Booking</button>
+      <button class="btn btn-primary" id="booking-save-button" onclick="saveBooking()">Confirm Booking</button>
     </div>
   </div>
 </div>
@@ -2224,7 +2224,7 @@ function handleCRMImport(event) {
       renderCommsPanel();
       renderReviewHub();
       renderReminders();
-      document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
+      updatePendingBadge();
       const label = type === 'contacts' ? 'customers' : type === 'opportunities' ? 'bookings' : 'invoices';
       showToast(`✅ Imported ${label} — ${summary.added} added, ${summary.updated} updated`);
     } catch (error) {
@@ -2259,7 +2259,7 @@ function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
   renderCommsPanel();
   renderReviewHub();
   renderReminders();
-  document.getElementById('pending-badge').textContent = bookings.filter((booking) => booking.status === 'pending').length;
+  updatePendingBadge();
   return { type, summary };
 }
 function importCRMFromTextarea() {
@@ -2405,44 +2405,83 @@ function calcBookingPrice() {
 }
 
 // ── SAVE BOOKING ──
-function saveBooking() {
+async function saveBooking() {
   const name = document.getElementById('b-name').value.trim();
   const craft = document.getElementById('b-craft').value;
   const dur = parseInt(document.getElementById('b-duration').value);
   if(!name||!craft||!dur) { showToast('⚠️ Fill in name, craft, and duration'); return; }
   const bookingValue = (PRICING[craft]?.[dur] || 0) + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
-  const b = {
-    id: nextId(bookings),
-    name, phone: document.getElementById('b-phone').value,
-    email: document.getElementById('b-email').value,
-    craft, duration: dur,
-    date: document.getElementById('b-date').value || 'TBD',
-    time: document.getElementById('b-time').value || '09:00',
-    drone: document.getElementById('b-drone').value==='yes',
-    status:'pending', deposit:false,
-    notes: document.getElementById('b-notes').value,
-    total: bookingValue
-  };
-  bookings.unshift(b);
-  const existingCustomer = customers.find((customer) => (
-    (normalizePhone(customer.phone) && normalizePhone(customer.phone) === normalizePhone(b.phone)) ||
-    (normalizeEmail(customer.email) && normalizeEmail(customer.email) === normalizeEmail(b.email))
-  ));
-  if(existingCustomer) {
-    existingCustomer.name = b.name;
-    existingCustomer.email = b.email || existingCustomer.email;
-    existingCustomer.bookings += 1;
-    existingCustomer.totalSpent += bookingValue;
-    existingCustomer.lastBooking = b.date;
-  } else {
-    customers.push({id:nextId(customers),name:b.name,phone:b.phone,email:b.email,bookings:1,totalSpent:bookingValue,lastBooking:b.date,source:'Direct',tag:''});
+  const existingBooking = editingBookingId
+    ? bookings.find((booking) => Number(booking.id) === Number(editingBookingId))
+    : null;
+  if (editingBookingId && !existingBooking) {
+    showToast('⚠️ Booking record not found');
+    return;
   }
-  saveData();
-  document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
+
+  const previousSnapshot = existingBooking ? {...existingBooking} : null;
+  const bookingRecord = existingBooking || {
+    id: nextId(bookings),
+    status: 'pending',
+    deposit: false,
+    paymentStatus: 'unpaid',
+    source: 'Ops Manual',
+    createdAt: new Date().toISOString()
+  };
+
+  bookingRecord.name = name;
+  bookingRecord.phone = document.getElementById('b-phone').value.trim();
+  bookingRecord.email = document.getElementById('b-email').value.trim();
+  bookingRecord.craft = craft;
+  bookingRecord.craftKey = craft;
+  bookingRecord.duration = dur;
+  bookingRecord.date = document.getElementById('b-date').value || 'TBD';
+  bookingRecord.time = document.getElementById('b-time').value || '09:00';
+  bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
+  bookingRecord.notes = document.getElementById('b-notes').value.trim();
+  bookingRecord.total = bookingValue;
+  bookingRecord.updatedAt = new Date().toISOString();
+
+  if (!existingBooking) bookings.unshift(bookingRecord);
+
+  let customer = findCustomerForBooking(bookingRecord) || customers.find((item) => (
+    (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(bookingRecord.phone)) ||
+    (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(bookingRecord.email))
+  ));
+
+  if (customer) {
+    customer.name = bookingRecord.name;
+    customer.phone = bookingRecord.phone || customer.phone;
+    customer.email = bookingRecord.email || customer.email;
+    customer.source = customer.source || 'Direct';
+  } else {
+    customer = {
+      id: nextId(customers),
+      name: bookingRecord.name,
+      phone: bookingRecord.phone,
+      email: bookingRecord.email,
+      bookings: 0,
+      totalSpent: 0,
+      lastBooking: 'N/A',
+      source: 'Direct',
+      tag: '',
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    customers.push(customer);
+  }
+
+  bookingRecord.customerId = customer.id;
+  const previousCustomer = previousSnapshot ? findCustomerForBooking(previousSnapshot) : null;
+  [previousCustomer, customer].forEach((item) => {
+    if (item) syncCustomerRollup(item);
+  });
+
+  await saveData();
+  updatePendingBadge();
   closeModal('booking-modal');
-  showToast('✅ Booking saved — remind customer to pay $50 deposit');
-  selectedCalendarDate = b.date || selectedCalendarDate;
-  const bookingDateObj = parseIsoDate(b.date);
+  showToast(existingBooking ? '✅ Booking updated' : '✅ Booking saved');
+  selectedCalendarDate = bookingRecord.date || selectedCalendarDate;
+  const bookingDateObj = parseIsoDate(bookingRecord.date);
   if (bookingDateObj) calendarMonthCursor = monthStart(bookingDateObj);
   renderUpcoming();
   if(document.getElementById('page-bookings').classList.contains('active')) renderBookings();
@@ -2453,15 +2492,19 @@ function saveBooking() {
   renderCommsPanel();
   renderReviewHub();
   renderReminders();
-  ['b-name','b-phone','b-email','b-date','b-notes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('b-craft').value=''; document.getElementById('b-duration').value=''; document.getElementById('b-drone').value='no';
-  calcBookingPrice();
-  document.getElementById('b-date').value = today();
+  resetBookingForm();
 }
 
 // ── RENDER UPCOMING (dashboard) ──
 function renderUpcoming() {
-  const rows = bookings.filter(b=>b.status!=='completed'&&b.status!=='noshow').slice(0,5);
+  const rows = scheduledBookings()
+    .filter((booking) => !['completed', 'noshow', 'no-show'].includes(normalizeBookingStatusValue(booking.status)))
+    .sort((left, right) => (
+      `${left.date || '9999-99-99'} ${bookingTimeValue(left.time)}`.localeCompare(
+        `${right.date || '9999-99-99'} ${bookingTimeValue(right.time)}`
+      )
+    ))
+    .slice(0,5);
   document.getElementById('upcoming-bookings-table').innerHTML = rows.map(b => `
     <tr>
       <td><strong>${escapeHtml(b.name)}</strong></td>
@@ -2479,6 +2522,7 @@ function renderUpcoming() {
 let currentFilter = 'all';
 let calendarMonthCursor = null;
 let selectedCalendarDate = '';
+let editingBookingId = null;
 
 function localDateParts(iso) {
   if (!iso || iso === 'TBD') return null;
@@ -2511,8 +2555,108 @@ function bookingTimeValue(timeValue) {
   return String(timeValue || '99:99');
 }
 
+function normalizeBookingStatusValue(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function bookingSourceValue(booking = {}) {
+  return String(booking.source || '').trim().toLowerCase();
+}
+
+function bookingIsArchived(booking = {}) {
+  return ['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(normalizeBookingStatusValue(booking.status));
+}
+
+function bookingShowsOnSchedule(booking = {}) {
+  if (!booking || !parseIsoDate(booking.date)) return false;
+  const status = normalizeBookingStatusValue(booking.status);
+  if (bookingIsArchived(booking)) return false;
+  if (booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid') return true;
+  if (status === 'confirmed' || status === 'completed') return true;
+  const source = bookingSourceValue(booking);
+  if (source === 'website booking' || source === 'website draft') return false;
+  return true;
+}
+
+function scheduledBookings() {
+  return bookings.filter((booking) => bookingShowsOnSchedule(booking));
+}
+
+function pendingOpsBookings() {
+  return scheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending' && !booking.deposit);
+}
+
+function updatePendingBadge() {
+  const badge = document.getElementById('pending-badge');
+  if (badge) badge.textContent = String(pendingOpsBookings().length);
+}
+
+function customerMatchesBooking(customer = {}, booking = {}) {
+  if (!customer || !booking) return false;
+  if (Number(customer.id || 0) && Number(booking.customerId || 0) === Number(customer.id || 0)) return true;
+  const customerPhone = normalizePhone(customer.phone);
+  const bookingPhone = normalizePhone(booking.phone);
+  if (customerPhone && bookingPhone && customerPhone === bookingPhone) return true;
+  const customerEmail = normalizeEmail(customer.email);
+  const bookingEmail = normalizeEmail(booking.email);
+  return Boolean(customerEmail && bookingEmail && customerEmail === bookingEmail);
+}
+
+function findCustomerForBooking(booking = {}) {
+  return customers.find((customer) => customerMatchesBooking(customer, booking)) || null;
+}
+
+function syncCustomerRollup(customer) {
+  if (!customer) return;
+  const customerBookings = bookings.filter((booking) => customerMatchesBooking(customer, booking) && !bookingIsArchived(booking));
+  customer.bookings = customerBookings.length;
+  customer.totalSpent = customerBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
+  customer.lastBooking = customerBookings.reduce((latest, booking) => updateLatestDate(latest, booking.date), 'N/A');
+}
+
+function resetBookingForm(defaultDate = '') {
+  editingBookingId = null;
+  document.getElementById('b-name').value = '';
+  document.getElementById('b-phone').value = '';
+  document.getElementById('b-email').value = '';
+  document.getElementById('b-date').value = defaultDate || today();
+  document.getElementById('b-time').value = '09:00';
+  document.getElementById('b-craft').value = '';
+  document.getElementById('b-duration').value = '';
+  document.getElementById('b-drone').value = 'no';
+  document.getElementById('b-notes').value = '';
+  document.getElementById('booking-modal-title').textContent = 'New Booking';
+  document.getElementById('booking-save-button').textContent = 'Confirm Booking';
+  calcBookingPrice();
+}
+
+function openBookingModal(bookingId = null, defaultDate = '') {
+  resetBookingForm(defaultDate);
+  if (bookingId !== null && bookingId !== undefined) {
+    const booking = bookings.find((item) => Number(item.id) === Number(bookingId));
+    if (!booking) {
+      showToast('⚠️ Booking record not found');
+      return;
+    }
+    editingBookingId = Number(booking.id);
+    document.getElementById('b-name').value = booking.name || '';
+    document.getElementById('b-phone').value = booking.phone || '';
+    document.getElementById('b-email').value = booking.email || '';
+    document.getElementById('b-date').value = booking.date && booking.date !== 'TBD' ? booking.date : today();
+    document.getElementById('b-time').value = booking.time || '09:00';
+    document.getElementById('b-craft').value = booking.craftKey || booking.craft || '';
+    document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
+    document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';
+    document.getElementById('b-notes').value = booking.notes || '';
+    document.getElementById('booking-modal-title').textContent = 'Edit Booking';
+    document.getElementById('booking-save-button').textContent = 'Save Changes';
+    calcBookingPrice();
+  }
+  openModal('booking-modal');
+}
+
 function bookingsForDate(dateIso) {
-  return bookings
+  return scheduledBookings()
     .filter((booking) => booking.date === dateIso)
     .sort((a, b) => bookingTimeValue(a.time).localeCompare(bookingTimeValue(b.time)));
 }
@@ -2537,9 +2681,7 @@ function selectCalendarDate(dateIso) {
 }
 
 function openBookingForSelectedDate() {
-  openModal('booking-modal');
-  document.getElementById('b-date').value = selectedCalendarDate || today();
-  calcBookingPrice();
+  openBookingModal(null, selectedCalendarDate || today());
 }
 
 function renderBookingAgenda() {
@@ -2622,7 +2764,9 @@ function renderBookingCalendar() {
 
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
-  const list = currentFilter==='all' ? bookings : bookings.filter(b=>b.status===currentFilter);
+  const list = currentFilter==='all'
+    ? bookings
+    : bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
   document.getElementById('bookings-table').innerHTML = list.map(b => `
     <tr data-status="${b.status}">
       <td>
@@ -2639,10 +2783,12 @@ function renderBookings(filter) {
       <td>${b.deposit?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
         ${b.status==='pending'?`<button class="btn btn-success btn-sm" onclick="updateStatus(${b.id},'confirmed')">Confirm</button>`:''}
         ${b.status==='confirmed'?`<button class="btn btn-ghost btn-sm" onclick="updateStatus(${b.id},'completed')">Done</button>`:''}
         ${!b.deposit?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
         ${b.status!=='noshow'&&b.status!=='completed'?`<button class="btn btn-danger btn-sm" onclick="updateStatus(${b.id},'noshow')">No-show</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
     </tr>`).join('');
   renderBookingCalendar();
@@ -2655,7 +2801,7 @@ function filterByStatus(status, btn) {
 }
 
 function statusBadge(s) {
-  const map={confirmed:'badge-confirmed',pending:'badge-pending',noshow:'badge-noshow',completed:'badge-completed',cancelled:'badge-cancelled'};
+  const map={confirmed:'badge-confirmed',pending:'badge-pending',draft:'badge-pending',noshow:'badge-noshow',completed:'badge-completed',cancelled:'badge-cancelled'};
   return `<span class="badge ${map[s]||''}">${s}</span>`;
 }
 function trackerStatusBadge(status) {
@@ -2856,7 +3002,7 @@ async function updateStatus(id, status) {
     renderBookingBars();
     renderReviewHub();
     renderReminders();
-    document.getElementById('pending-badge').textContent = bookings.filter((item) => item.status === 'pending').length;
+    updatePendingBadge();
     showToast(reviewAutoSent ? '✅ Updated to completed and sent the review request' : `✅ Updated to ${status}`);
   } catch (error) {
     booking.status = previousStatus;
@@ -2864,9 +3010,54 @@ async function updateStatus(id, status) {
   }
 }
 
-function confirmDeposit(id) {
-  const b = bookings.find(b=>b.id===id);
-  if(b) { b.deposit=true; saveData(); renderBookings(); renderUpcoming(); renderDashboardMetrics(); showToast('💰 Deposit confirmed for '+b.name); }
+async function confirmDeposit(id) {
+  const booking = bookings.find((item) => item.id === id);
+  if (!booking) return;
+  const previousDeposit = booking.deposit;
+  const previousPaymentStatus = booking.paymentStatus;
+  booking.deposit = true;
+  booking.paymentStatus = 'paid';
+  try {
+    await saveData();
+    renderBookings();
+    renderUpcoming();
+    renderDashboardMetrics();
+    renderBookingBars();
+    updatePendingBadge();
+    showToast(`💰 Deposit confirmed for ${booking.name}`);
+  } catch (error) {
+    booking.deposit = previousDeposit;
+    booking.paymentStatus = previousPaymentStatus;
+    showToast(`⚠️ ${error.message || 'Could not confirm the deposit'}`);
+  }
+}
+
+async function deleteBooking(bookingId) {
+  const booking = bookings.find((item) => Number(item.id) === Number(bookingId));
+  if (!booking) {
+    showToast('⚠️ Booking record not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete the booking for ${booking.name}? This cannot be undone from ops.`);
+  if (!confirmed) return;
+  const previousCustomer = findCustomerForBooking(booking);
+  bookings = bookings.filter((item) => Number(item.id) !== Number(bookingId));
+  if (previousCustomer) syncCustomerRollup(previousCustomer);
+  if (editingBookingId && Number(editingBookingId) === Number(bookingId)) {
+    closeModal('booking-modal');
+    resetBookingForm();
+  }
+  await saveData();
+  renderBookings();
+  renderUpcoming();
+  renderDashboardMetrics();
+  renderBookingBars();
+  renderCRM();
+  renderCommsPanel();
+  renderReviewHub();
+  renderReminders();
+  updatePendingBadge();
+  showToast('🗑️ Booking removed');
 }
 
 function filterTable(input, tableId) {
@@ -2882,7 +3073,7 @@ function renderFleetLegend() {
   if (!legend) return;
   const palette = ['#f5a623', '#7dd9ff', '#10b981', '#8b5cf6', '#ef4444'];
   const counts = new Map();
-  bookings.forEach((booking) => {
+  scheduledBookings().forEach((booking) => {
     const label = bookingCraftLabel(booking);
     counts.set(label, (counts.get(label) || 0) + 1);
   });
@@ -2891,12 +3082,12 @@ function renderFleetLegend() {
   `).join('');
 }
 function renderDashboardMetrics() {
-  const pendingDeposits = bookings.filter((booking) => booking.status === 'pending' && !booking.deposit).length;
+  const pendingDeposits = pendingOpsBookings().length;
   const deliverySpend = expensesInPeriod('month', 'delivery').reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const fuelSpend = currentMonthFuelCost();
   const revenue = revenueThisMonth();
   const profit = revenue - fuelSpend - deliverySpend;
-  const monthlyBookings = bookings.filter((booking) => isSameMonth(dateValue(booking.date))).length;
+  const monthlyBookings = scheduledBookings().filter((booking) => isSameMonth(dateValue(booking.date))).length;
 
   const pendingEl = document.getElementById('dashboard-kpi-pending');
   const pendingMeta = document.getElementById('dashboard-kpi-pending-meta');
@@ -3737,7 +3928,7 @@ function renderBookingBars() {
   const weeks = [0, 1, 2, 3, 4].map((index) => {
     const weekStart = new Date(start.getFullYear(), start.getMonth(), 1 + (index * 7));
     const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6, 23, 59, 59, 999);
-    const count = bookings.filter((booking) => {
+    const count = scheduledBookings().filter((booking) => {
       const bookingDate = dateValue(booking.date);
       return bookingDate && inRange(bookingDate, weekStart, weekEnd) && bookingDate.getMonth() === start.getMonth();
     }).length;
@@ -3791,7 +3982,7 @@ async function bootApp() {
     renderCommsPanel();
     renderReviewHub();
     renderSocialQueue();
-    document.getElementById('pending-badge').textContent = bookings.filter(b=>b.status==='pending').length;
+    updatePendingBadge();
     document.getElementById('b-date').value = today();
     document.getElementById('e-date').value = today();
     document.getElementById('f-date').value = today();
