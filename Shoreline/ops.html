@@ -2124,7 +2124,7 @@ function mergeInvoiceRecord(target, incoming) {
   target.invoiceName = incoming.invoiceName || target.invoiceName;
   target.invoiceNumber = incoming.invoiceNumber || target.invoiceNumber;
   target.recurring = Boolean(incoming.recurring || target.recurring);
-  target.customerId = incoming.customerId || target.customerId;
+  if (!target.customerId && incoming.customerId) target.customerId = incoming.customerId;
   target.customerName = incoming.customerName || target.customerName;
   target.customerEmail = incoming.customerEmail || target.customerEmail;
   target.customerPhone = incoming.customerPhone || target.customerPhone;
@@ -2195,16 +2195,19 @@ function importInvoicesFromCsv(rows, fileName) {
   const existing = new Map((invoices || []).map((invoice) => [invoiceImportKey(invoice), invoice]));
   for (const incoming of grouped.values()) {
     const existingInvoice = existing.get(invoiceImportKey(incoming));
+    let targetInvoice;
     if (existingInvoice) {
       mergeInvoiceRecord(existingInvoice, incoming);
+      targetInvoice = existingInvoice;
       updated += 1;
     } else {
-      invoices.push({
+      targetInvoice = {
         id: nextId(invoices),
         lineItems: [],
         rawFields: {},
         ...incoming
-      });
+      };
+      invoices.push(targetInvoice);
       added += 1;
     }
     if (meaningfulInvoiceCustomer(incoming.customerName, incoming.customerEmail, incoming.customerPhone)) {
@@ -2224,6 +2227,12 @@ function importInvoicesFromCsv(rows, fileName) {
           lastInvoiceDate: incoming.issueDate || ''
         }
       });
+      const linkedCustomer = customers.find((customer) => (
+        (normalizePhone(customer.phone) && normalizePhone(customer.phone) === normalizePhone(incoming.customerPhone)) ||
+        (normalizeEmail(customer.email) && normalizeEmail(customer.email) === normalizeEmail(incoming.customerEmail)) ||
+        (normalizeName(customer.name) && normalizeName(customer.name) === normalizeName(incoming.customerName))
+      ));
+      if (linkedCustomer && targetInvoice) targetInvoice.customerId = linkedCustomer.id;
     }
   }
   invoices = invoices
