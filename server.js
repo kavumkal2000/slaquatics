@@ -7,6 +7,8 @@ import Stripe from 'stripe';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const APP_PACKAGE = JSON.parse(await fs.readFile(path.join(__dirname, 'package.json'), 'utf8'));
+const APP_VERSION = String(APP_PACKAGE?.version || '1.0.0').trim() || '1.0.0';
 
 const PORT = Number(process.env.PORT || 10000);
 const HOST = '0.0.0.0';
@@ -30,6 +32,12 @@ const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
 const RESEND_FROM_NAME = process.env.RESEND_FROM_NAME || 'Shoreline Aquatics';
 const RESEND_REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO_EMAIL || '';
 const BOOKING_ALERT_EMAILS = process.env.BOOKING_ALERT_EMAILS || process.env.BOOKING_ALERT_EMAIL || '';
+const OWNER_UPDATE_EMAILS = process.env.OWNER_UPDATE_EMAILS || BOOKING_ALERT_EMAILS;
+const OWNER_WEEKLY_DIGEST_ENABLED = !/^false$/i.test(process.env.OWNER_WEEKLY_DIGEST_ENABLED || 'true');
+const OWNER_WEEKLY_DIGEST_TIMEZONE = process.env.OWNER_WEEKLY_DIGEST_TIMEZONE || 'America/New_York';
+const OWNER_WEEKLY_DIGEST_WEEKDAY = Number(process.env.OWNER_WEEKLY_DIGEST_WEEKDAY || 1);
+const OWNER_WEEKLY_DIGEST_HOUR = Number(process.env.OWNER_WEEKLY_DIGEST_HOUR || 9);
+const OWNER_WEEKLY_DIGEST_MINUTE = Number(process.env.OWNER_WEEKLY_DIGEST_MINUTE || 0);
 const SEND_BOOKING_REQUEST_CUSTOMER_EMAILS = /^true$/i.test(process.env.SEND_BOOKING_REQUEST_CUSTOMER_EMAILS || 'false');
 const GOOGLE_REVIEW_URL = process.env.GOOGLE_REVIEW_URL || '';
 const FACEBOOK_REVIEW_URL = process.env.FACEBOOK_REVIEW_URL || '';
@@ -55,6 +63,7 @@ const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
 const SHORELINE_PHONE_LINK = '4696937164';
 const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
 const SHORELINE_ADDRESS = '2000 Main St, Hickory Creek, TX 75065';
+const OPS_APP_URL = process.env.OPS_APP_URL || 'https://shoreline-aquatics-ops.onrender.com/ops.html';
 const ARRIVAL_INSTRUCTIONS = [
   'Proceed down Main Street until you pass the storage units on your left.',
   'Continue straight ahead and enter the park.',
@@ -108,6 +117,7 @@ const DEFAULT_STATE = {
   reviewRequests: [],
   reviews: [],
   socialPosts: [],
+  ownerWeeklyDigest: { lastSentAt: '', lastMessageId: '', lastWeekKey: '' },
   importMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false},
   invoiceImportMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false}
 };
@@ -134,6 +144,16 @@ function normalizeImportMeta(value) {
     : clone(DEFAULT_STATE.importMeta);
 }
 
+function normalizeOwnerWeeklyDigest(value) {
+  return value && typeof value === 'object'
+    ? {
+        lastSentAt: String(value.lastSentAt || ''),
+        lastMessageId: String(value.lastMessageId || ''),
+        lastWeekKey: String(value.lastWeekKey || '')
+      }
+    : clone(DEFAULT_STATE.ownerWeeklyDigest);
+}
+
 function sanitizeState(value = {}) {
   return {
     bookings: normalizeArray(value.bookings, DEFAULT_STATE.bookings),
@@ -147,6 +167,7 @@ function sanitizeState(value = {}) {
     reviewRequests: normalizeArray(value.reviewRequests, DEFAULT_STATE.reviewRequests),
     reviews: normalizeArray(value.reviews, DEFAULT_STATE.reviews),
     socialPosts: normalizeArray(value.socialPosts, DEFAULT_STATE.socialPosts),
+    ownerWeeklyDigest: normalizeOwnerWeeklyDigest(value.ownerWeeklyDigest),
     importMeta: normalizeImportMeta(value.importMeta),
     invoiceImportMeta: normalizeImportMeta(value.invoiceImportMeta)
   };
@@ -562,6 +583,100 @@ function formatTimeLabel(value = '') {
   return `${twelveHour}:${minuteText} ${suffix}`;
 }
 
+function formatDateTimeInTimeZone(value = new Date(), timeZone = OWNER_WEEKLY_DIGEST_TIMEZONE) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(value);
+}
+
+function zonedDateParts(value = new Date(), timeZone = OWNER_WEEKLY_DIGEST_TIMEZONE) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  });
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(value)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+  return {
+    weekday: String(parts.weekday || 'Mon'),
+    year: Number(parts.year || 0),
+    month: Number(parts.month || 0),
+    day: Number(parts.day || 0),
+    hour: Number(parts.hour || 0),
+    minute: Number(parts.minute || 0)
+  };
+}
+
+function weekdayIndex(label = '') {
+  const normalized = String(label || '').trim().slice(0, 3).toLowerCase();
+  return {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6
+  }[normalized] ?? 0;
+}
+
+function isoDateKeyFromParts(parts = {}) {
+  const year = Number(parts.year || 0);
+  const month = String(Number(parts.month || 0)).padStart(2, '0');
+  const day = String(Number(parts.day || 0)).padStart(2, '0');
+  return year ? `${year}-${month}-${day}` : '';
+}
+
+function addDaysToIsoDateKey(value = '', days = 0) {
+  const [yearText = '', monthText = '', dayText = ''] = String(value || '').split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) return '';
+  const next = new Date(Date.UTC(year, month - 1, day));
+  next.setUTCDate(next.getUTCDate() + Number(days || 0));
+  return next.toISOString().slice(0, 10);
+}
+
+function ownerWeeklyDigestRecipients() {
+  return normalizeEmailList(OWNER_UPDATE_EMAILS || BOOKING_ALERT_EMAILS);
+}
+
+function ownerWeeklyDigestSchedule(now = new Date()) {
+  const parts = zonedDateParts(now, OWNER_WEEKLY_DIGEST_TIMEZONE);
+  const todayKey = isoDateKeyFromParts(parts);
+  const weekday = weekdayIndex(parts.weekday);
+  const pastSchedule = weekday > OWNER_WEEKLY_DIGEST_WEEKDAY
+    || (weekday === OWNER_WEEKLY_DIGEST_WEEKDAY
+      && (parts.hour > OWNER_WEEKLY_DIGEST_HOUR
+        || (parts.hour === OWNER_WEEKLY_DIGEST_HOUR && parts.minute >= OWNER_WEEKLY_DIGEST_MINUTE)));
+  const weekStart = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((weekday - OWNER_WEEKLY_DIGEST_WEEKDAY + 7) % 7));
+  return {
+    now,
+    parts,
+    todayKey,
+    horizonKey: addDaysToIsoDateKey(todayKey, 6),
+    weekKey: weekStart.toISOString().slice(0, 10),
+    pastSchedule
+  };
+}
+
 function timeToMinutes(value = '') {
   const [hourText = '', minuteText = '00'] = String(value || '').split(':');
   const hour = Number(hourText);
@@ -809,6 +924,10 @@ function invoiceMatchesCustomer(customer = {}, invoice = {}) {
 }
 
 function normalizeInvoiceStatus(status = '') {
+  return String(status || '').trim().toLowerCase();
+}
+
+function normalizeBookingStatus(status = '') {
   return String(status || '').trim().toLowerCase();
 }
 
@@ -1494,6 +1613,8 @@ function integrationStatus() {
     smsConfigured: Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER),
     emailConfigured: Boolean(RESEND_API_KEY && RESEND_FROM_EMAIL),
     bookingAlertsConfigured: Boolean(normalizeEmailList(BOOKING_ALERT_EMAILS).length),
+    ownerUpdateConfigured: Boolean(ownerWeeklyDigestRecipients().length),
+    ownerWeeklyDigestEnabled: OWNER_WEEKLY_DIGEST_ENABLED,
     reviewLinksConfigured: Boolean(GOOGLE_REVIEW_URL || FACEBOOK_REVIEW_URL),
     reviewAutomationEnabled: AUTO_SEND_REVIEW_REQUESTS,
     reviewChannel: REVIEW_REQUEST_CHANNEL,
@@ -1501,7 +1622,8 @@ function integrationStatus() {
     stripeWebhookConfigured: stripeWebhookConfigured(),
     socialConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL || socialPlatforms.length),
     socialAutomationConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL),
-    socialPlatforms
+    socialPlatforms,
+    appVersion: APP_VERSION
   };
 }
 
@@ -1622,6 +1744,230 @@ async function sendBookingConfirmationEmail(state, booking, session = {}, now = 
     message: `Paid booking confirmation sent to ${booking.email} for ${booking.craftLabel} on ${booking.date} at ${booking.time}.`
   });
   return { sent: true, result };
+}
+
+function bookingQualifiesForUpcomingDigest(booking = {}, todayKey = '', horizonKey = '') {
+  const status = normalizeBookingStatus(booking.status);
+  const date = String(booking.date || '').trim();
+  if (!date || !todayKey || !horizonKey) return false;
+  if (date < todayKey || date > horizonKey) return false;
+  return !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status);
+}
+
+function buildOwnerWeeklyDigestReport(state, schedule = ownerWeeklyDigestSchedule()) {
+  const integrations = integrationStatus();
+  const paidInvoices = (state.invoices || []).filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid');
+  const openInvoices = (state.invoices || []).filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
+  const paidInvoiceRevenue = paidInvoices.reduce((sum, invoice) => sum + Number(invoice.paidAmount || invoice.total || 0), 0);
+  const paidDepositsCollected = (state.bookings || [])
+    .filter((booking) => booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid')
+    .reduce((sum, booking) => sum + Number(booking.amountDueToday || ((booking.depositAmount || (BOOKING_DEPOSIT_CENTS / 100)) + (booking.processingFeeAmount || (PROCESSING_FEE_CENTS / 100))) || 0), 0);
+  const upcomingBookings = (state.bookings || [])
+    .filter((booking) => bookingQualifiesForUpcomingDigest(booking, schedule.todayKey, schedule.horizonKey))
+    .sort((left, right) => (
+      String(left.date || '').localeCompare(String(right.date || ''))
+      || String(left.time || '').localeCompare(String(right.time || ''))
+      || String(left.name || '').localeCompare(String(right.name || ''))
+    ));
+  const recentCommunications = (state.communicationsLog || []).filter((item) => {
+    const sentAt = Date.parse(item?.date || '');
+    return Number.isFinite(sentAt) && sentAt >= (schedule.now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  });
+  const pendingReviews = (state.reviewRequests || []).filter((request) => String(request.status || '').trim().toLowerCase() !== 'reviewed');
+  return {
+    version: APP_VERSION,
+    generatedAt: formatDateTimeInTimeZone(schedule.now, OWNER_WEEKLY_DIGEST_TIMEZONE),
+    websiteUrl: PUBLIC_SITE_URL,
+    opsUrl: OPS_APP_URL,
+    counts: {
+      customers: (state.customers || []).length,
+      bookings: (state.bookings || []).length,
+      invoices: (state.invoices || []).length,
+      trackers: (state.trackers || []).length,
+      upcomingBookings: upcomingBookings.length,
+      openInvoices: openInvoices.length,
+      pendingReviews: pendingReviews.length,
+      communicationsLast7Days: recentCommunications.length
+    },
+    revenue: {
+      paidInvoiceRevenue,
+      paidDepositsCollected
+    },
+    integrations,
+    upcomingBookings: upcomingBookings.slice(0, 5).map((booking) => ({
+      name: String(booking.name || booking.email || 'Customer').trim(),
+      date: formatDateLabel(booking.date),
+      time: formatTimeLabel(booking.time),
+      craftLabel: String(booking.craftLabel || CRAFT_LABELS[booking.craftKey] || booking.craft || 'Rental').trim(),
+      paymentStatus: String(booking.paymentStatus || 'unpaid').trim(),
+      status: String(booking.status || 'pending').trim()
+    }))
+  };
+}
+
+function ownerWeeklyDigestSubject(report) {
+  return `Weekly Shoreline website + ops update • v${report.version}`;
+}
+
+function ownerWeeklyDigestText(report) {
+  const upcomingLines = report.upcomingBookings.length
+    ? report.upcomingBookings.map((booking) => (
+        `- ${booking.date} • ${booking.time} • ${booking.name} • ${booking.craftLabel} • ${booking.paymentStatus}/${booking.status}`
+      )).join('\n')
+    : 'No upcoming bookings in the next 7 days.';
+  return [
+    'Shoreline Aquatics weekly owner update',
+    '',
+    `Version: v${report.version}`,
+    `Generated: ${report.generatedAt}`,
+    `Website: ${report.websiteUrl}`,
+    `Ops: ${report.opsUrl}`,
+    '',
+    'Business snapshot',
+    `Customers: ${report.counts.customers}`,
+    `Bookings: ${report.counts.bookings}`,
+    `Upcoming next 7 days: ${report.counts.upcomingBookings}`,
+    `Invoices: ${report.counts.invoices}`,
+    `Open invoices: ${report.counts.openInvoices}`,
+    `Trackers: ${report.counts.trackers}`,
+    `Pending review requests: ${report.counts.pendingReviews}`,
+    `Communications sent in last 7 days: ${report.counts.communicationsLast7Days}`,
+    `Paid invoice revenue: ${formatCurrency(report.revenue.paidInvoiceRevenue)}`,
+    `Paid deposits collected: ${formatCurrency(report.revenue.paidDepositsCollected)}`,
+    '',
+    'Integrations',
+    `Email: ${report.integrations.emailConfigured ? 'configured' : 'not configured'}`,
+    `Owner booking alerts: ${report.integrations.bookingAlertsConfigured ? 'configured' : 'not configured'}`,
+    `Weekly owner digest: ${report.integrations.ownerWeeklyDigestEnabled ? 'enabled' : 'disabled'}`,
+    `Stripe: ${report.integrations.stripeConfigured ? 'configured' : 'not configured'}`,
+    `Stripe webhook: ${report.integrations.stripeWebhookConfigured ? 'configured' : 'not configured'}`,
+    `SMS: ${report.integrations.smsConfigured ? 'configured' : 'not configured'}`,
+    `Review links: ${report.integrations.reviewLinksConfigured ? 'configured' : 'not configured'}`,
+    `Social automation: ${report.integrations.socialConfigured ? 'configured' : 'not configured'}`,
+    '',
+    'Upcoming bookings',
+    upcomingLines
+  ].join('\n');
+}
+
+function ownerWeeklyDigestHtml(report) {
+  const badge = (value) => value
+    ? '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#d1fae5;color:#065f46;font-weight:700;font-size:12px;">Configured</span>'
+    : '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:700;font-size:12px;">Needs setup</span>';
+  const upcomingRows = report.upcomingBookings.length
+    ? report.upcomingBookings.map((booking) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.date)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.time)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.name)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.craftLabel)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(`${booking.paymentStatus}/${booking.status}`)}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="5" style="padding:12px 0;color:#5a6b85;">No upcoming bookings in the next 7 days.</td></tr>';
+  return `
+    <div style="font-family:Arial,sans-serif;background:#f3f7fb;padding:28px;color:#0f172a;">
+      <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #dbe5f0;">
+        <div style="background:#08111f;padding:24px 28px;color:#ffffff;">
+          <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f5a623;">Weekly owner update</div>
+          <h1 style="margin:10px 0 0;font-size:34px;line-height:1.05;">Shoreline website + ops</h1>
+          <p style="margin:12px 0 0;font-size:16px;color:#d7e3f2;">Version v${htmlEscape(report.version)} • ${htmlEscape(report.generatedAt)}</p>
+        </div>
+        <div style="padding:24px 28px;">
+          <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">
+            <tr><td style="padding:8px 0;color:#5a6b85;">Website</td><td style="padding:8px 0;text-align:right;"><a href="${htmlEscape(report.websiteUrl)}">${htmlEscape(report.websiteUrl)}</a></td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Ops</td><td style="padding:8px 0;text-align:right;"><a href="${htmlEscape(report.opsUrl)}">${htmlEscape(report.opsUrl)}</a></td></tr>
+          </table>
+          <h2 style="font-size:20px;margin:0 0 12px;">Business snapshot</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+            <tr><td style="padding:8px 0;color:#5a6b85;">Customers</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.customers}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Bookings</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.bookings}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Upcoming next 7 days</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.upcomingBookings}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Invoices</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.invoices}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Open invoices</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.openInvoices}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Trackers</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.trackers}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Pending review requests</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.pendingReviews}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Communications last 7 days</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.communicationsLast7Days}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Paid invoice revenue</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(report.revenue.paidInvoiceRevenue))}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Paid deposits collected</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(report.revenue.paidDepositsCollected))}</td></tr>
+          </table>
+          <h2 style="font-size:20px;margin:0 0 12px;">Integrations</h2>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+            <tr><td style="padding:8px 0;color:#5a6b85;">Email</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.emailConfigured)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Owner booking alerts</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.bookingAlertsConfigured)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Weekly owner digest</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.ownerWeeklyDigestEnabled)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Stripe</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeConfigured)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Stripe webhook</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeWebhookConfigured)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">SMS</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.smsConfigured)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Review links</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.reviewLinksConfigured)}</td></tr>
+            <tr><td style="padding:8px 0;color:#5a6b85;">Social automation</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.socialConfigured)}</td></tr>
+          </table>
+          <h2 style="font-size:20px;margin:0 0 12px;">Upcoming bookings</h2>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Date</th>
+                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Time</th>
+                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Customer</th>
+                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Package</th>
+                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Status</th>
+              </tr>
+            </thead>
+            <tbody>${upcomingRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function maybeSendOwnerWeeklyDigest({ force = false } = {}) {
+  if (!OWNER_WEEKLY_DIGEST_ENABLED) {
+    return { sent: false, reason: 'disabled' };
+  }
+  const recipients = ownerWeeklyDigestRecipients();
+  if (!recipients.length) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+
+  const schedule = ownerWeeklyDigestSchedule(new Date());
+  const state = await stateStore.read();
+  const lastWeekKey = String(state.ownerWeeklyDigest?.lastWeekKey || '');
+  if (!force) {
+    if (!schedule.pastSchedule) return { sent: false, reason: 'not-scheduled-yet', weekKey: schedule.weekKey };
+    if (lastWeekKey === schedule.weekKey) return { sent: false, reason: 'already-sent', weekKey: schedule.weekKey };
+  }
+
+  const report = buildOwnerWeeklyDigestReport(state, schedule);
+  const result = await sendResendEmail({
+    to: recipients,
+    subject: ownerWeeklyDigestSubject(report),
+    text: ownerWeeklyDigestText(report),
+    html: ownerWeeklyDigestHtml(report),
+    idempotencyKey: force
+      ? `shoreline-owner-weekly-digest-${schedule.weekKey}-manual-${Date.now()}`
+      : `shoreline-owner-weekly-digest-${schedule.weekKey}`
+  });
+
+  const latestState = await stateStore.read();
+  latestState.ownerWeeklyDigest = {
+    lastSentAt: new Date().toISOString(),
+    lastMessageId: String(result?.id || ''),
+    lastWeekKey: schedule.weekKey
+  };
+  latestState.communicationsLog.unshift({
+    id: nextId(latestState.communicationsLog),
+    date: new Date().toISOString(),
+    customerId: 0,
+    customerName: 'Owner Update',
+    channel: 'owner-weekly-digest-email',
+    message: `Weekly owner update sent to ${recipients.join(', ')} for release v${APP_VERSION}.`
+  });
+  await stateStore.write(latestState);
+  return { sent: true, result, weekKey: schedule.weekKey };
 }
 
 async function postWebhook(url, payload, extraHeaders = {}) {
@@ -2288,6 +2634,18 @@ async function handleApi(request, response, pathname) {
     }
   }
 
+  if (pathname === '/api/ops/owner-weekly-update/send' && request.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const result = await maybeSendOwnerWeeklyDigest({ force: Boolean(body.force) });
+      sendJson(response, 200, { ok: true, result });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send the owner weekly update.' });
+      return true;
+    }
+  }
+
   if (pathname === '/api/ops/reviews/send' && request.method === 'POST') {
     try {
       const body = JSON.parse(await readRequestBody(request) || '{}');
@@ -2345,7 +2703,27 @@ async function handleApi(request, response, pathname) {
   return true;
 }
 
+let ownerWeeklyDigestCheckInFlight = null;
+let ownerWeeklyDigestLastCheckedAt = 0;
+
+function scheduleOwnerWeeklyDigestCheck({ force = false } = {}) {
+  const now = Date.now();
+  if (!force && (now - ownerWeeklyDigestLastCheckedAt) < (5 * 60 * 1000)) {
+    return;
+  }
+  if (ownerWeeklyDigestCheckInFlight) return;
+  ownerWeeklyDigestLastCheckedAt = now;
+  ownerWeeklyDigestCheckInFlight = maybeSendOwnerWeeklyDigest({ force })
+    .catch((error) => {
+      console.error('Owner weekly digest check failed:', error);
+    })
+    .finally(() => {
+      ownerWeeklyDigestCheckInFlight = null;
+    });
+}
+
 const server = http.createServer(async (request, response) => {
+  scheduleOwnerWeeklyDigestCheck();
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
     const pathname = url.pathname;
@@ -2400,4 +2778,9 @@ const server = http.createServer(async (request, response) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Shoreline ops server listening on http://${HOST}:${PORT} using ${stateStore.kind} storage`);
+  scheduleOwnerWeeklyDigestCheck();
+  const weeklyDigestTimer = setInterval(() => {
+    scheduleOwnerWeeklyDigestCheck();
+  }, 60 * 60 * 1000);
+  weeklyDigestTimer.unref?.();
 });

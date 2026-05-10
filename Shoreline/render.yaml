@@ -65,6 +65,10 @@ services:
         value: false
       - key: BOOKING_ALERT_EMAILS
         sync: false
+      - key: OWNER_UPDATE_EMAILS
+        sync: false
+      - key: OWNER_WEEKLY_DIGEST_ENABLED
+        value: true
       - key: GOOGLE_REVIEW_URL
         sync: false
       - key: FACEBOOK_REVIEW_URL
