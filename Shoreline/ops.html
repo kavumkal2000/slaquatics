@@ -991,8 +991,26 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Invoice title</label><input type="text" id="i-invoice-name" placeholder="Weekend walk-up rental"></div>
         <div class="form-group"><label>Issue date</label><input type="date" id="i-issue-date"></div>
         <div class="form-group"><label>Due date</label><input type="date" id="i-due-date"></div>
+        <div class="form-group"><label>Rental package</label>
+          <select id="i-package" onchange="handleInvoicePackageChange()">
+            <option value="">Custom / manual</option>
+            <option value="jetski2">2 Yamaha Jet Skis</option>
+            <option value="jetski3">3 Yamaha Jet Skis</option>
+            <option value="jetski4">4 Yamaha Jet Skis</option>
+            <option value="boat">Boat Rental</option>
+            <option value="bundle2">2 Jet Skis + Boat</option>
+            <option value="bundle3">3 Jet Skis + Boat</option>
+            <option value="bundle4">4 Jet Skis + Boat</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Rental length</label>
+          <select id="i-duration" onchange="applyInvoiceRentalAutofill()">
+            <option value="">Select duration</option>
+          </select>
+        </div>
         <div class="form-group"><label>Line item</label><input type="text" id="i-line-item" placeholder="Jet ski rental"></div>
         <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Rental pricing helper</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-rental-helper">Pick a rental package and duration to auto-fill the invoice title, line item, and amount.</div></div>
         <div class="form-group"><label>Status</label>
           <select id="i-status">
             <option value="Paid">Paid</option>
@@ -2168,6 +2186,67 @@ function updateInvoiceFilters() {
   }
   renderInvoices();
 }
+function invoiceDurationText(duration) {
+  const hours = Number(duration || 0);
+  if (!hours) return '';
+  return hours === 8 ? 'Full Day (8 hours)' : `${hours} hour${hours === 1 ? '' : 's'}`;
+}
+function populateInvoiceDurationOptions(craftKey = '', selectedDuration = '') {
+  const durationEl = document.getElementById('i-duration');
+  if (!durationEl) return;
+  const availableDurations = Object.keys(PRICING[craftKey] || {})
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .sort((left, right) => left - right);
+  durationEl.innerHTML = ['<option value="">Select duration</option>']
+    .concat(availableDurations.map((duration) => (
+      `<option value="${duration}">${escapeHtml(invoiceDurationText(duration))}</option>`
+    )))
+    .join('');
+  durationEl.value = availableDurations.includes(Number(selectedDuration)) ? String(Number(selectedDuration)) : '';
+}
+function updateInvoiceRentalHelper(message = 'Pick a rental package and duration to auto-fill the invoice title, line item, and amount.') {
+  const helper = document.getElementById('invoice-rental-helper');
+  if (helper) helper.textContent = message;
+}
+function applyInvoiceRentalAutofill() {
+  const packageEl = document.getElementById('i-package');
+  const durationEl = document.getElementById('i-duration');
+  const invoiceNameEl = document.getElementById('i-invoice-name');
+  const lineItemEl = document.getElementById('i-line-item');
+  const totalEl = document.getElementById('i-total');
+  const craftKey = packageEl?.value || '';
+  const duration = Number(durationEl?.value || 0);
+  if (!craftKey) {
+    updateInvoiceRentalHelper();
+    return;
+  }
+  if (!duration) {
+    updateInvoiceRentalHelper(`Choose how long the ${CRAFT_NAMES[craftKey] || 'rental'} was out to auto-fill the amount.`);
+    return;
+  }
+  const amount = Number(PRICING[craftKey]?.[duration] || 0);
+  if (!amount) {
+    updateInvoiceRentalHelper('That duration is not available for this rental package.');
+    return;
+  }
+  const craftLabel = CRAFT_NAMES[craftKey] || 'Rental';
+  const durationLabel = invoiceDurationText(duration);
+  if (invoiceNameEl) invoiceNameEl.value = `${craftLabel} rental`;
+  if (lineItemEl) lineItemEl.value = `${craftLabel} • ${durationLabel}`;
+  if (totalEl) totalEl.value = amount.toFixed(2);
+  updateInvoiceRentalHelper(`${craftLabel} • ${durationLabel} auto-filled to ${moneyLabel(amount)}.`);
+}
+function handleInvoicePackageChange() {
+  const packageEl = document.getElementById('i-package');
+  const craftKey = packageEl?.value || '';
+  populateInvoiceDurationOptions(craftKey);
+  if (!craftKey) {
+    updateInvoiceRentalHelper();
+    return;
+  }
+  applyInvoiceRentalAutofill();
+}
 function createManualInvoiceNumber() {
   const datePart = today().replace(/-/g, '');
   const existingCount = invoices.filter((invoice) => String(invoice.invoiceNumber || '').startsWith(`SLA-${datePart}-`)).length + 1;
@@ -2181,10 +2260,13 @@ function resetInvoiceForm() {
   document.getElementById('i-invoice-name').value = '';
   document.getElementById('i-issue-date').value = today();
   document.getElementById('i-due-date').value = today();
+  document.getElementById('i-package').value = '';
+  populateInvoiceDurationOptions('');
   document.getElementById('i-line-item').value = '';
   document.getElementById('i-total').value = '';
   document.getElementById('i-status').value = 'Paid';
   document.getElementById('i-notes').value = '';
+  updateInvoiceRentalHelper();
   document.getElementById('invoice-modal-title').textContent = 'New Invoice';
   document.getElementById('invoice-save-button').textContent = 'Save Invoice';
 }
@@ -2203,16 +2285,24 @@ function openInvoiceModal(invoiceId = null) {
     document.getElementById('i-invoice-name').value = invoice.invoiceName || '';
     document.getElementById('i-issue-date').value = invoice.issueDate || today();
     document.getElementById('i-due-date').value = invoice.dueDate || invoice.issueDate || today();
+    const inferredCraft = invoice.craftKey || invoice.rawFields?.rentalPackage || guessCraftFromText(invoice.invoiceName || invoiceLineSummary(invoice));
+    const inferredDuration = Number(invoice.durationHours || invoice.rawFields?.rentalDurationHours || guessDurationFromText(invoice.invoiceName || invoiceLineSummary(invoice)) || 0);
+    document.getElementById('i-package').value = inferredCraft && inferredCraft !== 'imported' ? inferredCraft : '';
+    populateInvoiceDurationOptions(document.getElementById('i-package').value, inferredDuration);
     document.getElementById('i-line-item').value = Array.isArray(invoice.lineItems) && invoice.lineItems[0] ? (invoice.lineItems[0].name || invoice.lineItems[0].description || '') : '';
     document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
     document.getElementById('i-status').value = invoice.status || 'Paid';
     document.getElementById('i-notes').value = invoice.notes || '';
+    if (document.getElementById('i-package').value && document.getElementById('i-duration').value) {
+      updateInvoiceRentalHelper(`${CRAFT_NAMES[document.getElementById('i-package').value] || 'Rental'} • ${invoiceDurationText(document.getElementById('i-duration').value)} loaded from this invoice.`);
+    }
     document.getElementById('invoice-modal-title').textContent = 'Edit Invoice';
     document.getElementById('invoice-save-button').textContent = 'Save Changes';
   }
   openModal('invoice-modal');
 }
 async function saveInvoice() {
+  applyInvoiceRentalAutofill();
   const customerName = document.getElementById('i-customer-name').value.trim();
   const invoiceName = document.getElementById('i-invoice-name').value.trim();
   const lineItemName = document.getElementById('i-line-item').value.trim();
@@ -2232,6 +2322,8 @@ async function saveInvoice() {
   const issueDate = document.getElementById('i-issue-date').value || today();
   const dueDate = document.getElementById('i-due-date').value || issueDate;
   const status = document.getElementById('i-status').value || 'Paid';
+  const packageKey = document.getElementById('i-package').value || '';
+  const durationHours = Number(document.getElementById('i-duration').value || 0);
   const phone = document.getElementById('i-customer-phone').value.trim();
   const email = document.getElementById('i-customer-email').value.trim();
   const notes = document.getElementById('i-notes').value.trim();
@@ -2259,6 +2351,9 @@ async function saveInvoice() {
   invoice.total = total;
   invoice.status = status;
   invoice.notes = notes;
+  invoice.craftKey = packageKey || '';
+  invoice.durationHours = durationHours || 0;
+  invoice.durationLabel = durationHours ? invoiceDurationText(durationHours) : '';
   invoice.lineItems = [{
     name: lineItemName,
     description: notes,
@@ -2268,7 +2363,11 @@ async function saveInvoice() {
   }];
   invoice.rawFields = mergeCrmFields(invoice.rawFields, {
     source: 'manual invoice',
-    notes
+    notes,
+    rentalPackage: packageKey,
+    rentalPackageLabel: packageKey ? (CRAFT_NAMES[packageKey] || '') : '',
+    rentalDurationHours: durationHours ? String(durationHours) : '',
+    rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : ''
   });
 
   if (!existingInvoice) invoices.unshift(invoice);
