@@ -40,6 +40,7 @@ const SOCIAL_TIKTOK_WEBHOOK_URL = process.env.SOCIAL_TIKTOK_WEBHOOK_URL || '';
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const PUBLIC_SITE_URL = String(process.env.PUBLIC_SITE_URL || 'https://slaquatics.com').replace(/\/+$/, '');
+const REQUIRE_SERVER_STORE = /^true$/i.test(process.env.REQUIRE_SERVER_STORE || '') || process.env.NODE_ENV === 'production';
 const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
 const PROCESSING_FEE_CENTS = 500;
@@ -214,8 +215,14 @@ async function createStore() {
     try {
       return await createPostgresStore(process.env.DATABASE_URL);
     } catch (error) {
+      if (REQUIRE_SERVER_STORE) {
+        throw new Error(`Postgres store unavailable and file fallback is disabled: ${error.message}`);
+      }
       console.error('Postgres store unavailable, falling back to file store.', error);
     }
+  }
+  if (REQUIRE_SERVER_STORE) {
+    throw new Error('DATABASE_URL is required because server-side file fallback is disabled.');
   }
   return createFileStore(STORE_FILE);
 }
