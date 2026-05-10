@@ -1899,6 +1899,7 @@ function customerImportKey(customer) {
 function dedupeCustomers() {
   const seen = new Map();
   const deduped = [];
+  const customerIdRemap = new Map();
   customers.forEach((customer) => {
     const key = customerImportKey(customer);
     if (!key) {
@@ -1907,13 +1908,35 @@ function dedupeCustomers() {
     }
     const existing = seen.get(key);
     if (existing) {
+      if (Number(customer.id || 0) > 0 && Number(existing.id || 0) > 0 && Number(customer.id) !== Number(existing.id)) {
+        customerIdRemap.set(Number(customer.id), Number(existing.id));
+      }
       mergeCustomerRecord(existing, customer);
       return;
     }
     seen.set(key, customer);
     deduped.push(customer);
   });
-  customers = deduped.map((customer, index) => ({...customer, id: index + 1}));
+  let maxCustomerId = deduped.reduce((max, customer) => Math.max(max, Number(customer.id) || 0), 0);
+  customers = deduped.map((customer) => {
+    if (Number(customer.id || 0) > 0) return customer;
+    maxCustomerId += 1;
+    return { ...customer, id: maxCustomerId };
+  });
+  if (customerIdRemap.size) {
+    bookings.forEach((booking) => {
+      const remapped = customerIdRemap.get(Number(booking.customerId || 0));
+      if (remapped) booking.customerId = remapped;
+    });
+    invoices.forEach((invoice) => {
+      const remapped = customerIdRemap.get(Number(invoice.customerId || 0));
+      if (remapped) invoice.customerId = remapped;
+    });
+    communicationsLog.forEach((entry) => {
+      const remapped = customerIdRemap.get(Number(entry.customerId || 0));
+      if (remapped) entry.customerId = remapped;
+    });
+  }
 }
 function updateLatestDate(currentValue, incomingValue) {
   if (!incomingValue || incomingValue === 'N/A') return currentValue || 'N/A';
