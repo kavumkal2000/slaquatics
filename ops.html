@@ -1416,17 +1416,51 @@ async function detectBackendSession() {
 async function saveData(options = {}) {
   dedupeCustomers();
   refreshCustomerRollups();
-  if (!backendAvailable) return;
+  if (!backendAvailable) return false;
   try {
     await requestJson('/api/ops/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(snapshotState())
     });
+    return true;
   } catch (error) {
     console.error('Remote save failed:', error);
     if (!options.silent) showToast(`⚠️ ${error.message || 'Could not save to the private ops service'}`);
+    return false;
   }
+}
+async function persistStateChange(options = {}) {
+  const saved = await saveData(options);
+  if (saved) return true;
+  if (!backendAvailable) return false;
+  try {
+    const loaded = await loadData();
+    if (loaded === false) return false;
+    await loadIntegrationStatus();
+    syncAssetSelectors();
+    renderImportSummary();
+    renderInvoiceImportSummary();
+    renderUpcoming();
+    renderDashboardMetrics();
+    renderBookingBars();
+    renderInvoices();
+    renderCRM();
+    renderWaivers();
+    renderExpenses();
+    renderCommsPanel();
+    renderTracking();
+    renderReviewHub();
+    renderSocialQueue();
+    renderFuel();
+    renderMaint();
+    renderReminders();
+    if (document.getElementById('page-bookings')?.classList.contains('active')) renderBookings(currentFilter);
+    updatePendingBadge();
+  } catch (error) {
+    console.error('State reload after failed save failed:', error);
+  }
+  return false;
 }
 async function loadData() {
   const session = await detectBackendSession();
@@ -2487,7 +2521,7 @@ async function saveInvoice() {
   }
   invoice.customerId = customer.id;
 
-  await saveData();
+  if (!(await persistStateChange())) return;
   closeModal('invoice-modal');
   resetInvoiceForm();
   renderInvoices();
@@ -2510,7 +2544,7 @@ async function deleteInvoice(invoiceId) {
     closeModal('invoice-modal');
     resetInvoiceForm();
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   renderInvoices();
   renderCRM();
   renderWaivers();
@@ -2666,7 +2700,7 @@ function handleCRMImport(event) {
   const file = event?.target?.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const parsed = parseCsvObjects(reader.result);
       if (!parsed.rows.length) throw new Error('No records were found in that CSV.');
@@ -2679,7 +2713,7 @@ function handleCRMImport(event) {
         : type === 'opportunities'
           ? importOpportunitiesFromCsv(parsed.rows, file.name)
           : importInvoicesFromCsv(parsed.rows, file.name);
-      saveData();
+      if (!(await persistStateChange())) return;
       renderImportSummary();
       renderInvoiceImportSummary();
       renderUpcoming();
@@ -2703,7 +2737,7 @@ function handleCRMImport(event) {
   };
   reader.readAsText(file);
 }
-function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
+async function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
   const parsed = parseCsvObjects(rawText);
   if (!parsed.rows.length) throw new Error('No records were found in that CSV.');
   const type = detectImportType(parsed.headers);
@@ -2715,7 +2749,7 @@ function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
     : type === 'opportunities'
       ? importOpportunitiesFromCsv(parsed.rows, fileName)
       : importInvoicesFromCsv(parsed.rows, fileName);
-  saveData();
+  if (!(await persistStateChange())) throw new Error('Could not save the imported records to the private ops service.');
   renderImportSummary();
   renderInvoiceImportSummary();
   renderUpcoming();
@@ -2730,11 +2764,11 @@ function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
   updatePendingBadge();
   return { type, summary };
 }
-function importCRMFromTextarea() {
+async function importCRMFromTextarea() {
   const textarea = document.getElementById('crm-paste-data');
   const rawText = textarea?.value || '';
   try {
-    const result = processCRMImportText(rawText, 'pasted-admintribe.csv');
+    const result = await processCRMImportText(rawText, 'pasted-admintribe.csv');
     if (textarea) textarea.value = '';
     closeModal('crm-paste-modal');
     const label = result.type === 'contacts' ? 'customers' : result.type === 'opportunities' ? 'bookings' : 'invoices';
@@ -2748,7 +2782,7 @@ function handleInvoiceImport(event) {
   const file = event?.target?.files?.[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const parsed = parseCsvObjects(reader.result);
       if (!parsed.rows.length) throw new Error('No invoice records were found in that CSV.');
@@ -2757,7 +2791,7 @@ function handleInvoiceImport(event) {
         throw new Error('That file does not look like an Admin Tribe invoice export.');
       }
       const summary = importInvoicesFromCsv(parsed.rows, file.name);
-      saveData();
+      if (!(await persistStateChange())) return;
       renderInvoiceImportSummary();
       renderInvoices();
       renderCRM();
@@ -3067,7 +3101,7 @@ async function saveBooking() {
     if (item) syncCustomerRollup(item);
   });
 
-  await saveData();
+  if (!(await persistStateChange())) return;
   updatePendingBadge();
   closeModal('booking-modal');
   showToast(existingBooking ? '✅ Booking updated' : '✅ Booking saved');
@@ -3611,7 +3645,7 @@ function renderTracking() {
     </tr>
   `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">📡</div><p>No trackers saved yet. Add the first LandAirSea device here.</p></div></td></tr>';
 }
-function saveTracker() {
+async function saveTracker() {
   const name = document.getElementById('t-name').value.trim();
   const serialNumber = document.getElementById('t-serial').value.trim();
   if (!name || !serialNumber) {
@@ -3641,7 +3675,7 @@ function saveTracker() {
     createdAt: new Date().toISOString()
   });
   selectedTrackerId = trackers[0]?.id || null;
-  saveData();
+  if (!(await persistStateChange())) return;
   closeModal('tracking-modal');
   syncAssetSelectors();
   renderTracking();
@@ -3665,7 +3699,7 @@ async function updateStatus(id, status) {
   const previousStatus = booking.status;
   booking.status = status;
   try {
-    await saveData();
+    if (!(await persistStateChange())) return;
     const reviewAutoSent = normalizeBookingStatusValue(status) === 'completed' && normalizeBookingStatusValue(previousStatus) !== 'completed'
       ? await autoSendReviewForBooking(booking)
       : false;
@@ -3692,7 +3726,7 @@ async function confirmDeposit(id) {
   booking.deposit = true;
   booking.paymentStatus = 'paid';
   try {
-    await saveData();
+    if (!(await persistStateChange())) return;
     renderBookings();
     renderUpcoming();
     renderDashboardMetrics();
@@ -3722,7 +3756,7 @@ async function deleteBooking(bookingId) {
     closeModal('booking-modal');
     resetBookingForm();
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   renderBookings();
   renderUpcoming();
   renderDashboardMetrics();
@@ -4119,7 +4153,7 @@ async function saveCustomer() {
       crmFields: {}
     });
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   closeModal('customer-modal');
   showToast(customerId ? '✅ Customer updated' : '✅ Customer added');
   renderCRM();
@@ -4141,7 +4175,7 @@ async function deleteCustomer(customerId) {
     resetCustomerForm();
   }
   if (Number(expandedCustomerId) === Number(customerId)) expandedCustomerId = null;
-  await saveData();
+  if (!(await persistStateChange())) return;
   renderCRM();
   renderWaivers();
   renderCommsPanel();
@@ -4215,7 +4249,7 @@ async function saveExpense() {
       ...payload
     });
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   closeModal('expense-modal');
   resetExpenseForm();
   renderExpenses();
@@ -4236,7 +4270,7 @@ async function deleteExpense(expenseId) {
     closeModal('expense-modal');
     resetExpenseForm();
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   renderExpenses();
   renderDashboardMetrics();
   showToast('🗑️ Expense removed');
@@ -4356,9 +4390,9 @@ async function sendDirectMessage(channel) {
       channel,
       message
     });
-    saveData();
+    const logged = await persistStateChange();
     renderCommunications();
-    showToast(channel === 'sms' ? '📲 Text sent' : '✉️ Email sent');
+    showToast(logged ? (channel === 'sms' ? '📲 Text sent' : '✉️ Email sent') : '⚠️ Message sent, but the CRM log could not be saved');
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
   }
@@ -4393,14 +4427,14 @@ async function sendMassEmail() {
       channel: 'mass-email',
       message: `${subject} — ${body}`
     });
-    saveData();
+    const logged = await persistStateChange();
     renderCommunications();
-    showToast(`✉️ Mass email sent to ${bcc.length} recipients`);
+    showToast(logged ? `✉️ Mass email sent to ${bcc.length} recipients` : '⚠️ Mass email sent, but the CRM log could not be saved');
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
   }
 }
-function logCommunication() {
+async function logCommunication() {
   const select = document.getElementById('comm-customer');
   const message = document.getElementById('comm-message')?.value.trim();
   const customer = customers.find((item) => String(item.id) === String(select?.value));
@@ -4416,7 +4450,7 @@ function logCommunication() {
     channel: customer.email && customer.phone ? 'text/email draft' : customer.phone ? 'text draft' : 'email draft',
     message
   });
-  saveData();
+  if (!(await persistStateChange())) return;
   renderCommunications();
   showToast('💬 Communication note saved');
 }
@@ -4499,7 +4533,7 @@ async function sendReviewDrop(requestId, channel, options = {}) {
     throw error;
   }
 }
-function markReviewCompleted(requestId) {
+async function markReviewCompleted(requestId) {
   const request = reviewRequests.find((item) => item.id === requestId);
   if (!request) return;
   const rating = window.prompt('Star rating (1-5)', '5');
@@ -4514,15 +4548,15 @@ function markReviewCompleted(requestId) {
     responded: false
   });
   request.status = 'reviewed';
-  saveData();
+  if (!(await persistStateChange())) return;
   renderReviewHub();
   showToast('⭐ Review logged');
 }
-function toggleReviewResponded(reviewId) {
+async function toggleReviewResponded(reviewId) {
   const review = reviews.find((item) => item.id === reviewId);
   if (!review) return;
   review.responded = !review.responded;
-  saveData();
+  if (!(await persistStateChange())) return;
   renderReviewHub();
 }
 function renderReviewHub() {
@@ -4579,7 +4613,7 @@ function renderReviewHub() {
 }
 
 // ── SOCIAL ──
-function saveSocialDraft() {
+async function saveSocialDraft() {
   const caption = document.getElementById('social-caption')?.value.trim();
   const link = document.getElementById('social-link')?.value.trim();
   if (!caption) {
@@ -4592,7 +4626,7 @@ function saveSocialDraft() {
     link,
     createdAt: new Date().toISOString()
   });
-  saveData();
+  if (!(await persistStateChange())) return;
   renderSocialQueue();
   showToast('📣 Social draft saved');
 }
@@ -4738,7 +4772,7 @@ async function saveFuel() {
   } else {
     fuelLog.unshift({id: nextId(fuelLog), ...payload});
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   closeModal('fuel-modal');
   resetFuelForm();
   syncAssetSelectors();
@@ -4762,7 +4796,7 @@ async function deleteFuelEntry(fuelId) {
     closeModal('fuel-modal');
     resetFuelForm();
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   syncAssetSelectors();
   renderFuel();
   renderExpenses();
@@ -4817,7 +4851,7 @@ async function saveMaint() {
   } else {
     maintLog.unshift({id: nextId(maintLog), ...payload});
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   closeModal('maint-modal');
   resetMaintForm();
   syncAssetSelectors();
@@ -4838,7 +4872,7 @@ async function deleteMaintEntry(maintId) {
     closeModal('maint-modal');
     resetMaintForm();
   }
-  await saveData();
+  if (!(await persistStateChange())) return;
   syncAssetSelectors();
   renderMaint();
   showToast('🗑️ Service entry removed');
