@@ -430,6 +430,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="nav-section">Business</div>
   <button class="nav-item" onclick="showPage('invoices',this)"><span class="icon">🧾</span><span>Invoices</span></button>
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
+  <button class="nav-item" onclick="showPage('waivers',this)"><span class="icon">📝</span><span>Waivers</span></button>
   <button class="nav-item" onclick="showPage('expenses',this)"><span class="icon">💸</span><span>Expenses</span></button>
   <button class="nav-item" onclick="showPage('fuel',this)"><span class="icon">⛽</span><span>Fuel Log</span></button>
   <button class="nav-item" onclick="showPage('maintenance',this)"><span class="icon">🔧</span><span>Maintenance</span></button>
@@ -660,6 +661,36 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="crm-summary-line" id="crm-summary-line">Loading customer summary...</div>
   </div>
   <div class="crm-grid" id="crm-grid"></div>
+</div>
+
+<!-- ═══ WAIVERS ═══ -->
+<div class="page" id="page-waivers">
+  <div class="section-head">
+    <h2>Waivers</h2>
+    <div class="crm-toolbar">
+      <input class="search-input" placeholder="Search signed waivers..." oninput="filterWaivers(this)">
+      <button class="btn btn-ghost btn-sm" onclick="showPage('crm', document.querySelector('.nav-item[onclick*=&quot;crm&quot;]'))">Open customers</button>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">Waivers on file</div><div class="value" style="color:var(--green);" id="waiver-kpi-total">0</div><div class="delta up" id="waiver-kpi-total-meta">Signed waiver records in CRM</div></div>
+    <div class="kpi-card"><div class="label">Signed this month</div><div class="value" style="color:var(--wave);" id="waiver-kpi-month">0</div><div class="delta up" id="waiver-kpi-month-meta">Recent waiver submissions</div></div>
+    <div class="kpi-card"><div class="label">Waiver-only leads</div><div class="value" style="color:var(--amber);" id="waiver-kpi-leads">0</div><div class="delta warn" id="waiver-kpi-leads-meta">Signed but no booking yet</div></div>
+    <div class="kpi-card"><div class="label">Missing emergency info</div><div class="value" id="waiver-kpi-emergency">0</div><div class="delta warn" id="waiver-kpi-emergency-meta">Records that need a quick cleanup</div></div>
+  </div>
+  <div class="import-panel">
+    <div>
+      <div class="title">Signed waiver records</div>
+      <div class="copy">Every waiver submitted through the booking flow or the standalone waiver link lands here. Review the signed date, waiver details, and contact info without opening every customer one by one.</div>
+    </div>
+    <div class="import-pill" id="waiver-summary-pill">No signed waivers yet</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Customer</th><th>Contact</th><th>Signed</th><th>Waiver details</th><th>Emergency contact</th><th>Booking history</th><th>Actions</th></tr></thead>
+      <tbody id="waivers-table"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- ═══ EXPENSES ═══ -->
@@ -1475,6 +1506,7 @@ let customers = [];
 let importMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let invoiceImportMeta = {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false};
 let crmSearchQuery = '';
+let waiverSearchQuery = '';
 let crmViewFilter = 'all';
 let crmSortMode = 'recent';
 let invoiceSearchQuery = '';
@@ -1802,8 +1834,11 @@ function mergeCustomerRecord(target, incoming = {}) {
   target.createdAt = incoming.createdAt || target.createdAt || '';
   target.lastActivity = incoming.lastActivity || target.lastActivity || '';
   target.crmNotes = incoming.crmNotes || target.crmNotes || '';
+  target.waiverOnFile = incoming.waiverOnFile ?? target.waiverOnFile ?? false;
   target.waiverSignedAt = incoming.waiverSignedAt || target.waiverSignedAt || '';
   target.waiverSignature = incoming.waiverSignature || target.waiverSignature || '';
+  target.dateOfBirth = incoming.dateOfBirth || target.dateOfBirth || '';
+  target.waiverInitials = incoming.waiverInitials || target.waiverInitials || '';
   target.emergencyName = incoming.emergencyName || target.emergencyName || '';
   target.emergencyPhone = incoming.emergencyPhone || target.emergencyPhone || '';
   target.crmFields = mergeCrmFields(target.crmFields, incoming.crmFields);
@@ -2751,13 +2786,14 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',waivers:'Waivers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
   document.getElementById('page-title').textContent = titles[id]||id;
   const topbarBookingAction = document.getElementById('topbar-booking-action');
   if (topbarBookingAction) topbarBookingAction.style.display = id === 'bookings' ? 'none' : 'inline-flex';
   if(id==='bookings') renderBookings();
   if(id==='invoices') renderInvoices();
   if(id==='crm') renderCRM();
+  if(id==='waivers') renderWaivers();
   if(id==='expenses') renderExpenses();
   if(id==='fuel') renderFuel();
   if(id==='maintenance') renderMaint();
@@ -3791,7 +3827,11 @@ function renderInvoices() {
 
 // ── CRM ──
 function customerHasWaiver(customer) {
-  return Boolean(String(customer.waiverSignedAt || '').trim());
+  return Boolean(
+    customer.waiverOnFile === true ||
+    String(customer.waiverSignedAt || '').trim() ||
+    String(customer.waiverSignature || '').trim()
+  );
 }
 function customerNeedsFollowUp(customer) {
   if ((Number(customer.bookings) || 0) === 0) return true;
@@ -3833,6 +3873,98 @@ function sortCustomersForCRM(list) {
     return items.sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
   }
   return sortNewestFirst(items, (customer) => customer.lastActivity || customer.createdAt || customer.lastBooking);
+}
+
+function customerWaiverSignedLabel(customer) {
+  if (dateValue(customer.waiverSignedAt)) return formatShortDate(customer.waiverSignedAt);
+  if (String(customer.waiverSignature || '').trim()) return 'Signature on file';
+  if (customer.waiverOnFile) return 'On file';
+  return '—';
+}
+
+function customerWaiverDetailLabel(customer) {
+  const detailParts = [];
+  if (dateValue(customer.dateOfBirth)) detailParts.push(`DOB ${formatShortDate(customer.dateOfBirth)}`);
+  else if (String(customer.dateOfBirth || '').trim()) detailParts.push(`DOB ${escapeHtml(customer.dateOfBirth)}`);
+  if (String(customer.waiverInitials || '').trim()) detailParts.push(`Initials ${escapeHtml(customer.waiverInitials)}`);
+  if (String(customer.waiverSignature || '').trim()) detailParts.push('Signature saved');
+  return detailParts.length ? detailParts.join(' · ') : 'No extra waiver details saved';
+}
+
+function filterWaivers(input) {
+  waiverSearchQuery = String(input.value || '').trim().toLowerCase();
+  renderWaivers();
+}
+
+function renderWaivers() {
+  const signedCustomers = customers
+    .filter(customerHasWaiver)
+    .filter((customer) => {
+      if (!waiverSearchQuery) return true;
+      return [
+        customer.name,
+        customer.phone,
+        customer.email,
+        customer.dateOfBirth,
+        customer.waiverInitials,
+        customer.emergencyName,
+        customer.emergencyPhone,
+        customer.crmNotes
+      ].join(' ').toLowerCase().includes(waiverSearchQuery);
+    })
+    .sort((left, right) => {
+      const leftDate = dateValue(left.waiverSignedAt || left.lastActivity || left.createdAt);
+      const rightDate = dateValue(right.waiverSignedAt || right.lastActivity || right.createdAt);
+      return (rightDate?.getTime() || 0) - (leftDate?.getTime() || 0);
+    });
+
+  const totalSigned = customers.filter(customerHasWaiver).length;
+  const signedThisMonth = customers.filter((customer) => customerHasWaiver(customer) && isSameMonth(dateValue(customer.waiverSignedAt))).length;
+  const waiverOnlyLeads = customers.filter((customer) => customerHasWaiver(customer) && (Number(customer.bookings) || 0) === 0).length;
+  const missingEmergency = customers.filter((customer) => customerHasWaiver(customer) && !String(customer.emergencyName || '').trim() && !String(customer.emergencyPhone || '').trim()).length;
+
+  if (document.getElementById('waiver-kpi-total')) document.getElementById('waiver-kpi-total').textContent = totalSigned.toLocaleString();
+  if (document.getElementById('waiver-kpi-total-meta')) document.getElementById('waiver-kpi-total-meta').textContent = `${signedCustomers.length} match the current search`;
+  if (document.getElementById('waiver-kpi-month')) document.getElementById('waiver-kpi-month').textContent = signedThisMonth.toLocaleString();
+  if (document.getElementById('waiver-kpi-month-meta')) document.getElementById('waiver-kpi-month-meta').textContent = signedThisMonth ? `${signedThisMonth} signed this month` : 'No waiver submissions this month yet';
+  if (document.getElementById('waiver-kpi-leads')) document.getElementById('waiver-kpi-leads').textContent = waiverOnlyLeads.toLocaleString();
+  if (document.getElementById('waiver-kpi-leads-meta')) document.getElementById('waiver-kpi-leads-meta').textContent = waiverOnlyLeads ? `${waiverOnlyLeads} signed but not booked yet` : 'Every signed waiver has booking history';
+  if (document.getElementById('waiver-kpi-emergency')) document.getElementById('waiver-kpi-emergency').textContent = missingEmergency.toLocaleString();
+  if (document.getElementById('waiver-kpi-emergency-meta')) document.getElementById('waiver-kpi-emergency-meta').textContent = missingEmergency ? `${missingEmergency} records missing emergency details` : 'Emergency details look complete';
+  if (document.getElementById('waiver-summary-pill')) document.getElementById('waiver-summary-pill').textContent = totalSigned ? `${totalSigned} signed waiver${totalSigned === 1 ? '' : 's'} on file` : 'No signed waivers yet';
+
+  const table = document.getElementById('waivers-table');
+  if (!table) return;
+  table.innerHTML = signedCustomers.length ? signedCustomers.map((customer) => {
+    const contactLine = [customer.phone, customer.email].filter(Boolean).map(escapeHtml);
+    const emergencyLine = [customer.emergencyName, customer.emergencyPhone].filter(Boolean).map(escapeHtml);
+    return `
+      <tr>
+        <td>
+          <strong>${escapeHtml(customer.name || 'Unnamed customer')}</strong>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(customer.source || 'Website waiver')}</div>
+        </td>
+        <td>${contactLine.length ? contactLine.join('<br>') : '<span style="color:var(--muted);">No contact info saved</span>'}</td>
+        <td>
+          <div>${escapeHtml(customerWaiverSignedLabel(customer))}</div>
+          <div style="font-size:0.72rem;color:var(--green);margin-top:0.2rem;">${String(customer.waiverSignature || '').trim() ? 'Signature saved' : 'Signed waiver on file'}</div>
+        </td>
+        <td style="color:var(--muted);">${customerWaiverDetailLabel(customer)}</td>
+        <td>${emergencyLine.length ? emergencyLine.join('<br>') : '<span style="color:var(--muted);">No emergency info saved</span>'}</td>
+        <td>
+          <div>${Number(customer.bookings) || 0} booking${Number(customer.bookings) === 1 ? '' : 's'}</div>
+          <div style="font-size:0.72rem;color:var(--wave);margin-top:0.2rem;">$${Number(customer.totalSpent || 0).toLocaleString()} total spent</div>
+        </td>
+        <td>
+          <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="openCustomerModal(${Number(customer.id)})">Edit</button>
+            ${customer.phone ? `<a href="tel:${phoneHref(customer.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
+            ${customer.email ? `<a href="mailto:${encodeURIComponent(customer.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('') : '<tr><td colspan="7"><div class="empty"><div class="icon">📝</div><p>No signed waivers match this search yet.</p></div></td></tr>';
 }
 
 function toggleCustomerDetail(customerId) {
@@ -3981,6 +4113,7 @@ async function saveCustomer() {
   closeModal('customer-modal');
   showToast(customerId ? '✅ Customer updated' : '✅ Customer added');
   renderCRM();
+  renderWaivers();
   renderCommsPanel();
   resetCustomerForm();
 }
@@ -4000,6 +4133,7 @@ async function deleteCustomer(customerId) {
   if (Number(expandedCustomerId) === Number(customerId)) expandedCustomerId = null;
   await saveData();
   renderCRM();
+  renderWaivers();
   renderCommsPanel();
   showToast('🗑️ Customer removed');
 }
