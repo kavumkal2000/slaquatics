@@ -49,6 +49,7 @@ const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
 const PROCESSING_FEE_CENTS = 500;
 const DRONE_ADDON_CENTS = 5000;
+const TOTAL_PUBLIC_JET_SKIS = 4;
 const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
 const SHORELINE_PHONE_LINK = '4696937164';
@@ -574,6 +575,22 @@ function craftUsesBoat(craft = '') {
   return normalized === 'boat' || normalized.startsWith('bundle');
 }
 
+function craftJetSkiCount(craft = '') {
+  const normalized = normalizeCraftKey(craft);
+  if (normalized.startsWith('jetski')) return Number.parseInt(normalized.replace('jetski', ''), 10) || 0;
+  if (normalized.startsWith('bundle')) return Number.parseInt(normalized.replace('bundle', ''), 10) || 0;
+  return 0;
+}
+
+function craftAvailabilityType(craft = '') {
+  const usesBoat = craftUsesBoat(craft);
+  const jetSkiCount = craftJetSkiCount(craft);
+  if (usesBoat && jetSkiCount) return 'bundle';
+  if (usesBoat) return 'boat';
+  if (jetSkiCount) return 'jetski';
+  return 'none';
+}
+
 function bookingBlocksAvailability(booking = {}) {
   const status = String(booking.status || '').trim().toLowerCase();
   return Boolean(
@@ -590,7 +607,7 @@ function intervalsOverlap(startMinutesA, durationHoursA, startMinutesB, duration
   return startMinutesA < endMinutesB && startMinutesB < endMinutesA;
 }
 
-function findBoatConflicts(state, options = {}) {
+function findOverlappingBookings(state, options = {}) {
   const requestedDate = String(options.date || '').trim();
   const requestedTime = String(options.time || '').trim();
   const requestedDuration = Number(options.duration || 0);
@@ -605,7 +622,6 @@ function findBoatConflicts(state, options = {}) {
   return state.bookings.filter((booking) => {
     if (!bookingBlocksAvailability(booking)) return false;
     if (String(booking.date || '').trim() !== requestedDate) return false;
-    if (!craftUsesBoat(String(booking.craftKey || booking.craft || ''))) return false;
     if (ignoredId && Number(booking.id || 0) === ignoredId) return false;
     if (ignoredToken && String(booking.publicToken || '').trim() === ignoredToken) return false;
 
@@ -617,26 +633,61 @@ function findBoatConflicts(state, options = {}) {
   });
 }
 
-function blockedBoatStartTimes(state, options = {}) {
-  const requestedDate = String(options.date || '').trim();
-  const requestedDuration = Number(options.duration || 0);
-  if (!requestedDate || !requestedDuration) return [];
-
-  return PUBLIC_BOOKING_START_TIMES.filter((time) => (
-    findBoatConflicts(state, {
-      ...options,
-      date: requestedDate,
-      time,
-      duration: requestedDuration
-    }).length > 0
+function findBoatConflicts(state, options = {}) {
+  return findOverlappingBookings(state, options).filter((booking) => (
+    craftUsesBoat(String(booking.craftKey || booking.craft || ''))
   ));
 }
 
-function assertBoatAvailability(state, options = {}) {
-  if (!craftUsesBoat(options.craft)) return;
-  const conflicts = findBoatConflicts(state, options);
-  if (conflicts.length) {
-    throw new Error('That boat time is already booked. Please choose a different start time.');
+function findJetSkiConflicts(state, options = {}) {
+  return findOverlappingBookings(state, options).filter((booking) => (
+    craftJetSkiCount(String(booking.craftKey || booking.craft || '')) > 0
+  ));
+}
+
+function jetSkiUnitsBooked(state, options = {}) {
+  return findJetSkiConflicts(state, options).reduce((sum, booking) => (
+    sum + craftJetSkiCount(String(booking.craftKey || booking.craft || ''))
+  ), 0);
+}
+
+function hasInventoryConflict(state, options = {}) {
+  const craft = String(options.craft || '').trim();
+  const requiresBoat = craftUsesBoat(craft);
+  const requestedJetSkis = craftJetSkiCount(craft);
+  if (!requiresBoat && !requestedJetSkis) return false;
+  if (requiresBoat && findBoatConflicts(state, options).length) return true;
+  if (requestedJetSkis > 0) {
+    return (jetSkiUnitsBooked(state, options) + requestedJetSkis) > TOTAL_PUBLIC_JET_SKIS;
+  }
+  return false;
+}
+
+function blockedStartTimesForCraft(state, options = {}) {
+  const requestedDate = String(options.date || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  const requestedCraft = String(options.craft || '').trim();
+  if (!requestedDate || !requestedDuration) return [];
+
+  return PUBLIC_BOOKING_START_TIMES.filter((time) => (
+    hasInventoryConflict(state, {
+      ...options,
+      craft: requestedCraft,
+      date: requestedDate,
+      time,
+      duration: requestedDuration
+    })
+  ));
+}
+
+function assertPublicAvailability(state, options = {}) {
+  const availabilityType = craftAvailabilityType(options.craft);
+  if (availabilityType === 'none') return;
+  if (hasInventoryConflict(state, options)) {
+    if (availabilityType === 'boat') {
+      throw new Error('That boat time is already booked. Please choose a different start time.');
+    }
+    throw new Error('That rental time is no longer available. Please choose a different start time.');
   }
 }
 
@@ -1184,7 +1235,7 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
 
   const existingBooking = findBookingByPublicToken(state, payload.publicToken);
   const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
-  assertBoatAvailability(state, {
+  assertPublicAvailability(state, {
     craft: pricing.craft,
     date: payload.date,
     time: payload.time,
@@ -1248,7 +1299,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     duration: pricing.duration
   });
   const existingBooking = tokenBooking || matchedBooking;
-  assertBoatAvailability(state, {
+  assertPublicAvailability(state, {
     craft: pricing.craft,
     date: payload.date,
     time: payload.time,
@@ -1801,11 +1852,12 @@ async function handleApi(request, response, pathname) {
       return true;
     }
 
-    const requiresBoat = craftUsesBoat(craft);
-    if (!requiresBoat) {
+    const availabilityType = craftAvailabilityType(craft);
+    if (availabilityType === 'none') {
       sendPublicJson(response, request, 200, {
         ok: true,
-        requiresBoat: false,
+        availabilityType,
+        requiresAvailabilityCheck: false,
         blockedTimes: [],
         availableTimes: [...PUBLIC_BOOKING_START_TIMES],
         nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || ''
@@ -1814,16 +1866,18 @@ async function handleApi(request, response, pathname) {
     }
 
     const state = await stateStore.read();
-    const blockedTimes = blockedBoatStartTimes(state, {
+    const blockedTimes = blockedStartTimesForCraft(state, {
       date,
       duration,
+      craft,
       publicToken
     });
     const availableTimes = PUBLIC_BOOKING_START_TIMES.filter((time) => !blockedTimes.includes(time));
 
     sendPublicJson(response, request, 200, {
       ok: true,
-      requiresBoat: true,
+      availabilityType,
+      requiresAvailabilityCheck: true,
       blockedTimes,
       availableTimes,
       nextOpenTime: availableTimes[0] || ''

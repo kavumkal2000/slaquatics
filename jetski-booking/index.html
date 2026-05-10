@@ -1022,6 +1022,17 @@ function craftUsesBoat(craft) {
   return craft === 'boat' || isBundleType(craft);
 }
 
+function craftNeedsAvailabilityCheck(craft) {
+  return craftUsesBoat(craft) || getJetSkiCount(craft) > 0;
+}
+
+function availabilityLabelForCraft(craft) {
+  if (isBundleType(craft)) return 'bundle';
+  if (craftUsesBoat(craft)) return 'boat';
+  if (getJetSkiCount(craft) > 0) return 'jet ski';
+  return 'rental';
+}
+
 function getJetSkiCount(craft) {
   if (!craft) return 0;
   if (craft.startsWith('jetski')) return parseInt(craft.replace('jetski', ''), 10) || 0;
@@ -1128,6 +1139,7 @@ function prewarmOps() {
 async function refreshBoatAvailability(options = {}) {
   const payload = createBookingPayload();
   const requestId = ++activeAvailabilityRequest;
+  const availabilityLabel = availabilityLabelForCraft(payload.craft);
 
   if (!payload.date || !payload.duration) {
     refreshTimeOptions([]);
@@ -1135,14 +1147,14 @@ async function refreshBoatAvailability(options = {}) {
     return;
   }
 
-  if (!craftUsesBoat(payload.craft)) {
+  if (!craftNeedsAvailabilityCheck(payload.craft)) {
     refreshTimeOptions([]);
     setAvailabilityNote('');
     return;
   }
 
   if (!options.quiet) {
-    setAvailabilityNote('Checking live boat availability for this day...');
+    setAvailabilityNote(`Checking live ${availabilityLabel} availability for this day...`);
   }
 
   try {
@@ -1161,24 +1173,31 @@ async function refreshBoatAvailability(options = {}) {
     const body = await response.json().catch(() => ({}));
     if (requestId !== activeAvailabilityRequest) return;
     if (!response.ok) {
-      throw new Error(body.error || 'Could not check boat availability right now.');
+      throw new Error(body.error || `Could not check ${availabilityLabel} availability right now.`);
     }
 
     const blockedTimes = Array.isArray(body.blockedTimes) ? body.blockedTimes : [];
     const availableTimes = Array.isArray(body.availableTimes) ? body.availableTimes : [];
+    const responseLabel = body.availabilityType === 'bundle'
+      ? 'bundle'
+      : body.availabilityType === 'boat'
+        ? 'boat'
+        : body.availabilityType === 'jetski'
+          ? 'jet ski'
+          : availabilityLabel;
     refreshTimeOptions(blockedTimes);
 
     if (!availableTimes.length) {
-      setAvailabilityNote('The boat is fully booked for the available start times on this day. Choose another date.', 'error');
+      setAvailabilityNote(`This ${responseLabel} package is fully booked for the available start times on this day. Choose another date.`, 'error');
     } else if (blockedTimes.length) {
-      setAvailabilityNote(`${blockedTimes.length} boat start time${blockedTimes.length === 1 ? '' : 's'} already booked for this day.`, 'warn');
+      setAvailabilityNote(`${blockedTimes.length} ${responseLabel} start time${blockedTimes.length === 1 ? '' : 's'} unavailable for this day.`, 'warn');
     } else {
-      setAvailabilityNote('All boat start times are open for this date.', 'success');
+      setAvailabilityNote(`All ${responseLabel} start times are open for this date.`, 'success');
     }
   } catch (error) {
     if (requestId !== activeAvailabilityRequest) return;
     refreshTimeOptions([]);
-    setAvailabilityNote(error.message || 'Could not check boat availability right now.', 'warn');
+    setAvailabilityNote(error.message || `Could not check ${availabilityLabel} availability right now.`, 'warn');
   } finally {
     if (requestId === activeAvailabilityRequest) updateSummary();
   }
