@@ -250,9 +250,14 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .crm-chip:hover{border-color:rgba(26,158,212,0.35);color:var(--white);}
 .crm-chip.active{background:rgba(26,158,212,0.14);border-color:rgba(26,158,212,0.4);color:var(--wave);}
 .crm-summary-line{font-size:0.78rem;color:var(--muted);line-height:1.6;}
-.customer-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.2rem 1.25rem;transition:all 0.2s;display:grid;grid-template-columns:minmax(0,1.7fr) auto;gap:1rem;align-items:center;}
+.customer-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.05rem 1.15rem;transition:all 0.2s;display:flex;flex-direction:column;gap:0.85rem;}
 .customer-card:hover{border-color:rgba(26,158,212,0.4);transform:translateY(-2px);}
+.customer-summary{
+  width:100%;background:none;border:none;padding:0;color:inherit;display:grid;
+  grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:flex-start;text-align:left;cursor:pointer;
+}
 .customer-main{display:flex;align-items:flex-start;gap:0.85rem;min-width:0;}
+.customer-identity{min-width:0;flex:1;}
 .customer-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:500;flex-shrink:0;}
 .customer-name{font-size:0.95rem;font-weight:500;margin-bottom:0.2rem;}
 .customer-flags{display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.15rem 0 0.55rem;}
@@ -266,10 +271,17 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .customer-flag.ready{border-color:rgba(16,185,129,0.26);background:rgba(16,185,129,0.12);color:var(--green);}
 .customer-flag.value{border-color:rgba(139,92,246,0.28);background:rgba(139,92,246,0.12);color:#c4b5fd;}
 .customer-meta{font-size:0.78rem;color:var(--muted);margin-bottom:0.45rem;line-height:1.55;}
-.customer-stats{display:flex;gap:1rem;flex-wrap:wrap;}
-.customer-stat .num{font-size:1rem;font-weight:500;color:var(--wave);}
-.customer-stat .lbl{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
-.customer-actions{display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end;}
+.customer-basic{font-size:0.8rem;color:var(--muted);line-height:1.6;word-break:break-word;}
+.customer-overview{display:flex;flex-direction:column;gap:0.45rem;align-items:flex-end;text-align:right;flex-shrink:0;}
+.customer-overview strong{font-size:0.95rem;color:var(--wave);display:block;}
+.customer-overview span{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.customer-actions{display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:flex-start;}
+.customer-detail{border-top:1px solid rgba(255,255,255,0.08);padding-top:0.9rem;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.8rem 1rem;}
+.customer-detail-block{min-width:0;}
+.customer-detail-label{font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.2rem;}
+.customer-detail-value{font-size:0.8rem;line-height:1.6;color:var(--white);word-break:break-word;}
+.customer-detail-value.muted{color:var(--muted);}
+.customer-detail-actions{grid-column:1/-1;display:flex;gap:0.5rem;flex-wrap:wrap;}
 .crm-toolbar{display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;}
 .import-panel{background:rgba(15,32,64,0.72);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1.1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
 .import-panel .title{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--wave);margin-bottom:0.35rem;}
@@ -379,8 +391,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   .topbar{padding:0.9rem 1rem;align-items:center;gap:0.75rem;}
   .topbar-right{flex-wrap:wrap;justify-content:flex-end;}
   .ops-mode-pill{font-size:0.66rem;}
-  .customer-card{grid-template-columns:1fr;}
-  .customer-actions{justify-content:flex-start;}
+  .customer-summary{grid-template-columns:1fr;}
+  .customer-overview{align-items:flex-start;text-align:left;}
+  .customer-detail{grid-template-columns:1fr;}
   .compose-grid{grid-template-columns:1fr;}
   .mini-kpis{grid-template-columns:1fr;}
   .crm-workspace-head{flex-direction:column;}
@@ -652,7 +665,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="page" id="page-expenses">
   <div class="section-head">
     <h2>Expenses</h2>
-    <button class="btn btn-primary btn-sm" onclick="openModal('expense-modal')">+ Add Expense</button>
+    <button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ Add Expense</button>
   </div>
   <div class="kpi-grid">
     <div class="kpi-card"><div class="label">This month</div><div class="value" id="expense-kpi-month">$0</div><div class="delta warn" id="expense-kpi-month-meta">0 expenses logged</div></div>
@@ -662,7 +675,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Category</th><th>Expense</th><th>Notes</th><th>Amount</th></tr></thead>
+      <thead><tr><th>Date</th><th>Category</th><th>Expense</th><th>Notes</th><th>Amount</th><th>Actions</th></tr></thead>
       <tbody id="expense-table"></tbody>
     </table>
   </div>
@@ -1113,7 +1126,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <!-- EXPENSE MODAL -->
 <div class="modal-overlay" id="expense-modal">
   <div class="modal" style="width:440px;">
-    <div class="modal-head"><h3>Add Expense</h3><button class="modal-close" onclick="closeModal('expense-modal')">×</button></div>
+    <div class="modal-head"><h3 id="expense-modal-title">Add Expense</h3><button class="modal-close" onclick="closeModal('expense-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Date</label><input type="date" id="e-date"></div>
@@ -1127,7 +1140,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('expense-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+      <button class="btn btn-primary" id="expense-save-button" onclick="saveExpense()">Save Expense</button>
     </div>
   </div>
 </div>
@@ -1482,6 +1495,8 @@ let reviewRequests = [];
 let reviews = [];
 let socialPosts = [];
 let editingCustomerId = null;
+let expandedCustomerId = null;
+let editingExpenseId = null;
 
 const DEFAULT_ASSET_OPTIONS = ['Jet Ski 1', 'Jet Ski 2', 'Boat', 'Trailer'];
 
@@ -2792,6 +2807,37 @@ function openCustomerModal(customerId = null) {
   openModal('customer-modal');
 }
 
+function resetExpenseForm() {
+  editingExpenseId = null;
+  document.getElementById('e-date').value = today();
+  document.getElementById('e-amount').value = '';
+  document.getElementById('e-category').value = 'delivery';
+  document.getElementById('e-name').value = '';
+  document.getElementById('e-notes').value = '';
+  document.getElementById('expense-modal-title').textContent = 'Add Expense';
+  document.getElementById('expense-save-button').textContent = 'Save Expense';
+}
+
+function openExpenseModal(expenseId = null) {
+  resetExpenseForm();
+  if (expenseId !== null) {
+    const expense = expenses.find((item) => Number(item.id) === Number(expenseId));
+    if (!expense) {
+      showToast('⚠️ Expense record not found');
+      return;
+    }
+    editingExpenseId = Number(expense.id);
+    document.getElementById('e-date').value = inputDateValue(expense.date) || today();
+    document.getElementById('e-amount').value = String(Number(expense.amount || 0) || '');
+    document.getElementById('e-category').value = expense.category || 'other';
+    document.getElementById('e-name').value = expense.name || '';
+    document.getElementById('e-notes').value = expense.notes || '';
+    document.getElementById('expense-modal-title').textContent = 'Edit Expense';
+    document.getElementById('expense-save-button').textContent = 'Save Changes';
+  }
+  openModal('expense-modal');
+}
+
 // ── TOAST ──
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -2963,6 +3009,11 @@ function parseIsoDate(iso) {
 function inputDateValue(value) {
   const parsed = dateValue(value);
   return parsed ? isoFromDate(parsed) : '';
+}
+
+function formatShortDate(value) {
+  const parsed = dateValue(value);
+  return parsed ? parsed.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : '—';
 }
 
 function monthStart(date) {
@@ -3695,6 +3746,12 @@ function sortCustomersForCRM(list) {
   }
   return sortNewestFirst(items, (customer) => customer.lastActivity || customer.createdAt || customer.lastBooking);
 }
+
+function toggleCustomerDetail(customerId) {
+  expandedCustomerId = Number(expandedCustomerId) === Number(customerId) ? null : Number(customerId);
+  renderCRM();
+}
+
 function renderCRM() {
   const searchedCustomers = customers.filter((customer) => {
     if (!crmSearchQuery) return true;
@@ -3730,40 +3787,69 @@ function renderCRM() {
           : 'customers in the CRM';
     summaryEl.textContent = `${orderedCustomers.length} ${filterLabel}${crmSearchQuery ? ` for “${crmSearchQuery}”` : ''}. Sort is set to ${crmSortMode === 'recent' ? 'recent activity' : crmSortMode === 'spend' ? 'highest spend' : crmSortMode === 'bookings' ? 'most bookings' : 'name A-Z'}.`;
   }
-  document.getElementById('crm-grid').innerHTML = orderedCustomers.map((c,i) => `
-    <div class="customer-card">
-      <div class="customer-main">
-        <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
-        <div>
-          <div class="customer-name">${escapeHtml(c.name)}</div>
-          <div class="customer-flags">
-            ${customerNeedsFollowUp(c) ? '<span class="customer-flag followup">Follow-up due</span>' : '<span class="customer-flag ready">Recently active</span>'}
-            ${customerHasWaiver(c) ? '<span class="customer-flag ready">Waiver on file</span>' : '<span class="customer-flag waiver">Waiver needed</span>'}
-            ${customerIsBest(c) ? '<span class="customer-flag value">Best customer</span>' : ''}
+  document.getElementById('crm-grid').innerHTML = orderedCustomers.map((c,i) => {
+    const isExpanded = Number(expandedCustomerId) === Number(c.id);
+    const statusFlags = `
+      ${customerNeedsFollowUp(c) ? '<span class="customer-flag followup">Follow-up due</span>' : '<span class="customer-flag ready">Recently active</span>'}
+      ${customerHasWaiver(c) ? '<span class="customer-flag ready">Waiver on file</span>' : '<span class="customer-flag waiver">Waiver needed</span>'}
+      ${customerIsBest(c) ? '<span class="customer-flag value">Best customer</span>' : ''}
+    `;
+    const detailPieces = [c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ');
+    const contactLine = [c.phone, c.email].filter(Boolean).map(escapeHtml).join(' · ') || 'No contact info saved';
+    const sinceLast = dateValue(c.lastBooking) ? `${daysSince(c.lastBooking)}d` : '—';
+    return `
+      <div class="customer-card">
+        <button class="customer-summary" type="button" onclick="toggleCustomerDetail(${Number(c.id)})" aria-expanded="${isExpanded ? 'true' : 'false'}">
+          <div class="customer-main">
+            <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
+            <div class="customer-identity">
+              <div class="customer-name">${escapeHtml(c.name)}</div>
+              <div class="customer-flags">${statusFlags}</div>
+              <div class="customer-basic">${contactLine}</div>
+            </div>
           </div>
-          <div class="customer-meta">${c.phone ? `<a href="tel:${phoneHref(c.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(c.phone)}</a>` : 'No phone on file'}${c.email ? ` · ${escapeHtml(c.email)}` : ''}</div>
-      </div>
-        <div>
-          <div class="customer-meta">${[c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ') || 'Imported CRM profile'}</div>
-          ${(c.createdAt || c.lastActivity || c.lastBooking) ? `<div class="customer-meta">${escapeHtml(customerLastTouchLabel(c))} · Last booking ${escapeHtml(c.lastBooking || '—')}</div>` : ''}
-          ${c.waiverSignedAt ? `<div class="customer-meta">Waiver on file · ${escapeHtml(c.waiverSignedAt)}${c.emergencyName ? ` · Emergency: ${escapeHtml(c.emergencyName)}` : ''}</div>` : ''}
-          ${c.crmNotes ? `<div class="customer-meta">${escapeHtml(shortText(c.crmNotes))}</div>` : ''}
-          <div class="customer-stats">
-            <div class="customer-stat"><div class="num">${c.bookings}</div><div class="lbl">Bookings</div></div>
-            <div class="customer-stat"><div class="num">$${c.totalSpent.toLocaleString()}</div><div class="lbl">Total spent</div></div>
-            <div class="customer-stat"><div class="num">${dateValue(c.lastBooking)?`${daysSince(c.lastBooking)}d`:'—'}</div><div class="lbl">Since last</div></div>
+          <div class="customer-overview">
+            <div><strong>${Number(c.bookings) || 0}</strong><span>Bookings</span></div>
+            <div><strong>$${Number(c.totalSpent || 0).toLocaleString()}</strong><span>Total spent</span></div>
+            <div><strong>${escapeHtml(customerLastTouchLabel(c))}</strong><span>Last touch</span></div>
           </div>
+        </button>
+        <div class="customer-actions">
+          <button class="btn btn-ghost btn-sm" onclick="toggleCustomerDetail(${Number(c.id)})">${isExpanded ? 'Hide details' : 'More details'}</button>
+          <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
+          ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
         </div>
-      </div>
-      <div class="customer-actions">
-        ${c.tag==='vip'?'<span class="badge badge-vip">VIP</span>':c.tag==='repeat'?'<span class="badge badge-completed">Repeat</span>':''}
-        <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${Number(c.id)})">Delete</button>
-        ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">📞 Call</span>'}
-        ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">💬 Text</span>'}
-        ${c.email ? `<a href="mailto:${encodeURIComponent(c.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : '<span class="btn btn-ghost btn-sm" style="opacity:0.45;cursor:default;">✉️ Email</span>'}
-      </div>
-    </div>`).join('') || '<div class="empty"><div class="icon">🔎</div><p>No customers match this search.</p></div>';
+        ${isExpanded ? `
+          <div class="customer-detail">
+            <div class="customer-detail-block">
+              <div class="customer-detail-label">Profile</div>
+              <div class="customer-detail-value ${detailPieces ? '' : 'muted'}">${detailPieces || 'No extra profile details saved'}</div>
+            </div>
+            <div class="customer-detail-block">
+              <div class="customer-detail-label">Last booking</div>
+              <div class="customer-detail-value">${dateValue(c.lastBooking) ? `${formatShortDate(c.lastBooking)} · ${sinceLast} since last ride` : 'No booking history saved'}</div>
+            </div>
+            <div class="customer-detail-block">
+              <div class="customer-detail-label">Waiver</div>
+              <div class="customer-detail-value">${customerHasWaiver(c) ? `Signed ${formatShortDate(c.waiverSignedAt)}` : 'Waiver still needed'}</div>
+            </div>
+            <div class="customer-detail-block">
+              <div class="customer-detail-label">Emergency contact</div>
+              <div class="customer-detail-value ${c.emergencyName || c.emergencyPhone ? '' : 'muted'}">${[c.emergencyName, c.emergencyPhone].filter(Boolean).map(escapeHtml).join(' · ') || 'No emergency contact saved'}</div>
+            </div>
+            <div class="customer-detail-block" style="grid-column:1/-1;">
+              <div class="customer-detail-label">Notes</div>
+              <div class="customer-detail-value ${c.crmNotes ? '' : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
+            </div>
+            <div class="customer-detail-actions">
+              ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : ''}
+              ${c.email ? `<a href="mailto:${encodeURIComponent(c.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : ''}
+              <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${Number(c.id)})">Delete</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>`;
+  }).join('') || '<div class="empty"><div class="icon">🔎</div><p>No customers match this search.</p></div>';
 }
 
 async function saveCustomer() {
@@ -3823,6 +3909,7 @@ async function deleteCustomer(customerId) {
     closeModal('customer-modal');
     resetCustomerForm();
   }
+  if (Number(expandedCustomerId) === Number(customerId)) expandedCustomerId = null;
   await saveData();
   renderCRM();
   renderCommsPanel();
@@ -3854,37 +3941,73 @@ function renderExpenses() {
   const ordered = sortNewestFirst(expenses, (expense) => expense.date);
   table.innerHTML = ordered.length ? ordered.map((expense) => `
     <tr>
-      <td>${escapeHtml(expense.date)}</td>
+      <td>${escapeHtml(formatShortDate(expense.date))}</td>
       <td>${escapeHtml(expense.category)}</td>
       <td><strong>${escapeHtml(expense.name)}</strong></td>
       <td style="color:var(--muted);">${escapeHtml(expense.notes || '—')}</td>
       <td style="color:var(--amber);font-weight:500;">$${Number(expense.amount || 0).toLocaleString()}</td>
+      <td>
+        <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openExpenseModal(${Number(expense.id)})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteExpense(${Number(expense.id)})">Delete</button>
+        </div>
+      </td>
     </tr>
-  `).join('') : '<tr><td colspan="5"><div class="empty"><div class="icon">💸</div><p>No expenses logged yet.</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">💸</div><p>No expenses logged yet.</p></div></td></tr>';
 }
-function saveExpense() {
+async function saveExpense() {
   const name = document.getElementById('e-name').value.trim();
   const amount = parseFloat(document.getElementById('e-amount').value || '0');
   if (!name || !amount) {
     showToast('⚠️ Add an expense name and amount');
     return;
   }
-  expenses.unshift({
-    id: nextId(expenses),
+  const payload = {
     date: document.getElementById('e-date').value || today(),
     category: document.getElementById('e-category').value,
     name,
     amount,
     notes: document.getElementById('e-notes').value.trim()
-  });
-  saveData();
+  };
+  const isEditingExpense = Boolean(editingExpenseId);
+  if (editingExpenseId) {
+    const expense = expenses.find((item) => Number(item.id) === Number(editingExpenseId));
+    if (!expense) {
+      showToast('⚠️ Expense record not found');
+      return;
+    }
+    Object.assign(expense, payload);
+  } else {
+    expenses.unshift({
+      id: nextId(expenses),
+      ...payload
+    });
+  }
+  await saveData();
   closeModal('expense-modal');
-  ['e-name','e-amount','e-notes'].forEach((id) => document.getElementById(id).value = '');
-  document.getElementById('e-date').value = today();
-  document.getElementById('e-category').value = 'delivery';
+  resetExpenseForm();
   renderExpenses();
   renderDashboardMetrics();
-  showToast('💸 Expense saved');
+  showToast(isEditingExpense ? '💸 Expense updated' : '💸 Expense saved');
+}
+
+async function deleteExpense(expenseId) {
+  const expense = expenses.find((item) => Number(item.id) === Number(expenseId));
+  if (!expense) {
+    showToast('⚠️ Expense record not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete expense "${expense.name}" for $${Number(expense.amount || 0).toLocaleString()}?`);
+  if (!confirmed) return;
+  expenses = expenses.filter((item) => Number(item.id) !== Number(expenseId));
+  if (editingExpenseId && Number(editingExpenseId) === Number(expenseId)) {
+    closeModal('expense-modal');
+    resetExpenseForm();
+  }
+  await saveData();
+  renderExpenses();
+  renderDashboardMetrics();
+  showToast('🗑️ Expense removed');
 }
 
 // ── COMMUNICATIONS ──
