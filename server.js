@@ -27,6 +27,8 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
+const RESEND_FROM_NAME = process.env.RESEND_FROM_NAME || 'Shoreline Aquatics';
+const RESEND_REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO_EMAIL || '';
 const BOOKING_ALERT_EMAILS = process.env.BOOKING_ALERT_EMAILS || process.env.BOOKING_ALERT_EMAIL || '';
 const SEND_BOOKING_REQUEST_CUSTOMER_EMAILS = /^true$/i.test(process.env.SEND_BOOKING_REQUEST_CUSTOMER_EMAILS || 'false');
 const GOOGLE_REVIEW_URL = process.env.GOOGLE_REVIEW_URL || '';
@@ -461,6 +463,22 @@ function normalizeEmailList(value = '') {
     .split(/[,\n;]+/)
     .map((entry) => normalizeEmail(entry))
     .filter(Boolean);
+}
+
+function formattedResendFromAddress() {
+  const fromAddress = String(RESEND_FROM_EMAIL || '').trim();
+  if (!fromAddress) return '';
+  if (/[<>]/.test(fromAddress)) return fromAddress;
+  const displayName = String(RESEND_FROM_NAME || '').trim();
+  return displayName ? `${displayName} <${fromAddress}>` : fromAddress;
+}
+
+function resendReplyToAddress() {
+  const explicitReplyTo = normalizeEmail(RESEND_REPLY_TO_EMAIL);
+  if (explicitReplyTo) return explicitReplyTo;
+  const alertReplyTo = normalizeEmailList(BOOKING_ALERT_EMAILS)[0];
+  if (alertReplyTo) return alertReplyTo;
+  return '';
 }
 
 function normalizeCraftKey(value = '') {
@@ -1486,6 +1504,7 @@ async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyK
   }
   const recipients = Array.isArray(to) ? to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(to)].filter(Boolean);
   const bccRecipients = Array.isArray(bcc) ? bcc.map(normalizeEmail).filter(Boolean) : [normalizeEmail(bcc)].filter(Boolean);
+  const replyTo = resendReplyToAddress();
   if (!recipients.length) {
     throw new Error('At least one valid recipient email is required.');
   }
@@ -1497,7 +1516,8 @@ async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyK
       ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
     },
     body: JSON.stringify({
-      from: RESEND_FROM_EMAIL,
+      from: formattedResendFromAddress(),
+      reply_to: replyTo || undefined,
       to: recipients,
       bcc: bccRecipients.length ? bccRecipients : undefined,
       subject: subject || 'Shoreline Aquatics',

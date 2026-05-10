@@ -57,6 +57,10 @@ services:
         sync: false
       - key: RESEND_FROM_EMAIL
         sync: false
+      - key: RESEND_FROM_NAME
+        value: Shoreline Aquatics
+      - key: RESEND_REPLY_TO_EMAIL
+        sync: false
       - key: SEND_BOOKING_REQUEST_CUSTOMER_EMAILS
         value: false
       - key: BOOKING_ALERT_EMAILS
