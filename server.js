@@ -27,7 +27,8 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
-const BOOKING_ALERT_EMAILS = process.env.BOOKING_ALERT_EMAILS || process.env.BOOKING_ALERT_EMAIL || RESEND_FROM_EMAIL || '';
+const BOOKING_ALERT_EMAILS = process.env.BOOKING_ALERT_EMAILS || process.env.BOOKING_ALERT_EMAIL || '';
+const SEND_BOOKING_REQUEST_CUSTOMER_EMAILS = /^true$/i.test(process.env.SEND_BOOKING_REQUEST_CUSTOMER_EMAILS || 'false');
 const GOOGLE_REVIEW_URL = process.env.GOOGLE_REVIEW_URL || '';
 const FACEBOOK_REVIEW_URL = process.env.FACEBOOK_REVIEW_URL || '';
 const AUTO_SEND_REVIEW_REQUESTS = /^true$/i.test(process.env.AUTO_SEND_REVIEW_REQUESTS || 'false');
@@ -1086,6 +1087,9 @@ function ownerBookingAlertHtml(booking = {}) {
 }
 
 async function sendBookingRequestCustomerEmail(state, booking, now = new Date().toISOString()) {
+  if (!SEND_BOOKING_REQUEST_CUSTOMER_EMAILS) {
+    return { sent: false, reason: 'disabled' };
+  }
   if (!booking || booking.requestConfirmationEmailSentAt) {
     return { sent: false, reason: 'already-sent-or-missing-booking' };
   }
