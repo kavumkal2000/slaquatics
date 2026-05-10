@@ -2492,6 +2492,7 @@ async function saveInvoice() {
   resetInvoiceForm();
   renderInvoices();
   renderCRM();
+  renderWaivers();
   renderDashboardMetrics();
   renderCommsPanel();
   showToast(existingInvoice ? '✅ Invoice updated' : '✅ Invoice saved');
@@ -2511,6 +2512,8 @@ async function deleteInvoice(invoiceId) {
   }
   await saveData();
   renderInvoices();
+  renderCRM();
+  renderWaivers();
   renderDashboardMetrics();
   showToast('🗑️ Invoice removed');
 }
@@ -2684,6 +2687,7 @@ function handleCRMImport(event) {
       if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
       if (document.getElementById('page-invoices').classList.contains('active')) renderInvoices();
       renderCRM();
+      renderWaivers();
       renderCommsPanel();
       renderReviewHub();
       renderReminders();
@@ -2719,6 +2723,7 @@ function processCRMImportText(rawText, fileName = 'pasted-admintribe.csv') {
   if (document.getElementById('page-bookings').classList.contains('active')) renderBookings();
   if (document.getElementById('page-invoices').classList.contains('active')) renderInvoices();
   renderCRM();
+  renderWaivers();
   renderCommsPanel();
   renderReviewHub();
   renderReminders();
@@ -2756,6 +2761,7 @@ function handleInvoiceImport(event) {
       renderInvoiceImportSummary();
       renderInvoices();
       renderCRM();
+      renderWaivers();
       renderDashboardMetrics();
       showToast(`✅ Imported invoices — ${summary.added} added, ${summary.updated} updated`);
     } catch (error) {
@@ -3072,6 +3078,7 @@ async function saveBooking() {
   if(document.getElementById('page-bookings').classList.contains('active')) renderBookings();
   else renderBookingCalendar();
   if(document.getElementById('page-crm').classList.contains('active')) renderCRM();
+  if(document.getElementById('page-waivers').classList.contains('active')) renderWaivers();
   renderDashboardMetrics();
   renderBookingBars();
   renderCommsPanel();
@@ -3668,6 +3675,7 @@ async function updateStatus(id, status) {
     renderBookingBars();
     renderReviewHub();
     renderReminders();
+    renderWaivers();
     updatePendingBadge();
     showToast(reviewAutoSent ? '✅ Updated to completed and sent the review request' : `✅ Updated to ${status}`);
   } catch (error) {
@@ -3689,6 +3697,7 @@ async function confirmDeposit(id) {
     renderUpcoming();
     renderDashboardMetrics();
     renderBookingBars();
+    renderWaivers();
     updatePendingBadge();
     showToast(`💰 Deposit confirmed for ${booking.name}`);
   } catch (error) {
@@ -3719,6 +3728,7 @@ async function deleteBooking(bookingId) {
   renderDashboardMetrics();
   renderBookingBars();
   renderCRM();
+  renderWaivers();
   renderCommsPanel();
   renderReviewHub();
   renderReminders();
@@ -5117,6 +5127,7 @@ async function bootApp() {
     renderBookingBars();
     renderInvoices();
     renderCRM();
+    renderWaivers();
     renderExpenses();
     syncAssetSelectors();
     renderTracking();
