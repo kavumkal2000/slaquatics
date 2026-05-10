@@ -449,6 +449,13 @@ function normalizeEmail(value = '') {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizeName(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
 function normalizeEmailList(value = '') {
   return String(value || '')
     .split(/[,\n;]+/)
