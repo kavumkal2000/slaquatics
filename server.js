@@ -942,12 +942,9 @@ function updateCustomerRollup(state, customer) {
     .filter((invoice) => invoiceMatchesCustomer(customer, invoice))
     .filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid')
     .reduce((sum, invoice) => sum + Number(invoice.paidAmount || invoice.total || 0), 0);
+  const bookingSpend = relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
   customer.bookings = relatedBookings.length;
-  customer.totalSpent = Math.max(
-    relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0),
-    paidInvoiceTotal,
-    Number(customer.totalSpent || 0)
-  );
+  customer.totalSpent = Math.max(bookingSpend, paidInvoiceTotal);
   customer.lastBooking = relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), customer.lastBooking || '');
   if (customer.bookings > 1 && customer.tag !== 'vip') customer.tag = 'repeat';
 }

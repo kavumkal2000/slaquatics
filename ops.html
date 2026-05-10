@@ -1858,8 +1858,12 @@ function mergeCustomerRecord(target, incoming = {}) {
   target.name = incoming.name || target.name;
   target.phone = incoming.phone || target.phone;
   target.email = incoming.email || target.email;
-  target.bookings = Math.max(Number(target.bookings) || 0, Number(incoming.bookings) || 0);
-  target.totalSpent = Math.max(Number(target.totalSpent) || 0, Number(incoming.totalSpent) || 0);
+  if (incoming.bookings !== undefined && incoming.bookings !== null && String(incoming.bookings).trim() !== '') {
+    target.bookings = Number(incoming.bookings) || 0;
+  }
+  if (incoming.totalSpent !== undefined && incoming.totalSpent !== null && String(incoming.totalSpent).trim() !== '') {
+    target.totalSpent = Number(incoming.totalSpent) || 0;
+  }
   target.lastBooking = updateLatestDate(target.lastBooking, incoming.lastBooking);
   target.source = incoming.source || target.source;
   target.tag = target.tag || incoming.tag || '';
@@ -3287,7 +3291,7 @@ function syncCustomerRollup(customer) {
   const bookingSpend = customerBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
   const invoiceSpend = paidInvoiceTotalForCustomer(customer);
   customer.bookings = customerBookings.length;
-  customer.totalSpent = Math.max(bookingSpend, invoiceSpend, Number(customer.totalSpent || 0));
+  customer.totalSpent = Math.max(bookingSpend, invoiceSpend);
   customer.lastBooking = customerBookings.reduce((latest, booking) => updateLatestDate(latest, booking.date), 'N/A');
 }
 
