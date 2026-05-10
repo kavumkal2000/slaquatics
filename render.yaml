@@ -27,6 +27,14 @@ services:
           property: connectionString
       - key: OPS_PASSWORD
         sync: false
+      - key: OPS_DEV_USERNAME
+        sync: false
+      - key: OPS_DEV_PASSWORD
+        sync: false
+      - key: OPS_OWNER_USERNAME
+        sync: false
+      - key: OPS_OWNER_PASSWORD
+        sync: false
       - key: SESSION_SECRET
         generateValue: true
       - key: PUBLIC_SITE_URL
