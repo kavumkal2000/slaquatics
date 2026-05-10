@@ -3104,7 +3104,7 @@ function renderBookingCalendar() {
         </div>
         <div class="calendar-day-meta">${dayBookings.length ? `${pendingCount} pending` : '&nbsp;'}</div>
         <div class="calendar-day-list">
-          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(booking.status)}"><span class="calendar-pill-dot"></span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(booking.name))}</span></div>`).join('')}
+          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(normalizeBookingStatusValue(booking.status))}"><span class="calendar-pill-dot"></span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(booking.name))}</span></div>`).join('')}
           ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : ''}
         </div>
       </button>
@@ -3158,8 +3158,24 @@ function filterByStatus(status, btn) {
 }
 
 function statusBadge(s) {
-  const map={confirmed:'badge-confirmed',pending:'badge-pending',draft:'badge-pending',noshow:'badge-noshow',completed:'badge-completed',cancelled:'badge-cancelled'};
-  return `<span class="badge ${map[s]||''}">${s}</span>`;
+  const normalized = normalizeBookingStatusValue(s);
+  const map = {
+    confirmed:'badge-confirmed',
+    pending:'badge-pending',
+    draft:'badge-pending',
+    noshow:'badge-noshow',
+    completed:'badge-completed',
+    cancelled:'badge-cancelled'
+  };
+  const labels = {
+    confirmed:'Confirmed',
+    pending:'Pending',
+    draft:'Draft',
+    noshow:'No-show',
+    completed:'Completed',
+    cancelled:'Cancelled'
+  };
+  return `<span class="badge ${map[normalized] || ''}">${escapeHtml(labels[normalized] || String(s || 'Unknown'))}</span>`;
 }
 function trackerStatusBadge(status) {
   const normalized = String(status || '').trim().toLowerCase();
