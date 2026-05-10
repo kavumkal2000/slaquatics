@@ -408,6 +408,19 @@ function formatTimeLabel(value = '') {
   return `${twelveHour}:${minuteText} ${suffix}`;
 }
 
+function formatDateLabel(value = '') {
+  if (!value) return '-';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
 function normalizePhoneKey(value = '') {
   return String(value).replace(/\D/g, '');
 }
@@ -442,11 +455,11 @@ function buildMessage(booking) {
     `Email: ${booking.email || "Not provided"}`,
     `Package: ${booking.craftLabel}`,
     `Duration: ${booking.durationLabel}`,
-    `Date: ${booking.date}`,
+    `Date: ${formatDateLabel(booking.date)}`,
     `Time: ${formatTimeLabel(booking.time)}`,
     `Party size: ${booking.partySize || "Not provided"}`,
     `Aerial drone coverage: ${booking.drone ? "Yes" : "No"}`,
-    `Meeting spot: ${booking.location || "To be confirmed"}`,
+    `Meeting spot: ${booking.location || "Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX"}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
     `Booking payment: ${booking.paymentStatus === "paid" || booking.deposit ? "$55 paid ($50 deposit + $5 processing fee)" : "$55 due today ($50 deposit + $5 processing fee)"}`,
     `Notes: ${booking.notes || "None"}`
@@ -486,7 +499,7 @@ function populateSummary(booking) {
     : craftKey.startsWith('bundle')
       ? 'Your lake-day bundle is ready for the contact, waiver, and checkout step.'
       : 'Your Yamaha jet ski rental is ready for the contact, waiver, and checkout step.');
-  setText("summary-date", booking.date || '-');
+  setText("summary-date", formatDateLabel(booking.date));
   setText("summary-time", formatTimeLabel(booking.time));
   setText("summary-location", booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX');
   setText("summary-party", booking.partySize || '2');

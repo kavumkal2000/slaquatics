@@ -217,8 +217,8 @@ h3{font-size:1.7rem}
       <h2>We could not load your booking details.</h2>
       <p>Head back to the booking flow and finish the deposit step again if you still need help.</p>
       <div class="top-actions" style="margin-top:16px">
-        <a class="btn btn-primary" href="../jetski-booking/">Go To Booking Calendar</a>
-        <a class="btn btn-ghost" href="../jetski-booking-confirmation/">Back To Contact + Waiver</a>
+        <a class="btn btn-primary" id="empty-booking-link" href="../jetski-booking/">Go To Booking Calendar</a>
+        <a class="btn btn-ghost" id="empty-confirmation-link" href="../jetski-booking-confirmation/">Back To Contact + Waiver</a>
       </div>
     </div>
 
@@ -356,6 +356,19 @@ function formatTimeLabel(value = '') {
   return `${twelveHour}:${minuteText} ${suffix}`;
 }
 
+function formatDateLabel(value = '') {
+  if (!value) return '-';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
 function buildMessage(booking) {
   return [
     `Hi Shoreline Aquatics, I’m checking on this paid booking.`,
@@ -363,7 +376,7 @@ function buildMessage(booking) {
     `Name: ${booking.name}`,
     `Phone: ${booking.phone}`,
     `Package: ${booking.craftLabel}`,
-    `Date: ${booking.date}`,
+    `Date: ${formatDateLabel(booking.date)}`,
     `Time: ${formatTimeLabel(booking.time)}`
   ].join("\n");
 }
@@ -371,6 +384,13 @@ function buildMessage(booking) {
 function setText(id, value) {
   const element = qs(id);
   if (element) element.textContent = value;
+}
+
+function updateRecoveryLinks(token = '') {
+  const confirmationLink = qs('empty-confirmation-link');
+  if (confirmationLink && token) {
+    confirmationLink.href = `../jetski-booking-confirmation/?booking=${encodeURIComponent(token)}`;
+  }
 }
 
 function mergeBooking(base, incoming = {}) {
@@ -400,7 +420,7 @@ async function verifyCheckoutSession(sessionId) {
 function showBooking(booking) {
   setText('summary-total', formatCurrency(booking.total || 0));
   setText('summary-package', `${booking.craftLabel} · ${booking.durationLabel}`);
-  setText('summary-date', booking.date || '-');
+  setText('summary-date', formatDateLabel(booking.date));
   setText('summary-time', formatTimeLabel(booking.time));
   setText('summary-location', booking.location || 'Shoreline Aquatics launch, 2000 Main St, Hickory Creek, TX');
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
@@ -409,7 +429,7 @@ function showBooking(booking) {
   setText('summary-paid-today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5))));
   setText('payment-status', `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5)))}. Watch for your confirmation text or email.`);
   setText('next-package', `${booking.craftLabel} · ${booking.durationLabel}`);
-  setText('next-date', booking.date || '-');
+  setText('next-date', formatDateLabel(booking.date));
   setText('next-time', formatTimeLabel(booking.time));
   qs('sms-link').href = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(buildMessage(booking))}`;
   qs('thankyou-wrap').hidden = false;
@@ -420,6 +440,8 @@ function showBooking(booking) {
   const params = new URLSearchParams(window.location.search);
   const sessionId = params.get('session_id');
   const bookingToken = params.get('booking');
+
+  updateRecoveryLinks(bookingToken || '');
 
   if (!bookingToken && !sessionId) {
     qs('empty-state').hidden = false;
@@ -450,6 +472,7 @@ function showBooking(booking) {
   if (!booking && bookingToken) {
     try {
       booking = await loadBookingByToken(bookingToken);
+      updateRecoveryLinks(booking.publicToken || bookingToken);
     } catch (error) {
       qs('empty-state').hidden = false;
       qs('empty-state').querySelector('p').textContent = error.message || 'We could not load the booking details right now.';
@@ -462,6 +485,7 @@ function showBooking(booking) {
     return;
   }
 
+  updateRecoveryLinks(booking.publicToken || bookingToken || '');
   showBooking(booking);
 })();
 </script>
