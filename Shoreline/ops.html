@@ -2847,8 +2847,8 @@ function renderUpcoming() {
 
 // ── RENDER ALL BOOKINGS ──
 let currentFilter = 'all';
-let calendarMonthCursor = null;
-let selectedCalendarDate = '';
+let calendarMonthCursor = monthStart(new Date());
+let selectedCalendarDate = today();
 let editingBookingId = null;
 
 function localDateParts(iso) {
@@ -3075,8 +3075,7 @@ function renderBookingCalendar() {
   const monthLabel = document.getElementById('calendar-month-label');
   if (!grid || !monthLabel) return;
 
-  const firstBookedDate = bookings.map((booking) => booking.date).find((dateValue) => parseIsoDate(dateValue));
-  if (!selectedCalendarDate || !parseIsoDate(selectedCalendarDate)) selectedCalendarDate = firstBookedDate || today();
+  if (!selectedCalendarDate || !parseIsoDate(selectedCalendarDate)) selectedCalendarDate = today();
   if (!calendarMonthCursor) {
     const selectedDateObj = parseIsoDate(selectedCalendarDate) || new Date();
     calendarMonthCursor = monthStart(selectedDateObj);
