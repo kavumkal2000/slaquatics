@@ -351,13 +351,25 @@ function isAuthenticated(request) {
   return Boolean(getSession(request));
 }
 
+function sessionCookieAttributes() {
+  const attributes = [
+    `Path=/`,
+    `HttpOnly`,
+    `SameSite=Lax`
+  ];
+  if (process.env.NODE_ENV === 'production') {
+    attributes.push('Secure');
+  }
+  return attributes.join('; ');
+}
+
 function setSessionCookie(response, user) {
   const token = createSessionToken(user);
-  response.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`);
+  response.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; ${sessionCookieAttributes()}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`);
 }
 
 function clearSessionCookie(response) {
-  response.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+  response.setHeader('Set-Cookie', `${COOKIE_NAME}=; ${sessionCookieAttributes()}; Max-Age=0`);
 }
 
 function setCommonHeaders(response, overrides = {}) {
