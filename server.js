@@ -289,9 +289,7 @@ function listOpsUsers() {
 
 function findOpsUser(username = '', password = '') {
   const normalized = normalizeUsername(username);
-  if (!normalized && OPS_DEV_PASSWORD && safeSecretEquals(password, OPS_DEV_PASSWORD)) {
-    return listOpsUsers().find((user) => user.role === 'developer') || null;
-  }
+  if (!normalized) return null;
   return listOpsUsers().find((user) => user.username === normalized && user.matches(password)) || null;
 }
 
