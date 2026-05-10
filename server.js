@@ -18,7 +18,7 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
-const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || 'LkDev!4920Shoreline';
+const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
 const OPS_OWNER_USERNAME = String(process.env.OPS_OWNER_USERNAME || 'owner').trim().toLowerCase();
 const OPS_OWNER_PASSWORD = process.env.OPS_OWNER_PASSWORD || '';
 const OPS_OWNER_PASSWORD_HASH = process.env.OPS_OWNER_PASSWORD_HASH || 'd0677982c46bdf6f44b277acc927f922:5f71797d337b0a12ac1c966dbefdaa73b0fa68d8610861359c42bb9704b53c203e2e70f41edfc8fd0331325e2d2165b0834e6272cc7f3f33fe74e949cff22c2f';
@@ -704,6 +704,22 @@ function ensureBookingPublicToken(booking) {
   return booking.publicToken;
 }
 
+function invoiceMatchesCustomer(customer = {}, invoice = {}) {
+  const customerPhone = phoneDigits(customer.phone);
+  const invoicePhone = phoneDigits(invoice.customerPhone);
+  if (customerPhone && invoicePhone && customerPhone === invoicePhone) return true;
+  const customerEmail = normalizeEmail(customer.email);
+  const invoiceEmail = normalizeEmail(invoice.customerEmail);
+  if (customerEmail && invoiceEmail && customerEmail === invoiceEmail) return true;
+  const customerName = normalizeName(customer.name);
+  const invoiceName = normalizeName(invoice.customerName);
+  return Boolean(customerName && invoiceName && customerName === invoiceName);
+}
+
+function normalizeInvoiceStatus(status = '') {
+  return String(status || '').trim().toLowerCase();
+}
+
 function updateCustomerRollup(state, customer) {
   const phoneKey = phoneDigits(customer.phone);
   const emailKey = normalizeEmail(customer.email);
@@ -711,8 +727,16 @@ function updateCustomerRollup(state, customer) {
     (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
     (emailKey && normalizeEmail(booking.email) === emailKey)
   ));
+  const paidInvoiceTotal = (state.invoices || [])
+    .filter((invoice) => invoiceMatchesCustomer(customer, invoice))
+    .filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid')
+    .reduce((sum, invoice) => sum + Number(invoice.paidAmount || invoice.total || 0), 0);
   customer.bookings = relatedBookings.length;
-  customer.totalSpent = relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
+  customer.totalSpent = Math.max(
+    relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0),
+    paidInvoiceTotal,
+    Number(customer.totalSpent || 0)
+  );
   customer.lastBooking = relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), customer.lastBooking || '');
   if (customer.bookings > 1 && customer.tag !== 'vip') customer.tag = 'repeat';
 }
