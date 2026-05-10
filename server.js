@@ -27,6 +27,7 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
+const BOOKING_ALERT_EMAILS = process.env.BOOKING_ALERT_EMAILS || process.env.BOOKING_ALERT_EMAIL || RESEND_FROM_EMAIL || '';
 const GOOGLE_REVIEW_URL = process.env.GOOGLE_REVIEW_URL || '';
 const FACEBOOK_REVIEW_URL = process.env.FACEBOOK_REVIEW_URL || '';
 const AUTO_SEND_REVIEW_REQUESTS = /^true$/i.test(process.env.AUTO_SEND_REVIEW_REQUESTS || 'false');
@@ -445,6 +446,13 @@ function normalizePhone(value = '') {
 
 function normalizeEmail(value = '') {
   return String(value || '').trim().toLowerCase();
+}
+
+function normalizeEmailList(value = '') {
+  return String(value || '')
+    .split(/[,\n;]+/)
+    .map((entry) => normalizeEmail(entry))
+    .filter(Boolean);
 }
 
 function normalizeCraftKey(value = '') {
@@ -959,6 +967,187 @@ function bookingConfirmationSubject(booking = {}) {
   return `Booking confirmed for ${formatDateLabel(booking.date)} • Shoreline Aquatics`;
 }
 
+function bookingRequestSubject(booking = {}) {
+  return `Booking request received for ${formatDateLabel(booking.date)} • Shoreline Aquatics`;
+}
+
+function bookingRequestText(booking = {}) {
+  return [
+    `Hi ${firstName(booking.name)},`,
+    '',
+    'We received your Shoreline Aquatics booking details.',
+    '',
+    'Request details',
+    `Package: ${booking.craftLabel || 'Rental package'}`,
+    `Duration: ${booking.durationLabel || '-'}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Start time: ${formatTimeLabel(booking.time)}`,
+    `Meeting spot: ${bookingEmailLocation(booking)}`,
+    `Party size: ${booking.partySize || 'Not provided'}`,
+    `Quoted total: ${formatCurrency(booking.total || 0)}`,
+    '',
+    'What to expect',
+    '- If you already completed checkout, Shoreline will follow up with your full confirmation by text or email.',
+    '- If checkout was not completed yet, finish the deposit to lock in the reservation.',
+    `- If anything needs to change, call or text Shoreline at ${SHORELINE_PHONE_DISPLAY}.`,
+    '',
+    'See you soon,',
+    'Shoreline Aquatics'
+  ].join('\n');
+}
+
+function bookingRequestHtml(booking = {}) {
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
+      <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
+        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
+        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">Your booking request is in</h1>
+        <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(firstName(booking.name))}, Shoreline received your rental details for ${htmlEscape(formatDateLabel(booking.date))} at ${htmlEscape(formatTimeLabel(booking.time))}.</p>
+      </div>
+      <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
+        <h2 style="margin:0 0 12px;font-size:18px;">Request details</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:15px;">
+          <tr><td style="padding:8px 0;color:#5a6b85;">Package</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.craftLabel || 'Rental package')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.durationLabel || '-')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Date</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatDateLabel(booking.date))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Start time</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatTimeLabel(booking.time))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Meeting spot</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(bookingEmailLocation(booking))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Party size</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.partySize || 'Not provided')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
+        </table>
+        <div style="margin-top:24px;padding:18px;border-radius:18px;background:#f5f8fc;">
+          <h2 style="margin:0 0 10px;font-size:18px;">What to expect</h2>
+          <ul style="margin:0;padding-left:18px;">
+            <li>If checkout is already complete, Shoreline will follow up with the full confirmation by text or email.</li>
+            <li>If checkout was not completed yet, finish the deposit to lock in the reservation.</li>
+            <li>If anything needs to change, call or text Shoreline at <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function ownerBookingAlertSubject(booking = {}) {
+  return `New booking request • ${booking.name || booking.email || 'Customer'} • ${formatDateLabel(booking.date)}`;
+}
+
+function ownerBookingAlertText(booking = {}) {
+  return [
+    'A new Shoreline booking request was submitted.',
+    '',
+    `Name: ${booking.name || 'Unknown'}`,
+    `Email: ${booking.email || 'Not provided'}`,
+    `Phone: ${booking.phone || 'Not provided'}`,
+    `Package: ${booking.craftLabel || 'Rental package'}`,
+    `Duration: ${booking.durationLabel || '-'}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Start time: ${formatTimeLabel(booking.time)}`,
+    `Party size: ${booking.partySize || 'Not provided'}`,
+    `Quoted total: ${formatCurrency(booking.total || 0)}`,
+    `Amount due today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)))}`,
+    `Payment status: ${booking.paymentStatus || 'unpaid'}`,
+    `Booking status: ${booking.status || 'pending'}`,
+    `Meeting spot: ${bookingEmailLocation(booking)}`,
+    `Notes: ${booking.notes || 'None'}`,
+    '',
+    'Open the Shoreline ops CRM to review or update the booking.'
+  ].join('\n');
+}
+
+function ownerBookingAlertHtml(booking = {}) {
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
+      <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
+        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
+        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">New booking request</h1>
+        <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(booking.name || booking.email || 'A customer')} submitted a new booking request.</p>
+      </div>
+      <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
+        <table style="width:100%;border-collapse:collapse;font-size:15px;">
+          <tr><td style="padding:8px 0;color:#5a6b85;">Name</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.name || 'Unknown')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Email</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.email || 'Not provided')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Phone</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.phone || 'Not provided')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Package</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.craftLabel || 'Rental package')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.durationLabel || '-')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Date</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatDateLabel(booking.date))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Start time</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatTimeLabel(booking.time))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Party size</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.partySize || 'Not provided')}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Amount due today</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Payment status</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(String(booking.paymentStatus || 'unpaid'))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Booking status</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(String(booking.status || 'pending'))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Meeting spot</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(bookingEmailLocation(booking))}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Notes</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.notes || 'None')}</td></tr>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+async function sendBookingRequestCustomerEmail(state, booking, now = new Date().toISOString()) {
+  if (!booking || booking.requestConfirmationEmailSentAt) {
+    return { sent: false, reason: 'already-sent-or-missing-booking' };
+  }
+  if (!booking.email) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+  const result = await sendResendEmail({
+    to: booking.email,
+    subject: bookingRequestSubject(booking),
+    text: bookingRequestText(booking),
+    html: bookingRequestHtml(booking),
+    idempotencyKey: `shoreline-booking-request-customer-${booking.id}`
+  });
+  booking.requestConfirmationEmailSentAt = now;
+  booking.requestConfirmationEmailId = String(result?.id || '');
+  booking.updatedAt = now;
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    date: now,
+    customerId: booking.customerId || 0,
+    customerName: booking.name || booking.email,
+    channel: 'booking-request-email',
+    message: `Booking request confirmation sent to ${booking.email} for ${booking.craftLabel} on ${booking.date} at ${booking.time}.`
+  });
+  return { sent: true, result };
+}
+
+async function sendNewBookingOwnerAlert(state, booking, now = new Date().toISOString()) {
+  if (!booking || booking.ownerAlertEmailSentAt) {
+    return { sent: false, reason: 'already-sent-or-missing-booking' };
+  }
+  const recipients = normalizeEmailList(BOOKING_ALERT_EMAILS);
+  if (!recipients.length) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+  const result = await sendResendEmail({
+    to: recipients,
+    subject: ownerBookingAlertSubject(booking),
+    text: ownerBookingAlertText(booking),
+    html: ownerBookingAlertHtml(booking),
+    idempotencyKey: `shoreline-booking-alert-owner-${booking.id}`
+  });
+  booking.ownerAlertEmailSentAt = now;
+  booking.ownerAlertEmailId = String(result?.id || '');
+  booking.updatedAt = now;
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    date: now,
+    customerId: booking.customerId || 0,
+    customerName: booking.name || booking.email,
+    channel: 'new-booking-owner-alert',
+    message: `New booking alert sent to ${recipients.join(', ')} for ${booking.name || booking.email}.`
+  });
+  return { sent: true, result };
+}
+
 function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
   if (!payload?.date || !payload?.time) {
     throw new Error('A rental date and start time are required.');
@@ -1224,6 +1413,7 @@ function integrationStatus() {
   return {
     smsConfigured: Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER),
     emailConfigured: Boolean(RESEND_API_KEY && RESEND_FROM_EMAIL),
+    bookingAlertsConfigured: Boolean(normalizeEmailList(BOOKING_ALERT_EMAILS).length),
     reviewLinksConfigured: Boolean(GOOGLE_REVIEW_URL || FACEBOOK_REVIEW_URL),
     reviewAutomationEnabled: AUTO_SEND_REVIEW_REQUESTS,
     reviewChannel: REVIEW_REQUEST_CHANNEL,
@@ -1639,12 +1829,34 @@ async function handleApi(request, response, pathname) {
       const { customer, booking, existingCustomer } = upsertBookingFromPayload(state, payload, now);
       await stateStore.write(state);
 
+      let customerEmailStatus = { sent: false, reason: 'not-attempted' };
+      let ownerAlertStatus = { sent: false, reason: 'not-attempted' };
+      try {
+        customerEmailStatus = await sendBookingRequestCustomerEmail(state, booking, now);
+      } catch (error) {
+        console.error('Booking request customer email failed:', error);
+        customerEmailStatus = { sent: false, reason: error.message || 'send-failed' };
+      }
+      try {
+        ownerAlertStatus = await sendNewBookingOwnerAlert(state, booking, now);
+      } catch (error) {
+        console.error('New booking owner alert failed:', error);
+        ownerAlertStatus = { sent: false, reason: error.message || 'send-failed' };
+      }
+      if (customerEmailStatus.sent || ownerAlertStatus.sent) {
+        await stateStore.write(state);
+      }
+
       sendPublicJson(response, request, 200, {
         ok: true,
         bookingId: booking.id,
         bookingToken: booking.publicToken,
         matchedExistingCustomer: Boolean(existingCustomer),
         waiverStored: true,
+        notifications: {
+          customerEmail: customerEmailStatus,
+          ownerAlert: ownerAlertStatus
+        },
         customer: publicCustomerPayload(customer),
         booking: publicBookingPayload(booking)
       });
