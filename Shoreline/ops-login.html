@@ -135,17 +135,21 @@ code{
     <section class="panel">
       <div class="card">
         <h2>Sign In</h2>
-        <p>Use the private operations password configured for the Render ops service.</p>
+        <p>Use your assigned Shoreline ops login to open the private CRM.</p>
         <form id="login-form">
           <div class="field">
-            <label for="password">Operations Password</label>
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" autocomplete="username" placeholder="developer or owner" required>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
             <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your Shoreline ops password" required>
           </div>
           <button class="submit" id="submit-btn" type="submit">Unlock Ops</button>
           <div class="status" id="status">Checking private service status...</div>
         </form>
         <div class="support">
-          If this page says the private service is not ready yet, deploy the Node ops service from this repo and set <code>OPS_PASSWORD</code> in Render.
+          If this page says the private service is not ready yet, deploy the Node ops service from this repo and set the ops login credentials in Render.
         </div>
       </div>
     </section>
@@ -154,6 +158,7 @@ code{
 const form = document.getElementById('login-form');
 const statusEl = document.getElementById('status');
 const submitBtn = document.getElementById('submit-btn');
+const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 
 function setStatus(message, type = '') {
@@ -174,7 +179,7 @@ async function checkSession() {
       window.location.replace('/ops.html');
       return;
     }
-    setStatus('Private service ready. Enter the Shoreline ops password.', 'success');
+    setStatus('Private service ready. Sign in with your Shoreline ops login.', 'success');
   } catch (error) {
     setStatus('Could not reach the private ops service yet. Finish the Render deployment first.', 'error');
     submitBtn.disabled = true;
@@ -190,7 +195,7 @@ form.addEventListener('submit', async (event) => {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: passwordInput.value })
+      body: JSON.stringify({ username: usernameInput.value, password: passwordInput.value })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -201,7 +206,7 @@ form.addEventListener('submit', async (event) => {
   } catch (error) {
     setStatus(error.message || 'Sign-in failed', 'error');
     submitBtn.disabled = false;
-    passwordInput.select();
+    if (passwordInput.value) passwordInput.select();
   }
 });
 

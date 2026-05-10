@@ -72,6 +72,12 @@ body[data-app-ready="true"] .app-loading{opacity:0;pointer-events:none;}
   border:1px solid rgba(26,158,212,0.24);background:rgba(26,158,212,0.1);font-size:0.72rem;
   letter-spacing:0.12em;text-transform:uppercase;color:var(--white);white-space:nowrap
 }
+.ops-user-pill{
+  display:inline-flex;align-items:center;gap:0.4rem;padding:0.36rem 0.72rem;border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.72rem;
+  color:var(--white);white-space:nowrap
+}
+.ops-user-pill strong{font-size:0.72rem;color:var(--white);}
 .ops-mode-pill.browser{border-color:rgba(245,158,11,0.28);background:rgba(245,158,11,0.12)}
 .ops-mode-pill.server{border-color:rgba(16,185,129,0.28);background:rgba(16,185,129,0.12)}
 .btn{padding:0.55rem 1.2rem;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:0.82rem;font-weight:500;cursor:pointer;letter-spacing:0.05em;text-transform:uppercase;transition:all 0.18s;border:none;}
@@ -419,6 +425,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <button class="nav-item" onclick="showPage('reviews',this)"><span class="icon">⭐</span><span>Reviews</span></button>
   <button class="nav-item" onclick="showPage('social',this)"><span class="icon">📣</span><span>Social</span></button>
   <button class="nav-item" onclick="showPage('reminders',this)"><span class="icon">🔔</span><span>Re-engage</span></button>
+  <div class="nav-section" data-role="developer">Developer</div>
+  <button class="nav-item" data-role="developer" onclick="showPage('system',this)"><span class="icon">🛠️</span><span>System</span></button>
   <div class="sidebar-bottom"><div class="version">Shoreline Ops v1.0</div></div>
 </aside>
 <button class="mobile-nav-backdrop" id="mobile-nav-backdrop" onclick="closeMobileNav()" aria-label="Close navigation"></button>
@@ -433,6 +441,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="topbar-right">
     <span style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
     <span class="ops-mode-pill browser" id="ops-mode-pill">Checking sync</span>
+    <span class="ops-user-pill" id="ops-user-pill" style="display:none;"></span>
     <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
     <button class="btn btn-primary" id="topbar-booking-action" onclick="openBookingModal()">+ New Booking</button>
   </div>
@@ -855,9 +864,31 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Automated reminders scheduled to send.</p>
     <div id="upcoming-reminders"></div>
   </div>
-  <div id="reminder-campaigns" style="display:none;">
+<div id="reminder-campaigns" style="display:none;">
     <p style="font-size:0.83rem;color:var(--muted);margin-bottom:1rem;">Reusable text and email templates for slow weekdays, busy weekends, and repeat riders.</p>
     <div id="campaigns-list"></div>
+  </div>
+</div>
+
+<div class="page" id="page-system" data-role="developer">
+  <div class="section-head"><h2>System</h2></div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">Storage</div><div class="value" id="system-kpi-storage">Private sync</div><div class="delta up" id="system-kpi-storage-meta">Shared server-backed CRM</div></div>
+    <div class="kpi-card"><div class="label">Signed in as</div><div class="value" id="system-kpi-role">Developer</div><div class="delta up" id="system-kpi-role-meta">Full control</div></div>
+    <div class="kpi-card"><div class="label">Connected services</div><div class="value" id="system-kpi-integrations">0</div><div class="delta up" id="system-kpi-integrations-meta">SMS, email, reviews, payments</div></div>
+    <div class="kpi-card"><div class="label">Role split</div><div class="value" id="system-kpi-access">2</div><div class="delta up" id="system-kpi-access-meta">Developer and owner logins</div></div>
+  </div>
+  <div class="compose-grid">
+    <div class="list-card">
+      <h3>Developer access</h3>
+      <p>This screen stays visible only to the developer login. The owner login keeps full business access without website-development controls.</p>
+      <div class="list-stack" id="system-access-list" style="margin-top:1rem;"></div>
+    </div>
+    <div class="list-card">
+      <h3>Service health</h3>
+      <p>Use this view to confirm that the private CRM, payments, messaging, and review automations are configured the way you expect.</p>
+      <div class="list-stack" id="system-status-list" style="margin-top:1rem;"></div>
+    </div>
   </div>
 </div>
 
@@ -1182,6 +1213,20 @@ let integrations = {
   socialPlatforms: []
 };
 const PRIVATE_OPS_URL = 'https://shoreline-aquatics-ops.onrender.com/ops-login.html';
+let currentSession = {
+  available: false,
+  authenticated: false,
+  storage: '',
+  user: null
+};
+
+function currentPermissions() {
+  return currentSession?.user?.permissions || {
+    canAccessBusinessData: true,
+    canAccessSystem: false,
+    canAccessWebsiteDevelopment: false
+  };
+}
 
 function snapshotState() {
   return {
@@ -1221,8 +1266,9 @@ function applyState(nextState = {}) {
 }
 function updateModeBadge() {
   const pill = document.getElementById('ops-mode-pill');
+  const userPill = document.getElementById('ops-user-pill');
   const logoutBtn = document.getElementById('logout-btn');
-  if (!pill || !logoutBtn) return;
+  if (!pill || !logoutBtn || !userPill) return;
   if (backendAvailable) {
     pill.textContent = 'Private sync';
     pill.className = 'ops-mode-pill server';
@@ -1231,6 +1277,23 @@ function updateModeBadge() {
     pill.textContent = 'Private service required';
     pill.className = 'ops-mode-pill browser';
     logoutBtn.style.display = 'none';
+  }
+  if (currentSession?.authenticated && currentSession.user) {
+    userPill.style.display = 'inline-flex';
+    userPill.innerHTML = `<strong>${escapeHtml(currentSession.user.displayName || currentSession.user.username || 'User')}</strong><span>${escapeHtml(currentSession.user.role || '')}</span>`;
+  } else {
+    userPill.style.display = 'none';
+    userPill.textContent = '';
+  }
+}
+function applyRolePermissions() {
+  const permissions = currentPermissions();
+  document.querySelectorAll('[data-role="developer"]').forEach((element) => {
+    element.style.display = permissions.canAccessSystem ? '' : 'none';
+  });
+  if (!permissions.canAccessSystem && document.getElementById('page-system')?.classList.contains('active')) {
+    const dashboardButton = document.querySelector('.nav-item[onclick*="dashboard"]');
+    showPage('dashboard', dashboardButton);
   }
 }
 function showServerRequiredState(message = '') {
@@ -1279,11 +1342,16 @@ async function detectBackendSession() {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' }
     });
-    if (!response.ok) return {available:false, authenticated:false};
+    if (!response.ok) return {available:false, authenticated:false, storage:'', user:null};
     const payload = await response.json().catch(() => ({}));
-    return {available:true, authenticated:Boolean(payload.authenticated)};
+    return {
+      available:true,
+      authenticated:Boolean(payload.authenticated),
+      storage:String(payload.storage || ''),
+      user: payload.user || null
+    };
   } catch (error) {
-    return {available:false, authenticated:false};
+    return {available:false, authenticated:false, storage:'', user:null};
   }
 }
 async function saveData(options = {}) {
@@ -1302,8 +1370,10 @@ async function saveData(options = {}) {
 }
 async function loadData() {
   const session = await detectBackendSession();
+  currentSession = session;
   if (!session.available) {
     backendAvailable = false;
+    applyRolePermissions();
     updateModeBadge();
     throw new Error('Private Shoreline storage is unavailable right now.');
   }
@@ -1312,6 +1382,7 @@ async function loadData() {
     return false;
   }
   backendAvailable = true;
+  applyRolePermissions();
   updateModeBadge();
   const payload = await requestJson('/api/ops/state');
   const serverState = payload?.state || {};
@@ -2546,11 +2617,15 @@ function closeMobileNav() {
 }
 function showPage(id, btn) {
   try {
+  if (id === 'system' && !currentPermissions().canAccessSystem) {
+    showToast('⚠️ Only the developer login can access system controls');
+    return;
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
   document.getElementById('page-title').textContent = titles[id]||id;
   const topbarBookingAction = document.getElementById('topbar-booking-action');
   if (topbarBookingAction) topbarBookingAction.style.display = id === 'bookings' ? 'none' : 'inline-flex';
@@ -2565,6 +2640,7 @@ function showPage(id, btn) {
   if(id==='reviews') renderReviewHub();
   if(id==='social') renderSocialQueue();
   if(id==='reminders') renderReminders();
+  if(id==='system') renderSystemPage();
   closeMobileNav();
   } catch(e) { console.error('showPage error:', e); }
 }
@@ -4230,6 +4306,87 @@ function switchReminderTab(tab, btn) {
   });
 }
 
+function renderSystemPage() {
+  const accessList = document.getElementById('system-access-list');
+  const statusList = document.getElementById('system-status-list');
+  if (!accessList || !statusList) return;
+
+  const user = currentSession?.user || {};
+  const connectedServices = [
+    integrations.smsConfigured,
+    integrations.emailConfigured,
+    integrations.reviewLinksConfigured,
+    integrations.reviewAutomationEnabled,
+    integrations.stripeConfigured,
+    integrations.socialConfigured || integrations.socialAutomationConfigured
+  ].filter(Boolean).length;
+
+  document.getElementById('system-kpi-storage').textContent = backendAvailable ? 'Private sync' : 'Offline';
+  document.getElementById('system-kpi-storage-meta').textContent = backendAvailable
+    ? 'Shared server-backed CRM'
+    : 'Private service unavailable';
+  document.getElementById('system-kpi-role').textContent = user.displayName || 'Developer';
+  document.getElementById('system-kpi-role-meta').textContent = user.role === 'developer'
+    ? 'Full control'
+    : 'Business access only';
+  document.getElementById('system-kpi-integrations').textContent = String(connectedServices);
+  document.getElementById('system-kpi-integrations-meta').textContent = 'Connected service checks';
+  document.getElementById('system-kpi-access').textContent = '2';
+  document.getElementById('system-kpi-access-meta').textContent = 'Developer and owner logins';
+
+  accessList.innerHTML = `
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Developer login</strong>
+        <div class="sub">Full business access plus website-development and system controls.</div>
+      </div>
+    </div>
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Owner login</strong>
+        <div class="sub">Full business data access without website-development controls.</div>
+      </div>
+    </div>
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Live links</strong>
+        <div class="sub"><a href="https://slaquatics.com" target="_blank" rel="noopener noreferrer">slaquatics.com</a> · <a href="${PRIVATE_OPS_URL}" target="_blank" rel="noopener noreferrer">private ops login</a></div>
+      </div>
+    </div>
+  `;
+
+  statusList.innerHTML = `
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>CRM storage</strong>
+        <div class="sub">${backendAvailable ? 'Connected to the private server-backed CRM.' : 'Not connected to the private CRM.'}</div>
+      </div>
+      <div class="list-row-actions"><span class="badge ${backendAvailable ? 'badge-confirmed' : 'badge-pending'}">${backendAvailable ? 'online' : 'offline'}</span></div>
+    </div>
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Payments</strong>
+        <div class="sub">${integrations.stripeConfigured ? 'Stripe checkout is configured.' : 'Stripe checkout is not configured.'}</div>
+      </div>
+      <div class="list-row-actions"><span class="badge ${integrations.stripeConfigured ? 'badge-confirmed' : 'badge-pending'}">${integrations.stripeConfigured ? 'configured' : 'needs setup'}</span></div>
+    </div>
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Messaging</strong>
+        <div class="sub">SMS: ${integrations.smsConfigured ? 'configured' : 'not configured'} · Email: ${integrations.emailConfigured ? 'configured' : 'not configured'}</div>
+      </div>
+      <div class="list-row-actions"><span class="badge ${(integrations.smsConfigured || integrations.emailConfigured) ? 'badge-confirmed' : 'badge-pending'}">${(integrations.smsConfigured || integrations.emailConfigured) ? 'available' : 'needs setup'}</span></div>
+    </div>
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Review automation</strong>
+        <div class="sub">Links: ${integrations.reviewLinksConfigured ? 'configured' : 'not configured'} · Auto-send: ${integrations.reviewAutomationEnabled ? 'enabled' : 'off'}</div>
+      </div>
+      <div class="list-row-actions"><span class="badge ${(integrations.reviewLinksConfigured && integrations.reviewAutomationEnabled) ? 'badge-confirmed' : 'badge-pending'}">${(integrations.reviewLinksConfigured && integrations.reviewAutomationEnabled) ? 'ready' : 'partial'}</span></div>
+    </div>
+  `;
+}
+
 // ── DASHBOARD BARS ──
 function renderBookingBars() {
   const start = startOfMonth(new Date());
@@ -4288,6 +4445,7 @@ async function bootApp() {
     renderCommsPanel();
     renderReviewHub();
     renderSocialQueue();
+    renderSystemPage();
     updatePendingBadge();
     document.getElementById('b-date').value = today();
     document.getElementById('e-date').value = today();
