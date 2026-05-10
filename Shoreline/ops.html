@@ -1018,7 +1018,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Equipment</label>
-          <select id="f-craft"><option>Yamaha VX #1</option><option>Yamaha VX #2</option><option>Boat</option></select>
+          <select id="f-craft"></select>
         </div>
         <div class="form-group"><label>Date</label><input type="date" id="f-date"></div>
         <div class="form-group"><label>Gallons</label><input type="number" id="f-gallons" placeholder="0.0" step="0.1"></div>
@@ -1041,7 +1041,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Equipment</label>
-          <select id="m-craft"><option>Yamaha VX #1</option><option>Yamaha VX #2</option><option>Boat</option></select>
+          <select id="m-craft"></select>
         </div>
         <div class="form-group"><label>Service type</label>
           <select id="m-type"><option>Oil change</option><option>Spark plugs</option><option>Impeller check</option><option>Full service</option><option>Repair</option><option>Winterization</option><option>De-winterization</option></select>
@@ -1120,18 +1120,12 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="modal-head"><h3>Add Tracker</h3><button class="modal-close" onclick="closeModal('tracking-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid full">
-        <div class="form-group"><label>Device label</label><input type="text" id="t-name" placeholder="Yamaha VX #1 tracker"></div>
+        <div class="form-group"><label>Device label</label><input type="text" id="t-name" placeholder="Jet Ski 1 tracker"></div>
         <div class="form-group"><label>Provider</label><input type="text" id="t-provider" value="LandAirSea"></div>
         <div class="form-group"><label>Model</label><input type="text" id="t-model" value="FiftyFour"></div>
         <div class="form-group"><label>Serial number</label><input type="text" id="t-serial" placeholder="Tracker serial number"></div>
         <div class="form-group"><label>Assigned asset</label>
-          <select id="t-asset">
-            <option value="">Unassigned / spare</option>
-            <option>Yamaha VX #1</option>
-            <option>Yamaha VX #2</option>
-            <option>Boat</option>
-            <option>Trailer</option>
-          </select>
+          <select id="t-asset"></select>
         </div>
         <div class="form-group"><label>Status</label>
           <select id="t-status">
@@ -1469,11 +1463,7 @@ let reviews = [];
 let socialPosts = [];
 let editingCustomerId = null;
 
-const equipment = [
-  {name:'Yamaha VX #1',hours:88,serviceInterval:100,lastService:'2026-03-10'},
-  {name:'Yamaha VX #2',hours:76,serviceInterval:100,lastService:'2026-03-10'},
-  {name:'Boat',hours:115,serviceInterval:150,lastService:'2026-04-01'},
-];
+const DEFAULT_ASSET_OPTIONS = ['Jet Ski 1', 'Jet Ski 2', 'Boat', 'Trailer'];
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -3206,6 +3196,7 @@ function openTrackerLiveMap(id) {
   renderTracking();
 }
 function renderTracking() {
+  syncAssetSelectors();
   const activeTrackers = trackers.filter((tracker) => String(tracker.status || '').toLowerCase() === 'active');
   const assignedTrackers = trackers.filter((tracker) => String(tracker.assignedAsset || '').trim());
   const recurringPlans = trackers.filter((tracker) => Number(tracker.monthlyFee || 0) > 0);
@@ -3344,6 +3335,7 @@ function saveTracker() {
   selectedTrackerId = trackers[0]?.id || null;
   saveData();
   closeModal('tracking-modal');
+  syncAssetSelectors();
   renderTracking();
   showToast('📡 Tracker saved');
   [
@@ -4208,6 +4200,7 @@ function renderSocialQueue() {
 
 // ── FUEL ──
 function renderFuel() {
+  syncAssetSelectors();
   document.getElementById('fuel-log').innerHTML = fuelLog.map(f => {
     const cost = (f.gallons * f.ppg).toFixed(2);
     const cph = f.hours>0 ? (cost/f.hours).toFixed(2) : '–';
@@ -4223,25 +4216,23 @@ function saveFuel() {
   const g=parseFloat(document.getElementById('f-gallons').value)||0;
   const p=parseFloat(document.getElementById('f-ppg').value)||3.89;
   fuelLog.unshift({craft:document.getElementById('f-craft').value,date:document.getElementById('f-date').value||today(),gallons:g,ppg:p,hours:parseFloat(document.getElementById('f-hours').value)||0,ref:document.getElementById('f-ref').value||'–'});
-  saveData(); closeModal('fuel-modal'); showToast('⛽ Fuel entry saved'); renderFuel(); renderExpenses(); renderDashboardMetrics();
+  saveData(); closeModal('fuel-modal'); showToast('⛽ Fuel entry saved'); syncAssetSelectors(); renderFuel(); renderExpenses(); renderDashboardMetrics(); renderMaint();
 }
 
 // ── MAINTENANCE ──
 function renderMaint() {
-  document.getElementById('maint-grid').innerHTML = equipment.map(e => {
-    const pct = Math.min(100, Math.round((e.hours/e.serviceInterval)*100));
-    const color = pct>=100?'var(--red)':pct>=80?'var(--amber)':'var(--green)';
-    const hoursLeft = Math.max(0, e.serviceInterval-e.hours);
+  syncAssetSelectors();
+  document.getElementById('maint-grid').innerHTML = equipmentSummaries().map(e => {
     return `<div class="maint-card">
       <div class="maint-craft">${e.name}</div>
-      <div class="maint-hours">${e.hours} hrs total · Last service: ${e.lastService}</div>
+      <div class="maint-hours">Last service: ${e.lastServiceDate}</div>
       <div class="maint-progress">
-        <div class="maint-progress-label"><span>Hours since service</span><span style="color:${color};">${e.hours%e.serviceInterval}/${e.serviceInterval}</span></div>
-        <div class="maint-bar-track"><div class="maint-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+        <div class="maint-progress-label"><span>Logged hours since service</span><span style="color:${e.color};">${e.hoursSinceService}/${e.serviceInterval}</span></div>
+        <div class="maint-bar-track"><div class="maint-bar-fill" style="width:${e.pct}%;background:${e.color};"></div></div>
       </div>
       <div class="maint-next">
         <span class="label">Next service:</span>
-        ${hoursLeft===0?'<span class="badge badge-noshow">OVERDUE</span>':hoursLeft<=10?`<span class="badge badge-pending">In ${hoursLeft} hrs</span>`:`<span style="color:var(--green);">In ${hoursLeft} hrs</span>`}
+        ${e.hoursLeft===0?'<span class="badge badge-noshow">OVERDUE</span>':e.hoursLeft<=10?`<span class="badge badge-pending">In ${e.hoursLeft} hrs</span>`:`<span style="color:var(--green);">In ${e.hoursLeft} hrs</span>`}
       </div>
     </div>`;
   }).join('');
@@ -4250,7 +4241,7 @@ function renderMaint() {
 
 function saveMaint() {
   maintLog.unshift({craft:document.getElementById('m-craft').value,type:document.getElementById('m-type').value,date:document.getElementById('m-date').value||today(),hours:parseInt(document.getElementById('m-hours').value)||0,cost:parseInt(document.getElementById('m-cost').value)||0,notes:document.getElementById('m-notes').value});
-  saveData(); closeModal('maint-modal'); showToast('🔧 Service logged'); renderMaint();
+  saveData(); closeModal('maint-modal'); showToast('🔧 Service logged'); syncAssetSelectors(); renderMaint();
 }
 
 // ── REMINDERS ──
@@ -4434,6 +4425,87 @@ function daysSince(dateStr) {
 }
 function today() { return isoFromDate(new Date()); }
 
+function assetServiceInterval(assetName = '') {
+  const label = String(assetName || '').trim().toLowerCase();
+  if (label.includes('boat')) return 150;
+  if (label.includes('trailer')) return 180;
+  return 100;
+}
+
+function knownAssetOptions() {
+  const seen = new Set();
+  const ordered = [];
+  const addOption = (value) => {
+    const label = String(value || '').trim();
+    if (!label) return;
+    const key = label.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    ordered.push(label);
+  };
+  DEFAULT_ASSET_OPTIONS.forEach(addOption);
+  fuelLog.forEach((entry) => addOption(entry.craft));
+  maintLog.forEach((entry) => addOption(entry.craft));
+  trackers.forEach((tracker) => addOption(tracker.assignedAsset));
+  return ordered;
+}
+
+function syncAssetSelectors() {
+  const options = knownAssetOptions();
+  const configs = [
+    { id: 'f-craft', includeBlank: false, blankLabel: '' },
+    { id: 'm-craft', includeBlank: false, blankLabel: '' },
+    { id: 't-asset', includeBlank: true, blankLabel: 'Unassigned / spare' }
+  ];
+  configs.forEach(({ id, includeBlank, blankLabel }) => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const previous = select.value;
+    select.innerHTML = [
+      includeBlank ? `<option value="">${escapeHtml(blankLabel)}</option>` : '',
+      ...options.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`)
+    ].join('');
+    if (previous && options.includes(previous)) {
+      select.value = previous;
+    } else if (includeBlank) {
+      select.value = '';
+    } else if (options.length) {
+      select.value = options[0];
+    }
+  });
+}
+
+function equipmentSummaries() {
+  return knownAssetOptions().map((name) => {
+    const serviceInterval = assetServiceInterval(name);
+    const assetMaint = maintLog
+      .filter((entry) => String(entry.craft || '').trim() === name)
+      .sort((left, right) => String(right.date || '').localeCompare(String(left.date || '')));
+    const latestService = assetMaint[0] || null;
+    const lastServiceDate = latestService?.date || 'No service logged yet';
+    const serviceBaseline = dateValue(latestService?.date) || null;
+    const hoursSinceService = fuelLog
+      .filter((entry) => String(entry.craft || '').trim() === name)
+      .filter((entry) => {
+        const entryDate = dateValue(entry.date);
+        return !serviceBaseline || !entryDate || entryDate >= serviceBaseline;
+      })
+      .reduce((sum, entry) => sum + Number(entry.hours || 0), 0);
+    const pct = Math.min(100, Math.round((hoursSinceService / serviceInterval) * 100));
+    const color = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--amber)' : 'var(--green)';
+    const hoursLeft = Math.max(0, serviceInterval - hoursSinceService);
+    return {
+      name,
+      lastServiceDate,
+      hoursSinceService,
+      serviceInterval,
+      pct,
+      color,
+      hoursLeft
+    };
+  });
+}
+
 // ── INIT ──
 async function bootApp() {
   let ready = false;
@@ -4456,6 +4528,7 @@ async function bootApp() {
     renderInvoices();
     renderCRM();
     renderExpenses();
+    syncAssetSelectors();
     renderTracking();
     renderCommsPanel();
     renderReviewHub();
