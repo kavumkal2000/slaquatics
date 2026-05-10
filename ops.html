@@ -318,10 +318,11 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 
 /* FUEL TRACKER */
 .fuel-log{display:flex;flex-direction:column;gap:0.5rem;}
-.fuel-entry{background:var(--deep);border-radius:10px;border:1px solid var(--border);padding:0.9rem 1.2rem;display:flex;align-items:center;gap:1rem;}
+.fuel-entry{background:var(--deep);border-radius:10px;border:1px solid var(--border);padding:0.9rem 1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
 .fuel-craft{font-size:0.85rem;font-weight:500;flex:1;}
 .fuel-meta{font-size:0.78rem;color:var(--muted);}
 .fuel-cost{font-family:'Bebas Neue',cursive;font-size:1.4rem;color:var(--amber);letter-spacing:0.04em;}
+.fuel-entry-actions{display:flex;gap:0.5rem;flex-wrap:wrap;}
 
 /* MAINTENANCE */
 .maint-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
@@ -685,12 +686,12 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="page" id="page-fuel">
   <div class="section-head">
     <h2>Fuel Log</h2>
-    <button class="btn btn-primary btn-sm" onclick="openModal('fuel-modal')">+ Log Fuel</button>
+    <button class="btn btn-primary btn-sm" onclick="openFuelModal()">+ Log Fuel</button>
   </div>
   <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
-    <div class="kpi-card"><div class="label">Fuel cost this month</div><div class="value" style="color:var(--amber);">$412</div><div class="delta warn">45.3 rental hours logged</div></div>
-    <div class="kpi-card"><div class="label">Cost per rental hour</div><div class="value" style="color:var(--amber);">$9.10</div><div class="delta up">↓ $1.20 vs last month</div></div>
-    <div class="kpi-card"><div class="label">Total hours logged</div><div class="value">45.3</div><div class="delta up">This month</div></div>
+    <div class="kpi-card"><div class="label">Fuel cost this month</div><div class="value" style="color:var(--amber);" id="fuel-kpi-month">$0</div><div class="delta warn" id="fuel-kpi-month-meta">0 fuel entries this month</div></div>
+    <div class="kpi-card"><div class="label">Cost per rental hour</div><div class="value" style="color:var(--amber);" id="fuel-kpi-rate">$0</div><div class="delta up" id="fuel-kpi-rate-meta">No rental hours logged yet</div></div>
+    <div class="kpi-card"><div class="label">Total hours logged</div><div class="value" id="fuel-kpi-hours">0</div><div class="delta up" id="fuel-kpi-hours-meta">This month</div></div>
   </div>
   <div class="fuel-log" id="fuel-log"></div>
 </div>
@@ -699,13 +700,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div class="page" id="page-maintenance">
   <div class="section-head">
     <h2>Equipment Maintenance</h2>
-    <button class="btn btn-primary btn-sm" onclick="openModal('maint-modal')">+ Log Service</button>
+    <button class="btn btn-primary btn-sm" onclick="openMaintModal()">+ Log Service</button>
   </div>
   <div class="maint-grid" id="maint-grid"></div>
   <div style="margin-top:1.5rem;" class="table-wrap">
     <div class="table-header"><div class="table-title">Service history</div></div>
     <table>
-      <thead><tr><th>Equipment</th><th>Service type</th><th>Date</th><th>Hours at service</th><th>Cost</th><th>Notes</th></tr></thead>
+      <thead><tr><th>Equipment</th><th>Service type</th><th>Date</th><th>Hours at service</th><th>Cost</th><th>Notes</th><th>Actions</th></tr></thead>
       <tbody id="maint-log"></tbody>
     </table>
   </div>
@@ -1045,11 +1046,12 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <!-- FUEL MODAL -->
 <div class="modal-overlay" id="fuel-modal">
   <div class="modal" style="width:420px;">
-    <div class="modal-head"><h3>Log Fuel</h3><button class="modal-close" onclick="closeModal('fuel-modal')">×</button></div>
+    <div class="modal-head"><h3 id="fuel-modal-title">Log Fuel</h3><button class="modal-close" onclick="closeModal('fuel-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Equipment</label>
-          <select id="f-craft"></select>
+          <input type="text" id="f-craft" list="fuel-asset-options" placeholder="Jet Ski 1">
+          <datalist id="fuel-asset-options"></datalist>
         </div>
         <div class="form-group"><label>Date</label><input type="date" id="f-date"></div>
         <div class="form-group"><label>Gallons</label><input type="number" id="f-gallons" placeholder="0.0" step="0.1"></div>
@@ -1060,7 +1062,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('fuel-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveFuel()">Save Entry</button>
+      <button class="btn btn-primary" id="fuel-save-button" onclick="saveFuel()">Save Entry</button>
     </div>
   </div>
 </div>
@@ -1068,24 +1070,25 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <!-- MAINTENANCE MODAL -->
 <div class="modal-overlay" id="maint-modal">
   <div class="modal" style="width:420px;">
-    <div class="modal-head"><h3>Log Service</h3><button class="modal-close" onclick="closeModal('maint-modal')">×</button></div>
+    <div class="modal-head"><h3 id="maint-modal-title">Log Service</h3><button class="modal-close" onclick="closeModal('maint-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label>Equipment</label>
-          <select id="m-craft"></select>
+          <input type="text" id="m-craft" list="maint-asset-options" placeholder="Jet Ski 1">
+          <datalist id="maint-asset-options"></datalist>
         </div>
         <div class="form-group"><label>Service type</label>
           <select id="m-type"><option>Oil change</option><option>Spark plugs</option><option>Impeller check</option><option>Full service</option><option>Repair</option><option>Winterization</option><option>De-winterization</option></select>
         </div>
         <div class="form-group"><label>Date</label><input type="date" id="m-date"></div>
-        <div class="form-group"><label>Hours at service</label><input type="number" id="m-hours" placeholder="0"></div>
-        <div class="form-group"><label>Cost ($)</label><input type="number" id="m-cost" placeholder="0"></div>
+        <div class="form-group"><label>Hours at service</label><input type="number" id="m-hours" placeholder="0" step="0.1"></div>
+        <div class="form-group"><label>Cost ($)</label><input type="number" id="m-cost" placeholder="0" step="0.01"></div>
         <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="m-notes" placeholder="What was done, parts replaced, etc." style="min-height:60px;"></textarea></div>
       </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('maint-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveMaint()">Save Service Log</button>
+      <button class="btn btn-primary" id="maint-save-button" onclick="saveMaint()">Save Service Log</button>
     </div>
   </div>
 </div>
@@ -1481,10 +1484,13 @@ let invoiceDateTo = '';
 let editingInvoiceId = null;
 
 let expenses = [];
+let editingExpenseId = null;
 
 let fuelLog = [];
+let editingFuelId = null;
 
 let maintLog = [];
+let editingMaintId = null;
 
 let trackers = [];
 let selectedTrackerId = null;
@@ -1496,7 +1502,6 @@ let reviews = [];
 let socialPosts = [];
 let editingCustomerId = null;
 let expandedCustomerId = null;
-let editingExpenseId = null;
 
 const DEFAULT_ASSET_OPTIONS = ['Jet Ski 1', 'Jet Ski 2', 'Boat', 'Trailer'];
 
@@ -1627,6 +1632,21 @@ function moneyLabel(value) {
     minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
     maximumFractionDigits: 2
   })}`;
+}
+function ensureEntryIds(list = []) {
+  let changed = false;
+  let maxId = list.reduce((max, entry) => {
+    const value = Number(entry?.id || 0);
+    return Number.isFinite(value) && value > max ? value : max;
+  }, 0);
+  list.forEach((entry) => {
+    const value = Number(entry?.id || 0);
+    if (Number.isFinite(value) && value > 0) return;
+    maxId += 1;
+    entry.id = maxId;
+    changed = true;
+  });
+  return changed;
 }
 function dateValue(value) {
   if (!value || value === 'N/A' || value === 'TBD') return null;
@@ -2836,6 +2856,74 @@ function openExpenseModal(expenseId = null) {
     document.getElementById('expense-save-button').textContent = 'Save Changes';
   }
   openModal('expense-modal');
+}
+
+function resetFuelForm() {
+  editingFuelId = null;
+  document.getElementById('f-craft').value = knownAssetOptions()[0] || DEFAULT_ASSET_OPTIONS[0];
+  document.getElementById('f-date').value = today();
+  document.getElementById('f-gallons').value = '';
+  document.getElementById('f-ppg').value = '3.85';
+  document.getElementById('f-hours').value = '';
+  document.getElementById('f-ref').value = '';
+  document.getElementById('fuel-modal-title').textContent = 'Log Fuel';
+  document.getElementById('fuel-save-button').textContent = 'Save Entry';
+}
+
+function openFuelModal(fuelId = null) {
+  syncAssetSelectors();
+  resetFuelForm();
+  if (fuelId !== null) {
+    const entry = fuelLog.find((item) => Number(item.id) === Number(fuelId));
+    if (!entry) {
+      showToast('⚠️ Fuel entry not found');
+      return;
+    }
+    editingFuelId = Number(entry.id);
+    document.getElementById('f-craft').value = entry.craft || '';
+    document.getElementById('f-date').value = inputDateValue(entry.date) || today();
+    document.getElementById('f-gallons').value = String(Number(entry.gallons || 0) || '');
+    document.getElementById('f-ppg').value = String(Number(entry.ppg || 0) || '');
+    document.getElementById('f-hours').value = String(Number(entry.hours || 0) || '');
+    document.getElementById('f-ref').value = entry.ref || '';
+    document.getElementById('fuel-modal-title').textContent = 'Edit Fuel Entry';
+    document.getElementById('fuel-save-button').textContent = 'Save Changes';
+  }
+  openModal('fuel-modal');
+}
+
+function resetMaintForm() {
+  editingMaintId = null;
+  document.getElementById('m-craft').value = knownAssetOptions()[0] || DEFAULT_ASSET_OPTIONS[0];
+  document.getElementById('m-type').value = 'Oil change';
+  document.getElementById('m-date').value = today();
+  document.getElementById('m-hours').value = '';
+  document.getElementById('m-cost').value = '';
+  document.getElementById('m-notes').value = '';
+  document.getElementById('maint-modal-title').textContent = 'Log Service';
+  document.getElementById('maint-save-button').textContent = 'Save Service Log';
+}
+
+function openMaintModal(maintId = null) {
+  syncAssetSelectors();
+  resetMaintForm();
+  if (maintId !== null) {
+    const entry = maintLog.find((item) => Number(item.id) === Number(maintId));
+    if (!entry) {
+      showToast('⚠️ Service record not found');
+      return;
+    }
+    editingMaintId = Number(entry.id);
+    document.getElementById('m-craft').value = entry.craft || '';
+    document.getElementById('m-type').value = entry.type || 'Oil change';
+    document.getElementById('m-date').value = inputDateValue(entry.date) || today();
+    document.getElementById('m-hours').value = String(Number(entry.hours || 0) || '');
+    document.getElementById('m-cost').value = String(Number(entry.cost || 0) || '');
+    document.getElementById('m-notes').value = entry.notes || '';
+    document.getElementById('maint-modal-title').textContent = 'Edit Service';
+    document.getElementById('maint-save-button').textContent = 'Save Changes';
+  }
+  openModal('maint-modal');
 }
 
 // ── TOAST ──
@@ -4449,27 +4537,99 @@ function renderSocialQueue() {
 
 // ── FUEL ──
 function renderFuel() {
+  if (ensureEntryIds(fuelLog)) saveData({silent:true}).catch((error) => console.error('Fuel id sync failed:', error));
   syncAssetSelectors();
-  document.getElementById('fuel-log').innerHTML = fuelLog.map(f => {
-    const cost = (f.gallons * f.ppg).toFixed(2);
-    const cph = f.hours>0 ? (cost/f.hours).toFixed(2) : '–';
+  const monthFuel = fuelLog.filter((entry) => isSameMonth(dateValue(entry.date)));
+  const monthCost = monthFuel.reduce((sum, entry) => sum + (Number(entry.gallons || 0) * Number(entry.ppg || 0)), 0);
+  const monthHours = monthFuel.reduce((sum, entry) => sum + Number(entry.hours || 0), 0);
+  const costPerHour = monthHours > 0 ? monthCost / monthHours : 0;
+  document.getElementById('fuel-kpi-month').textContent = `$${monthCost.toFixed(2)}`;
+  document.getElementById('fuel-kpi-month-meta').textContent = `${monthFuel.length} fuel entr${monthFuel.length === 1 ? 'y' : 'ies'} this month`;
+  document.getElementById('fuel-kpi-rate').textContent = monthHours > 0 ? `$${costPerHour.toFixed(2)}` : '$0.00';
+  document.getElementById('fuel-kpi-rate-meta').textContent = monthHours > 0 ? `${monthHours.toFixed(1)} rental hours logged this month` : 'No rental hours logged yet';
+  document.getElementById('fuel-kpi-hours').textContent = monthHours.toFixed(1);
+  document.getElementById('fuel-kpi-hours-meta').textContent = 'This month';
+  document.getElementById('fuel-log').innerHTML = sortNewestFirst(fuelLog, (entry) => entry.date).map(f => {
+    const cost = (Number(f.gallons || 0) * Number(f.ppg || 0)).toFixed(2);
+    const cph = Number(f.hours || 0) > 0 ? (Number(cost)/Number(f.hours)).toFixed(2) : '–';
     return `<div class="fuel-entry">
       <span style="font-size:1.3rem;">⛽</span>
-      <div style="flex:1;"><div class="fuel-craft">${f.craft}</div><div class="fuel-meta">${f.date} · ${f.gallons} gal @ $${f.ppg} · ${f.hours}hrs · Ref: ${f.ref}</div></div>
-      <div style="text-align:right;"><div class="fuel-cost">$${cost}</div><div style="font-size:0.72rem;color:var(--muted);">$${cph}/hr</div></div>
+      <div style="flex:1;"><div class="fuel-craft">${escapeHtml(f.craft)}</div><div class="fuel-meta">${escapeHtml(formatShortDate(f.date))} · ${escapeHtml(String(f.gallons))} gal @ $${escapeHtml(String(f.ppg))} · ${escapeHtml(String(f.hours))}hrs · Ref: ${escapeHtml(f.ref || '—')}</div></div>
+      <div style="text-align:right;">
+        <div class="fuel-cost">$${cost}</div>
+        <div style="font-size:0.72rem;color:var(--muted);">$${cph}/hr</div>
+        <div class="fuel-entry-actions" style="margin-top:0.55rem;justify-content:flex-end;">
+          <button class="btn btn-ghost btn-sm" onclick="openFuelModal(${Number(f.id)})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteFuelEntry(${Number(f.id)})">Delete</button>
+        </div>
+      </div>
     </div>`;
-  }).join('');
+  }).join('') || '<div class="empty"><div class="icon">⛽</div><p>No fuel entries logged yet.</p></div>';
 }
 
-function saveFuel() {
-  const g=parseFloat(document.getElementById('f-gallons').value)||0;
-  const p=parseFloat(document.getElementById('f-ppg').value)||3.89;
-  fuelLog.unshift({craft:document.getElementById('f-craft').value,date:document.getElementById('f-date').value||today(),gallons:g,ppg:p,hours:parseFloat(document.getElementById('f-hours').value)||0,ref:document.getElementById('f-ref').value||'–'});
-  saveData(); closeModal('fuel-modal'); showToast('⛽ Fuel entry saved'); syncAssetSelectors(); renderFuel(); renderExpenses(); renderDashboardMetrics(); renderMaint();
+async function saveFuel() {
+  const craft = document.getElementById('f-craft').value.trim();
+  const gallons = parseFloat(document.getElementById('f-gallons').value) || 0;
+  const ppg = parseFloat(document.getElementById('f-ppg').value) || 3.85;
+  if (!craft || !gallons) {
+    showToast('⚠️ Add equipment and gallons');
+    return;
+  }
+  const payload = {
+    craft,
+    date: document.getElementById('f-date').value || today(),
+    gallons,
+    ppg,
+    hours: parseFloat(document.getElementById('f-hours').value) || 0,
+    ref: document.getElementById('f-ref').value.trim() || '—'
+  };
+  const isEditingFuel = Boolean(editingFuelId);
+  if (editingFuelId) {
+    const entry = fuelLog.find((item) => Number(item.id) === Number(editingFuelId));
+    if (!entry) {
+      showToast('⚠️ Fuel entry not found');
+      return;
+    }
+    Object.assign(entry, payload);
+  } else {
+    fuelLog.unshift({id: nextId(fuelLog), ...payload});
+  }
+  await saveData();
+  closeModal('fuel-modal');
+  resetFuelForm();
+  syncAssetSelectors();
+  renderFuel();
+  renderExpenses();
+  renderDashboardMetrics();
+  renderMaint();
+  showToast(isEditingFuel ? '⛽ Fuel entry updated' : '⛽ Fuel entry saved');
+}
+
+async function deleteFuelEntry(fuelId) {
+  const entry = fuelLog.find((item) => Number(item.id) === Number(fuelId));
+  if (!entry) {
+    showToast('⚠️ Fuel entry not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete fuel entry for ${entry.craft} on ${formatShortDate(entry.date)}?`);
+  if (!confirmed) return;
+  fuelLog = fuelLog.filter((item) => Number(item.id) !== Number(fuelId));
+  if (editingFuelId && Number(editingFuelId) === Number(fuelId)) {
+    closeModal('fuel-modal');
+    resetFuelForm();
+  }
+  await saveData();
+  syncAssetSelectors();
+  renderFuel();
+  renderExpenses();
+  renderDashboardMetrics();
+  renderMaint();
+  showToast('🗑️ Fuel entry removed');
 }
 
 // ── MAINTENANCE ──
 function renderMaint() {
+  if (ensureEntryIds(maintLog)) saveData({silent:true}).catch((error) => console.error('Maint id sync failed:', error));
   syncAssetSelectors();
   document.getElementById('maint-grid').innerHTML = equipmentSummaries().map(e => {
     return `<div class="maint-card">
@@ -4485,12 +4645,59 @@ function renderMaint() {
       </div>
     </div>`;
   }).join('');
-  document.getElementById('maint-log').innerHTML = maintLog.map(m=>`<tr><td>${m.craft}</td><td>${m.type}</td><td>${m.date}</td><td>${m.hours} hrs</td><td style="color:var(--amber);">$${m.cost}</td><td style="color:var(--muted);">${m.notes}</td></tr>`).join('');
+  document.getElementById('maint-log').innerHTML = sortNewestFirst(maintLog, (entry) => entry.date).map(m=>`<tr><td>${escapeHtml(m.craft)}</td><td>${escapeHtml(m.type)}</td><td>${escapeHtml(formatShortDate(m.date))}</td><td>${escapeHtml(String(m.hours))} hrs</td><td style="color:var(--amber);">${moneyLabel(m.cost || 0)}</td><td style="color:var(--muted);">${escapeHtml(m.notes || '—')}</td><td><div style="display:flex;gap:0.45rem;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openMaintModal(${Number(m.id)})">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteMaintEntry(${Number(m.id)})">Delete</button></div></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>No service history logged yet.</p></div></td></tr>';
 }
 
-function saveMaint() {
-  maintLog.unshift({craft:document.getElementById('m-craft').value,type:document.getElementById('m-type').value,date:document.getElementById('m-date').value||today(),hours:parseInt(document.getElementById('m-hours').value)||0,cost:parseInt(document.getElementById('m-cost').value)||0,notes:document.getElementById('m-notes').value});
-  saveData(); closeModal('maint-modal'); showToast('🔧 Service logged'); syncAssetSelectors(); renderMaint();
+async function saveMaint() {
+  const craft = document.getElementById('m-craft').value.trim();
+  if (!craft) {
+    showToast('⚠️ Add equipment name');
+    return;
+  }
+  const payload = {
+    craft,
+    type: document.getElementById('m-type').value,
+    date: document.getElementById('m-date').value || today(),
+    hours: parseFloat(document.getElementById('m-hours').value) || 0,
+    cost: parseFloat(document.getElementById('m-cost').value) || 0,
+    notes: document.getElementById('m-notes').value.trim()
+  };
+  const isEditingMaint = Boolean(editingMaintId);
+  if (editingMaintId) {
+    const entry = maintLog.find((item) => Number(item.id) === Number(editingMaintId));
+    if (!entry) {
+      showToast('⚠️ Service record not found');
+      return;
+    }
+    Object.assign(entry, payload);
+  } else {
+    maintLog.unshift({id: nextId(maintLog), ...payload});
+  }
+  await saveData();
+  closeModal('maint-modal');
+  resetMaintForm();
+  syncAssetSelectors();
+  renderMaint();
+  showToast(isEditingMaint ? '🔧 Service updated' : '🔧 Service logged');
+}
+
+async function deleteMaintEntry(maintId) {
+  const entry = maintLog.find((item) => Number(item.id) === Number(maintId));
+  if (!entry) {
+    showToast('⚠️ Service record not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete ${entry.type} for ${entry.craft} on ${formatShortDate(entry.date)}?`);
+  if (!confirmed) return;
+  maintLog = maintLog.filter((item) => Number(item.id) !== Number(maintId));
+  if (editingMaintId && Number(editingMaintId) === Number(maintId)) {
+    closeModal('maint-modal');
+    resetMaintForm();
+  }
+  await saveData();
+  syncAssetSelectors();
+  renderMaint();
+  showToast('🗑️ Service entry removed');
 }
 
 // ── REMINDERS ──
@@ -4692,21 +4899,21 @@ function knownAssetOptions() {
     seen.add(key);
     ordered.push(label);
   };
-  DEFAULT_ASSET_OPTIONS.forEach(addOption);
   fuelLog.forEach((entry) => addOption(entry.craft));
   maintLog.forEach((entry) => addOption(entry.craft));
   trackers.forEach((tracker) => addOption(tracker.assignedAsset));
+  if (!ordered.length) DEFAULT_ASSET_OPTIONS.forEach(addOption);
   return ordered;
 }
 
 function syncAssetSelectors() {
   const options = knownAssetOptions();
-  const configs = [
-    { id: 'f-craft', includeBlank: false, blankLabel: '' },
-    { id: 'm-craft', includeBlank: false, blankLabel: '' },
-    { id: 't-asset', includeBlank: true, blankLabel: 'Unassigned / spare' }
-  ];
-  configs.forEach(({ id, includeBlank, blankLabel }) => {
+  ['fuel-asset-options', 'maint-asset-options'].forEach((id) => {
+    const list = document.getElementById(id);
+    if (!list) return;
+    list.innerHTML = options.map((option) => `<option value="${escapeHtml(option)}"></option>`).join('');
+  });
+  [{ id: 't-asset', includeBlank: true, blankLabel: 'Unassigned / spare' }].forEach(({ id, includeBlank, blankLabel }) => {
     const select = document.getElementById(id);
     if (!select) return;
     const previous = select.value;
