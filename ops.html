@@ -1597,6 +1597,9 @@ function normalizePhone(phone) {
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
+function uniqueValues(list = []) {
+  return Array.from(new Set(list.filter(Boolean)));
+}
 function normalizeName(name) {
   return String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
@@ -3151,7 +3154,7 @@ async function saveBooking() {
       lastBooking: 'N/A',
       source: 'Direct',
       tag: '',
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: today()
     };
     customers.push(customer);
   }
@@ -3859,6 +3862,7 @@ function renderDashboardMetrics() {
   const revenue = revenueThisMonth();
   const profit = revenue - fuelSpend - deliverySpend;
   const monthlyBookings = scheduledBookings().filter((booking) => isSameMonth(dateValue(booking.date))).length;
+  const collectedInvoicesThisMonth = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice))).length;
 
   const pendingEl = document.getElementById('dashboard-kpi-pending');
   const pendingMeta = document.getElementById('dashboard-kpi-pending-meta');
@@ -3872,7 +3876,7 @@ function renderDashboardMetrics() {
   if (pendingEl) pendingEl.textContent = pendingDeposits.toLocaleString();
   if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} bookings still need deposit follow-up` : 'All open bookings have deposit coverage';
   if (revenueEl) revenueEl.textContent = `$${Math.round(revenue).toLocaleString()}`;
-  if (revenueMeta) revenueMeta.textContent = invoices.length ? 'Invoice payments collected this month' : 'Confirmed, completed, or paid bookings this month';
+  if (revenueMeta) revenueMeta.textContent = collectedInvoicesThisMonth ? 'Invoice payments collected this month' : 'Paid bookings recognized this month';
   if (profitEl) profitEl.textContent = `$${Math.round(profit).toLocaleString()}`;
   if (profitMeta) profitMeta.textContent = `$${Math.round(fuelSpend).toLocaleString()} fuel + $${Math.round(deliverySpend).toLocaleString()} delivery`;
   if (bookingsEl) bookingsEl.textContent = monthlyBookings.toLocaleString();
@@ -4230,6 +4234,15 @@ async function deleteCustomer(customerId) {
   }
   const confirmed = window.confirm(`Delete ${customer.name} from the CRM? Existing bookings and invoices will stay in place.`);
   if (!confirmed) return;
+  bookings.forEach((booking) => {
+    if (Number(booking.customerId || 0) === Number(customerId)) booking.customerId = null;
+  });
+  invoices.forEach((invoice) => {
+    if (Number(invoice.customerId || 0) === Number(customerId)) invoice.customerId = null;
+  });
+  communicationsLog.forEach((entry) => {
+    if (Number(entry.customerId || 0) === Number(customerId)) entry.customerId = null;
+  });
   customers = customers.filter((item) => Number(item.id) !== Number(customerId));
   if (editingCustomerId && Number(editingCustomerId) === Number(customerId)) {
     closeModal('customer-modal');
@@ -4352,8 +4365,8 @@ function renderCommunications() {
   `).join('') : '<tr><td colspan="4"><div class="empty"><div class="icon">💬</div><p>No communications logged yet.</p></div></td></tr>';
 }
 function renderMassEmailDraft() {
-  const emails = customers.map((customer) => normalizeEmail(customer.email)).filter(Boolean);
-  const phones = customers.map((customer) => normalizePhone(customer.phone)).filter(Boolean);
+  const emails = uniqueValues(customers.map((customer) => normalizeEmail(customer.email)));
+  const phones = uniqueValues(customers.map((customer) => normalizePhone(customer.phone)));
   const repeatCount = customers.filter((customer) => ['repeat', 'vip'].includes(customer.tag)).length;
   document.getElementById('mass-email-count').textContent = emails.length.toLocaleString();
   document.getElementById('mass-text-count').textContent = phones.length.toLocaleString();
@@ -4459,7 +4472,7 @@ async function sendDirectMessage(channel) {
   }
 }
 async function sendMassEmail() {
-  const bcc = customers.map((customer) => normalizeEmail(customer.email)).filter(Boolean);
+  const bcc = uniqueValues(customers.map((customer) => normalizeEmail(customer.email)));
   const subject = document.getElementById('mass-email-subject')?.value.trim() || '';
   const body = document.getElementById('mass-email-body')?.value.trim() || '';
   if (!integrations.emailConfigured) {

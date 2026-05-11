@@ -421,6 +421,13 @@ function formatDateLabel(value = '') {
   });
 }
 
+function todayLocalIso() {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function normalizePhoneKey(value = '') {
   return String(value).replace(/\D/g, '');
 }
@@ -610,7 +617,7 @@ function applyCustomerPrefill(customer) {
     if (!qs('date-of-birth').value) qs('date-of-birth').value = customer.dateOfBirth || '';
     if (!qs('waiver-initials').value.trim()) qs('waiver-initials').value = customer.waiverInitials || '';
     if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
-    if (!qs('signature-date').value) qs('signature-date').value = new Date().toISOString().slice(0, 10);
+    if (!qs('signature-date').value) qs('signature-date').value = todayLocalIso();
   }
 
   showMatchedCustomer(customer);
@@ -846,7 +853,7 @@ qs('name').addEventListener('blur', () => {
   element.addEventListener('input', updateContactLinks);
 });
 
-qs('signature-date').value = new Date().toISOString().slice(0, 10);
+qs('signature-date').value = todayLocalIso();
 
 (async function init() {
   const params = new URLSearchParams(window.location.search);
