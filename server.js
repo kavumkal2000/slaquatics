@@ -1319,12 +1319,13 @@ async function sendBookingRequestCustomerEmail(state, booking, now = new Date().
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
     return { sent: false, reason: 'email-not-configured' };
   }
+  const bookingKey = String(booking.publicToken || booking.paymentSessionId || booking.createdAt || booking.id || '').trim();
   const result = await sendResendEmail({
     to: booking.email,
     subject: bookingRequestSubject(booking),
     text: bookingRequestText(booking),
     html: bookingRequestHtml(booking),
-    idempotencyKey: `shoreline-booking-request-customer-${booking.id}`
+    idempotencyKey: `shoreline-booking-request-customer-${bookingKey}`
   });
   booking.requestConfirmationEmailSentAt = now;
   booking.requestConfirmationEmailId = String(result?.id || '');
@@ -1351,12 +1352,13 @@ async function sendNewBookingOwnerAlert(state, booking, now = new Date().toISOSt
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
     return { sent: false, reason: 'email-not-configured' };
   }
+  const bookingKey = String(booking.publicToken || booking.paymentSessionId || booking.createdAt || booking.id || '').trim();
   const result = await sendResendEmail({
     to: recipients,
     subject: ownerBookingAlertSubject(booking),
     text: ownerBookingAlertText(booking),
     html: ownerBookingAlertHtml(booking),
-    idempotencyKey: `shoreline-booking-alert-owner-${booking.id}`
+    idempotencyKey: `shoreline-booking-alert-owner-${bookingKey}`
   });
   booking.ownerAlertEmailSentAt = now;
   booking.ownerAlertEmailId = String(result?.id || '');
