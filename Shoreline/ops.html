@@ -1802,9 +1802,9 @@ function expensesInPeriod(period = 'month', category = '') {
   });
 }
 function revenueThisMonth() {
-  const paidInvoices = invoices.filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid' && isSameMonth(invoiceDateValue(invoice)));
-  if (paidInvoices.length) {
-    return paidInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+  const collectedInvoices = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice)));
+  if (collectedInvoices.length) {
+    return collectedInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
   }
   return scheduledBookings().reduce((sum, booking) => {
     const bookingDate = dateValue(booking.date);
@@ -1941,7 +1941,11 @@ function dedupeCustomers() {
 function updateLatestDate(currentValue, incomingValue) {
   if (!incomingValue || incomingValue === 'N/A') return currentValue || 'N/A';
   if (!currentValue || currentValue === 'N/A') return incomingValue;
-  return new Date(incomingValue) > new Date(currentValue) ? incomingValue : currentValue;
+  const currentDate = dateValue(currentValue);
+  const incomingDate = dateValue(incomingValue);
+  if (!incomingDate) return currentValue;
+  if (!currentDate) return incomingValue;
+  return incomingDate > currentDate ? incomingValue : currentValue;
 }
 function upsertImportedCustomer(data) {
   const phoneKey = normalizePhone(data.phone);
@@ -2053,20 +2057,41 @@ function detectImportType(headers) {
   return 'unknown';
 }
 function normalizeInvoiceStatus(status) {
-  return String(status || 'unknown').trim().toLowerCase();
+  const normalized = String(status || 'unknown').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (normalized === 'paid in full') return 'paid';
+  if (normalized === 'partial' || normalized === 'partial paid' || normalized === 'partiallypaid') return 'partially paid';
+  if (normalized === 'over due') return 'overdue';
+  if (normalized === 'canceled') return 'cancelled';
+  return normalized;
+}
+function invoiceCollectedAmount(invoice = {}) {
+  const explicitPaid = Number(invoice.paidAmount);
+  if (Number.isFinite(explicitPaid) && explicitPaid > 0) {
+    const total = Number(invoice.total || 0);
+    return total > 0 ? Math.min(explicitPaid, total) : explicitPaid;
+  }
+  return normalizeInvoiceStatus(invoice.status) === 'paid' ? Number(invoice.total || 0) : 0;
+}
+function invoiceOutstandingAmount(invoice = {}) {
+  const total = Number(invoice.total || 0);
+  const collected = invoiceCollectedAmount(invoice);
+  return Math.max(total - collected, 0);
 }
 function invoiceStatusBadge(status) {
   const normalized = normalizeInvoiceStatus(status);
   const className = normalized === 'paid'
     ? 'badge-confirmed'
-    : normalized === 'draft' || normalized === 'sent'
+    : normalized === 'draft' || normalized === 'sent' || normalized === 'partially paid'
       ? 'badge-pending'
       : normalized === 'overdue'
         ? 'badge-noshow'
         : normalized === 'void' || normalized === 'cancelled'
           ? 'badge-cancelled'
           : 'badge-completed';
-  return `<span class="badge ${className}">${escapeHtml(status || 'Unknown')}</span>`;
+  const label = normalized
+    ? normalized.replace(/\b\w/g, (character) => character.toUpperCase())
+    : 'Unknown';
+  return `<span class="badge ${className}">${escapeHtml(label)}</span>`;
 }
 function invoiceLineSummary(invoice) {
   const items = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
@@ -3299,6 +3324,7 @@ function findCustomerForBooking(booking = {}) {
 }
 
 function invoiceMatchesCustomer(customer = {}, invoice = {}) {
+  if (Number(customer.id || 0) > 0 && Number(invoice.customerId || 0) === Number(customer.id || 0)) return true;
   const customerEmail = normalizeEmail(customer.email);
   const invoiceEmail = normalizeEmail(invoice.customerEmail);
   if (customerEmail && invoiceEmail && customerEmail === invoiceEmail) return true;
@@ -3313,8 +3339,7 @@ function invoiceMatchesCustomer(customer = {}, invoice = {}) {
 function paidInvoiceTotalForCustomer(customer = {}) {
   return invoices
     .filter((invoice) => invoiceMatchesCustomer(customer, invoice))
-    .filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid')
-    .reduce((sum, invoice) => sum + Number(invoice.paidAmount || invoice.total || 0), 0);
+    .reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
 }
 
 function syncCustomerRollup(customer) {
@@ -3847,7 +3872,7 @@ function renderDashboardMetrics() {
   if (pendingEl) pendingEl.textContent = pendingDeposits.toLocaleString();
   if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} bookings still need deposit follow-up` : 'All open bookings have deposit coverage';
   if (revenueEl) revenueEl.textContent = `$${Math.round(revenue).toLocaleString()}`;
-  if (revenueMeta) revenueMeta.textContent = invoices.length ? 'Paid invoices collected this month' : 'Confirmed, completed, or paid bookings this month';
+  if (revenueMeta) revenueMeta.textContent = invoices.length ? 'Invoice payments collected this month' : 'Confirmed, completed, or paid bookings this month';
   if (profitEl) profitEl.textContent = `$${Math.round(profit).toLocaleString()}`;
   if (profitMeta) profitMeta.textContent = `$${Math.round(fuelSpend).toLocaleString()} fuel + $${Math.round(deliverySpend).toLocaleString()} delivery`;
   if (bookingsEl) bookingsEl.textContent = monthlyBookings.toLocaleString();
@@ -3856,11 +3881,11 @@ function renderDashboardMetrics() {
 }
 function renderInvoices() {
   const filteredInvoices = sortNewestFirst(filteredInvoicesList(), (invoice) => invoice.issueDate || invoice.dueDate);
-  const paidInvoices = filteredInvoices.filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid');
+  const paidInvoices = filteredInvoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0);
   const openInvoices = filteredInvoices.filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
   const unknownInvoices = filteredInvoices.filter((invoice) => !meaningfulInvoiceCustomer(invoice.customerName, invoice.customerEmail, invoice.customerPhone));
-  const paidTotal = paidInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
-  const openTotal = openInvoices.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+  const paidTotal = paidInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
+  const openTotal = openInvoices.reduce((sum, invoice) => sum + invoiceOutstandingAmount(invoice), 0);
 
   const countEl = document.getElementById('invoice-kpi-count');
   const updatedEl = document.getElementById('invoice-kpi-updated');
@@ -3872,7 +3897,7 @@ function renderInvoices() {
   if (countEl) countEl.textContent = filteredInvoices.length.toLocaleString();
   if (updatedEl) updatedEl.textContent = invoiceImportMeta.importedAt ? `${invoiceImportMeta.recordCount} rows synced` : 'No invoice import yet';
   if (paidEl) paidEl.textContent = `$${paidTotal.toLocaleString()}`;
-  if (paidCountEl) paidCountEl.textContent = `${paidInvoices.length} paid invoices`;
+  if (paidCountEl) paidCountEl.textContent = `${paidInvoices.length} collected invoices`;
   if (openEl) openEl.textContent = `$${openTotal.toLocaleString()}`;
   if (openCountEl) openCountEl.textContent = `${openInvoices.length} open invoices`;
   if (unknownEl) unknownEl.textContent = unknownInvoices.length.toLocaleString();

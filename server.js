@@ -912,6 +912,7 @@ function ensureBookingPublicToken(booking) {
 }
 
 function invoiceMatchesCustomer(customer = {}, invoice = {}) {
+  if (Number(customer.id || 0) > 0 && Number(invoice.customerId || 0) === Number(customer.id || 0)) return true;
   const customerPhone = phoneDigits(customer.phone);
   const invoicePhone = phoneDigits(invoice.customerPhone);
   if (customerPhone && invoicePhone && customerPhone === invoicePhone) return true;
@@ -924,7 +925,21 @@ function invoiceMatchesCustomer(customer = {}, invoice = {}) {
 }
 
 function normalizeInvoiceStatus(status = '') {
-  return String(status || '').trim().toLowerCase();
+  const normalized = String(status || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (normalized === 'paid in full') return 'paid';
+  if (normalized === 'partial' || normalized === 'partial paid' || normalized === 'partiallypaid') return 'partially paid';
+  if (normalized === 'over due') return 'overdue';
+  if (normalized === 'canceled') return 'cancelled';
+  return normalized;
+}
+
+function invoiceCollectedAmount(invoice = {}) {
+  const explicitPaid = Number(invoice.paidAmount);
+  if (Number.isFinite(explicitPaid) && explicitPaid > 0) {
+    const total = Number(invoice.total || 0);
+    return total > 0 ? Math.min(explicitPaid, total) : explicitPaid;
+  }
+  return normalizeInvoiceStatus(invoice.status) === 'paid' ? Number(invoice.total || 0) : 0;
 }
 
 function normalizeBookingStatus(status = '') {
@@ -940,8 +955,7 @@ function updateCustomerRollup(state, customer) {
   ));
   const paidInvoiceTotal = (state.invoices || [])
     .filter((invoice) => invoiceMatchesCustomer(customer, invoice))
-    .filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid')
-    .reduce((sum, invoice) => sum + Number(invoice.paidAmount || invoice.total || 0), 0);
+    .reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
   const bookingSpend = relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
   customer.bookings = relatedBookings.length;
   customer.totalSpent = Math.max(bookingSpend, paidInvoiceTotal);
@@ -1753,9 +1767,9 @@ function bookingQualifiesForUpcomingDigest(booking = {}, todayKey = '', horizonK
 
 function buildOwnerWeeklyDigestReport(state, schedule = ownerWeeklyDigestSchedule()) {
   const integrations = integrationStatus();
-  const paidInvoices = (state.invoices || []).filter((invoice) => normalizeInvoiceStatus(invoice.status) === 'paid');
+  const paidInvoices = (state.invoices || []).filter((invoice) => invoiceCollectedAmount(invoice) > 0);
   const openInvoices = (state.invoices || []).filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
-  const paidInvoiceRevenue = paidInvoices.reduce((sum, invoice) => sum + Number(invoice.paidAmount || invoice.total || 0), 0);
+  const paidInvoiceRevenue = paidInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
   const paidDepositsCollected = (state.bookings || [])
     .filter((booking) => booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid')
     .reduce((sum, booking) => sum + Number(booking.amountDueToday || ((booking.depositAmount || (BOOKING_DEPOSIT_CENTS / 100)) + (booking.processingFeeAmount || (PROCESSING_FEE_CENTS / 100))) || 0), 0);
