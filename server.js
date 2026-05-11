@@ -986,6 +986,153 @@ function invoiceCollectedAmount(invoice = {}) {
   return normalizeInvoiceStatus(invoice.status) === 'paid' ? Number(invoice.total || 0) : 0;
 }
 
+function invoiceDurationText(duration = 0) {
+  const hours = Number(duration || 0);
+  if (!hours) return '';
+  return hours === 8 ? 'Full Day (8 hours)' : `${hours} hour${hours === 1 ? '' : 's'}`;
+}
+
+function bookingInvoiceDate(booking = {}, fallback = new Date().toISOString()) {
+  const source = String(
+    booking.paymentCompletedAt ||
+    booking.updatedAt ||
+    booking.createdAt ||
+    fallback ||
+    ''
+  ).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(source)) return source;
+  if (source.includes('T')) return source.slice(0, 10);
+  return fallback.slice(0, 10);
+}
+
+function createWebsiteInvoiceNumber(booking = {}, fallback = new Date().toISOString()) {
+  const datePart = bookingInvoiceDate(booking, fallback).replace(/-/g, '') || '00000000';
+  const bookingPart = String(Number(booking.id || 0)).padStart(3, '0');
+  return `SLA-WEB-${datePart}-${bookingPart}`;
+}
+
+function findInvoiceForBooking(state, booking = {}) {
+  const bookingId = Number(booking.id || 0);
+  const bookingToken = String(booking.publicToken || '').trim();
+  const paymentSessionId = String(booking.paymentSessionId || '').trim();
+  return (state.invoices || []).find((invoice) => (
+    (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
+    (bookingToken && String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken) ||
+    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId)
+  )) || null;
+}
+
+function invoiceStatusForBooking(booking = {}) {
+  const bookingStatus = normalizeBookingStatus(booking.status);
+  if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
+  const total = Number(booking.total || 0) + Number(booking.processingFeeAmount || 0);
+  const collected = booking.paymentStatus === 'paid'
+    ? Number(booking.amountDueToday || 0)
+    : 0;
+  if (collected >= total && total > 0) return 'paid';
+  if (collected > 0) return 'partially paid';
+  if (bookingStatus === 'draft') return 'draft';
+  if (booking.paymentStatus === 'pending' || booking.paymentSessionId) return 'sent';
+  return 'open';
+}
+
+function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString()) {
+  if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft') return null;
+  const existingInvoice = findInvoiceForBooking(state, booking);
+  const issueDate = bookingInvoiceDate(booking, now);
+  const dueDate = String(booking.date || issueDate).trim() || issueDate;
+  const rentalTotal = Number(booking.total || 0);
+  const processingFee = Number(booking.processingFeeAmount || 0);
+  const total = Number((rentalTotal + processingFee).toFixed(2));
+  const collected = booking.paymentStatus === 'paid'
+    ? Number(booking.amountDueToday || 0)
+    : 0;
+  const invoice = existingInvoice || {
+    id: nextId(state.invoices),
+    invoiceNumber: createWebsiteInvoiceNumber(booking, now),
+    recurring: false,
+    lineItems: [],
+    rawFields: {},
+    importSource: 'website',
+    liveMode: 'Website Booking',
+    createdAt: now
+  };
+
+  invoice.bookingId = Number(booking.id || 0);
+  invoice.invoiceName = `${booking.craftLabel || CRAFT_LABELS[normalizeCraftKey(booking.craftKey || booking.craft)] || 'Rental'} booking`;
+  invoice.customerId = Number(booking.customerId || 0) || invoice.customerId || 0;
+  invoice.customerName = String(booking.name || invoice.customerName || '').trim();
+  invoice.customerPhone = String(booking.phone || invoice.customerPhone || '').trim();
+  invoice.customerEmail = String(booking.email || invoice.customerEmail || '').trim();
+  invoice.issueDate = issueDate;
+  invoice.dueDate = dueDate;
+  invoice.subTotal = rentalTotal;
+  invoice.discountAmount = 0;
+  invoice.taxAmount = processingFee;
+  invoice.total = total;
+  invoice.paidAmount = Number(collected.toFixed(2));
+  invoice.status = invoiceStatusForBooking(booking);
+  invoice.notes = String(booking.notes || invoice.notes || '').trim();
+  invoice.craftKey = String(booking.craftKey || normalizeCraftKey(booking.craft || '') || '').trim();
+  invoice.durationHours = Number(booking.duration || 0);
+  invoice.durationLabel = invoiceDurationText(booking.duration);
+  invoice.lineItems = [
+    {
+      name: `${booking.craftLabel || 'Rental'} • ${invoiceDurationText(booking.duration) || 'Custom duration'}`,
+      description: `Booking for ${booking.date || 'TBD'} at ${formatTimeLabel(booking.time)}`,
+      amount: rentalTotal,
+      quantity: 1,
+      currency: 'USD'
+    },
+    ...(processingFee > 0 ? [{
+      name: 'Processing Fee',
+      description: 'Secure checkout and card processing fee',
+      amount: processingFee,
+      quantity: 1,
+      currency: 'USD'
+    }] : [])
+  ];
+  invoice.rawFields = {
+    ...(invoice.rawFields || {}),
+    source: 'website booking',
+    bookingId: String(booking.id || ''),
+    bookingPublicToken: String(booking.publicToken || ''),
+    paymentSessionId: String(booking.paymentSessionId || ''),
+    paymentStatus: String(booking.paymentStatus || ''),
+    bookingStatus: String(booking.status || ''),
+    rentalPackage: String(booking.craftKey || ''),
+    rentalPackageLabel: String(booking.craftLabel || ''),
+    rentalDurationHours: String(booking.duration || ''),
+    rentalDurationLabel: invoiceDurationText(booking.duration),
+    depositAmount: String(Number(booking.depositAmount || 0).toFixed(2)),
+    processingFeeAmount: String(processingFee.toFixed(2)),
+    amountDueToday: String(Number(booking.amountDueToday || 0).toFixed(2)),
+    bookingDate: String(booking.date || ''),
+    bookingTime: String(booking.time || '')
+  };
+
+  if (!existingInvoice) {
+    state.invoices.push(invoice);
+  }
+  return invoice;
+}
+
+function syncWebsiteBookingInvoices(state, now = new Date().toISOString()) {
+  let changed = false;
+  (state.bookings || []).forEach((booking) => {
+    if (!booking || normalizeBookingStatus(booking.status) === 'draft') return;
+    const existingInvoice = findInvoiceForBooking(state, booking);
+    const beforeCount = (state.invoices || []).length;
+    const beforeSnapshot = existingInvoice ? JSON.stringify(existingInvoice) : '';
+    const invoice = ensureBookingInvoice(state, booking, now);
+    if (!invoice) return;
+    if (!existingInvoice || beforeCount !== (state.invoices || []).length || JSON.stringify(invoice) !== beforeSnapshot) {
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 function normalizeBookingStatus(status = '') {
   return String(status || '').trim().toLowerCase();
 }
@@ -1570,6 +1717,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     state.bookings.push(booking);
   }
 
+  ensureBookingInvoice(state, booking, now);
   updateCustomerRollup(state, customer);
   return { state, customer, booking, existingCustomer, existingBooking, pricing };
 }
@@ -1663,6 +1811,7 @@ function applyStripeSessionToBooking(state, session = {}, now = new Date().toISO
   booking.deposit = booking.paymentStatus === 'paid';
   booking.paymentCompletedAt = booking.deposit ? now : String(booking.paymentCompletedAt || '');
   booking.updatedAt = now;
+  ensureBookingInvoice(state, booking, now);
   return booking;
 }
 
@@ -2005,6 +2154,9 @@ async function maybeSendOwnerWeeklyDigest({ force = false } = {}) {
 
   const schedule = ownerWeeklyDigestSchedule(new Date());
   const state = await stateStore.read();
+  if (syncWebsiteBookingInvoices(state, schedule.now.toISOString())) {
+    await stateStore.write(state);
+  }
   const lastWeekKey = String(state.ownerWeeklyDigest?.lastWeekKey || '');
   if (!force) {
     if (!schedule.pastSchedule) return { sent: false, reason: 'not-scheduled-yet', weekKey: schedule.weekKey };
@@ -2409,6 +2561,7 @@ async function handleApi(request, response, pathname) {
       const { booking, pricing } = upsertBookingFromPayload(state, payload, now);
 
       if (booking.deposit || booking.paymentStatus === 'paid') {
+        ensureBookingInvoice(state, booking, now);
         await stateStore.write(state);
         sendPublicJson(response, request, 200, {
           ok: true,
@@ -2512,6 +2665,7 @@ async function handleApi(request, response, pathname) {
       booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
       booking.amountDueToday = Number(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2));
       booking.updatedAt = now;
+      ensureBookingInvoice(state, booking, now);
       await stateStore.write(state);
 
       sendPublicJson(response, request, 200, {
@@ -2603,9 +2757,10 @@ async function handleApi(request, response, pathname) {
       if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
         const state = await stateStore.read();
         const session = event.data.object;
-        const booking = applyStripeSessionToBooking(state, session, new Date().toISOString());
+        const now = new Date().toISOString();
+        const booking = applyStripeSessionToBooking(state, session, now);
         if (booking?.paymentStatus === 'paid' && booking.deposit) {
-          await sendBookingConfirmationEmail(state, booking, session, new Date().toISOString());
+          await sendBookingConfirmationEmail(state, booking, session, now);
         }
         if (booking) {
           await stateStore.write(state);
@@ -2620,6 +2775,7 @@ async function handleApi(request, response, pathname) {
           booking.paymentStatus = 'expired';
           booking.deposit = false;
           booking.updatedAt = new Date().toISOString();
+          ensureBookingInvoice(state, booking, booking.updatedAt);
           await stateStore.write(state);
         }
       }
@@ -2648,6 +2804,9 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/state' && request.method === 'GET') {
     const state = await stateStore.read();
+    if (syncWebsiteBookingInvoices(state)) {
+      await stateStore.write(state);
+    }
     sendJson(response, 200, { state, storage: stateStore.kind });
     return true;
   }
