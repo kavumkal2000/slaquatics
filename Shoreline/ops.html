@@ -1066,7 +1066,21 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
           </select>
         </div>
         <div class="form-group"><label>Collected amount</label><input type="number" id="i-paid-amount" min="0" step="0.01" placeholder="0.00" oninput="updateInvoicePaymentHelper()"></div>
-        <div class="form-group"><label>Payment method</label><input type="text" id="i-payment-method" placeholder="Cash, card, Zelle, Apple Cash"></div>
+        <div class="form-group"><label>Payment method</label>
+          <select id="i-payment-method" onchange="toggleInvoicePaymentMethodCustom()">
+            <option value="">Select method</option>
+            <option value="Cash">Cash</option>
+            <option value="Zelle">Zelle</option>
+            <option value="Card">Card</option>
+            <option value="Apple Cash">Apple Cash</option>
+            <option value="Cash App">Cash App</option>
+            <option value="Venmo">Venmo</option>
+            <option value="Check">Check</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group" id="invoice-payment-method-custom-wrap" style="display:none;"><label>Custom payment method</label><input type="text" id="i-payment-method-custom" placeholder="Write the payment method"></div>
         <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Payment tracker</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-payment-helper">Collected $0.00 • Remaining $0.00. Mark the invoice paid when you collect the full balance.</div></div>
         <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="i-notes" placeholder="Walk-up booking notes, payment method, or anything staff should know."></textarea></div>
       </div>
@@ -2395,6 +2409,43 @@ function updateInvoiceRentalHelper(message = 'Pick a rental package and duration
   const helper = document.getElementById('invoice-rental-helper');
   if (helper) helper.textContent = message;
 }
+function toggleInvoicePaymentMethodCustom() {
+  const select = document.getElementById('i-payment-method');
+  const customWrap = document.getElementById('invoice-payment-method-custom-wrap');
+  const customInput = document.getElementById('i-payment-method-custom');
+  if (!select || !customWrap || !customInput) return;
+  const showCustom = select.value === 'Other';
+  customWrap.style.display = showCustom ? '' : 'none';
+  if (!showCustom) customInput.value = '';
+}
+function setInvoicePaymentMethod(method = '') {
+  const select = document.getElementById('i-payment-method');
+  const customInput = document.getElementById('i-payment-method-custom');
+  if (!select || !customInput) return;
+  const value = String(method || '').trim();
+  const knownValues = Array.from(select.options).map((option) => option.value);
+  if (!value) {
+    select.value = '';
+    customInput.value = '';
+    toggleInvoicePaymentMethodCustom();
+    return;
+  }
+  if (knownValues.includes(value) && value !== 'Other') {
+    select.value = value;
+    customInput.value = '';
+  } else {
+    select.value = 'Other';
+    customInput.value = value;
+  }
+  toggleInvoicePaymentMethodCustom();
+}
+function getInvoicePaymentMethod() {
+  const select = document.getElementById('i-payment-method');
+  const customInput = document.getElementById('i-payment-method-custom');
+  if (!select) return '';
+  if (select.value === 'Other') return customInput?.value.trim() || '';
+  return String(select.value || '').trim();
+}
 function invoiceStatusSelectValue(status = '') {
   const normalized = normalizeInvoiceStatus(status);
   if (normalized === 'paid') return 'Paid';
@@ -2473,7 +2524,7 @@ function resetInvoiceForm() {
   document.getElementById('i-total').value = '';
   document.getElementById('i-status').value = 'Paid';
   document.getElementById('i-paid-amount').value = '';
-  document.getElementById('i-payment-method').value = '';
+  setInvoicePaymentMethod('');
   document.getElementById('i-notes').value = '';
   updateInvoiceRentalHelper();
   updateInvoicePaymentHelper();
@@ -2503,7 +2554,7 @@ function openInvoiceModal(invoiceId = null) {
     document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
     document.getElementById('i-status').value = invoiceStatusSelectValue(invoice.status);
     document.getElementById('i-paid-amount').value = invoiceCollectedAmount(invoice) ? String(invoiceCollectedAmount(invoice)) : '';
-    document.getElementById('i-payment-method').value = invoice.paymentMethod || invoice.rawFields?.paymentMethod || '';
+    setInvoicePaymentMethod(invoice.paymentMethod || invoice.rawFields?.paymentMethod || '');
     document.getElementById('i-notes').value = invoice.notes || '';
     if (document.getElementById('i-package').value && document.getElementById('i-duration').value) {
       updateInvoiceRentalHelper(`${CRAFT_NAMES[document.getElementById('i-package').value] || 'Rental'} • ${invoiceDurationText(document.getElementById('i-duration').value)} loaded from this invoice.`);
@@ -2540,7 +2591,7 @@ async function saveInvoice() {
   const phone = document.getElementById('i-customer-phone').value.trim();
   const email = document.getElementById('i-customer-email').value.trim();
   const explicitPaidAmount = Math.max(0, Number(document.getElementById('i-paid-amount').value || 0));
-  const paymentMethod = document.getElementById('i-payment-method').value.trim();
+  const paymentMethod = getInvoicePaymentMethod();
   const notes = document.getElementById('i-notes').value.trim();
   let paidAmount = Math.min(explicitPaidAmount, total);
   let finalStatus = invoiceStatusSelectValue(status);
