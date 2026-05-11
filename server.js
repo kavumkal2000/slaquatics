@@ -878,10 +878,17 @@ function applyWaiverToCustomer(customer, waiver = {}, fallbackDate = '', now = n
 function findMatchingCustomer(state, payload = {}) {
   const phoneKey = phoneDigits(payload.phone);
   const emailKey = normalizeEmail(payload.email);
-  return state.customers.find((customer) => (
+  const directMatch = state.customers.find((customer) => (
     (phoneKey && phoneDigits(customer.phone) === phoneKey) ||
     (emailKey && normalizeEmail(customer.email) === emailKey)
-  )) || null;
+  ));
+  if (directMatch) return directMatch;
+  const nameKey = normalizeName(
+    payload.name || [payload.firstName, payload.lastName].filter(Boolean).join(' ')
+  );
+  if (!nameKey) return null;
+  const nameMatches = state.customers.filter((customer) => normalizeName(customer.name) === nameKey);
+  return nameMatches.length === 1 ? nameMatches[0] : null;
 }
 
 function findMatchingBooking(state, payload = {}) {

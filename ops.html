@@ -1873,7 +1873,7 @@ function mergeCustomerRecord(target, incoming = {}) {
   target.crmTags = incoming.crmTags || target.crmTags || '';
   target.company = incoming.company || target.company || '';
   target.createdAt = incoming.createdAt || target.createdAt || '';
-  target.lastActivity = incoming.lastActivity || target.lastActivity || '';
+  target.lastActivity = updateLatestDate(target.lastActivity, incoming.lastActivity);
   target.crmNotes = incoming.crmNotes || target.crmNotes || '';
   target.waiverOnFile = incoming.waiverOnFile ?? target.waiverOnFile ?? false;
   target.waiverSignedAt = incoming.waiverSignedAt || target.waiverSignedAt || '';
@@ -3109,13 +3109,14 @@ async function saveBooking() {
   }
 
   const previousSnapshot = existingBooking ? {...existingBooking} : null;
+  const nowIso = new Date().toISOString();
   const bookingRecord = existingBooking || {
     id: nextId(bookings),
     status: 'pending',
     deposit: false,
     paymentStatus: 'unpaid',
     source: 'Ops Manual',
-    createdAt: new Date().toISOString()
+    createdAt: nowIso
   };
 
   bookingRecord.name = name;
@@ -3129,7 +3130,7 @@ async function saveBooking() {
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
   bookingRecord.notes = document.getElementById('b-notes').value.trim();
   bookingRecord.total = bookingValue;
-  bookingRecord.updatedAt = new Date().toISOString();
+  bookingRecord.updatedAt = nowIso;
 
   if (!existingBooking) bookings.unshift(bookingRecord);
 
@@ -3143,6 +3144,7 @@ async function saveBooking() {
     customer.phone = bookingRecord.phone || customer.phone;
     customer.email = bookingRecord.email || customer.email;
     customer.source = customer.source || 'Direct';
+    customer.lastActivity = nowIso;
   } else {
     customer = {
       id: nextId(customers),
@@ -3154,7 +3156,8 @@ async function saveBooking() {
       lastBooking: 'N/A',
       source: 'Direct',
       tag: '',
-      createdAt: today()
+      createdAt: today(),
+      lastActivity: nowIso
     };
     customers.push(customer);
   }
@@ -3323,7 +3326,12 @@ function customerMatchesBooking(customer = {}, booking = {}) {
 }
 
 function findCustomerForBooking(booking = {}) {
-  return customers.find((customer) => customerMatchesBooking(customer, booking)) || null;
+  const directMatch = customers.find((customer) => customerMatchesBooking(customer, booking));
+  if (directMatch) return directMatch;
+  const bookingName = normalizeName(booking.name);
+  if (!bookingName) return null;
+  const nameMatches = customers.filter((customer) => normalizeName(customer.name) === bookingName);
+  return nameMatches.length === 1 ? nameMatches[0] : null;
 }
 
 function invoiceMatchesCustomer(customer = {}, invoice = {}) {
@@ -3957,8 +3965,13 @@ function customerIsBest(customer) {
   const tags = `${customer.tag || ''} ${customer.crmTags || ''}`.toLowerCase();
   return totalSpent >= 1000 || bookingsCount >= 2 || tags.includes('vip') || tags.includes('repeat');
 }
+function customerLastTouchValue(customer) {
+  return [customer.createdAt, customer.lastBooking, customer.lastActivity].reduce((latest, value) => (
+    updateLatestDate(latest, value)
+  ), '');
+}
 function customerLastTouchLabel(customer) {
-  const lastTouch = customer.lastActivity || customer.lastBooking || customer.createdAt || '';
+  const lastTouch = customerLastTouchValue(customer);
   if (!lastTouch) return 'No recent activity saved';
   const days = daysSince(lastTouch);
   if (days === 999) return 'No recent activity saved';
@@ -3981,7 +3994,7 @@ function sortCustomersForCRM(list) {
   if (crmSortMode === 'name') {
     return items.sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
   }
-  return sortNewestFirst(items, (customer) => customer.lastActivity || customer.createdAt || customer.lastBooking);
+  return sortNewestFirst(items, (customer) => customerLastTouchValue(customer));
 }
 
 function customerWaiverSignedLabel(customer) {
