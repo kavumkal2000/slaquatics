@@ -949,17 +949,24 @@ function normalizeBookingStatus(status = '') {
 function updateCustomerRollup(state, customer) {
   const phoneKey = phoneDigits(customer.phone);
   const emailKey = normalizeEmail(customer.email);
-  const relatedBookings = state.bookings.filter((booking) => (
-    (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
-    (emailKey && normalizeEmail(booking.email) === emailKey)
-  ));
+  const relatedBookings = state.bookings.filter((booking) => {
+    const status = normalizeBookingStatus(booking.status);
+    if (['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status)) return false;
+    if (Number(customer.id || 0) > 0 && Number(booking.customerId || 0) === Number(customer.id || 0)) return true;
+    return (
+      (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
+      (emailKey && normalizeEmail(booking.email) === emailKey)
+    );
+  });
   const paidInvoiceTotal = (state.invoices || [])
     .filter((invoice) => invoiceMatchesCustomer(customer, invoice))
     .reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
   const bookingSpend = relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
   customer.bookings = relatedBookings.length;
   customer.totalSpent = Math.max(bookingSpend, paidInvoiceTotal);
-  customer.lastBooking = relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), customer.lastBooking || '');
+  customer.lastBooking = relatedBookings.length
+    ? relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), '')
+    : 'N/A';
   if (customer.bookings > 1 && customer.tag !== 'vip') customer.tag = 'repeat';
 }
 
