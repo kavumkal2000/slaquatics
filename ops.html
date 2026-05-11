@@ -1304,6 +1304,9 @@ function snapshotState() {
     invoiceImportMeta
   };
 }
+function cloneReviewRequests(items = reviewRequests) {
+  return items.map((item) => ({...item}));
+}
 function applyState(nextState = {}) {
   if (Array.isArray(nextState.bookings)) bookings = nextState.bookings;
   if (Array.isArray(nextState.customers)) customers = nextState.customers;
@@ -1416,12 +1419,15 @@ async function detectBackendSession() {
 async function saveData(options = {}) {
   dedupeCustomers();
   refreshCustomerRollups();
+  return saveStateSnapshot(snapshotState(), options);
+}
+async function saveStateSnapshot(nextState, options = {}) {
   if (!backendAvailable) return false;
   try {
     await requestJson('/api/ops/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(snapshotState())
+      body: JSON.stringify(nextState)
     });
     return true;
   } catch (error) {
@@ -4557,12 +4563,15 @@ async function logCommunication() {
 
 // ── REVIEWS ──
 function ensureReviewRequestForBooking(booking) {
+  return ensureReviewRequestForBookingInList(booking, reviewRequests);
+}
+function ensureReviewRequestForBookingInList(booking, requestList) {
   if (!booking || normalizeBookingStatusValue(booking.status) !== 'completed') return { request: null, created: false };
-  const existing = reviewRequests.find((request) => request.bookingId === booking.id);
+  const existing = requestList.find((request) => request.bookingId === booking.id);
   if (existing) return { request: existing, created: false };
   if (reviews.some((review) => review.bookingId === booking.id)) return { request: null, created: false };
   const request = {
-    id: nextId(reviewRequests),
+    id: nextId(requestList),
     bookingId: booking.id,
     customerName: booking.name,
     phone: booking.phone,
@@ -4570,25 +4579,60 @@ function ensureReviewRequestForBooking(booking) {
     sentAt: '',
     status: 'pending'
   };
-  reviewRequests.unshift(request);
+  requestList.unshift(request);
   return { request, created: true };
 }
-function ensureReviewRequestsForCompletedBookings() {
+function prepareReviewRequestsForCompletedBookings(baseRequests = reviewRequests) {
+  const requestList = cloneReviewRequests(baseRequests);
   let created = false;
   bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').forEach((booking) => {
-    const result = ensureReviewRequestForBooking(booking);
+    const result = ensureReviewRequestForBookingInList(booking, requestList);
     if (result.created) created = true;
   });
-  return created;
+  return { requestList, created };
 }
 function reviewMessage(name) {
   return `Hey ${firstName(name)}! Thanks again for riding with Shoreline Aquatics. If you had a great time, we'd really appreciate a quick review about your experience on the lake.`;
 }
+let reviewQueueSyncPending = false;
+function syncReviewQueueForCompletedBookings() {
+  if (!backendAvailable || reviewQueueSyncPending) return;
+  const { requestList, created } = prepareReviewRequestsForCompletedBookings();
+  if (!created) return;
+  reviewQueueSyncPending = true;
+  saveStateSnapshot({
+    ...snapshotState(),
+    reviewRequests: requestList
+  }, {silent:true}).then((saved) => {
+    if (!saved) return;
+    reviewRequests = requestList;
+    renderReviewHub({ skipQueueSync: true });
+  }).catch((error) => {
+    console.error('Review queue sync failed:', error);
+  }).finally(() => {
+    reviewQueueSyncPending = false;
+  });
+}
 async function autoSendReviewForBooking(booking) {
   if (!backendAvailable || !integrations.reviewAutomationEnabled || !integrations.reviewLinksConfigured) return false;
-  const { request, created } = ensureReviewRequestForBooking(booking);
+  let request = reviewRequests.find((item) => item.bookingId === booking.id);
+  let created = false;
+  if (!request) {
+    const requestList = cloneReviewRequests(reviewRequests);
+    const prepared = ensureReviewRequestForBookingInList(booking, requestList);
+    request = prepared.request;
+    created = prepared.created;
+    if (created) {
+      const saved = await saveStateSnapshot({
+        ...snapshotState(),
+        reviewRequests: requestList
+      }, {silent:true});
+      if (!saved) return false;
+      reviewRequests = requestList;
+    }
+  }
   if (created) {
-    await saveData({silent:true});
+    renderReviewHub({ skipQueueSync: true });
   }
   if (!request || String(request.status || '').toLowerCase() === 'reviewed' || request.sentAt) return false;
   const canText = Boolean(integrations.smsConfigured && request.phone);
@@ -4659,10 +4703,9 @@ async function toggleReviewResponded(reviewId) {
   if (!(await persistStateChange())) return;
   renderReviewHub();
 }
-function renderReviewHub() {
-  const queueChanged = ensureReviewRequestsForCompletedBookings();
-  if (queueChanged) {
-    saveData({silent:true}).catch((error) => console.error('Review queue sync failed:', error));
+function renderReviewHub(options = {}) {
+  if (!options.skipQueueSync) {
+    syncReviewQueueForCompletedBookings();
   }
   const pending = reviewRequests.filter((request) => String(request.status || '').toLowerCase() !== 'reviewed');
   const completedRentals = bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').length;
