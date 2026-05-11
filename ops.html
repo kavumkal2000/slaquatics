@@ -1054,16 +1054,20 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
           </select>
         </div>
         <div class="form-group"><label>Line item</label><input type="text" id="i-line-item" placeholder="Jet ski rental"></div>
-        <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00"></div>
+        <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00" oninput="updateInvoicePaymentHelper()"></div>
         <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Rental pricing helper</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-rental-helper">Pick a rental package and duration to auto-fill the invoice title, line item, and amount.</div></div>
         <div class="form-group"><label>Status</label>
-          <select id="i-status">
+          <select id="i-status" onchange="updateInvoicePaymentHelper()">
             <option value="Paid">Paid</option>
+            <option value="Partially Paid">Partially Paid</option>
             <option value="Open">Open</option>
             <option value="Draft">Draft</option>
             <option value="Sent">Sent</option>
           </select>
         </div>
+        <div class="form-group"><label>Collected amount</label><input type="number" id="i-paid-amount" min="0" step="0.01" placeholder="0.00" oninput="updateInvoicePaymentHelper()"></div>
+        <div class="form-group"><label>Payment method</label><input type="text" id="i-payment-method" placeholder="Cash, card, Zelle, Apple Cash"></div>
+        <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Payment tracker</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-payment-helper">Collected $0.00 • Remaining $0.00. Mark the invoice paid when you collect the full balance.</div></div>
         <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="i-notes" placeholder="Walk-up booking notes, payment method, or anything staff should know."></textarea></div>
       </div>
     </div>
@@ -2391,6 +2395,26 @@ function updateInvoiceRentalHelper(message = 'Pick a rental package and duration
   const helper = document.getElementById('invoice-rental-helper');
   if (helper) helper.textContent = message;
 }
+function invoiceStatusSelectValue(status = '') {
+  const normalized = normalizeInvoiceStatus(status);
+  if (normalized === 'paid') return 'Paid';
+  if (normalized === 'partially paid') return 'Partially Paid';
+  if (normalized === 'draft') return 'Draft';
+  if (normalized === 'sent') return 'Sent';
+  return 'Open';
+}
+function updateInvoicePaymentHelper(message = '') {
+  const helper = document.getElementById('invoice-payment-helper');
+  if (!helper) return;
+  const total = Math.max(0, Number(document.getElementById('i-total')?.value || 0));
+  const rawPaid = Math.max(0, Number(document.getElementById('i-paid-amount')?.value || 0));
+  const normalizedStatus = normalizeInvoiceStatus(document.getElementById('i-status')?.value || 'open');
+  const collected = normalizedStatus === 'paid'
+    ? total
+    : Math.min(rawPaid, total || rawPaid);
+  const remaining = Math.max(total - collected, 0);
+  helper.textContent = `${message ? `${message} ` : ''}Collected ${moneyLabel(collected)} • Remaining ${moneyLabel(remaining)}. Mark the invoice paid when you collect the full balance.`;
+}
 function applyInvoiceRentalAutofill() {
   const packageEl = document.getElementById('i-package');
   const durationEl = document.getElementById('i-duration');
@@ -2418,6 +2442,7 @@ function applyInvoiceRentalAutofill() {
   if (lineItemEl) lineItemEl.value = `${craftLabel} • ${durationLabel}`;
   if (totalEl) totalEl.value = amount.toFixed(2);
   updateInvoiceRentalHelper(`${craftLabel} • ${durationLabel} auto-filled to ${moneyLabel(amount)}.`);
+  updateInvoicePaymentHelper();
 }
 function handleInvoicePackageChange() {
   const packageEl = document.getElementById('i-package');
@@ -2447,8 +2472,11 @@ function resetInvoiceForm() {
   document.getElementById('i-line-item').value = '';
   document.getElementById('i-total').value = '';
   document.getElementById('i-status').value = 'Paid';
+  document.getElementById('i-paid-amount').value = '';
+  document.getElementById('i-payment-method').value = '';
   document.getElementById('i-notes').value = '';
   updateInvoiceRentalHelper();
+  updateInvoicePaymentHelper();
   document.getElementById('invoice-modal-title').textContent = 'New Invoice';
   document.getElementById('invoice-save-button').textContent = 'Save Invoice';
 }
@@ -2473,11 +2501,14 @@ function openInvoiceModal(invoiceId = null) {
     populateInvoiceDurationOptions(document.getElementById('i-package').value, inferredDuration);
     document.getElementById('i-line-item').value = Array.isArray(invoice.lineItems) && invoice.lineItems[0] ? (invoice.lineItems[0].name || invoice.lineItems[0].description || '') : '';
     document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
-    document.getElementById('i-status').value = invoice.status || 'Paid';
+    document.getElementById('i-status').value = invoiceStatusSelectValue(invoice.status);
+    document.getElementById('i-paid-amount').value = invoiceCollectedAmount(invoice) ? String(invoiceCollectedAmount(invoice)) : '';
+    document.getElementById('i-payment-method').value = invoice.paymentMethod || invoice.rawFields?.paymentMethod || '';
     document.getElementById('i-notes').value = invoice.notes || '';
     if (document.getElementById('i-package').value && document.getElementById('i-duration').value) {
       updateInvoiceRentalHelper(`${CRAFT_NAMES[document.getElementById('i-package').value] || 'Rental'} • ${invoiceDurationText(document.getElementById('i-duration').value)} loaded from this invoice.`);
     }
+    updateInvoicePaymentHelper();
     document.getElementById('invoice-modal-title').textContent = 'Edit Invoice';
     document.getElementById('invoice-save-button').textContent = 'Save Changes';
   }
@@ -2508,7 +2539,21 @@ async function saveInvoice() {
   const durationHours = Number(document.getElementById('i-duration').value || 0);
   const phone = document.getElementById('i-customer-phone').value.trim();
   const email = document.getElementById('i-customer-email').value.trim();
+  const explicitPaidAmount = Math.max(0, Number(document.getElementById('i-paid-amount').value || 0));
+  const paymentMethod = document.getElementById('i-payment-method').value.trim();
   const notes = document.getElementById('i-notes').value.trim();
+  let paidAmount = Math.min(explicitPaidAmount, total);
+  let finalStatus = invoiceStatusSelectValue(status);
+  if (finalStatus === 'Paid') {
+    paidAmount = total;
+  } else if (paidAmount >= total && total > 0) {
+    paidAmount = total;
+    finalStatus = 'Paid';
+  } else if (paidAmount > 0) {
+    finalStatus = 'Partially Paid';
+  } else if (finalStatus === 'Partially Paid') {
+    finalStatus = 'Open';
+  }
 
   const invoice = existingInvoice || {
     id: nextId(invoices),
@@ -2531,7 +2576,9 @@ async function saveInvoice() {
   invoice.discountAmount = 0;
   invoice.taxAmount = 0;
   invoice.total = total;
-  invoice.status = status;
+  invoice.status = finalStatus;
+  invoice.paidAmount = paidAmount;
+  invoice.paymentMethod = paymentMethod;
   invoice.notes = notes;
   invoice.craftKey = packageKey || '';
   invoice.durationHours = durationHours || 0;
@@ -2549,7 +2596,9 @@ async function saveInvoice() {
     rentalPackage: packageKey,
     rentalPackageLabel: packageKey ? (CRAFT_NAMES[packageKey] || '') : '',
     rentalDurationHours: durationHours ? String(durationHours) : '',
-    rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : ''
+    rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : '',
+    paymentMethod,
+    collectedAmount: paidAmount ? String(paidAmount) : ''
   });
 
   if (!existingInvoice) invoices.unshift(invoice);
@@ -2568,9 +2617,10 @@ async function saveInvoice() {
     customer.crmNotes = notes || customer.crmNotes || '';
     customer.crmFields = mergeCrmFields(customer.crmFields, {
       lastManualInvoiceNumber: invoice.invoiceNumber,
-      lastManualInvoiceStatus: status,
+      lastManualInvoiceStatus: finalStatus,
       lastManualInvoiceTotal: String(total),
-      lastManualInvoiceDate: issueDate
+      lastManualInvoiceDate: issueDate,
+      lastManualPaymentMethod: paymentMethod
     });
   } else {
     customer = {
@@ -2590,9 +2640,10 @@ async function saveInvoice() {
       crmNotes: notes,
       crmFields: {
         lastManualInvoiceNumber: invoice.invoiceNumber,
-        lastManualInvoiceStatus: status,
+        lastManualInvoiceStatus: finalStatus,
         lastManualInvoiceTotal: String(total),
-        lastManualInvoiceDate: issueDate
+        lastManualInvoiceDate: issueDate,
+        lastManualPaymentMethod: paymentMethod
       }
     };
     customers.push(customer);
@@ -3979,7 +4030,7 @@ function renderInvoices() {
         <div>${escapeHtml(invoiceLineSummary(invoice))}</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(Array.isArray(invoice.lineItems) ? `${invoice.lineItems.length} item${invoice.lineItems.length === 1 ? '' : 's'}` : '0 items')}</div>
       </td>
-      <td style="color:var(--wave);font-weight:500;">$${Number(invoice.total || 0).toLocaleString()}</td>
+      <td style="color:var(--wave);font-weight:500;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Collected ${moneyLabel(invoiceCollectedAmount(invoice))} • Remaining ${moneyLabel(invoiceOutstandingAmount(invoice))}</div></td>
       <td>${invoiceStatusBadge(invoice.status)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
