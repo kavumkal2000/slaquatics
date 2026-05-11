@@ -154,22 +154,59 @@ function normalizeOwnerWeeklyDigest(value) {
     : clone(DEFAULT_STATE.ownerWeeklyDigest);
 }
 
+const STATE_TOP_LEVEL_KEYS = [
+  'bookings',
+  'customers',
+  'expenses',
+  'fuelLog',
+  'maintLog',
+  'trackers',
+  'invoices',
+  'communicationsLog',
+  'reviewRequests',
+  'reviews',
+  'socialPosts',
+  'ownerWeeklyDigest',
+  'importMeta',
+  'invoiceImportMeta'
+];
+
+function unwrapStatePayload(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const rootHasStateKeys = STATE_TOP_LEVEL_KEYS.some((key) => Object.prototype.hasOwnProperty.call(value, key));
+  if (!rootHasStateKeys && value.state && typeof value.state === 'object' && !Array.isArray(value.state)) {
+    return value.state;
+  }
+  return value;
+}
+
+function isLikelyStatePayload(value = {}) {
+  const payload = unwrapStatePayload(value);
+  return Boolean(
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    STATE_TOP_LEVEL_KEYS.some((key) => Object.prototype.hasOwnProperty.call(payload, key))
+  );
+}
+
 function sanitizeState(value = {}) {
+  const payload = unwrapStatePayload(value);
   return {
-    bookings: normalizeArray(value.bookings, DEFAULT_STATE.bookings),
-    customers: normalizeArray(value.customers, DEFAULT_STATE.customers),
-    expenses: normalizeArray(value.expenses, DEFAULT_STATE.expenses),
-    fuelLog: normalizeArray(value.fuelLog, DEFAULT_STATE.fuelLog),
-    maintLog: normalizeArray(value.maintLog, DEFAULT_STATE.maintLog),
-    trackers: normalizeArray(value.trackers, DEFAULT_STATE.trackers),
-    invoices: normalizeArray(value.invoices, DEFAULT_STATE.invoices),
-    communicationsLog: normalizeArray(value.communicationsLog, DEFAULT_STATE.communicationsLog),
-    reviewRequests: normalizeArray(value.reviewRequests, DEFAULT_STATE.reviewRequests),
-    reviews: normalizeArray(value.reviews, DEFAULT_STATE.reviews),
-    socialPosts: normalizeArray(value.socialPosts, DEFAULT_STATE.socialPosts),
-    ownerWeeklyDigest: normalizeOwnerWeeklyDigest(value.ownerWeeklyDigest),
-    importMeta: normalizeImportMeta(value.importMeta),
-    invoiceImportMeta: normalizeImportMeta(value.invoiceImportMeta)
+    bookings: normalizeArray(payload.bookings, DEFAULT_STATE.bookings),
+    customers: normalizeArray(payload.customers, DEFAULT_STATE.customers),
+    expenses: normalizeArray(payload.expenses, DEFAULT_STATE.expenses),
+    fuelLog: normalizeArray(payload.fuelLog, DEFAULT_STATE.fuelLog),
+    maintLog: normalizeArray(payload.maintLog, DEFAULT_STATE.maintLog),
+    trackers: normalizeArray(payload.trackers, DEFAULT_STATE.trackers),
+    invoices: normalizeArray(payload.invoices, DEFAULT_STATE.invoices),
+    communicationsLog: normalizeArray(payload.communicationsLog, DEFAULT_STATE.communicationsLog),
+    reviewRequests: normalizeArray(payload.reviewRequests, DEFAULT_STATE.reviewRequests),
+    reviews: normalizeArray(payload.reviews, DEFAULT_STATE.reviews),
+    socialPosts: normalizeArray(payload.socialPosts, DEFAULT_STATE.socialPosts),
+    ownerWeeklyDigest: normalizeOwnerWeeklyDigest(payload.ownerWeeklyDigest),
+    importMeta: normalizeImportMeta(payload.importMeta),
+    invoiceImportMeta: normalizeImportMeta(payload.invoiceImportMeta)
   };
 }
 
@@ -2618,6 +2655,9 @@ async function handleApi(request, response, pathname) {
   if (pathname === '/api/ops/state' && (request.method === 'PUT' || request.method === 'POST')) {
     try {
       const body = JSON.parse(await readRequestBody(request) || '{}');
+      if (!isLikelyStatePayload(body)) {
+        throw new Error('Malformed state payload.');
+      }
       const state = await stateStore.write(body);
       sendJson(response, 200, { ok: true, state });
       return true;
