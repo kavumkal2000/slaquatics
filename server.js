@@ -481,10 +481,10 @@ function normalizeName(value = '') {
 }
 
 function normalizeEmailList(value = '') {
-  return String(value || '')
+  return Array.from(new Set(String(value || '')
     .split(/[,\n;]+/)
     .map((entry) => normalizeEmail(entry))
-    .filter(Boolean);
+    .filter(Boolean)));
 }
 
 function formattedResendFromAddress() {
@@ -1686,8 +1686,14 @@ async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyK
   if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
     throw new Error('Resend email is not configured yet.');
   }
-  const recipients = Array.isArray(to) ? to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(to)].filter(Boolean);
-  const bccRecipients = Array.isArray(bcc) ? bcc.map(normalizeEmail).filter(Boolean) : [normalizeEmail(bcc)].filter(Boolean);
+  const recipients = Array.from(new Set(
+    (Array.isArray(to) ? to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(to)].filter(Boolean))
+  ));
+  const recipientSet = new Set(recipients);
+  const bccRecipients = Array.from(new Set(
+    (Array.isArray(bcc) ? bcc.map(normalizeEmail).filter(Boolean) : [normalizeEmail(bcc)].filter(Boolean))
+      .filter((email) => !recipientSet.has(email))
+  ));
   const replyTo = resendReplyToAddress();
   if (!recipients.length) {
     throw new Error('At least one valid recipient email is required.');

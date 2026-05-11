@@ -4234,6 +4234,12 @@ async function deleteCustomer(customerId) {
   }
   const confirmed = window.confirm(`Delete ${customer.name} from the CRM? Existing bookings and invoices will stay in place.`);
   if (!confirmed) return;
+  const previousBookings = bookings.map((booking) => ({ ...booking }));
+  const previousInvoices = invoices.map((invoice) => ({ ...invoice }));
+  const previousCommunications = communicationsLog.map((entry) => ({ ...entry }));
+  const previousCustomers = customers.map((item) => ({ ...item }));
+  const previousExpandedCustomerId = expandedCustomerId;
+  const shouldCloseEditor = editingCustomerId && Number(editingCustomerId) === Number(customerId);
   bookings.forEach((booking) => {
     if (Number(booking.customerId || 0) === Number(customerId)) booking.customerId = null;
   });
@@ -4244,12 +4250,19 @@ async function deleteCustomer(customerId) {
     if (Number(entry.customerId || 0) === Number(customerId)) entry.customerId = null;
   });
   customers = customers.filter((item) => Number(item.id) !== Number(customerId));
-  if (editingCustomerId && Number(editingCustomerId) === Number(customerId)) {
+  if (Number(expandedCustomerId) === Number(customerId)) expandedCustomerId = null;
+  if (!(await persistStateChange())) {
+    bookings = previousBookings;
+    invoices = previousInvoices;
+    communicationsLog = previousCommunications;
+    customers = previousCustomers;
+    expandedCustomerId = previousExpandedCustomerId;
+    return;
+  }
+  if (shouldCloseEditor) {
     closeModal('customer-modal');
     resetCustomerForm();
   }
-  if (Number(expandedCustomerId) === Number(customerId)) expandedCustomerId = null;
-  if (!(await persistStateChange())) return;
   renderCRM();
   renderWaivers();
   renderCommsPanel();
