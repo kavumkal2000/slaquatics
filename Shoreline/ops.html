@@ -3347,6 +3347,39 @@ function findCustomerForBooking(booking = {}) {
   const nameMatches = customers.filter((customer) => normalizeName(customer.name) === bookingName);
   return nameMatches.length === 1 ? nameMatches[0] : null;
 }
+function findCustomerForContact(contact = {}) {
+  if (Number(contact.customerId || 0) > 0) {
+    const direct = customers.find((customer) => Number(customer.id || 0) === Number(contact.customerId || 0));
+    if (direct) return direct;
+  }
+  if (Number(contact.bookingId || 0) > 0) {
+    const booking = bookings.find((item) => Number(item.id || 0) === Number(contact.bookingId || 0));
+    if (booking) {
+      const bookingCustomer = findCustomerForBooking(booking);
+      if (bookingCustomer) return bookingCustomer;
+    }
+  }
+  const phoneKey = normalizePhone(contact.phone);
+  if (phoneKey) {
+    const phoneMatch = customers.find((customer) => normalizePhone(customer.phone) === phoneKey);
+    if (phoneMatch) return phoneMatch;
+  }
+  const emailKey = normalizeEmail(contact.email);
+  if (emailKey) {
+    const emailMatch = customers.find((customer) => normalizeEmail(customer.email) === emailKey);
+    if (emailMatch) return emailMatch;
+  }
+  const nameKey = normalizeName(contact.name);
+  if (!nameKey) return null;
+  const nameMatches = customers.filter((customer) => normalizeName(customer.name) === nameKey);
+  return nameMatches.length === 1 ? nameMatches[0] : null;
+}
+function touchCustomerActivity(contact = {}, timestamp = new Date().toISOString()) {
+  const customer = findCustomerForContact(contact);
+  if (!customer) return null;
+  customer.lastActivity = timestamp;
+  return customer;
+}
 
 function invoiceMatchesCustomer(customer = {}, invoice = {}) {
   if (Number(customer.id || 0) > 0 && Number(invoice.customerId || 0) === Number(customer.id || 0)) return true;
@@ -4476,6 +4509,7 @@ async function sendDirectMessage(channel) {
     return;
   }
   try {
+    const sentAt = new Date().toISOString();
     if (channel === 'sms') {
       if (!integrations.smsConfigured || !customer.phone) throw new Error('SMS is not configured or this customer has no phone number.');
       await requestJson('/api/ops/messages/send', {
@@ -4496,9 +4530,10 @@ async function sendDirectMessage(channel) {
         })
       });
     }
+    touchCustomerActivity({ customerId: customer.id, name: customer.name, phone: customer.phone, email: customer.email }, sentAt);
     communicationsLog.unshift({
       id: nextId(communicationsLog),
-      date: new Date().toISOString(),
+      date: sentAt,
       customerId: customer.id,
       customerName: customer.name,
       channel,
@@ -4556,9 +4591,11 @@ async function logCommunication() {
     showToast('⚠️ Choose a customer and add your message first');
     return;
   }
+  const loggedAt = new Date().toISOString();
+  touchCustomerActivity({ customerId: customer.id, name: customer.name, phone: customer.phone, email: customer.email }, loggedAt);
   communicationsLog.unshift({
     id: nextId(communicationsLog),
-    date: new Date().toISOString(),
+    date: loggedAt,
     customerId: customer.id,
     customerName: customer.name,
     channel: customer.email && customer.phone ? 'text/email draft' : customer.phone ? 'text draft' : 'email draft',
@@ -4676,6 +4713,12 @@ async function sendReviewDrop(requestId, channel, options = {}) {
     request.sentAt = new Date().toISOString();
     request.channel = apiChannel;
     request.status = 'sent';
+    touchCustomerActivity({
+      bookingId: request.bookingId,
+      name: request.customerName,
+      phone: request.phone,
+      email: request.email
+    }, request.sentAt);
     const saved = await persistStateChange({silent:true});
     if (!saved) {
       throw new Error('Review request was sent, but the CRM could not save the send status. Refresh and verify the queue.');
