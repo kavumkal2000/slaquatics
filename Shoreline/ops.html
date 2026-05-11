@@ -1708,19 +1708,27 @@ function moneyLabel(value) {
     maximumFractionDigits: 2
   })}`;
 }
-function ensureEntryIds(list = []) {
+function listWithEntryIds(list = []) {
+  const items = list.map((entry) => ({...entry}));
   let changed = false;
-  let maxId = list.reduce((max, entry) => {
+  let maxId = items.reduce((max, entry) => {
     const value = Number(entry?.id || 0);
     return Number.isFinite(value) && value > max ? value : max;
   }, 0);
-  list.forEach((entry) => {
+  items.forEach((entry) => {
     const value = Number(entry?.id || 0);
     if (Number.isFinite(value) && value > 0) return;
     maxId += 1;
     entry.id = maxId;
     changed = true;
   });
+  return {items, changed};
+}
+function ensureEntryIds(list = []) {
+  const {items, changed} = listWithEntryIds(list);
+  if (changed) {
+    list.splice(0, list.length, ...items);
+  }
   return changed;
 }
 function dateValue(value) {
@@ -4668,7 +4676,10 @@ async function sendReviewDrop(requestId, channel, options = {}) {
     request.sentAt = new Date().toISOString();
     request.channel = apiChannel;
     request.status = 'sent';
-    await saveData({silent:true});
+    const saved = await persistStateChange({silent:true});
+    if (!saved) {
+      throw new Error('Review request was sent, but the CRM could not save the send status. Refresh and verify the queue.');
+    }
     if (!options.preserveRender) renderReviewHub();
     if (!options.silent) showToast(apiChannel === 'sms' ? '⭐ Review text sent' : '⭐ Review email sent');
     return true;
@@ -4857,8 +4868,27 @@ function renderSocialQueue() {
 }
 
 // ── FUEL ──
-function renderFuel() {
-  if (ensureEntryIds(fuelLog)) saveData({silent:true}).catch((error) => console.error('Fuel id sync failed:', error));
+let fuelIdSyncPending = false;
+function syncFuelEntryIds() {
+  if (!backendAvailable || fuelIdSyncPending) return;
+  const {items, changed} = listWithEntryIds(fuelLog);
+  if (!changed) return;
+  fuelIdSyncPending = true;
+  saveStateSnapshot({
+    ...snapshotState(),
+    fuelLog: items
+  }, {silent:true}).then((saved) => {
+    if (!saved) return;
+    fuelLog = items;
+    renderFuel({skipIdSync:true});
+  }).catch((error) => {
+    console.error('Fuel id sync failed:', error);
+  }).finally(() => {
+    fuelIdSyncPending = false;
+  });
+}
+function renderFuel(options = {}) {
+  if (!options.skipIdSync) syncFuelEntryIds();
   syncAssetSelectors();
   const monthFuel = fuelLog.filter((entry) => isSameMonth(dateValue(entry.date)));
   const monthCost = monthFuel.reduce((sum, entry) => sum + (Number(entry.gallons || 0) * Number(entry.ppg || 0)), 0);
@@ -4949,8 +4979,27 @@ async function deleteFuelEntry(fuelId) {
 }
 
 // ── MAINTENANCE ──
-function renderMaint() {
-  if (ensureEntryIds(maintLog)) saveData({silent:true}).catch((error) => console.error('Maint id sync failed:', error));
+let maintIdSyncPending = false;
+function syncMaintEntryIds() {
+  if (!backendAvailable || maintIdSyncPending) return;
+  const {items, changed} = listWithEntryIds(maintLog);
+  if (!changed) return;
+  maintIdSyncPending = true;
+  saveStateSnapshot({
+    ...snapshotState(),
+    maintLog: items
+  }, {silent:true}).then((saved) => {
+    if (!saved) return;
+    maintLog = items;
+    renderMaint({skipIdSync:true});
+  }).catch((error) => {
+    console.error('Maint id sync failed:', error);
+  }).finally(() => {
+    maintIdSyncPending = false;
+  });
+}
+function renderMaint(options = {}) {
+  if (!options.skipIdSync) syncMaintEntryIds();
   syncAssetSelectors();
   document.getElementById('maint-grid').innerHTML = equipmentSummaries().map(e => {
     return `<div class="maint-card">
