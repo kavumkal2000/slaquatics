@@ -2609,6 +2609,8 @@ async function saveInvoice() {
   const existingInvoice = editingInvoiceId
     ? invoices.find((invoice) => Number(invoice.id) === Number(editingInvoiceId))
     : null;
+  const previousInvoiceSnapshot = existingInvoice ? JSON.parse(JSON.stringify(existingInvoice)) : null;
+  const previousCustomer = previousInvoiceSnapshot ? linkedCustomerForInvoice(previousInvoiceSnapshot) : null;
   if (editingInvoiceId && !existingInvoice) {
     showToast('⚠️ Invoice record not found');
     return;
@@ -2740,6 +2742,12 @@ async function saveInvoice() {
     }
   }
   invoice.customerId = customer ? customer.id : '';
+  const currentCustomer = linkedCustomerForInvoice(invoice);
+  [previousCustomer, currentCustomer].forEach((item, index, list) => {
+    if (!item) return;
+    if (list.findIndex((candidate) => candidate && Number(candidate.id || 0) === Number(item.id || 0)) !== index) return;
+    syncCustomerRollup(item);
+  });
 
   if (!(await persistStateChange())) return;
   closeModal('invoice-modal');
@@ -2757,9 +2765,11 @@ async function deleteInvoice(invoiceId) {
     showToast('⚠️ Invoice record not found');
     return;
   }
+  const linkedCustomer = linkedCustomerForInvoice({...invoice});
   const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNumber || invoice.invoiceName}?`);
   if (!confirmed) return;
   invoices = invoices.filter((item) => Number(item.id) !== Number(invoiceId));
+  if (linkedCustomer) syncCustomerRollup(linkedCustomer);
   if (editingInvoiceId && Number(editingInvoiceId) === Number(invoiceId)) {
     closeModal('invoice-modal');
     resetInvoiceForm();
