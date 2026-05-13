@@ -2158,6 +2158,30 @@ function meaningfulInvoiceCustomer(customerName, customerEmail, customerPhone) {
     normalizedPhone
   );
 }
+function linkedCustomerForInvoice(invoice = {}) {
+  const directId = Number(invoice.customerId || 0);
+  if (directId > 0) {
+    const directCustomer = customers.find((customer) => Number(customer.id || 0) === directId);
+    if (directCustomer) return directCustomer;
+  }
+  return findCustomerForContact({
+    name: invoice.customerName,
+    email: invoice.customerEmail,
+    phone: invoice.customerPhone
+  });
+}
+function invoiceDisplayContact(invoice = {}) {
+  const linkedCustomer = linkedCustomerForInvoice(invoice);
+  return {
+    name: String(invoice.customerName || linkedCustomer?.name || '').trim(),
+    email: String(invoice.customerEmail || linkedCustomer?.email || '').trim(),
+    phone: String(invoice.customerPhone || linkedCustomer?.phone || '').trim()
+  };
+}
+function invoiceHasKnownCustomer(invoice = {}) {
+  const contact = invoiceDisplayContact(invoice);
+  return meaningfulInvoiceCustomer(contact.name, contact.email, contact.phone);
+}
 function invoiceImportKey(invoice) {
   return String(invoice.invoiceNumber || '').trim().toLowerCase()
     || [
@@ -4058,7 +4082,7 @@ function renderInvoices() {
   const filteredInvoices = sortNewestFirst(filteredInvoicesList(), (invoice) => invoice.issueDate || invoice.dueDate);
   const paidInvoices = filteredInvoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0);
   const openInvoices = filteredInvoices.filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
-  const unknownInvoices = filteredInvoices.filter((invoice) => !meaningfulInvoiceCustomer(invoice.customerName, invoice.customerEmail, invoice.customerPhone));
+  const unknownInvoices = filteredInvoices.filter((invoice) => !invoiceHasKnownCustomer(invoice));
   const paidTotal = paidInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
   const openTotal = openInvoices.reduce((sum, invoice) => sum + invoiceOutstandingAmount(invoice), 0);
 
@@ -4081,13 +4105,16 @@ function renderInvoices() {
   if (!table) return;
   table.innerHTML = filteredInvoices.length ? filteredInvoices.map((invoice) => `
     <tr>
+      ${(() => {
+        const contact = invoiceDisplayContact(invoice);
+        return `
       <td>
         <strong>${escapeHtml(invoice.invoiceNumber || 'No number')}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(invoice.invoiceName || 'Invoice')}</div>
       </td>
       <td>
-        <strong>${escapeHtml(invoice.customerName || 'Unknown')}</strong>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${invoice.customerPhone ? `<a href="tel:${phoneHref(invoice.customerPhone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(invoice.customerPhone)}</a>` : escapeHtml(invoice.customerEmail || 'No contact')}</div>
+        <strong>${escapeHtml(contact.name || 'Unknown')}</strong>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${contact.phone ? `<a href="tel:${phoneHref(contact.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(contact.phone)}</a>` : escapeHtml(contact.email || 'No contact')}</div>
       </td>
       <td>${escapeHtml(invoice.issueDate || '—')}</td>
       <td>${escapeHtml(invoice.dueDate || '—')}</td>
@@ -4101,6 +4128,8 @@ function renderInvoices() {
         <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${Number(invoice.id)})">Delete</button>
       </td>
+      `;
+      })()}
     </tr>
   `).join('') : '<tr><td colspan="8"><div class="empty"><div class="icon">🧾</div><p>No invoices match this search yet.</p></div></td></tr>';
 }
