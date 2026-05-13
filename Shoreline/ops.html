@@ -1066,6 +1066,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
           </select>
         </div>
         <div class="form-group"><label>Collected amount</label><input type="number" id="i-paid-amount" min="0" step="0.01" placeholder="0.00" oninput="updateInvoicePaymentHelper()"></div>
+        <div class="form-group"><label>Balance due</label><input type="number" id="i-balance-due" min="0" step="0.01" placeholder="0.00" readonly></div>
         <div class="form-group"><label>Payment method</label>
           <select id="i-payment-method" onchange="toggleInvoicePaymentMethodCustom()">
             <option value="">Select method</option>
@@ -2464,6 +2465,8 @@ function updateInvoicePaymentHelper(message = '') {
     ? total
     : Math.min(rawPaid, total || rawPaid);
   const remaining = Math.max(total - collected, 0);
+  const balanceInput = document.getElementById('i-balance-due');
+  if (balanceInput) balanceInput.value = remaining ? remaining.toFixed(2) : '0.00';
   helper.textContent = `${message ? `${message} ` : ''}Collected ${moneyLabel(collected)} • Remaining ${moneyLabel(remaining)}. Mark the invoice paid when you collect the full balance.`;
 }
 function applyInvoiceRentalAutofill() {
@@ -2524,6 +2527,7 @@ function resetInvoiceForm() {
   document.getElementById('i-total').value = '';
   document.getElementById('i-status').value = 'Paid';
   document.getElementById('i-paid-amount').value = '';
+  document.getElementById('i-balance-due').value = '0.00';
   setInvoicePaymentMethod('');
   document.getElementById('i-notes').value = '';
   updateInvoiceRentalHelper();
@@ -2554,6 +2558,7 @@ function openInvoiceModal(invoiceId = null) {
     document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
     document.getElementById('i-status').value = invoiceStatusSelectValue(invoice.status);
     document.getElementById('i-paid-amount').value = invoiceCollectedAmount(invoice) ? String(invoiceCollectedAmount(invoice)) : '';
+    document.getElementById('i-balance-due').value = invoiceOutstandingAmount(invoice).toFixed(2);
     setInvoicePaymentMethod(invoice.paymentMethod || invoice.rawFields?.paymentMethod || '');
     document.getElementById('i-notes').value = invoice.notes || '';
     if (document.getElementById('i-package').value && document.getElementById('i-duration').value) {
@@ -2629,6 +2634,7 @@ async function saveInvoice() {
   invoice.total = total;
   invoice.status = finalStatus;
   invoice.paidAmount = paidAmount;
+  invoice.balanceDue = Math.max(total - paidAmount, 0);
   invoice.paymentMethod = paymentMethod;
   invoice.notes = notes;
   invoice.craftKey = packageKey || '';
@@ -2648,6 +2654,7 @@ async function saveInvoice() {
     rentalPackageLabel: packageKey ? (CRAFT_NAMES[packageKey] || '') : '',
     rentalDurationHours: durationHours ? String(durationHours) : '',
     rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : '',
+    balanceDue: String(invoice.balanceDue || 0),
     paymentMethod,
     collectedAmount: paidAmount ? String(paidAmount) : ''
   });
@@ -2671,6 +2678,7 @@ async function saveInvoice() {
       lastManualInvoiceStatus: finalStatus,
       lastManualInvoiceTotal: String(total),
       lastManualInvoiceDate: issueDate,
+      lastManualInvoiceBalanceDue: String(invoice.balanceDue || 0),
       lastManualPaymentMethod: paymentMethod
     });
   } else {
@@ -2694,6 +2702,7 @@ async function saveInvoice() {
         lastManualInvoiceStatus: finalStatus,
         lastManualInvoiceTotal: String(total),
         lastManualInvoiceDate: issueDate,
+        lastManualInvoiceBalanceDue: String(invoice.balanceDue || 0),
         lastManualPaymentMethod: paymentMethod
       }
     };
