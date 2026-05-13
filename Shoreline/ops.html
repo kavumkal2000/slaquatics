@@ -2576,8 +2576,8 @@ async function saveInvoice() {
   const invoiceName = document.getElementById('i-invoice-name').value.trim();
   const lineItemName = document.getElementById('i-line-item').value.trim();
   const total = Math.max(0, Number(document.getElementById('i-total').value || 0));
-  if (!customerName || !invoiceName || !lineItemName || !total) {
-    showToast('⚠️ Enter the customer, invoice title, line item, and amount');
+  if (!invoiceName || !lineItemName || !total) {
+    showToast('⚠️ Enter the invoice title, line item, and amount');
     return;
   }
   const existingInvoice = editingInvoiceId
@@ -2595,6 +2595,8 @@ async function saveInvoice() {
   const durationHours = Number(document.getElementById('i-duration').value || 0);
   const phone = document.getElementById('i-customer-phone').value.trim();
   const email = document.getElementById('i-customer-email').value.trim();
+  const hasMeaningfulCustomer = meaningfulInvoiceCustomer(customerName, email, phone);
+  const customerLabel = customerName || email || phone || '';
   const explicitPaidAmount = Math.max(0, Number(document.getElementById('i-paid-amount').value || 0));
   const paymentMethod = getInvoicePaymentMethod();
   const notes = document.getElementById('i-notes').value.trim();
@@ -2623,7 +2625,7 @@ async function saveInvoice() {
   };
 
   invoice.invoiceName = invoiceName;
-  invoice.customerName = customerName;
+  invoice.customerName = customerLabel;
   invoice.customerPhone = phone;
   invoice.customerEmail = email;
   invoice.issueDate = issueDate;
@@ -2661,54 +2663,57 @@ async function saveInvoice() {
 
   if (!existingInvoice) invoices.unshift(invoice);
 
-  let customer = customers.find((item) => (
-    (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(phone)) ||
-    (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(email)) ||
-    (normalizeName(item.name) && normalizeName(item.name) === normalizeName(customerName))
-  ));
-  if (customer) {
-    customer.name = customerName;
-    customer.phone = phone || customer.phone;
-    customer.email = email || customer.email;
-    customer.lastActivity = new Date().toISOString();
-    customer.source = customer.source || 'Manual Invoice';
-    customer.crmNotes = notes || customer.crmNotes || '';
-    customer.crmFields = mergeCrmFields(customer.crmFields, {
-      lastManualInvoiceNumber: invoice.invoiceNumber,
-      lastManualInvoiceStatus: finalStatus,
-      lastManualInvoiceTotal: String(total),
-      lastManualInvoiceDate: issueDate,
-      lastManualInvoiceBalanceDue: String(invoice.balanceDue || 0),
-      lastManualPaymentMethod: paymentMethod
-    });
-  } else {
-    customer = {
-      id: nextId(customers),
-      name: customerName,
-      phone,
-      email,
-      bookings: 0,
-      totalSpent: 0,
-      lastBooking: 'N/A',
-      source: 'Manual Invoice',
-      tag: '',
-      company: '',
-      crmTags: '',
-      createdAt: issueDate,
-      lastActivity: new Date().toISOString(),
-      crmNotes: notes,
-      crmFields: {
+  let customer = null;
+  if (hasMeaningfulCustomer) {
+    customer = customers.find((item) => (
+      (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(phone)) ||
+      (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(email)) ||
+      (normalizeName(item.name) && normalizeName(item.name) === normalizeName(customerName))
+    ));
+    if (customer) {
+      customer.name = customerName || customer.name;
+      customer.phone = phone || customer.phone;
+      customer.email = email || customer.email;
+      customer.lastActivity = new Date().toISOString();
+      customer.source = customer.source || 'Manual Invoice';
+      customer.crmNotes = notes || customer.crmNotes || '';
+      customer.crmFields = mergeCrmFields(customer.crmFields, {
         lastManualInvoiceNumber: invoice.invoiceNumber,
         lastManualInvoiceStatus: finalStatus,
         lastManualInvoiceTotal: String(total),
         lastManualInvoiceDate: issueDate,
         lastManualInvoiceBalanceDue: String(invoice.balanceDue || 0),
         lastManualPaymentMethod: paymentMethod
-      }
-    };
-    customers.push(customer);
+      });
+    } else {
+      customer = {
+        id: nextId(customers),
+        name: customerLabel || 'Walk-up customer',
+        phone,
+        email,
+        bookings: 0,
+        totalSpent: 0,
+        lastBooking: 'N/A',
+        source: 'Manual Invoice',
+        tag: '',
+        company: '',
+        crmTags: '',
+        createdAt: issueDate,
+        lastActivity: new Date().toISOString(),
+        crmNotes: notes,
+        crmFields: {
+          lastManualInvoiceNumber: invoice.invoiceNumber,
+          lastManualInvoiceStatus: finalStatus,
+          lastManualInvoiceTotal: String(total),
+          lastManualInvoiceDate: issueDate,
+          lastManualInvoiceBalanceDue: String(invoice.balanceDue || 0),
+          lastManualPaymentMethod: paymentMethod
+        }
+      };
+      customers.push(customer);
+    }
   }
-  invoice.customerId = customer.id;
+  invoice.customerId = customer ? customer.id : '';
 
   if (!(await persistStateChange())) return;
   closeModal('invoice-modal');
