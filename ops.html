@@ -2136,12 +2136,13 @@ function invoiceLineSummary(invoice) {
   return `${items[0].name || items[0].description || 'Custom item'} +${items.length - 1} more`;
 }
 function invoiceSearchText(invoice) {
+  const contact = invoiceDisplayContact(invoice);
   return [
     invoice.invoiceNumber,
     invoice.invoiceName,
-    invoice.customerName,
-    invoice.customerEmail,
-    invoice.customerPhone,
+    contact.name,
+    contact.email,
+    contact.phone,
     invoice.status,
     invoice.issueDate,
     invoice.dueDate,
@@ -2567,10 +2568,11 @@ function openInvoiceModal(invoiceId = null) {
       showToast('⚠️ Invoice record not found');
       return;
     }
+    const contact = invoiceDisplayContact(invoice);
     editingInvoiceId = Number(invoice.id);
-    document.getElementById('i-customer-name').value = invoice.customerName || '';
-    document.getElementById('i-customer-phone').value = invoice.customerPhone || '';
-    document.getElementById('i-customer-email').value = invoice.customerEmail || '';
+    document.getElementById('i-customer-name').value = contact.name || '';
+    document.getElementById('i-customer-phone').value = contact.phone || '';
+    document.getElementById('i-customer-email').value = contact.email || '';
     document.getElementById('i-invoice-name').value = invoice.invoiceName || '';
     document.getElementById('i-issue-date').value = invoice.issueDate || today();
     document.getElementById('i-due-date').value = invoice.dueDate || invoice.issueDate || today();
