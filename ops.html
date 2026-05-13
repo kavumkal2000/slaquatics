@@ -2117,7 +2117,7 @@ function invoiceStatusBadge(status) {
   const normalized = normalizeInvoiceStatus(status);
   const className = normalized === 'paid'
     ? 'badge-confirmed'
-    : normalized === 'draft' || normalized === 'sent' || normalized === 'partially paid'
+    : normalized === 'draft' || normalized === 'sent' || normalized === 'partially paid' || normalized === 'open' || normalized === 'unpaid'
       ? 'badge-pending'
       : normalized === 'overdue'
         ? 'badge-noshow'
