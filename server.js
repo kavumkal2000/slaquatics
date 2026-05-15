@@ -59,6 +59,7 @@ const PROCESSING_FEE_CENTS = 500;
 const DRONE_ADDON_CENTS = 5000;
 const TOTAL_PUBLIC_JET_SKIS = 4;
 const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+const PUBLIC_UNPAID_HOLD_MINUTES = Math.max(Number(process.env.PUBLIC_UNPAID_HOLD_MINUTES || 30), 1);
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
 const SHORELINE_PHONE_LINK = '4696937164';
 const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
@@ -743,13 +744,31 @@ function craftAvailabilityType(craft = '') {
   return 'none';
 }
 
+function websiteBookingHoldIsActive(booking = {}, status = '') {
+  if (['confirmed', 'completed'].includes(status)) return true;
+
+  const source = String(booking.source || '').trim().toLowerCase();
+  if (!source.includes('website')) return true;
+
+  const paymentStatus = String(booking.paymentStatus || '').trim().toLowerCase();
+  if (booking.deposit || paymentStatus === 'paid') return true;
+  if (paymentStatus === 'expired') return false;
+  if (paymentStatus === 'pending' || String(booking.paymentSessionId || '').trim()) return true;
+
+  const anchor = Date.parse(String(booking.updatedAt || booking.createdAt || ''));
+  if (Number.isNaN(anchor)) return true;
+
+  return (Date.now() - anchor) < (PUBLIC_UNPAID_HOLD_MINUTES * 60 * 1000);
+}
+
 function bookingBlocksAvailability(booking = {}) {
   const status = String(booking.status || '').trim().toLowerCase();
   return Boolean(
     booking.date &&
     booking.time &&
     Number(booking.duration || 0) > 0 &&
-    !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status)
+    !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status) &&
+    websiteBookingHoldIsActive(booking, status)
   );
 }
 
