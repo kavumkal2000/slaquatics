@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="description" content="Shoreline Aquatics Operations — Bookings, CRM, Fuel, Maintenance, Reminders">
+<meta name="description" content="Shoreline Aquatics Operations — Bookings, CRM, Expenses, Maintenance, Trackers">
 <meta name="robots" content="noindex, nofollow">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -259,7 +259,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .customer-main{display:flex;align-items:flex-start;gap:0.85rem;min-width:0;}
 .customer-identity{min-width:0;flex:1;}
 .customer-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:500;flex-shrink:0;}
+.customer-name-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;min-width:0;}
 .customer-name{font-size:0.95rem;font-weight:500;margin-bottom:0.2rem;}
+.customer-open-hint{font-size:0.72rem;color:var(--wave);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;flex-shrink:0;}
 .customer-flags{display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.15rem 0 0.55rem;}
 .customer-flag{
   display:inline-flex;align-items:center;gap:0.35rem;padding:0.22rem 0.58rem;border-radius:999px;
@@ -432,7 +434,6 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
   <button class="nav-item" onclick="showPage('waivers',this)"><span class="icon">📝</span><span>Waivers</span></button>
   <button class="nav-item" onclick="showPage('expenses',this)"><span class="icon">💸</span><span>Expenses</span></button>
-  <button class="nav-item" onclick="showPage('fuel',this)"><span class="icon">⛽</span><span>Fuel Log</span></button>
   <button class="nav-item" onclick="showPage('maintenance',this)"><span class="icon">🔧</span><span>Maintenance</span></button>
   <button class="nav-item" onclick="showPage('tracking',this)"><span class="icon">📡</span><span>Tracking</span></button>
   <div class="nav-section">Growth</div>
@@ -701,30 +702,16 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   </div>
   <div class="kpi-grid">
     <div class="kpi-card"><div class="label">This month</div><div class="value" id="expense-kpi-month">$0</div><div class="delta warn" id="expense-kpi-month-meta">0 expenses logged</div></div>
-    <div class="kpi-card"><div class="label">Delivery costs</div><div class="value" style="color:var(--amber);" id="expense-kpi-delivery">$0</div><div class="delta warn" id="expense-kpi-delivery-meta">Current month delivery spend</div></div>
-    <div class="kpi-card"><div class="label">Fuel + delivery</div><div class="value" style="color:var(--wave);" id="expense-kpi-direct">$0</div><div class="delta up" id="expense-kpi-direct-meta">Direct operating costs</div></div>
-    <div class="kpi-card"><div class="label">Year to date</div><div class="value" id="expense-kpi-ytd">$0</div><div class="delta up" id="expense-kpi-ytd-meta">All tracked business expenses</div></div>
+    <div class="kpi-card"><div class="label">Recurring this month</div><div class="value" style="color:var(--amber);" id="expense-kpi-delivery">$0</div><div class="delta warn" id="expense-kpi-delivery-meta">Active monthly charges this month</div></div>
+    <div class="kpi-card"><div class="label">Season total</div><div class="value" style="color:var(--wave);" id="expense-kpi-direct">$0</div><div class="delta up" id="expense-kpi-direct-meta">Projected seasonal recurring cost</div></div>
+    <div class="kpi-card"><div class="label">Yearly recurring</div><div class="value" id="expense-kpi-ytd">$0</div><div class="delta up" id="expense-kpi-ytd-meta">Projected annual recurring cost</div></div>
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Category</th><th>Expense</th><th>Notes</th><th>Amount</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Date</th><th>Category</th><th>Schedule</th><th>Expense</th><th>Notes</th><th>Amount</th><th>Actions</th></tr></thead>
       <tbody id="expense-table"></tbody>
     </table>
   </div>
-</div>
-
-<!-- ═══ FUEL LOG ═══ -->
-<div class="page" id="page-fuel">
-  <div class="section-head">
-    <h2>Fuel Log</h2>
-    <button class="btn btn-primary btn-sm" onclick="openFuelModal()">+ Log Fuel</button>
-  </div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
-    <div class="kpi-card"><div class="label">Fuel cost this month</div><div class="value" style="color:var(--amber);" id="fuel-kpi-month">$0</div><div class="delta warn" id="fuel-kpi-month-meta">0 fuel entries this month</div></div>
-    <div class="kpi-card"><div class="label">Cost per rental hour</div><div class="value" style="color:var(--amber);" id="fuel-kpi-rate">$0</div><div class="delta up" id="fuel-kpi-rate-meta">No rental hours logged yet</div></div>
-    <div class="kpi-card"><div class="label">Total hours logged</div><div class="value" id="fuel-kpi-hours">0</div><div class="delta up" id="fuel-kpi-hours-meta">This month</div></div>
-  </div>
-  <div class="fuel-log" id="fuel-log"></div>
 </div>
 
 <!-- ═══ MAINTENANCE ═══ -->
@@ -746,31 +733,31 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <!-- ═══ TRACKING ═══ -->
 <div class="page" id="page-tracking">
   <div class="section-head">
-    <h2>GPS Tracking</h2>
-    <button class="btn btn-primary btn-sm" onclick="openModal('tracking-modal')">+ Add Tracker</button>
+    <h2>Trackers</h2>
+    <button class="btn btn-primary btn-sm" onclick="openModal('tracking-modal')">+ Add tracker</button>
   </div>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="label">Active devices</div><div class="value" id="tracking-kpi-active">0</div><div class="delta up" id="tracking-kpi-active-meta">0 units actively assigned</div></div>
-    <div class="kpi-card"><div class="label">Monthly tracking cost</div><div class="value" style="color:var(--amber);" id="tracking-kpi-monthly">$0</div><div class="delta warn" id="tracking-kpi-monthly-meta">Recurring device plans</div></div>
-    <div class="kpi-card"><div class="label">Assigned to fleet</div><div class="value" style="color:var(--green);" id="tracking-kpi-assigned">0</div><div class="delta up" id="tracking-kpi-assigned-meta">Trackers tied to a ski or boat</div></div>
-    <div class="kpi-card"><div class="label">Unassigned / spare</div><div class="value" style="color:var(--wave);" id="tracking-kpi-spare">0</div><div class="delta warn" id="tracking-kpi-spare-meta">Ready for install or reassignment</div></div>
+    <div class="kpi-card"><div class="label">Active trackers</div><div class="value" id="tracking-kpi-active">0</div><div class="delta up" id="tracking-kpi-active-meta">0 units actively assigned</div></div>
+    <div class="kpi-card"><div class="label">Monthly tracker cost</div><div class="value" style="color:var(--amber);" id="tracking-kpi-monthly">$0</div><div class="delta warn" id="tracking-kpi-monthly-meta">Recurring tracker plans</div></div>
+    <div class="kpi-card"><div class="label">Assigned trackers</div><div class="value" style="color:var(--green);" id="tracking-kpi-assigned">0</div><div class="delta up" id="tracking-kpi-assigned-meta">Trackers tied to a ski or boat</div></div>
+    <div class="kpi-card"><div class="label">Spare trackers</div><div class="value" style="color:var(--wave);" id="tracking-kpi-spare">0</div><div class="delta warn" id="tracking-kpi-spare-meta">Ready for install or reassignment</div></div>
   </div>
   <div class="import-panel">
     <div>
-      <div class="title">LandAirSea device registry</div>
-      <div class="copy">Save each tracker’s ShareSpot link, serial number, plan, billing details, and assigned ski or boat in one place. Use the live panel below to open the current tracker map inside ops or jump out to LandAirSea when needed.</div>
+      <div class="title">Tracker registry</div>
+      <div class="copy">Save each tracker’s serial number, ShareSpot link, billing plan, and assigned jet ski or boat in one place. Use this section to keep the fleet hardware organized and open the saved live map when you need it.</div>
     </div>
     <div class="import-pill" id="tracking-summary-pill">No trackers added yet</div>
   </div>
   <div class="compose-grid" style="margin-bottom:1rem;">
     <div class="list-card">
-      <h3>Selected live tracker</h3>
-      <p>Choose a device below to view the saved ShareSpot link, billing details, and latest assignment without leaving ops.</p>
+      <h3>Selected tracker</h3>
+      <p>Choose a tracker below to view the saved assignment, billing details, and latest check-in without leaving ops.</p>
       <div class="list-stack" id="tracking-selected-card" style="margin-top:1rem;"></div>
     </div>
     <div class="list-card">
-      <h3>Live map</h3>
-      <p>If LandAirSea allows embedding for your ShareSpot link, it will load below. If not, use the open button to view the live location in a new tab.</p>
+      <h3>Tracker map</h3>
+      <p>If the saved ShareSpot link allows embedding, the live map loads below. If not, use the open button to view the location in a new tab.</p>
       <div id="tracking-live-map" style="margin-top:1rem;"></div>
     </div>
   </div>
@@ -1187,7 +1174,29 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
         <div class="form-group"><label>Category</label>
           <select id="e-category"><option value="delivery">Delivery</option><option value="maintenance">Maintenance</option><option value="marketing">Marketing</option><option value="supplies">Supplies</option><option value="other">Other</option></select>
         </div>
+        <div class="form-group"><label>Schedule</label>
+          <select id="e-recurring-type" onchange="toggleExpenseSeasonFields()">
+            <option value="one-time">One-time</option>
+            <option value="monthly">Monthly recurring</option>
+            <option value="yearly">Yearly recurring</option>
+            <option value="seasonal">Seasonal monthly recurring</option>
+          </select>
+        </div>
         <div class="form-group"><label>Expense</label><input type="text" id="e-name" placeholder="Trailer gas, launch fee, ad spend"></div>
+        <div class="form-group" id="e-season-start-wrap"><label>Season starts</label>
+          <select id="e-season-start">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
+        <div class="form-group" id="e-season-end-wrap"><label>Season ends</label>
+          <select id="e-season-end">
+            <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+          </select>
+        </div>
         <div class="form-group" style="grid-column:1/-1;"><label>Notes</label><textarea id="e-notes" placeholder="Any extra detail you want to keep with this expense"></textarea></div>
       </div>
     </div>
@@ -1480,7 +1489,6 @@ async function persistStateChange(options = {}) {
     renderTracking();
     renderReviewHub();
     renderSocialQueue();
-    renderFuel();
     renderMaint();
     renderReminders();
     if (document.getElementById('page-bookings')?.classList.contains('active')) renderBookings(currentFilter);
@@ -1834,11 +1842,87 @@ function currentMonthFuelCost() {
 }
 function expensesInPeriod(period = 'month', category = '') {
   return expenses.filter((expense) => {
-    const expenseDate = dateValue(expense.date);
-    const periodMatch = period === 'month' ? isSameMonth(expenseDate) : period === 'year' ? isSameYear(expenseDate) : true;
     const categoryMatch = category ? expense.category === category : true;
-    return periodMatch && categoryMatch;
+    return categoryMatch && expenseProjectedAmount(expense, period) > 0;
   });
+}
+function normalizeExpenseRecurringType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['monthly', 'yearly', 'seasonal'].includes(normalized)) return normalized;
+  return 'one-time';
+}
+function expenseMonthNumber(value, fallback = 1) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(12, Math.max(1, Math.round(parsed)));
+}
+function expenseMonthInSeason(month, start, end) {
+  if (start <= end) return month >= start && month <= end;
+  return month >= start || month <= end;
+}
+function expenseOccurrencesInPeriod(expense = {}, period = 'month', reference = new Date()) {
+  const recurringType = normalizeExpenseRecurringType(expense.recurringType);
+  const expenseDate = dateValue(expense.date) || reference;
+  const referenceMonth = reference.getMonth() + 1;
+  if (recurringType === 'one-time') {
+    if (period === 'month') return isSameMonth(expenseDate, reference) ? 1 : 0;
+    if (period === 'year') return isSameYear(expenseDate, reference) ? 1 : 0;
+    return 1;
+  }
+  if (recurringType === 'monthly') return period === 'year' ? 12 : 1;
+  if (recurringType === 'yearly') {
+    if (period === 'month') return expenseDate.getMonth() + 1 === referenceMonth ? 1 : 0;
+    return 1;
+  }
+  const seasonStart = expenseMonthNumber(expense.seasonStartMonth, expenseDate.getMonth() + 1);
+  const seasonEnd = expenseMonthNumber(expense.seasonEndMonth, seasonStart);
+  if (period === 'month') return expenseMonthInSeason(referenceMonth, seasonStart, seasonEnd) ? 1 : 0;
+  let count = 0;
+  for (let month = 1; month <= 12; month += 1) {
+    if (expenseMonthInSeason(month, seasonStart, seasonEnd)) count += 1;
+  }
+  return count;
+}
+function expenseProjectedAmount(expense = {}, period = 'month', reference = new Date()) {
+  return Number(expense.amount || 0) * expenseOccurrencesInPeriod(expense, period, reference);
+}
+function expensePeriodTotal(period = 'month', category = '', reference = new Date()) {
+  return expenses.reduce((sum, expense) => {
+    if (category && expense.category !== category) return sum;
+    return sum + expenseProjectedAmount(expense, period, reference);
+  }, 0);
+}
+function expenseScheduleLabel(expense = {}) {
+  const recurringType = normalizeExpenseRecurringType(expense.recurringType);
+  if (recurringType === 'monthly') return 'Monthly';
+  if (recurringType === 'yearly') {
+    const expenseDate = dateValue(expense.date);
+    return expenseDate ? `Yearly in ${MONTH_LABELS[expenseDate.getMonth()]}` : 'Yearly';
+  }
+  if (recurringType === 'seasonal') {
+    const seasonStart = expenseMonthNumber(expense.seasonStartMonth, 5);
+    const seasonEnd = expenseMonthNumber(expense.seasonEndMonth, seasonStart);
+    return `Seasonal ${MONTH_LABELS[seasonStart - 1]}-${MONTH_LABELS[seasonEnd - 1]}`;
+  }
+  return 'One-time';
+}
+function recurringExpenseMonthlyTotal(reference = new Date()) {
+  return expenses.reduce((sum, expense) => {
+    if (normalizeExpenseRecurringType(expense.recurringType) === 'one-time') return sum;
+    return sum + expenseProjectedAmount(expense, 'month', reference);
+  }, 0);
+}
+function seasonalExpenseYearlyTotal(reference = new Date()) {
+  return expenses.reduce((sum, expense) => {
+    if (normalizeExpenseRecurringType(expense.recurringType) !== 'seasonal') return sum;
+    return sum + expenseProjectedAmount(expense, 'year', reference);
+  }, 0);
+}
+function recurringExpenseYearlyTotal(reference = new Date()) {
+  return expenses.reduce((sum, expense) => {
+    if (normalizeExpenseRecurringType(expense.recurringType) === 'one-time') return sum;
+    return sum + expenseProjectedAmount(expense, 'year', reference);
+  }, 0);
 }
 function revenueThisMonth() {
   const collectedInvoices = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice)));
@@ -3051,6 +3135,7 @@ function closeMobileNav() {
 }
 function showPage(id, btn) {
   try {
+  if (id === 'fuel') id = 'expenses';
   if (id === 'system' && !currentPermissions().canAccessSystem) {
     showToast('⚠️ Only the developer login can access system controls');
     return;
@@ -3059,7 +3144,7 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',waivers:'Waivers',expenses:'Expenses',fuel:'Fuel Log',maintenance:'Maintenance',tracking:'Tracking',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
+  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',waivers:'Waivers',expenses:'Expenses',maintenance:'Maintenance',tracking:'Trackers',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
   document.getElementById('page-title').textContent = titles[id]||id;
   const topbarBookingAction = document.getElementById('topbar-booking-action');
   if (topbarBookingAction) topbarBookingAction.style.display = id === 'bookings' ? 'none' : 'inline-flex';
@@ -3068,7 +3153,6 @@ function showPage(id, btn) {
   if(id==='crm') renderCRM();
   if(id==='waivers') renderWaivers();
   if(id==='expenses') renderExpenses();
-  if(id==='fuel') renderFuel();
   if(id==='maintenance') renderMaint();
   if(id==='tracking') renderTracking();
   if(id==='comms') renderCommsPanel();
@@ -3141,10 +3225,14 @@ function resetExpenseForm() {
   document.getElementById('e-date').value = today();
   document.getElementById('e-amount').value = '';
   document.getElementById('e-category').value = 'delivery';
+  document.getElementById('e-recurring-type').value = 'one-time';
   document.getElementById('e-name').value = '';
+  document.getElementById('e-season-start').value = '5';
+  document.getElementById('e-season-end').value = '9';
   document.getElementById('e-notes').value = '';
   document.getElementById('expense-modal-title').textContent = 'Add Expense';
   document.getElementById('expense-save-button').textContent = 'Save Expense';
+  toggleExpenseSeasonFields();
 }
 
 function openExpenseModal(expenseId = null) {
@@ -3159,12 +3247,25 @@ function openExpenseModal(expenseId = null) {
     document.getElementById('e-date').value = inputDateValue(expense.date) || today();
     document.getElementById('e-amount').value = String(Number(expense.amount || 0) || '');
     document.getElementById('e-category').value = expense.category || 'other';
+    document.getElementById('e-recurring-type').value = normalizeExpenseRecurringType(expense.recurringType);
     document.getElementById('e-name').value = expense.name || '';
+    document.getElementById('e-season-start').value = String(expenseMonthNumber(expense.seasonStartMonth, 5));
+    document.getElementById('e-season-end').value = String(expenseMonthNumber(expense.seasonEndMonth, 9));
     document.getElementById('e-notes').value = expense.notes || '';
     document.getElementById('expense-modal-title').textContent = 'Edit Expense';
     document.getElementById('expense-save-button').textContent = 'Save Changes';
   }
+  toggleExpenseSeasonFields();
   openModal('expense-modal');
+}
+
+function toggleExpenseSeasonFields() {
+  const recurringType = document.getElementById('e-recurring-type')?.value || 'one-time';
+  const display = recurringType === 'seasonal' ? '' : 'none';
+  const startWrap = document.getElementById('e-season-start-wrap');
+  const endWrap = document.getElementById('e-season-end-wrap');
+  if (startWrap) startWrap.style.display = display;
+  if (endWrap) endWrap.style.display = display;
 }
 
 function resetFuelForm() {
@@ -3421,6 +3522,8 @@ function monthStart(date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 function bookingTimeValue(timeValue) {
   return String(timeValue || '99:99');
 }
@@ -3459,15 +3562,8 @@ function bookingIsPaid(booking = {}) {
 
 function bookingShowsOnSchedule(booking = {}) {
   if (!booking || !parseIsoDate(booking.date)) return false;
-  const status = normalizeBookingStatusValue(booking.status);
   if (bookingIsArchived(booking)) return false;
-  if (bookingIsPaid(booking)) return true;
-  if (status === 'confirmed' || status === 'completed') return true;
-  const source = bookingSourceValue(booking);
-  if (source === 'website draft') return false;
-  if (source === 'website booking') return bookingHasCompletedWebsiteRequest(booking);
-  if (String(booking.publicToken || '').trim()) return bookingHasCompletedWebsiteRequest(booking);
-  return true;
+  return bookingIsPaid(booking);
 }
 
 function scheduledBookings() {
@@ -3475,7 +3571,7 @@ function scheduledBookings() {
 }
 
 function pendingOpsBookings() {
-  return scheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending' && !bookingIsPaid(booking));
+  return scheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending');
 }
 
 function updatePendingBadge() {
@@ -3722,10 +3818,11 @@ function renderBookingCalendar() {
 
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
+  const visibleBookings = scheduledBookings();
   const list = currentFilter==='all'
-    ? bookings
-    : bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
-  document.getElementById('bookings-table').innerHTML = list.map((b) => {
+    ? visibleBookings
+    : visibleBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
+  document.getElementById('bookings-table').innerHTML = list.length ? list.map((b) => {
     const paid = bookingIsPaid(b);
     const normalizedStatus = normalizeBookingStatusValue(b.status);
     return `
@@ -3752,7 +3849,7 @@ function renderBookings(filter) {
         <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
     </tr>`;
-  }).join('');
+  }).join('') : '<tr><td colspan="9"><div class="empty"><div class="icon">📅</div><p>No paid bookings match this filter yet.</p></div></td></tr>';
   renderBookingCalendar();
 }
 
@@ -3841,13 +3938,13 @@ function renderTracking() {
   const selectedTracker = getSelectedTracker();
 
   if (activeEl) activeEl.textContent = activeTrackers.length.toLocaleString();
-  if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live devices currently reporting` : 'No active tracker plans on file';
+  if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live tracker${activeTrackers.length === 1 ? '' : 's'} currently reporting` : 'No active tracker plans on file';
   if (monthlyEl) monthlyEl.textContent = moneyLabel(monthlyCost);
   if (monthlyMetaEl) monthlyMetaEl.textContent = `${recurringPlans.length} recurring tracker plan${recurringPlans.length === 1 ? '' : 's'}`;
   if (assignedEl) assignedEl.textContent = assignedTrackers.length.toLocaleString();
-  if (assignedMetaEl) assignedMetaEl.textContent = assignedTrackers.length ? `${assignedTrackers.length} device${assignedTrackers.length === 1 ? '' : 's'} tied to the fleet` : 'No devices assigned to the fleet yet';
+  if (assignedMetaEl) assignedMetaEl.textContent = assignedTrackers.length ? `${assignedTrackers.length} tracker${assignedTrackers.length === 1 ? '' : 's'} tied to the fleet` : 'No trackers assigned to the fleet yet';
   if (spareEl) spareEl.textContent = spareTrackers.length.toLocaleString();
-  if (spareMetaEl) spareMetaEl.textContent = spareTrackers.length ? `${spareTrackers.length} device${spareTrackers.length === 1 ? '' : 's'} ready for install or reassignment` : 'Every saved tracker is assigned';
+  if (spareMetaEl) spareMetaEl.textContent = spareTrackers.length ? `${spareTrackers.length} tracker${spareTrackers.length === 1 ? '' : 's'} ready for install or reassignment` : 'Every saved tracker is assigned';
   if (summaryEl) summaryEl.textContent = trackers.length ? `${trackers.length} tracker${trackers.length === 1 ? '' : 's'} · ${moneyLabel(monthlyCost)}/mo` : 'No trackers added yet';
   if (selectedCardEl) {
     selectedCardEl.innerHTML = selectedTracker ? `
@@ -3917,7 +4014,7 @@ function renderTracking() {
         </div>
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">📡</div><p>No trackers saved yet. Add the first LandAirSea device here.</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">📡</div><p>No trackers saved yet. Add the first tracker here.</p></div></td></tr>';
 }
 async function saveTracker() {
   const name = document.getElementById('t-name').value.trim();
@@ -4067,10 +4164,9 @@ function renderFleetLegend() {
 }
 function renderDashboardMetrics() {
   const pendingDeposits = pendingOpsBookings().length;
-  const deliverySpend = expensesInPeriod('month', 'delivery').reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const fuelSpend = currentMonthFuelCost();
+  const monthExpenseTotal = expensePeriodTotal('month');
   const revenue = revenueThisMonth();
-  const profit = revenue - fuelSpend - deliverySpend;
+  const profit = revenue - monthExpenseTotal;
   const monthlyBookings = scheduledBookings().filter((booking) => isSameMonth(dateValue(booking.date))).length;
   const collectedInvoicesThisMonth = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice))).length;
 
@@ -4084,11 +4180,11 @@ function renderDashboardMetrics() {
   const bookingsMeta = document.getElementById('dashboard-kpi-bookings-meta');
 
   if (pendingEl) pendingEl.textContent = pendingDeposits.toLocaleString();
-  if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} bookings still need deposit follow-up` : 'All open bookings have deposit coverage';
+  if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} paid bookings still need ops confirmation` : 'No paid bookings are waiting on ops follow-up';
   if (revenueEl) revenueEl.textContent = `$${Math.round(revenue).toLocaleString()}`;
   if (revenueMeta) revenueMeta.textContent = collectedInvoicesThisMonth ? 'Invoice payments collected this month' : 'Paid bookings recognized this month';
   if (profitEl) profitEl.textContent = `$${Math.round(profit).toLocaleString()}`;
-  if (profitMeta) profitMeta.textContent = `$${Math.round(fuelSpend).toLocaleString()} fuel + $${Math.round(deliverySpend).toLocaleString()} delivery`;
+  if (profitMeta) profitMeta.textContent = `${moneyLabel(monthExpenseTotal)} tracked expenses this month`;
   if (bookingsEl) bookingsEl.textContent = monthlyBookings.toLocaleString();
   if (bookingsMeta) bookingsMeta.textContent = `${monthlyBookings} rentals scheduled this month`;
   renderFleetLegend();
@@ -4352,24 +4448,21 @@ function renderCRM() {
           <div class="customer-main">
             <div class="customer-avatar" style="background:${AVATAR_COLORS[i%AVATAR_COLORS.length]}22;color:${AVATAR_COLORS[i%AVATAR_COLORS.length]};">${escapeHtml(initials(c.name))}</div>
             <div class="customer-identity">
-              <div class="customer-name">${escapeHtml(c.name)}</div>
+              <div class="customer-name-row">
+                <div class="customer-name">${escapeHtml(c.name)}</div>
+                <span class="customer-open-hint">${isExpanded ? 'Hide details' : 'Open details'}</span>
+              </div>
               <div class="customer-flags">${statusFlags}</div>
               <div class="customer-basic">${contactLine}</div>
             </div>
           </div>
-          <div class="customer-overview">
-            <div><strong>${Number(c.bookings) || 0}</strong><span>Bookings</span></div>
-            <div><strong>$${Number(c.totalSpent || 0).toLocaleString()}</strong><span>Total spent</span></div>
-            <div><strong>${escapeHtml(customerLastTouchLabel(c))}</strong><span>Last touch</span></div>
-          </div>
         </button>
-        <div class="customer-actions">
-          <button class="btn btn-ghost btn-sm" onclick="toggleCustomerDetail(${Number(c.id)})">${isExpanded ? 'Hide details' : 'More details'}</button>
-          <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
-          ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
-        </div>
         ${isExpanded ? `
           <div class="customer-detail">
+            <div class="customer-detail-block">
+              <div class="customer-detail-label">Booking summary</div>
+              <div class="customer-detail-value">${Number(c.bookings) || 0} booking${Number(c.bookings) === 1 ? '' : 's'} · ${moneyLabel(c.totalSpent || 0)} total spent · ${escapeHtml(customerLastTouchLabel(c))}</div>
+            </div>
             <div class="customer-detail-block">
               <div class="customer-detail-label">Profile</div>
               <div class="customer-detail-value ${detailPieces ? '' : 'muted'}">${detailPieces || 'No extra profile details saved'}</div>
@@ -4391,6 +4484,8 @@ function renderCRM() {
               <div class="customer-detail-value ${c.crmNotes ? '' : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
             </div>
             <div class="customer-detail-actions">
+              <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
+              ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
               ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : ''}
               ${c.email ? `<a href="mailto:${encodeURIComponent(c.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : ''}
               <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${Number(c.id)})">Delete</button>
@@ -4492,22 +4587,19 @@ async function deleteCustomer(customerId) {
 // ── EXPENSES ──
 function renderExpenses() {
   const monthExpenses = expensesInPeriod('month');
-  const deliveryExpenses = expensesInPeriod('month', 'delivery');
-  const directCost = currentMonthFuelCost() + deliveryExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const ytdExpenses = expensesInPeriod('year');
-
-  const monthTotal = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const deliveryTotal = deliveryExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const ytdTotal = ytdExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+  const monthTotal = expensePeriodTotal('month');
+  const recurringMonthly = recurringExpenseMonthlyTotal();
+  const seasonalAnnual = seasonalExpenseYearlyTotal();
+  const recurringAnnual = recurringExpenseYearlyTotal();
 
   document.getElementById('expense-kpi-month').textContent = `$${Math.round(monthTotal).toLocaleString()}`;
-  document.getElementById('expense-kpi-month-meta').textContent = `${monthExpenses.length} expenses logged this month`;
-  document.getElementById('expense-kpi-delivery').textContent = `$${Math.round(deliveryTotal).toLocaleString()}`;
-  document.getElementById('expense-kpi-delivery-meta').textContent = `${deliveryExpenses.length} delivery-related charges`;
-  document.getElementById('expense-kpi-direct').textContent = `$${Math.round(directCost).toLocaleString()}`;
-  document.getElementById('expense-kpi-direct-meta').textContent = `$${Math.round(currentMonthFuelCost()).toLocaleString()} fuel + $${Math.round(deliveryTotal).toLocaleString()} delivery`;
-  document.getElementById('expense-kpi-ytd').textContent = `$${Math.round(ytdTotal).toLocaleString()}`;
-  document.getElementById('expense-kpi-ytd-meta').textContent = `${ytdExpenses.length} expenses tracked this year`;
+  document.getElementById('expense-kpi-month-meta').textContent = `${monthExpenses.length} expense line${monthExpenses.length === 1 ? '' : 's'} hitting this month`;
+  document.getElementById('expense-kpi-delivery').textContent = `$${Math.round(recurringMonthly).toLocaleString()}`;
+  document.getElementById('expense-kpi-delivery-meta').textContent = recurringMonthly ? 'Active recurring charges this month' : 'No recurring charges active this month';
+  document.getElementById('expense-kpi-direct').textContent = `$${Math.round(seasonalAnnual).toLocaleString()}`;
+  document.getElementById('expense-kpi-direct-meta').textContent = seasonalAnnual ? 'Projected seasonal total across the active season' : 'No seasonal recurring expenses saved';
+  document.getElementById('expense-kpi-ytd').textContent = `$${Math.round(recurringAnnual).toLocaleString()}`;
+  document.getElementById('expense-kpi-ytd-meta').textContent = recurringAnnual ? 'Projected recurring total for the full year' : 'No recurring expenses saved yet';
 
   const table = document.getElementById('expense-table');
   if (!table) return;
@@ -4516,6 +4608,7 @@ function renderExpenses() {
     <tr>
       <td>${escapeHtml(formatShortDate(expense.date))}</td>
       <td>${escapeHtml(expense.category)}</td>
+      <td>${escapeHtml(expenseScheduleLabel(expense))}</td>
       <td><strong>${escapeHtml(expense.name)}</strong></td>
       <td style="color:var(--muted);">${escapeHtml(expense.notes || '—')}</td>
       <td style="color:var(--amber);font-weight:500;">$${Number(expense.amount || 0).toLocaleString()}</td>
@@ -4526,7 +4619,7 @@ function renderExpenses() {
         </div>
       </td>
     </tr>
-  `).join('') : '<tr><td colspan="6"><div class="empty"><div class="icon">💸</div><p>No expenses logged yet.</p></div></td></tr>';
+  `).join('') : '<tr><td colspan="7"><div class="empty"><div class="icon">💸</div><p>No expenses logged yet.</p></div></td></tr>';
 }
 async function saveExpense() {
   const name = document.getElementById('e-name').value.trim();
@@ -4538,8 +4631,11 @@ async function saveExpense() {
   const payload = {
     date: document.getElementById('e-date').value || today(),
     category: document.getElementById('e-category').value,
+    recurringType: normalizeExpenseRecurringType(document.getElementById('e-recurring-type').value),
     name,
     amount,
+    seasonStartMonth: expenseMonthNumber(document.getElementById('e-season-start').value, 5),
+    seasonEndMonth: expenseMonthNumber(document.getElementById('e-season-end').value, 9),
     notes: document.getElementById('e-notes').value.trim()
   };
   const isEditingExpense = Boolean(editingExpenseId);
