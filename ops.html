@@ -1291,6 +1291,9 @@ let integrations = {
   socialPlatforms: []
 };
 const PRIVATE_OPS_URL = 'https://shoreline-aquatics-ops.onrender.com/ops-login.html';
+if (window.location.protocol === 'file:') {
+  window.location.replace(PRIVATE_OPS_URL);
+}
 let currentSession = {
   available: false,
   authenticated: false,

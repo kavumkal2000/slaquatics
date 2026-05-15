@@ -155,6 +155,13 @@ code{
     </section>
   </div>
 <script>
+const LIVE_OPS_ORIGIN = 'https://shoreline-aquatics-ops.onrender.com';
+const LIVE_OPS_LOGIN_URL = `${LIVE_OPS_ORIGIN}/ops-login.html`;
+const LIVE_OPS_APP_URL = `${LIVE_OPS_ORIGIN}/ops.html`;
+if (window.location.protocol === 'file:') {
+  window.location.replace(LIVE_OPS_LOGIN_URL);
+}
+
 const form = document.getElementById('login-form');
 const statusEl = document.getElementById('status');
 const submitBtn = document.getElementById('submit-btn');
@@ -176,7 +183,7 @@ async function checkSession() {
     }
     const data = await response.json();
     if (data.authenticated) {
-      window.location.replace('/ops.html');
+      window.location.replace(LIVE_OPS_APP_URL);
       return;
     }
     setStatus('Private service ready. Sign in with your Shoreline ops login.', 'success');
@@ -202,7 +209,7 @@ form.addEventListener('submit', async (event) => {
       throw new Error(data.error || 'Sign-in failed');
     }
     setStatus('Access granted. Opening Shoreline ops...', 'success');
-    window.location.replace('/ops.html');
+    window.location.replace(LIVE_OPS_APP_URL);
   } catch (error) {
     setStatus(error.message || 'Sign-in failed', 'error');
     submitBtn.disabled = false;
