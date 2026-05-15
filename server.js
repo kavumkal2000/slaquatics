@@ -117,6 +117,7 @@ const DEFAULT_STATE = {
   communicationsLog: [],
   reviewRequests: [],
   reviews: [],
+  reviewSettings: { googleUrl: '', facebookUrl: '', autoSend: false, channel: 'sms' },
   socialPosts: [],
   ownerWeeklyDigest: { lastSentAt: '', lastMessageId: '', lastWeekKey: '' },
   importMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false},
@@ -145,6 +146,17 @@ function normalizeImportMeta(value) {
     : clone(DEFAULT_STATE.importMeta);
 }
 
+function normalizeReviewSettings(value) {
+  const payload = value && typeof value === 'object' ? value : {};
+  const channel = String(payload.channel || '').trim().toLowerCase() === 'email' ? 'email' : 'sms';
+  return {
+    googleUrl: String(payload.googleUrl || '').trim(),
+    facebookUrl: String(payload.facebookUrl || '').trim(),
+    autoSend: Boolean(payload.autoSend),
+    channel
+  };
+}
+
 function normalizeOwnerWeeklyDigest(value) {
   return value && typeof value === 'object'
     ? {
@@ -166,6 +178,7 @@ const STATE_TOP_LEVEL_KEYS = [
   'communicationsLog',
   'reviewRequests',
   'reviews',
+  'reviewSettings',
   'socialPosts',
   'ownerWeeklyDigest',
   'importMeta',
@@ -204,10 +217,29 @@ function sanitizeState(value = {}) {
     communicationsLog: normalizeArray(payload.communicationsLog, DEFAULT_STATE.communicationsLog),
     reviewRequests: normalizeArray(payload.reviewRequests, DEFAULT_STATE.reviewRequests),
     reviews: normalizeArray(payload.reviews, DEFAULT_STATE.reviews),
+    reviewSettings: normalizeReviewSettings(payload.reviewSettings),
     socialPosts: normalizeArray(payload.socialPosts, DEFAULT_STATE.socialPosts),
     ownerWeeklyDigest: normalizeOwnerWeeklyDigest(payload.ownerWeeklyDigest),
     importMeta: normalizeImportMeta(payload.importMeta),
     invoiceImportMeta: normalizeImportMeta(payload.invoiceImportMeta)
+  };
+}
+
+function reviewSettingsForState(state = null) {
+  const stored = normalizeReviewSettings(state?.reviewSettings);
+  const googleUrl = stored.googleUrl || String(GOOGLE_REVIEW_URL || '').trim();
+  const facebookUrl = stored.facebookUrl || String(FACEBOOK_REVIEW_URL || '').trim();
+  const autoSend = typeof state?.reviewSettings?.autoSend === 'boolean'
+    ? Boolean(state.reviewSettings.autoSend)
+    : AUTO_SEND_REVIEW_REQUESTS;
+  const channel = ['email', 'sms'].includes(String(stored.channel || '').trim().toLowerCase())
+    ? String(stored.channel).trim().toLowerCase()
+    : REVIEW_REQUEST_CHANNEL;
+  return {
+    googleUrl,
+    facebookUrl,
+    autoSend,
+    channel: channel === 'email' ? 'email' : 'sms'
   };
 }
 
@@ -1834,7 +1866,8 @@ function applyStripeSessionToBooking(state, session = {}, now = new Date().toISO
   return booking;
 }
 
-function integrationStatus() {
+function integrationStatus(state = null) {
+  const reviewSettings = reviewSettingsForState(state);
   const socialPlatforms = [
     SOCIAL_FACEBOOK_WEBHOOK_URL ? 'facebook' : '',
     SOCIAL_INSTAGRAM_WEBHOOK_URL ? 'instagram' : '',
@@ -1847,9 +1880,11 @@ function integrationStatus() {
     bookingAlertsConfigured: Boolean(normalizeEmailList(BOOKING_ALERT_EMAILS).length),
     ownerUpdateConfigured: Boolean(ownerWeeklyDigestRecipients().length),
     ownerWeeklyDigestEnabled: OWNER_WEEKLY_DIGEST_ENABLED,
-    reviewLinksConfigured: Boolean(GOOGLE_REVIEW_URL || FACEBOOK_REVIEW_URL),
-    reviewAutomationEnabled: AUTO_SEND_REVIEW_REQUESTS,
-    reviewChannel: REVIEW_REQUEST_CHANNEL,
+    reviewLinksConfigured: Boolean(reviewSettings.googleUrl || reviewSettings.facebookUrl),
+    reviewAutomationEnabled: reviewSettings.autoSend,
+    reviewChannel: reviewSettings.channel,
+    reviewGoogleUrl: reviewSettings.googleUrl,
+    reviewFacebookUrl: reviewSettings.facebookUrl,
     stripeConfigured: stripeConfigured(),
     stripeWebhookConfigured: stripeWebhookConfigured(),
     socialConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL || socialPlatforms.length),
@@ -1859,17 +1894,19 @@ function integrationStatus() {
   };
 }
 
-function reviewLinksText() {
+function reviewLinksText(state = null) {
+  const reviewSettings = reviewSettingsForState(state);
   const links = [];
-  if (GOOGLE_REVIEW_URL) links.push(`Google: ${GOOGLE_REVIEW_URL}`);
-  if (FACEBOOK_REVIEW_URL) links.push(`Facebook: ${FACEBOOK_REVIEW_URL}`);
+  if (reviewSettings.googleUrl) links.push(`Google: ${reviewSettings.googleUrl}`);
+  if (reviewSettings.facebookUrl) links.push(`Facebook: ${reviewSettings.facebookUrl}`);
   return links.join('\n');
 }
 
-function reviewLinksHtml() {
+function reviewLinksHtml(state = null) {
+  const reviewSettings = reviewSettingsForState(state);
   const links = [];
-  if (GOOGLE_REVIEW_URL) links.push(`<a href="${htmlEscape(GOOGLE_REVIEW_URL)}">Leave a Google review</a>`);
-  if (FACEBOOK_REVIEW_URL) links.push(`<a href="${htmlEscape(FACEBOOK_REVIEW_URL)}">Leave a Facebook review</a>`);
+  if (reviewSettings.googleUrl) links.push(`<a href="${htmlEscape(reviewSettings.googleUrl)}">Leave a Google review</a>`);
+  if (reviewSettings.facebookUrl) links.push(`<a href="${htmlEscape(reviewSettings.facebookUrl)}">Leave a Facebook review</a>`);
   return links.join('<br>');
 }
 
@@ -1993,7 +2030,7 @@ function bookingQualifiesForUpcomingDigest(booking = {}, todayKey = '', horizonK
 }
 
 function buildOwnerWeeklyDigestReport(state, schedule = ownerWeeklyDigestSchedule()) {
-  const integrations = integrationStatus();
+  const integrations = integrationStatus(state);
   const paidInvoices = (state.invoices || []).filter((invoice) => invoiceCollectedAmount(invoice) > 0);
   const openInvoices = (state.invoices || []).filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
   const paidInvoiceRevenue = paidInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
@@ -2394,9 +2431,10 @@ async function handleApi(request, response, pathname) {
   }
 
   if (pathname === '/api/public/integrations/status' && request.method === 'GET') {
+    const state = await stateStore.read();
     sendPublicJson(response, request, 200, {
       ok: true,
-      integrations: integrationStatus()
+      integrations: integrationStatus(state)
     });
     return true;
   }
@@ -2817,7 +2855,8 @@ async function handleApi(request, response, pathname) {
   }
 
   if (pathname === '/api/ops/integrations/status' && request.method === 'GET') {
-    sendJson(response, 200, { ok: true, integrations: integrationStatus() });
+    const state = await stateStore.read();
+    sendJson(response, 200, { ok: true, integrations: integrationStatus(state) });
     return true;
   }
 
@@ -2900,18 +2939,20 @@ async function handleApi(request, response, pathname) {
   if (pathname === '/api/ops/reviews/send' && request.method === 'POST') {
     try {
       const body = JSON.parse(await readRequestBody(request) || '{}');
-      if (!GOOGLE_REVIEW_URL && !FACEBOOK_REVIEW_URL) {
+      const state = await stateStore.read();
+      const reviewSettings = reviewSettingsForState(state);
+      if (!reviewSettings.googleUrl && !reviewSettings.facebookUrl) {
         throw new Error('Review links are not configured yet.');
       }
-      const channel = String(body.channel || REVIEW_REQUEST_CHANNEL || 'sms').toLowerCase();
+      const channel = String(body.channel || reviewSettings.channel || 'sms').toLowerCase();
       const customerName = body.customerName || 'there';
       const subject = 'Thanks for riding with Shoreline Aquatics';
       const text = [
         `Hey ${firstName(customerName)}! Thanks again for riding with Shoreline Aquatics.`,
         'If you had a great time, we would really appreciate a quick review:',
-        reviewLinksText()
+        reviewLinksText(state)
       ].filter(Boolean).join('\n\n');
-      const html = `<p>Hey ${htmlEscape(firstName(customerName))}! Thanks again for riding with Shoreline Aquatics.</p><p>If you had a great time, we would really appreciate a quick review:</p><p>${reviewLinksHtml()}</p>`;
+      const html = `<p>Hey ${htmlEscape(firstName(customerName))}! Thanks again for riding with Shoreline Aquatics.</p><p>If you had a great time, we would really appreciate a quick review:</p><p>${reviewLinksHtml(state)}</p>`;
 
       let result;
       if (channel === 'email') {

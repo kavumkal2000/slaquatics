@@ -830,6 +830,29 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="kpi-card"><div class="label">Need response</div><div class="value" style="color:var(--amber);" id="reviews-kpi-response">0</div><div class="delta warn" id="reviews-kpi-response-meta">Unanswered reviews</div></div>
     <div class="kpi-card"><div class="label">Review rate</div><div class="value" id="reviews-kpi-rate">0%</div><div class="delta up" id="reviews-kpi-rate-meta">Completed rentals with a review</div></div>
   </div>
+  <div class="list-card" style="margin-bottom:1.5rem;">
+    <h3>Review automation settings</h3>
+    <p id="review-settings-note">Set your review links and choose whether completed rentals should auto-send a review request.</p>
+    <div class="form-grid" style="margin-top:1rem;">
+      <div class="form-group"><label>Google review link</label><input type="url" id="review-google-url" placeholder="https://..."></div>
+      <div class="form-group"><label>Facebook review link</label><input type="url" id="review-facebook-url" placeholder="https://..."></div>
+      <div class="form-group"><label>Default review channel</label>
+        <select id="review-default-channel">
+          <option value="sms">Text message</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Auto-send when rental is completed</label>
+        <select id="review-auto-send">
+          <option value="off">Off</option>
+          <option value="on">On</option>
+        </select>
+      </div>
+    </div>
+    <div class="compose-actions">
+      <button class="btn btn-primary btn-sm" onclick="saveReviewSettings()">Save review settings</button>
+    </div>
+  </div>
   <div class="compose-grid">
     <div class="list-card">
       <h3>Review drop queue</h3>
@@ -1294,10 +1317,18 @@ let integrations = {
   emailConfigured: false,
   reviewLinksConfigured: false,
   reviewAutomationEnabled: false,
+  reviewGoogleUrl: '',
+  reviewFacebookUrl: '',
   reviewChannel: 'sms',
   socialConfigured: false,
   socialAutomationConfigured: false,
   socialPlatforms: []
+};
+let reviewSettings = {
+  googleUrl: '',
+  facebookUrl: '',
+  autoSend: false,
+  channel: 'sms'
 };
 const PRIVATE_OPS_URL = 'https://shoreline-aquatics-ops.onrender.com/ops-login.html';
 if (window.location.protocol === 'file:') {
@@ -1330,6 +1361,7 @@ function snapshotState() {
     communicationsLog,
     reviewRequests,
     reviews,
+    reviewSettings,
     socialPosts,
     importMeta,
     invoiceImportMeta
@@ -1349,6 +1381,14 @@ function applyState(nextState = {}) {
   if (Array.isArray(nextState.communicationsLog)) communicationsLog = nextState.communicationsLog;
   if (Array.isArray(nextState.reviewRequests)) reviewRequests = nextState.reviewRequests;
   if (Array.isArray(nextState.reviews)) reviews = nextState.reviews;
+  if (nextState.reviewSettings && typeof nextState.reviewSettings === 'object') {
+    reviewSettings = {
+      googleUrl: String(nextState.reviewSettings.googleUrl || '').trim(),
+      facebookUrl: String(nextState.reviewSettings.facebookUrl || '').trim(),
+      autoSend: Boolean(nextState.reviewSettings.autoSend),
+      channel: String(nextState.reviewSettings.channel || '').trim().toLowerCase() === 'email' ? 'email' : 'sms'
+    };
+  }
   if (Array.isArray(nextState.socialPosts)) socialPosts = nextState.socialPosts;
   if (nextState.importMeta && typeof nextState.importMeta === 'object') {
     importMeta = {...importMeta, ...nextState.importMeta};
@@ -1526,6 +1566,13 @@ async function loadIntegrationStatus() {
   try {
     const payload = await requestJson('/api/ops/integrations/status');
     integrations = {...integrations, ...(payload.integrations || {})};
+    reviewSettings = {
+      ...reviewSettings,
+      googleUrl: String(integrations.reviewGoogleUrl || reviewSettings.googleUrl || '').trim(),
+      facebookUrl: String(integrations.reviewFacebookUrl || reviewSettings.facebookUrl || '').trim(),
+      autoSend: Boolean(integrations.reviewAutomationEnabled),
+      channel: integrations.reviewChannel === 'email' ? 'email' : 'sms'
+    };
   } catch (error) {
     console.error('Integration status load failed:', error);
   }
@@ -4895,6 +4942,24 @@ function prepareReviewRequestsForCompletedBookings(baseRequests = reviewRequests
 function reviewMessage(name) {
   return `Hey ${firstName(name)}! Thanks again for riding with Shoreline Aquatics. If you had a great time, we'd really appreciate a quick review about your experience on the lake.`;
 }
+async function saveReviewSettings() {
+  const nextSettings = {
+    googleUrl: document.getElementById('review-google-url')?.value.trim() || '',
+    facebookUrl: document.getElementById('review-facebook-url')?.value.trim() || '',
+    autoSend: (document.getElementById('review-auto-send')?.value || 'off') === 'on',
+    channel: (document.getElementById('review-default-channel')?.value || 'sms') === 'email' ? 'email' : 'sms'
+  };
+  reviewSettings = nextSettings;
+  const saved = await saveStateSnapshot({
+    ...snapshotState(),
+    reviewSettings: nextSettings
+  });
+  if (!saved) return;
+  await loadIntegrationStatus();
+  renderReviewHub({ skipQueueSync: true });
+  renderSystemPage();
+  showToast('✅ Review automation updated');
+}
 let reviewQueueSyncPending = false;
 function syncReviewQueueForCompletedBookings() {
   if (!backendAvailable || reviewQueueSyncPending) return;
@@ -5017,6 +5082,20 @@ function renderReviewHub(options = {}) {
   if (!options.skipQueueSync) {
     syncReviewQueueForCompletedBookings();
   }
+  const googleInput = document.getElementById('review-google-url');
+  const facebookInput = document.getElementById('review-facebook-url');
+  const channelInput = document.getElementById('review-default-channel');
+  const autoSendInput = document.getElementById('review-auto-send');
+  const settingsNote = document.getElementById('review-settings-note');
+  if (googleInput) googleInput.value = reviewSettings.googleUrl || '';
+  if (facebookInput) facebookInput.value = reviewSettings.facebookUrl || '';
+  if (channelInput) channelInput.value = reviewSettings.channel === 'email' ? 'email' : 'sms';
+  if (autoSendInput) autoSendInput.value = reviewSettings.autoSend ? 'on' : 'off';
+  if (settingsNote) {
+    settingsNote.textContent = integrations.reviewLinksConfigured
+      ? `Review links are configured. Auto-send is ${integrations.reviewAutomationEnabled ? 'on' : 'off'} and the default channel is ${integrations.reviewChannel}.`
+      : 'Add at least one Google or Facebook review link, then choose whether completed rentals should auto-send.';
+  }
   const pending = reviewRequests.filter((request) => String(request.status || '').toLowerCase() !== 'reviewed');
   const completedRentals = bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').length;
   const reviewRate = completedRentals ? Math.round((reviews.length / completedRentals) * 100) : 0;
@@ -5031,7 +5110,7 @@ function renderReviewHub(options = {}) {
   if (providerNote) {
     providerNote.textContent = integrations.reviewLinksConfigured
       ? `Completed rentals queue up here. Auto-send is ${integrations.reviewAutomationEnabled ? 'enabled' : 'disabled'} and the default channel is ${integrations.reviewChannel}.`
-      : 'Add Google and/or Facebook review links in the backend env vars before sending automated review requests.';
+      : 'Add Google and/or Facebook review links above before sending automated review requests.';
   }
   if (requestList) {
     requestList.innerHTML = pending.length ? sortNewestFirst(pending, (item) => item.sentAt || '').map((request) => `
