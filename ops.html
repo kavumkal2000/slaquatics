@@ -1268,6 +1268,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeTrackerModal()">Cancel</button>
+      <button class="btn btn-danger" id="tracking-delete-button" onclick="deleteTracker()" style="display:none;">Delete Tracker</button>
       <button class="btn btn-primary" id="tracking-save-button" onclick="saveTracker()">Save Tracker</button>
     </div>
   </div>
@@ -3992,6 +3993,12 @@ function trackerDateTimeInputValue(value = '') {
   const text = String(value || '').trim();
   return text ? text.slice(0, 16) : '';
 }
+function trackerStatusValue(status = '') {
+  return String(status || '').trim().toLowerCase();
+}
+function trackerSerialKey(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
 function normalizeTrackerShareUrl(value = '') {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -4015,16 +4022,17 @@ function resetTrackerForm() {
   document.getElementById('t-status').value = 'active';
   document.getElementById('tracking-modal-title').textContent = 'Add Tracker';
   document.getElementById('tracking-save-button').textContent = 'Save Tracker';
+  document.getElementById('tracking-delete-button').style.display = 'none';
 }
 function closeTrackerModal() {
   closeModal('tracking-modal');
   resetTrackerForm();
 }
 function getSelectedTracker() {
-  const current = trackers.find((tracker) => tracker.id === selectedTrackerId);
+  const current = trackers.find((tracker) => Number(tracker.id) === Number(selectedTrackerId));
   if (current) return current;
   const preferred = trackers.find((tracker) => tracker.shareSpotUrl) || trackers[0] || null;
-  if (preferred) selectedTrackerId = preferred.id;
+  if (preferred) selectedTrackerId = Number(preferred.id);
   return preferred;
 }
 function openTrackerModal(trackerId = null) {
@@ -4057,24 +4065,36 @@ function openTrackerModal(trackerId = null) {
     document.getElementById('t-notes').value = tracker.notes || '';
     document.getElementById('tracking-modal-title').textContent = 'Edit Tracker';
     document.getElementById('tracking-save-button').textContent = 'Save Changes';
+    document.getElementById('tracking-delete-button').style.display = '';
   }
   openModal('tracking-modal');
 }
 function openTrackerLiveMap(id) {
-  selectedTrackerId = id;
+  const tracker = trackers.find((item) => Number(item.id) === Number(id));
+  if (!tracker) {
+    showToast('⚠️ Tracker record not found');
+    return;
+  }
+  selectedTrackerId = Number(tracker.id);
   renderTracking();
 }
 function renderTracking() {
   syncAssetSelectors();
-  const activeTrackers = trackers.filter((tracker) => String(tracker.status || '').toLowerCase() === 'active');
-  const assignedTrackers = trackers.filter((tracker) => String(tracker.assignedAsset || '').trim());
-  const recurringPlans = trackers.filter((tracker) => Number(tracker.monthlyFee || 0) > 0);
+  const activeTrackers = trackers.filter((tracker) => trackerStatusValue(tracker.status) === 'active');
+  const assignedTrackers = trackers.filter((tracker) => {
+    const status = trackerStatusValue(tracker.status);
+    return status !== 'inactive' && status !== 'lost' && String(tracker.assignedAsset || '').trim();
+  });
+  const recurringPlans = trackers.filter((tracker) => {
+    const status = trackerStatusValue(tracker.status);
+    return status !== 'inactive' && status !== 'lost' && Number(tracker.monthlyFee || 0) > 0;
+  });
   const spareTrackers = trackers.filter((tracker) => {
-    const status = String(tracker.status || '').toLowerCase();
-    return !String(tracker.assignedAsset || '').trim() || status === 'spare';
+    const status = trackerStatusValue(tracker.status);
+    return status !== 'inactive' && status !== 'lost' && (!String(tracker.assignedAsset || '').trim() || status === 'spare');
   });
   const monthlyCost = trackers.reduce((sum, tracker) => {
-    const status = String(tracker.status || '').toLowerCase();
+    const status = trackerStatusValue(tracker.status);
     if (status === 'inactive' || status === 'lost') return sum;
     return sum + Number(tracker.monthlyFee || 0);
   }, 0);
@@ -4114,6 +4134,7 @@ function renderTracking() {
         <div class="list-row-actions">
           ${trackerStatusBadge(selectedTracker.status)}
           <button class="btn btn-ghost btn-sm" onclick="openTrackerModal(${Number(selectedTracker.id)})">Edit tracker</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTracker(${Number(selectedTracker.id)})">Delete tracker</button>
           ${selectedTracker.shareSpotUrl ? `<a class="btn btn-primary btn-sm" href="${escapeHtml(selectedTracker.shareSpotUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">Open live map</a>` : `<button class="btn btn-primary btn-sm" onclick="openTrackerModal(${Number(selectedTracker.id)})">Add live map link</button>`}
         </div>
       </div>
@@ -4135,6 +4156,7 @@ function renderTracking() {
       <div class="compose-actions" style="margin-top:0.75rem;">
         <a class="btn btn-primary btn-sm" href="${escapeHtml(selectedTracker.shareSpotUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;">Open ShareSpot</a>
         <button class="btn btn-ghost btn-sm" onclick="openTrackerModal(${Number(selectedTracker.id)})">Edit tracker</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTracker(${Number(selectedTracker.id)})">Delete tracker</button>
         <button class="btn btn-ghost btn-sm" onclick="renderTracking()">Refresh panel</button>
       </div>
       <p class="note-soft" style="margin-top:0.75rem;">If LandAirSea blocks iframe embedding for this link, use <strong>Open ShareSpot</strong> to view the live location in a full tab.</p>
@@ -4177,6 +4199,7 @@ function renderTracking() {
           <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" onclick="openTrackerLiveMap(${Number(tracker.id)})">${tracker.shareSpotUrl ? 'View live map' : 'Select tracker'}</button>
             <button class="btn btn-ghost btn-sm" onclick="openTrackerModal(${Number(tracker.id)})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteTracker(${Number(tracker.id)})">Delete</button>
           </div>
         </div>
       </td>
@@ -4195,6 +4218,14 @@ async function saveTracker() {
     : null;
   if (editingTrackerId && !existingTracker) {
     showToast('⚠️ Tracker record not found');
+    return;
+  }
+  const duplicateTracker = trackers.find((tracker) => {
+    if (Number(tracker.id) === Number(editingTrackerId || 0)) return false;
+    return trackerSerialKey(tracker.serialNumber) === trackerSerialKey(serialNumber);
+  });
+  if (duplicateTracker) {
+    showToast(`⚠️ Serial number already belongs to ${duplicateTracker.name || 'another tracker'}`);
     return;
   }
   const previousTrackers = JSON.parse(JSON.stringify(trackers));
@@ -4223,7 +4254,7 @@ async function saveTracker() {
   tracker.notes = document.getElementById('t-notes').value.trim();
   tracker.updatedAt = new Date().toISOString();
   if (!existingTracker) trackers.unshift(tracker);
-  selectedTrackerId = tracker.id;
+  selectedTrackerId = Number(tracker.id);
   if (!(await persistStateChange())) {
     trackers = previousTrackers;
     selectedTrackerId = previousSelectedTrackerId;
@@ -4233,6 +4264,33 @@ async function saveTracker() {
   syncAssetSelectors();
   renderTracking();
   showToast(existingTracker ? '📡 Tracker updated' : '📡 Tracker saved');
+}
+
+async function deleteTracker(trackerId = null) {
+  const resolvedTrackerId = Number(trackerId ?? editingTrackerId ?? selectedTrackerId ?? 0);
+  const tracker = trackers.find((item) => Number(item.id) === resolvedTrackerId);
+  if (!tracker) {
+    showToast('⚠️ Tracker record not found');
+    return;
+  }
+  const confirmed = window.confirm(`Delete tracker "${tracker.name}" (${tracker.serialNumber || 'no serial'})?`);
+  if (!confirmed) return;
+  const previousTrackers = JSON.parse(JSON.stringify(trackers));
+  const previousSelectedTrackerId = selectedTrackerId;
+  const shouldCloseEditor = editingTrackerId && Number(editingTrackerId) === resolvedTrackerId;
+  trackers = trackers.filter((item) => Number(item.id) !== resolvedTrackerId);
+  if (Number(selectedTrackerId) === resolvedTrackerId) {
+    selectedTrackerId = trackers[0] ? Number(trackers[0].id) : null;
+  }
+  if (!(await persistStateChange())) {
+    trackers = previousTrackers;
+    selectedTrackerId = previousSelectedTrackerId;
+    return;
+  }
+  if (shouldCloseEditor) closeTrackerModal();
+  syncAssetSelectors();
+  renderTracking();
+  showToast('🗑️ Tracker removed');
 }
 
 async function updateStatus(id, status) {
