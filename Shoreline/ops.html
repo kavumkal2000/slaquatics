@@ -3455,6 +3455,8 @@ async function saveBooking() {
   const baseValue = PRICING[craft]?.[dur] || 0;
   if (!baseValue) { showToast('⚠️ That duration is not available for this package'); return; }
   const bookingValue = baseValue + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
+  const previousBookings = JSON.parse(JSON.stringify(bookings));
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
   const existingBooking = editingBookingId
     ? bookings.find((booking) => Number(booking.id) === Number(editingBookingId))
     : null;
@@ -3523,7 +3525,11 @@ async function saveBooking() {
     if (item) syncCustomerRollup(item);
   });
 
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    bookings = previousBookings;
+    customers = previousCustomers;
+    return;
+  }
   updatePendingBadge();
   closeModal('booking-modal');
   showToast(existingBooking ? '✅ Booking updated' : '✅ Booking saved');
@@ -5070,6 +5076,22 @@ async function logCommunication() {
 function ensureReviewRequestForBooking(booking) {
   return ensureReviewRequestForBookingInList(booking, reviewRequests);
 }
+function reviewRequestBooking(request = {}) {
+  return bookings.find((booking) => Number(booking.id || 0) === Number(request.bookingId || 0)) || null;
+}
+function reviewRequestStillValid(request = {}) {
+  if (String(request.status || '').toLowerCase() === 'reviewed') return true;
+  const booking = reviewRequestBooking(request);
+  return Boolean(booking && normalizeBookingStatusValue(booking.status) === 'completed');
+}
+function normalizeReviewRequestList(baseRequests = reviewRequests) {
+  const source = Array.isArray(baseRequests) ? baseRequests : [];
+  const requestList = cloneReviewRequests(source).filter(reviewRequestStillValid);
+  return {
+    requestList,
+    changed: requestList.length !== source.length
+  };
+}
 function ensureReviewRequestForBookingInList(booking, requestList) {
   if (!booking || normalizeBookingStatusValue(booking.status) !== 'completed') return { request: null, created: false };
   const existing = requestList.find((request) => request.bookingId === booking.id);
@@ -5088,13 +5110,14 @@ function ensureReviewRequestForBookingInList(booking, requestList) {
   return { request, created: true };
 }
 function prepareReviewRequestsForCompletedBookings(baseRequests = reviewRequests) {
-  const requestList = cloneReviewRequests(baseRequests);
-  let created = false;
+  const normalized = normalizeReviewRequestList(baseRequests);
+  const requestList = normalized.requestList;
+  let changed = normalized.changed;
   bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').forEach((booking) => {
     const result = ensureReviewRequestForBookingInList(booking, requestList);
-    if (result.created) created = true;
+    if (result.created) changed = true;
   });
-  return { requestList, created };
+  return { requestList, changed };
 }
 function reviewMessage(name) {
   return `Hey ${firstName(name)}! Thanks again for riding with Shoreline Aquatics. If you had a great time, we'd really appreciate a quick review about your experience on the lake.`;
@@ -5125,8 +5148,8 @@ async function saveReviewSettings() {
 let reviewQueueSyncPending = false;
 function syncReviewQueueForCompletedBookings() {
   if (!backendAvailable || reviewQueueSyncPending) return;
-  const { requestList, created } = prepareReviewRequestsForCompletedBookings();
-  if (!created) return;
+  const { requestList, changed } = prepareReviewRequestsForCompletedBookings();
+  if (!changed) return;
   reviewQueueSyncPending = true;
   saveStateSnapshot({
     ...snapshotState(),
@@ -5272,7 +5295,7 @@ function renderReviewHub(options = {}) {
       ? `Review links are configured. Auto-send is ${integrations.reviewAutomationEnabled ? 'on' : 'off'} and the default channel is ${integrations.reviewChannel}.`
       : 'Add at least one Google or Facebook review link, then choose whether completed rentals should auto-send.';
   }
-  const pending = reviewRequests.filter((request) => String(request.status || '').toLowerCase() !== 'reviewed');
+  const pending = reviewRequests.filter((request) => reviewRequestStillValid(request) && String(request.status || '').toLowerCase() !== 'reviewed');
   const completedRentals = bookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'completed').length;
   const reviewRate = completedRentals ? Math.round((reviews.length / completedRentals) * 100) : 0;
   document.getElementById('reviews-kpi-pending').textContent = pending.length.toLocaleString();
@@ -5328,13 +5351,17 @@ async function saveSocialDraft() {
     showToast('⚠️ Add a caption first');
     return;
   }
+  const previousSocialPosts = JSON.parse(JSON.stringify(socialPosts));
   socialPosts.unshift({
     id: nextId(socialPosts),
     caption,
     link,
     createdAt: new Date().toISOString()
   });
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    socialPosts = previousSocialPosts;
+    return;
+  }
   renderSocialQueue();
   showToast('📣 Social draft saved');
 }
@@ -5480,6 +5507,7 @@ async function saveFuel() {
     showToast('⚠️ Add equipment and gallons');
     return;
   }
+  const previousFuelLog = JSON.parse(JSON.stringify(fuelLog));
   const payload = {
     craft,
     date: document.getElementById('f-date').value || today(),
@@ -5499,7 +5527,10 @@ async function saveFuel() {
   } else {
     fuelLog.unshift({id: nextId(fuelLog), ...payload});
   }
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    fuelLog = previousFuelLog;
+    return;
+  }
   closeModal('fuel-modal');
   resetFuelForm();
   syncAssetSelectors();
@@ -5518,12 +5549,17 @@ async function deleteFuelEntry(fuelId) {
   }
   const confirmed = window.confirm(`Delete fuel entry for ${entry.craft} on ${formatShortDate(entry.date)}?`);
   if (!confirmed) return;
+  const previousFuelLog = JSON.parse(JSON.stringify(fuelLog));
+  const shouldCloseEditor = editingFuelId && Number(editingFuelId) === Number(fuelId);
   fuelLog = fuelLog.filter((item) => Number(item.id) !== Number(fuelId));
-  if (editingFuelId && Number(editingFuelId) === Number(fuelId)) {
+  if (!(await persistStateChange())) {
+    fuelLog = previousFuelLog;
+    return;
+  }
+  if (shouldCloseEditor) {
     closeModal('fuel-modal');
     resetFuelForm();
   }
-  if (!(await persistStateChange())) return;
   syncAssetSelectors();
   renderFuel();
   renderExpenses();
@@ -5578,6 +5614,7 @@ async function saveMaint() {
     showToast('⚠️ Add equipment name');
     return;
   }
+  const previousMaintLog = JSON.parse(JSON.stringify(maintLog));
   const payload = {
     craft,
     type: document.getElementById('m-type').value,
@@ -5597,7 +5634,10 @@ async function saveMaint() {
   } else {
     maintLog.unshift({id: nextId(maintLog), ...payload});
   }
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    maintLog = previousMaintLog;
+    return;
+  }
   closeModal('maint-modal');
   resetMaintForm();
   syncAssetSelectors();
@@ -5613,12 +5653,17 @@ async function deleteMaintEntry(maintId) {
   }
   const confirmed = window.confirm(`Delete ${entry.type} for ${entry.craft} on ${formatShortDate(entry.date)}?`);
   if (!confirmed) return;
+  const previousMaintLog = JSON.parse(JSON.stringify(maintLog));
+  const shouldCloseEditor = editingMaintId && Number(editingMaintId) === Number(maintId);
   maintLog = maintLog.filter((item) => Number(item.id) !== Number(maintId));
-  if (editingMaintId && Number(editingMaintId) === Number(maintId)) {
+  if (!(await persistStateChange())) {
+    maintLog = previousMaintLog;
+    return;
+  }
+  if (shouldCloseEditor) {
     closeModal('maint-modal');
     resetMaintForm();
   }
-  if (!(await persistStateChange())) return;
   syncAssetSelectors();
   renderMaint();
   showToast('🗑️ Service entry removed');
