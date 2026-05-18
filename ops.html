@@ -1040,10 +1040,10 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label>Customer name</label><input type="text" id="i-customer-name" placeholder="First Last"></div>
-        <div class="form-group"><label>Phone</label><input type="tel" id="i-customer-phone" placeholder="Phone number"></div>
-        <div class="form-group"><label>Email</label><input type="email" id="i-customer-email" placeholder="email@example.com"></div>
-        <div class="form-group"><label>Invoice title</label><input type="text" id="i-invoice-name" placeholder="Weekend walk-up rental"></div>
+        <div class="form-group"><label>Customer name <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="text" id="i-customer-name" placeholder="First Last"></div>
+        <div class="form-group"><label>Phone <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="tel" id="i-customer-phone" placeholder="Phone number"></div>
+        <div class="form-group"><label>Email <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="email" id="i-customer-email" placeholder="email@example.com"></div>
+        <div class="form-group"><label>Invoice title <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="text" id="i-invoice-name" placeholder="Auto-fills if left blank"></div>
         <div class="form-group"><label>Issue date</label><input type="date" id="i-issue-date"></div>
         <div class="form-group"><label>Due date</label><input type="date" id="i-due-date"></div>
         <div class="form-group"><label>Rental package</label>
@@ -1063,9 +1063,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
             <option value="">Select duration</option>
           </select>
         </div>
-        <div class="form-group"><label>Line item</label><input type="text" id="i-line-item" placeholder="Jet ski rental"></div>
+        <div class="form-group"><label>Line item <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="text" id="i-line-item" placeholder="Auto-fills if left blank"></div>
         <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00" oninput="updateInvoicePaymentHelper()"></div>
-        <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Rental pricing helper</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-rental-helper">Pick a rental package and duration to auto-fill the invoice title, line item, and amount.</div></div>
+        <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Rental pricing helper</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-rental-helper">Pick a rental package and duration to auto-fill the title, line item, and amount. For a quick manual invoice, just enter the amount.</div></div>
         <div class="form-group"><label>Status</label>
           <select id="i-status" onchange="updateInvoicePaymentHelper()">
             <option value="Paid">Paid</option>
@@ -2565,7 +2565,7 @@ function populateInvoiceDurationOptions(craftKey = '', selectedDuration = '') {
     .join('');
   durationEl.value = availableDurations.includes(Number(selectedDuration)) ? String(Number(selectedDuration)) : '';
 }
-function updateInvoiceRentalHelper(message = 'Pick a rental package and duration to auto-fill the invoice title, line item, and amount.') {
+function updateInvoiceRentalHelper(message = 'Pick a rental package and duration to auto-fill the title, line item, and amount. For a quick manual invoice, just enter the amount.') {
   const helper = document.getElementById('invoice-rental-helper');
   if (helper) helper.textContent = message;
 }
@@ -2605,6 +2605,22 @@ function getInvoicePaymentMethod() {
   if (!select) return '';
   if (select.value === 'Other') return customInput?.value.trim() || '';
   return String(select.value || '').trim();
+}
+function buildInvoiceTitle(packageKey = '', durationHours = 0, lineItemName = '') {
+  const craftLabel = CRAFT_NAMES[packageKey] || '';
+  const durationLabel = durationHours ? invoiceDurationText(durationHours) : '';
+  if (craftLabel && durationLabel) return `${craftLabel} rental`;
+  if (craftLabel) return `${craftLabel} invoice`;
+  if (lineItemName) return lineItemName;
+  return 'Walk-up rental';
+}
+function buildInvoiceLineItem(packageKey = '', durationHours = 0, invoiceName = '') {
+  const craftLabel = CRAFT_NAMES[packageKey] || '';
+  const durationLabel = durationHours ? invoiceDurationText(durationHours) : '';
+  if (craftLabel && durationLabel) return `${craftLabel} • ${durationLabel}`;
+  if (craftLabel) return craftLabel;
+  if (invoiceName) return invoiceName;
+  return 'Rental charge';
 }
 function invoiceStatusSelectValue(status = '') {
   const normalized = normalizeInvoiceStatus(status);
@@ -2733,11 +2749,11 @@ function openInvoiceModal(invoiceId = null) {
 async function saveInvoice() {
   applyInvoiceRentalAutofill();
   const customerName = document.getElementById('i-customer-name').value.trim();
-  const invoiceName = document.getElementById('i-invoice-name').value.trim();
-  const lineItemName = document.getElementById('i-line-item').value.trim();
+  const rawInvoiceName = document.getElementById('i-invoice-name').value.trim();
+  const rawLineItemName = document.getElementById('i-line-item').value.trim();
   const total = Math.max(0, Number(document.getElementById('i-total').value || 0));
-  if (!invoiceName || !lineItemName || !total) {
-    showToast('⚠️ Enter the invoice title, line item, and amount');
+  if (!total) {
+    showToast('⚠️ Enter an amount or choose a rental package');
     return;
   }
   const existingInvoice = editingInvoiceId
@@ -2755,6 +2771,8 @@ async function saveInvoice() {
   const status = document.getElementById('i-status').value || 'Paid';
   const packageKey = document.getElementById('i-package').value || '';
   const durationHours = Number(document.getElementById('i-duration').value || 0);
+  const invoiceName = rawInvoiceName || buildInvoiceTitle(packageKey, durationHours, rawLineItemName);
+  const lineItemName = rawLineItemName || buildInvoiceLineItem(packageKey, durationHours, invoiceName);
   const phone = document.getElementById('i-customer-phone').value.trim();
   const email = document.getElementById('i-customer-email').value.trim();
   const hasMeaningfulCustomer = meaningfulInvoiceCustomer(customerName, email, phone);
