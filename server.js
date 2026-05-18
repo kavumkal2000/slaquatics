@@ -1087,6 +1087,26 @@ function invoiceStatusForBooking(booking = {}) {
   return 'open';
 }
 
+function mergedCollectedAmountForBookingInvoice(existingInvoice = null, booking = {}) {
+  const bookingCollected = booking.paymentStatus === 'paid'
+    ? Number(booking.amountDueToday || 0)
+    : 0;
+  const invoiceCollected = Number(existingInvoice?.paidAmount || 0);
+  return Number(Math.max(bookingCollected, invoiceCollected, 0).toFixed(2));
+}
+
+function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
+  const bookingStatus = normalizeBookingStatus(booking.status);
+  if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
+  const total = Number((Number(booking.total || 0) + Number(booking.processingFeeAmount || 0)).toFixed(2));
+  const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
+  if (collected >= total && total > 0) return 'paid';
+  if (collected > 0) return 'partially paid';
+  if (bookingStatus === 'draft') return 'draft';
+  if (booking.paymentStatus === 'pending' || booking.paymentSessionId) return 'sent';
+  return 'open';
+}
+
 function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString()) {
   if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft') return null;
   const existingInvoice = findInvoiceForBooking(state, booking);
@@ -1095,9 +1115,7 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   const rentalTotal = Number(booking.total || 0);
   const processingFee = Number(booking.processingFeeAmount || 0);
   const total = Number((rentalTotal + processingFee).toFixed(2));
-  const collected = booking.paymentStatus === 'paid'
-    ? Number(booking.amountDueToday || 0)
-    : 0;
+  const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
   const invoice = existingInvoice || {
     id: nextId(state.invoices),
     invoiceNumber: createWebsiteInvoiceNumber(booking, now),
@@ -1122,7 +1140,8 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   invoice.taxAmount = processingFee;
   invoice.total = total;
   invoice.paidAmount = Number(collected.toFixed(2));
-  invoice.status = invoiceStatusForBooking(booking);
+  invoice.balanceDue = Number(Math.max(total - collected, 0).toFixed(2));
+  invoice.status = mergedInvoiceStatusForBooking(existingInvoice, booking);
   invoice.notes = String(booking.notes || invoice.notes || '').trim();
   invoice.craftKey = String(booking.craftKey || normalizeCraftKey(booking.craft || '') || '').trim();
   invoice.durationHours = Number(booking.duration || 0);

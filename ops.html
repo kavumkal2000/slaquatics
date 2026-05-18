@@ -2747,7 +2747,6 @@ function openInvoiceModal(invoiceId = null) {
   openModal('invoice-modal');
 }
 async function saveInvoice() {
-  applyInvoiceRentalAutofill();
   const customerName = document.getElementById('i-customer-name').value.trim();
   const rawInvoiceName = document.getElementById('i-invoice-name').value.trim();
   const rawLineItemName = document.getElementById('i-line-item').value.trim();
