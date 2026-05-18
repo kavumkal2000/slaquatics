@@ -2309,9 +2309,9 @@ function linkedCustomerForInvoice(invoice = {}) {
 function invoiceDisplayContact(invoice = {}) {
   const linkedCustomer = linkedCustomerForInvoice(invoice);
   return {
-    name: String(invoice.customerName || linkedCustomer?.name || '').trim(),
-    email: String(invoice.customerEmail || linkedCustomer?.email || '').trim(),
-    phone: String(invoice.customerPhone || linkedCustomer?.phone || '').trim()
+    name: String(linkedCustomer?.name || invoice.customerName || '').trim(),
+    email: String(linkedCustomer?.email || invoice.customerEmail || '').trim(),
+    phone: String(linkedCustomer?.phone || invoice.customerPhone || '').trim()
   };
 }
 function invoiceHasKnownCustomer(invoice = {}) {
