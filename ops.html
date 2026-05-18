@@ -2345,7 +2345,7 @@ function mergeInvoiceRecord(target, incoming) {
   target.invoiceName = incoming.invoiceName || target.invoiceName;
   target.invoiceNumber = incoming.invoiceNumber || target.invoiceNumber;
   target.recurring = Boolean(incoming.recurring || target.recurring);
-  if (!target.customerId && incoming.customerId) target.customerId = incoming.customerId;
+  if ((!Number(target.customerId || 0)) && Number(incoming.customerId || 0) > 0) target.customerId = Number(incoming.customerId || 0);
   target.customerName = incoming.customerName || target.customerName;
   target.customerEmail = incoming.customerEmail || target.customerEmail;
   target.customerPhone = incoming.customerPhone || target.customerPhone;
@@ -2355,11 +2355,18 @@ function mergeInvoiceRecord(target, incoming) {
   target.discountAmount = Number(incoming.discountAmount ?? target.discountAmount ?? 0);
   target.taxAmount = Number(incoming.taxAmount ?? target.taxAmount ?? 0);
   target.total = Number(incoming.total ?? target.total ?? 0);
+  target.paidAmount = Math.max(Number(target.paidAmount || 0), Number(incoming.paidAmount || 0));
   target.status = incoming.status || target.status;
+  target.paymentMethod = incoming.paymentMethod || target.paymentMethod;
+  target.notes = incoming.notes || target.notes;
+  target.craftKey = incoming.craftKey || target.craftKey;
+  target.durationHours = Number(incoming.durationHours ?? target.durationHours ?? 0);
+  target.durationLabel = incoming.durationLabel || target.durationLabel;
   target.liveMode = incoming.liveMode || target.liveMode;
   target.importSource = incoming.importSource || target.importSource || 'admintribe';
   target.lineItems = dedupeInvoiceLineItems([...(target.lineItems || []), ...(incoming.lineItems || [])]);
   target.rawFields = mergeCrmFields(target.rawFields, incoming.rawFields);
+  target.balanceDue = Number(Math.max(Number(target.total || 0) - invoiceCollectedAmount(target), 0).toFixed(2));
 }
 function importInvoicesFromCsv(rows, fileName) {
   const grouped = new Map();
@@ -2759,6 +2766,8 @@ async function saveInvoice() {
   const existingInvoice = editingInvoiceId
     ? invoices.find((invoice) => Number(invoice.id) === Number(editingInvoiceId))
     : null;
+  const previousInvoices = JSON.parse(JSON.stringify(invoices));
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
   const previousInvoiceSnapshot = existingInvoice ? JSON.parse(JSON.stringify(existingInvoice)) : null;
   const previousCustomer = previousInvoiceSnapshot ? linkedCustomerForInvoice(previousInvoiceSnapshot) : null;
   if (editingInvoiceId && !existingInvoice) {
@@ -2901,7 +2910,11 @@ async function saveInvoice() {
     syncCustomerRollup(item);
   });
 
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    invoices = previousInvoices;
+    customers = previousCustomers;
+    return;
+  }
   closeModal('invoice-modal');
   resetInvoiceForm();
   renderInvoices();
@@ -2920,13 +2933,20 @@ async function deleteInvoice(invoiceId) {
   const linkedCustomer = linkedCustomerForInvoice({...invoice});
   const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNumber || invoice.invoiceName}?`);
   if (!confirmed) return;
+  const previousInvoices = JSON.parse(JSON.stringify(invoices));
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
+  const shouldCloseEditor = editingInvoiceId && Number(editingInvoiceId) === Number(invoiceId);
   invoices = invoices.filter((item) => Number(item.id) !== Number(invoiceId));
   if (linkedCustomer) syncCustomerRollup(linkedCustomer);
-  if (editingInvoiceId && Number(editingInvoiceId) === Number(invoiceId)) {
+  if (!(await persistStateChange())) {
+    invoices = previousInvoices;
+    customers = previousCustomers;
+    return;
+  }
+  if (shouldCloseEditor) {
     closeModal('invoice-modal');
     resetInvoiceForm();
   }
-  if (!(await persistStateChange())) return;
   renderInvoices();
   renderCRM();
   renderWaivers();
@@ -4171,6 +4191,8 @@ async function saveTracker() {
     showToast('⚠️ Tracker record not found');
     return;
   }
+  const previousTrackers = JSON.parse(JSON.stringify(trackers));
+  const previousSelectedTrackerId = selectedTrackerId;
   const tracker = existingTracker || {
     id: nextId(trackers),
     createdAt: new Date().toISOString()
@@ -4196,7 +4218,11 @@ async function saveTracker() {
   tracker.updatedAt = new Date().toISOString();
   if (!existingTracker) trackers.unshift(tracker);
   selectedTrackerId = tracker.id;
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    trackers = previousTrackers;
+    selectedTrackerId = previousSelectedTrackerId;
+    return;
+  }
   closeTrackerModal();
   syncAssetSelectors();
   renderTracking();
@@ -4209,7 +4235,10 @@ async function updateStatus(id, status) {
   const previousStatus = booking.status;
   booking.status = status;
   try {
-    if (!(await persistStateChange())) return;
+    if (!(await persistStateChange())) {
+      booking.status = previousStatus;
+      return;
+    }
     const reviewAutoSent = normalizeBookingStatusValue(status) === 'completed' && normalizeBookingStatusValue(previousStatus) !== 'completed'
       ? await autoSendReviewForBooking(booking)
       : false;
@@ -4236,7 +4265,11 @@ async function confirmDeposit(id) {
   booking.deposit = true;
   booking.paymentStatus = 'paid';
   try {
-    if (!(await persistStateChange())) return;
+    if (!(await persistStateChange())) {
+      booking.deposit = previousDeposit;
+      booking.paymentStatus = previousPaymentStatus;
+      return;
+    }
     renderBookings();
     renderUpcoming();
     renderDashboardMetrics();
@@ -4259,14 +4292,33 @@ async function deleteBooking(bookingId) {
   }
   const confirmed = window.confirm(`Delete the booking for ${booking.name}? This cannot be undone from ops.`);
   if (!confirmed) return;
+  const previousBookings = JSON.parse(JSON.stringify(bookings));
+  const previousInvoices = JSON.parse(JSON.stringify(invoices));
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
   const previousCustomer = findCustomerForBooking(booking);
+  const shouldCloseEditor = editingBookingId && Number(editingBookingId) === Number(bookingId);
   bookings = bookings.filter((item) => Number(item.id) !== Number(bookingId));
+  invoices.forEach((invoice) => {
+    if (Number(invoice.bookingId || 0) !== Number(bookingId)) return;
+    invoice.bookingId = 0;
+    invoice.rawFields = mergeCrmFields(invoice.rawFields, {
+      bookingId: '',
+      bookingPublicToken: '',
+      paymentSessionId: '',
+      bookingStatus: 'deleted'
+    });
+  });
   if (previousCustomer) syncCustomerRollup(previousCustomer);
-  if (editingBookingId && Number(editingBookingId) === Number(bookingId)) {
+  if (!(await persistStateChange())) {
+    bookings = previousBookings;
+    invoices = previousInvoices;
+    customers = previousCustomers;
+    return;
+  }
+  if (shouldCloseEditor) {
     closeModal('booking-modal');
     resetBookingForm();
   }
-  if (!(await persistStateChange())) return;
   renderBookings();
   renderUpcoming();
   renderDashboardMetrics();
@@ -4639,6 +4691,7 @@ async function saveCustomer() {
   const name = document.getElementById('c-name').value.trim();
   if(!name) { showToast('⚠️ Enter a name'); return; }
   const customerId = editingCustomerId || Number(document.getElementById('c-id').value) || null;
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
   const payload = {
     name,
     phone: document.getElementById('c-phone').value.trim(),
@@ -4672,7 +4725,10 @@ async function saveCustomer() {
       crmFields: {}
     });
   }
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    customers = previousCustomers;
+    return;
+  }
   closeModal('customer-modal');
   showToast(customerId ? '✅ Customer updated' : '✅ Customer added');
   renderCRM();
@@ -4767,6 +4823,7 @@ async function saveExpense() {
     showToast('⚠️ Add an expense name and amount');
     return;
   }
+  const previousExpenses = JSON.parse(JSON.stringify(expenses));
   const payload = {
     date: document.getElementById('e-date').value || today(),
     category: document.getElementById('e-category').value,
@@ -4791,7 +4848,10 @@ async function saveExpense() {
       ...payload
     });
   }
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    expenses = previousExpenses;
+    return;
+  }
   closeModal('expense-modal');
   resetExpenseForm();
   renderExpenses();
@@ -4807,12 +4867,17 @@ async function deleteExpense(expenseId) {
   }
   const confirmed = window.confirm(`Delete expense "${expense.name}" for $${Number(expense.amount || 0).toLocaleString()}?`);
   if (!confirmed) return;
+  const previousExpenses = JSON.parse(JSON.stringify(expenses));
+  const shouldCloseEditor = editingExpenseId && Number(editingExpenseId) === Number(expenseId);
   expenses = expenses.filter((item) => Number(item.id) !== Number(expenseId));
-  if (editingExpenseId && Number(editingExpenseId) === Number(expenseId)) {
+  if (!(await persistStateChange())) {
+    expenses = previousExpenses;
+    return;
+  }
+  if (shouldCloseEditor) {
     closeModal('expense-modal');
     resetExpenseForm();
   }
-  if (!(await persistStateChange())) return;
   renderExpenses();
   renderDashboardMetrics();
   showToast('🗑️ Expense removed');
@@ -5041,12 +5106,17 @@ async function saveReviewSettings() {
     autoSend: (document.getElementById('review-auto-send')?.value || 'off') === 'on',
     channel: (document.getElementById('review-default-channel')?.value || 'sms') === 'email' ? 'email' : 'sms'
   };
+  const previousReviewSettings = {...reviewSettings};
   reviewSettings = nextSettings;
   const saved = await saveStateSnapshot({
     ...snapshotState(),
     reviewSettings: nextSettings
   });
-  if (!saved) return;
+  if (!saved) {
+    reviewSettings = previousReviewSettings;
+    renderReviewHub({ skipQueueSync: true });
+    return;
+  }
   await loadIntegrationStatus();
   renderReviewHub({ skipQueueSync: true });
   renderSystemPage();
@@ -5112,6 +5182,8 @@ async function sendReviewDrop(requestId, channel, options = {}) {
   const request = reviewRequests.find((item) => item.id === requestId);
   if (!request) return false;
   const apiChannel = channel === 'text' ? 'sms' : 'email';
+  const previousReviewRequests = JSON.parse(JSON.stringify(reviewRequests));
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
   try {
     await requestJson('/api/ops/reviews/send', {
       method: 'POST',
@@ -5134,6 +5206,8 @@ async function sendReviewDrop(requestId, channel, options = {}) {
     }, request.sentAt);
     const saved = await persistStateChange({silent:true});
     if (!saved) {
+      reviewRequests = previousReviewRequests;
+      customers = previousCustomers;
       throw new Error('Review request was sent, but the CRM could not save the send status. Refresh and verify the queue.');
     }
     if (!options.preserveRender) renderReviewHub();
@@ -5149,6 +5223,8 @@ async function markReviewCompleted(requestId) {
   if (!request) return;
   const rating = window.prompt('Star rating (1-5)', '5');
   const reviewText = window.prompt('Paste the review text or a short summary', '');
+  const previousReviews = JSON.parse(JSON.stringify(reviews));
+  const previousReviewRequests = JSON.parse(JSON.stringify(reviewRequests));
   reviews.unshift({
     id: nextId(reviews),
     bookingId: request.bookingId,
@@ -5159,15 +5235,23 @@ async function markReviewCompleted(requestId) {
     responded: false
   });
   request.status = 'reviewed';
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    reviews = previousReviews;
+    reviewRequests = previousReviewRequests;
+    return;
+  }
   renderReviewHub();
   showToast('⭐ Review logged');
 }
 async function toggleReviewResponded(reviewId) {
   const review = reviews.find((item) => item.id === reviewId);
   if (!review) return;
+  const previousResponded = Boolean(review.responded);
   review.responded = !review.responded;
-  if (!(await persistStateChange())) return;
+  if (!(await persistStateChange())) {
+    review.responded = previousResponded;
+    return;
+  }
   renderReviewHub();
 }
 function renderReviewHub(options = {}) {
