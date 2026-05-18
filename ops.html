@@ -1496,11 +1496,17 @@ async function saveData(options = {}) {
 async function saveStateSnapshot(nextState, options = {}) {
   if (!backendAvailable) return false;
   try {
-    await requestJson('/api/ops/state', {
+    const payload = await requestJson('/api/ops/state', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(nextState)
     });
+    const serverState = payload?.state;
+    if (serverState && typeof serverState === 'object') {
+      applyState(serverState);
+      dedupeCustomers();
+      refreshCustomerRollups();
+    }
     return true;
   } catch (error) {
     console.error('Remote save failed:', error);
