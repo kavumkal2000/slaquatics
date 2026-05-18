@@ -1810,6 +1810,11 @@ function ensureEntryIds(list = []) {
   }
   return changed;
 }
+function ensureLocalEntryIds(list = [], syncFn = null) {
+  const changed = ensureEntryIds(list);
+  if (changed && typeof syncFn === 'function') syncFn();
+  return changed;
+}
 function dateValue(value) {
   if (!value || value === 'N/A' || value === 'TBD') return null;
   return parseFlexibleDate(value) || parseIsoDate(value);
@@ -5527,7 +5532,7 @@ function syncFuelEntryIds() {
   });
 }
 function renderFuel(options = {}) {
-  if (!options.skipIdSync) syncFuelEntryIds();
+  if (!options.skipIdSync) ensureLocalEntryIds(fuelLog, syncFuelEntryIds);
   syncAssetSelectors();
   const monthFuel = fuelLog.filter((entry) => isSameMonth(dateValue(entry.date)));
   const monthCost = monthFuel.reduce((sum, entry) => sum + (Number(entry.gallons || 0) * Number(entry.ppg || 0)), 0);
@@ -5647,7 +5652,7 @@ function syncMaintEntryIds() {
   });
 }
 function renderMaint(options = {}) {
-  if (!options.skipIdSync) syncMaintEntryIds();
+  if (!options.skipIdSync) ensureLocalEntryIds(maintLog, syncMaintEntryIds);
   syncAssetSelectors();
   document.getElementById('maint-grid').innerHTML = equipmentSummaries().map(e => {
     return `<div class="maint-card">
