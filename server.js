@@ -2894,6 +2894,7 @@ async function handleApi(request, response, pathname) {
       if (!isLikelyStatePayload(body)) {
         throw new Error('Malformed state payload.');
       }
+      syncWebsiteBookingInvoices(body);
       const state = await stateStore.write(body);
       sendJson(response, 200, { ok: true, state });
       return true;
