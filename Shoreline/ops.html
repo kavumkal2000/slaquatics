@@ -4809,6 +4809,7 @@ async function saveCustomer() {
   }
   closeModal('customer-modal');
   showToast(customerId ? '✅ Customer updated' : '✅ Customer added');
+  renderInvoices();
   renderCRM();
   renderWaivers();
   renderCommsPanel();
@@ -4851,6 +4852,7 @@ async function deleteCustomer(customerId) {
     closeModal('customer-modal');
     resetCustomerForm();
   }
+  renderInvoices();
   renderCRM();
   renderWaivers();
   renderCommsPanel();
