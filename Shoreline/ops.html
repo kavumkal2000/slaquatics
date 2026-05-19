@@ -5106,6 +5106,7 @@ async function sendMassEmail() {
     return;
   }
   try {
+    const sentAt = new Date().toISOString();
     await requestJson('/api/ops/messages/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -5116,15 +5117,23 @@ async function sendMassEmail() {
         body
       })
     });
+    const recipientEmails = new Set(bcc);
+    customers.forEach((customer) => {
+      const email = normalizeEmail(customer.email);
+      if (!email || !recipientEmails.has(email)) return;
+      customer.lastActivity = sentAt;
+    });
     communicationsLog.unshift({
       id: nextId(communicationsLog),
-      date: new Date().toISOString(),
+      date: sentAt,
       customerName: 'Mass campaign',
       channel: 'mass-email',
       message: `${subject} — ${body}`
     });
     const logged = await persistStateChange();
     renderCommunications();
+    renderCRM();
+    renderReminders();
     showToast(logged ? `✉️ Mass email sent to ${bcc.length} recipients` : '⚠️ Mass email sent, but the CRM log could not be saved');
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
