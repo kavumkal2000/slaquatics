@@ -5081,6 +5081,8 @@ async function sendDirectMessage(channel) {
     });
     const logged = await persistStateChange();
     renderCommunications();
+    renderCRM();
+    renderReminders();
     showToast(logged ? (channel === 'sms' ? '📲 Text sent' : '✉️ Email sent') : '⚠️ Message sent, but the CRM log could not be saved');
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
@@ -5143,6 +5145,8 @@ async function logCommunication() {
   });
   if (!(await persistStateChange())) return;
   renderCommunications();
+  renderCRM();
+  renderReminders();
   showToast('💬 Communication note saved');
 }
 
@@ -5307,6 +5311,8 @@ async function sendReviewDrop(requestId, channel, options = {}) {
       customers = previousCustomers;
       throw new Error('Review request was sent, but the CRM could not save the send status. Refresh and verify the queue.');
     }
+    renderCRM();
+    renderReminders();
     if (!options.preserveRender) renderReviewHub();
     if (!options.silent) showToast(apiChannel === 'sms' ? '⭐ Review text sent' : '⭐ Review email sent');
     return true;
