@@ -3550,6 +3550,7 @@ async function saveBooking() {
   const bookingDateObj = parseIsoDate(bookingRecord.date);
   if (bookingDateObj) calendarMonthCursor = monthStart(bookingDateObj);
   renderUpcoming();
+  renderInvoices();
   if(document.getElementById('page-bookings').classList.contains('active')) renderBookings();
   else renderBookingCalendar();
   if(document.getElementById('page-crm').classList.contains('active')) renderCRM();
