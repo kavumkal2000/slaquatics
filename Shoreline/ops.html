@@ -4275,6 +4275,7 @@ async function saveTracker() {
   closeTrackerModal();
   syncAssetSelectors();
   renderTracking();
+  renderMaint();
   showToast(existingTracker ? '📡 Tracker updated' : '📡 Tracker saved');
 }
 
@@ -4302,6 +4303,7 @@ async function deleteTracker(trackerId = null) {
   if (shouldCloseEditor) closeTrackerModal();
   syncAssetSelectors();
   renderTracking();
+  renderMaint();
   showToast('🗑️ Tracker removed');
 }
 
