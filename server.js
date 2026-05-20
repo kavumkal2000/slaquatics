@@ -1336,6 +1336,104 @@ function bookingRemainingBalance(booking = {}) {
   return Math.max(Number(booking.total || 0) - Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100), 0);
 }
 
+function shorelineMapsUrl(address = SHORELINE_ADDRESS) {
+  const query = String(address || SHORELINE_ADDRESS).trim();
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '';
+}
+
+function emailPill(label = '', tone = 'neutral') {
+  const palette = {
+    neutral: { background: '#e7eef6', color: '#32455f' },
+    accent: { background: '#fff1cf', color: '#8a5a00' },
+    success: { background: '#d9f7e7', color: '#0f7a45' },
+    warning: { background: '#ffe4bf', color: '#965300' },
+    danger: { background: '#ffe1e1', color: '#a42828' },
+    dark: { background: '#10213a', color: '#f5f8fc' }
+  };
+  const colors = palette[tone] || palette.neutral;
+  return `<span style="display:inline-block;padding:6px 11px;border-radius:999px;background:${colors.background};color:${colors.color};font-size:12px;font-weight:700;letter-spacing:0.02em;">${htmlEscape(label)}</span>`;
+}
+
+function emailActionButton(label = '', href = '', variant = 'primary') {
+  if (!href) return '';
+  const styles = {
+    primary: {
+      background: '#f4b63f',
+      color: '#08111f',
+      border: '1px solid #f4b63f'
+    },
+    secondary: {
+      background: '#ffffff',
+      color: '#10213a',
+      border: '1px solid #d8e1ee'
+    }
+  };
+  const style = styles[variant] || styles.primary;
+  return `<a href="${htmlEscape(href)}" style="display:inline-block;padding:13px 18px;border-radius:12px;background:${style.background};color:${style.color};border:${style.border};font-weight:700;text-decoration:none;font-size:14px;">${htmlEscape(label)}</a>`;
+}
+
+function emailMetricCard(label = '', value = '', tone = 'default') {
+  const highlight = tone === 'accent'
+    ? 'background:linear-gradient(180deg,#fff6dc 0%,#fffdf5 100%);border:1px solid #f4d07c;'
+    : tone === 'success'
+      ? 'background:linear-gradient(180deg,#e6faf0 0%,#f8fffb 100%);border:1px solid #b7ebcb;'
+      : 'background:#f7fafd;border:1px solid #e3ebf3;';
+  return `
+    <div style="width:calc(50% - 8px);min-width:220px;display:inline-block;vertical-align:top;margin:0 8px 12px 0;padding:16px 18px;border-radius:16px;${highlight}">
+      <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#667a96;font-weight:700;">${htmlEscape(label)}</div>
+      <div style="margin-top:8px;font-size:20px;line-height:1.2;color:#10213a;font-weight:800;">${htmlEscape(value)}</div>
+    </div>
+  `;
+}
+
+function emailDetailRows(rows = []) {
+  return `
+    <table style="width:100%;border-collapse:collapse;font-size:15px;">
+      ${rows.map((row) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #edf2f7;color:#60748e;">${htmlEscape(row.label || '')}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #edf2f7;text-align:right;font-weight:700;color:${htmlEscape(row.valueColor || '#10213a')};">${htmlEscape(row.value || '-')}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+function emailCardSection(title = '', bodyHtml = '', options = {}) {
+  const background = options.background || '#f7fafd';
+  const border = options.border || '#e3ebf3';
+  return `
+    <div style="margin-top:18px;padding:18px 20px;border-radius:18px;background:${background};border:1px solid ${border};">
+      <h2 style="margin:0 0 10px;font-size:18px;line-height:1.2;color:#10213a;">${htmlEscape(title)}</h2>
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function shorelineEmailShell({ eyebrow = 'Shoreline Aquatics', title = '', subtitle = '', pills = [], actionHtml = '', bodyHtml = '', footerHtml = '' } = {}) {
+  const pillHtml = pills.filter(Boolean).join('');
+  return `
+    <div style="margin:0;padding:0;background:#eef4f9;font-family:Arial,sans-serif;color:#10213a;">
+      <div style="max-width:720px;margin:0 auto;padding:28px 16px;">
+        <div style="background:#08111f;border-radius:26px;overflow:hidden;box-shadow:0 24px 64px rgba(8,17,31,0.18);">
+          <div style="padding:28px 28px 22px;background:linear-gradient(180deg,#0b1730 0%,#08111f 100%);">
+            <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f4b63f;font-weight:800;">${htmlEscape(eyebrow)}</div>
+            <h1 style="margin:12px 0 0;font-size:34px;line-height:1.06;color:#ffffff;">${htmlEscape(title)}</h1>
+            <p style="margin:14px 0 0;font-size:16px;line-height:1.65;color:#d5e0ee;">${htmlEscape(subtitle)}</p>
+            ${(pillHtml || actionHtml) ? `<div style="margin-top:18px;">${pillHtml}${actionHtml ? `<div style="margin-top:${pillHtml ? '14px' : '0'};">${actionHtml}</div>` : ''}</div>` : ''}
+          </div>
+          <div style="background:#ffffff;padding:24px 28px 26px;">
+            ${bodyHtml}
+            <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e8eef5;font-size:13px;line-height:1.7;color:#6b7f98;">
+              ${footerHtml || `Questions or schedule changes? Reply to this email or call/text <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>.`}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function bookingConfirmationText(booking = {}) {
   const arrivalLines = ARRIVAL_INSTRUCTIONS.map((line, index) => `${index + 1}. ${line}`).join('\n');
   const safetyLines = SAFETY_BRIEFING_POINTS.map((line, index) => `${index + 1}. ${line}`).join('\n');
@@ -1384,58 +1482,57 @@ function bookingConfirmationHtml(booking = {}) {
   const remainingBalance = bookingRemainingBalance(booking);
   const arrivalList = ARRIVAL_INSTRUCTIONS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
   const safetyList = SAFETY_BRIEFING_POINTS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
-  return `
-    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
-      <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
-        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
-        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">Your booking payment is confirmed</h1>
-        <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(firstName(booking.name))}, your rental date is locked in and Shoreline has everything needed for launch day.</p>
-      </div>
-      <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
-        <h2 style="margin:0 0 12px;font-size:18px;">Booking details</h2>
-        <table style="width:100%;border-collapse:collapse;font-size:15px;">
-          <tr><td style="padding:8px 0;color:#5a6b85;">Package</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.craftLabel || 'Rental package')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.durationLabel || '-')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Date</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatDateLabel(booking.date))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Start time</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatTimeLabel(booking.time))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Meeting spot</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(bookingEmailLocation(booking))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Party size</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.partySize || 'Not provided')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Drone coverage</td><td style="padding:8px 0;text-align:right;font-weight:700;">${booking.drone ? 'Included' : 'Not included'}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Deposit received</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#0f8b53;">${htmlEscape(formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Processing fee</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Paid today</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Remaining balance</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(remainingBalance))}</td></tr>
-        </table>
-
-        <div style="margin-top:24px;padding:18px;border-radius:18px;background:#f5f8fc;">
-          <h2 style="margin:0 0 10px;font-size:18px;">Launch notes</h2>
-          <ul style="margin:0;padding-left:18px;">
-            <li>Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.</li>
-            <li>Life jackets, fuel, cooler space, and the pre-launch safety briefing are included.</li>
-            <li>The remaining balance is handled directly with Shoreline before you head out on the water.</li>
-          </ul>
-        </div>
-
-        <div style="margin-top:18px;padding:18px;border-radius:18px;background:#f5f8fc;">
-          <h2 style="margin:0 0 10px;font-size:18px;">Quick safety briefing</h2>
-          <ul style="margin:0;padding-left:18px;">
-            ${safetyList}
-          </ul>
-        </div>
-
-        <div style="margin-top:24px;">
-          <h2 style="margin:0 0 10px;font-size:18px;">Arrival instructions</h2>
-          <ol style="margin:0;padding-left:20px;">
-            ${arrivalList}
-          </ol>
-          <p style="margin:16px 0 0;"><strong>Address:</strong> ${htmlEscape(SHORELINE_ADDRESS)}<br><strong>Call or text:</strong> <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a></p>
-        </div>
-
-        <p style="margin:24px 0 0;color:#5a6b85;">If anything changes with your party size or timing, reply to this email or call/text Shoreline before your rental window.</p>
-      </div>
-    </div>
-  `;
+  const actionHtml = [
+    emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`),
+    emailActionButton('Open launch location', shorelineMapsUrl(), 'secondary')
+  ].join('&nbsp;');
+  const summaryCards = [
+    emailMetricCard('Rental date', formatDateLabel(booking.date)),
+    emailMetricCard('Start time', formatTimeLabel(booking.time)),
+    emailMetricCard('Paid today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))), 'success'),
+    emailMetricCard('Balance due at launch', formatCurrency(remainingBalance), 'accent')
+  ].join('');
+  const detailRows = emailDetailRows([
+    { label: 'Package', value: booking.craftLabel || 'Rental package' },
+    { label: 'Duration', value: booking.durationLabel || '-' },
+    { label: 'Meeting spot', value: bookingEmailLocation(booking) },
+    { label: 'Party size', value: booking.partySize || 'Not provided' },
+    { label: 'Drone coverage', value: booking.drone ? 'Included' : 'Not included' },
+    { label: 'Quoted total', value: formatCurrency(booking.total || 0) },
+    { label: 'Deposit received', value: formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100), valueColor: '#0f8b53' },
+    { label: 'Processing fee', value: formatCurrency(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100) }
+  ]);
+  return shorelineEmailShell({
+    title: 'Your booking is confirmed',
+    subtitle: `${firstName(booking.name)}, your rental date is locked in and Shoreline is ready for your launch day.`,
+    pills: [
+      emailPill('Payment confirmed', 'success'),
+      emailPill('Lake Lewisville', 'accent')
+    ],
+    actionHtml,
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${summaryCards}</div>
+      ${emailCardSection('Booking details', detailRows, { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Launch notes', `
+        <ul style="margin:0;padding-left:18px;color:#40546c;">
+          <li>Arrive about 15 minutes early so Shoreline can finish the walkthrough and fit everyone with life jackets.</li>
+          <li>Life jackets, fuel, cooler space, and the pre-launch safety briefing are included.</li>
+          <li>The remaining balance is handled directly with Shoreline before you head out on the water.</li>
+        </ul>
+      `)}
+      ${emailCardSection('Quick safety briefing', `
+        <ul style="margin:0;padding-left:18px;color:#40546c;">
+          ${safetyList}
+        </ul>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+      ${emailCardSection('Arrival instructions', `
+        <ol style="margin:0;padding-left:20px;color:#40546c;">
+          ${arrivalList}
+        </ol>
+        <p style="margin:14px 0 0;color:#40546c;"><strong>Address:</strong> ${htmlEscape(SHORELINE_ADDRESS)}<br><strong>Call or text:</strong> <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a></p>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+    `
+  });
 }
 
 function bookingConfirmationSubject(booking = {}) {
@@ -1472,35 +1569,42 @@ function bookingRequestText(booking = {}) {
 }
 
 function bookingRequestHtml(booking = {}) {
-  return `
-    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
-      <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
-        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
-        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">Your booking request is in</h1>
-        <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(firstName(booking.name))}, Shoreline received your rental details for ${htmlEscape(formatDateLabel(booking.date))} at ${htmlEscape(formatTimeLabel(booking.time))}.</p>
-      </div>
-      <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
-        <h2 style="margin:0 0 12px;font-size:18px;">Request details</h2>
-        <table style="width:100%;border-collapse:collapse;font-size:15px;">
-          <tr><td style="padding:8px 0;color:#5a6b85;">Package</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.craftLabel || 'Rental package')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.durationLabel || '-')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Date</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatDateLabel(booking.date))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Start time</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatTimeLabel(booking.time))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Meeting spot</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(bookingEmailLocation(booking))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Party size</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.partySize || 'Not provided')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
-        </table>
-        <div style="margin-top:24px;padding:18px;border-radius:18px;background:#f5f8fc;">
-          <h2 style="margin:0 0 10px;font-size:18px;">What to expect</h2>
-          <ul style="margin:0;padding-left:18px;">
-            <li>If checkout is already complete, Shoreline will follow up with the full confirmation by text or email.</li>
-            <li>If checkout was not completed yet, finish the deposit to lock in the reservation.</li>
-            <li>If anything needs to change, call or text Shoreline at <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>.</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  `;
+  const summaryCards = [
+    emailMetricCard('Rental date', formatDateLabel(booking.date)),
+    emailMetricCard('Start time', formatTimeLabel(booking.time)),
+    emailMetricCard('Package', booking.craftLabel || 'Rental package'),
+    emailMetricCard('Quoted total', formatCurrency(booking.total || 0), 'accent')
+  ].join('');
+  const detailRows = emailDetailRows([
+    { label: 'Duration', value: booking.durationLabel || '-' },
+    { label: 'Meeting spot', value: bookingEmailLocation(booking) },
+    { label: 'Party size', value: booking.partySize || 'Not provided' },
+    { label: 'Phone', value: booking.phone || 'Not provided' },
+    { label: 'Email', value: booking.email || 'Not provided' }
+  ]);
+  return shorelineEmailShell({
+    title: 'Your booking request is in',
+    subtitle: `${firstName(booking.name)}, Shoreline received your rental details and is holding the request for review.`,
+    pills: [
+      emailPill('Request received', 'accent'),
+      emailPill('Awaiting deposit if unpaid', 'neutral')
+    ],
+    actionHtml: [
+      emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`),
+      emailActionButton('View the booking site', `${PUBLIC_SITE_URL}/jetski-booking/`, 'secondary')
+    ].join('&nbsp;'),
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${summaryCards}</div>
+      ${emailCardSection('Request details', detailRows, { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('What happens next', `
+        <ul style="margin:0;padding-left:18px;color:#40546c;">
+          <li>If checkout is already complete, Shoreline will follow up with the full confirmation by text or email.</li>
+          <li>If checkout was not completed yet, finish the deposit to lock in the reservation.</li>
+          <li>If anything changes, call or text Shoreline at <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>.</li>
+        </ul>
+      `)}
+    `
+  });
 }
 
 function ownerBookingAlertSubject(booking = {}) {
@@ -1531,33 +1635,38 @@ function ownerBookingAlertText(booking = {}) {
 }
 
 function ownerBookingAlertHtml(booking = {}) {
-  return `
-    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#10213a;max-width:680px;margin:0 auto;padding:24px;background:#f5f8fc;">
-      <div style="background:#08111f;color:#ffffff;padding:24px;border-radius:20px 20px 0 0;">
-        <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f0b54a;font-weight:700;">Shoreline Aquatics</div>
-        <h1 style="margin:10px 0 0;font-size:28px;line-height:1.15;">New booking request</h1>
-        <p style="margin:12px 0 0;color:#d8e1ee;">${htmlEscape(booking.name || booking.email || 'A customer')} submitted a new booking request.</p>
-      </div>
-      <div style="background:#ffffff;padding:24px;border-radius:0 0 20px 20px;box-shadow:0 18px 48px rgba(8,17,31,0.08);">
-        <table style="width:100%;border-collapse:collapse;font-size:15px;">
-          <tr><td style="padding:8px 0;color:#5a6b85;">Name</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.name || 'Unknown')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Email</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.email || 'Not provided')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Phone</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.phone || 'Not provided')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Package</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.craftLabel || 'Rental package')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Duration</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.durationLabel || '-')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Date</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatDateLabel(booking.date))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Start time</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatTimeLabel(booking.time))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Party size</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.partySize || 'Not provided')}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Quoted total</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.total || 0))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Amount due today</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Payment status</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(String(booking.paymentStatus || 'unpaid'))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Booking status</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(String(booking.status || 'pending'))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Meeting spot</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(bookingEmailLocation(booking))}</td></tr>
-          <tr><td style="padding:8px 0;color:#5a6b85;">Notes</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(booking.notes || 'None')}</td></tr>
-        </table>
-      </div>
-    </div>
-  `;
+  const actionHtml = emailActionButton('Open Shoreline Ops', OPS_APP_URL);
+  const summaryCards = [
+    emailMetricCard('Rental date', formatDateLabel(booking.date)),
+    emailMetricCard('Start time', formatTimeLabel(booking.time)),
+    emailMetricCard('Amount due today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))), 'accent'),
+    emailMetricCard('Quoted total', formatCurrency(booking.total || 0))
+  ].join('');
+  const detailRows = emailDetailRows([
+    { label: 'Customer', value: booking.name || 'Unknown' },
+    { label: 'Email', value: booking.email || 'Not provided' },
+    { label: 'Phone', value: booking.phone || 'Not provided' },
+    { label: 'Package', value: booking.craftLabel || 'Rental package' },
+    { label: 'Duration', value: booking.durationLabel || '-' },
+    { label: 'Party size', value: booking.partySize || 'Not provided' },
+    { label: 'Meeting spot', value: bookingEmailLocation(booking) },
+    { label: 'Notes', value: booking.notes || 'None' }
+  ]);
+  return shorelineEmailShell({
+    eyebrow: 'Shoreline Ops Alert',
+    title: 'New booking request',
+    subtitle: `${booking.name || booking.email || 'A customer'} submitted a new booking request and is ready for review.`,
+    pills: [
+      emailPill(`Payment: ${String(booking.paymentStatus || 'unpaid')}`, normalizeEmail(String(booking.paymentStatus || '')).includes('paid') ? 'success' : 'warning'),
+      emailPill(`Status: ${String(booking.status || 'pending')}`, 'dark')
+    ],
+    actionHtml,
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${summaryCards}</div>
+      ${emailCardSection('Booking details', detailRows, { background: '#ffffff', border: '#e3ebf3' })}
+    `,
+    footerHtml: `Open <a href="${htmlEscape(OPS_APP_URL)}" style="color:#0a5ad1;text-decoration:none;">Shoreline Ops</a> to review, edit, or follow up with this booking.`
+  });
 }
 
 async function sendBookingRequestCustomerEmail(state, booking, now = new Date().toISOString()) {
@@ -2145,9 +2254,7 @@ function ownerWeeklyDigestText(report) {
 }
 
 function ownerWeeklyDigestHtml(report) {
-  const badge = (value) => value
-    ? '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#d1fae5;color:#065f46;font-weight:700;font-size:12px;">Configured</span>'
-    : '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;font-weight:700;font-size:12px;">Needs setup</span>';
+  const badge = (value) => value ? emailPill('Configured', 'success') : emailPill('Needs setup', 'danger');
   const upcomingRows = report.upcomingBookings.length
     ? report.upcomingBookings.map((booking) => `
         <tr>
@@ -2159,60 +2266,65 @@ function ownerWeeklyDigestHtml(report) {
         </tr>
       `).join('')
     : '<tr><td colspan="5" style="padding:12px 0;color:#5a6b85;">No upcoming bookings in the next 7 days.</td></tr>';
-  return `
-    <div style="font-family:Arial,sans-serif;background:#f3f7fb;padding:28px;color:#0f172a;">
-      <div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #dbe5f0;">
-        <div style="background:#08111f;padding:24px 28px;color:#ffffff;">
-          <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f5a623;">Weekly owner update</div>
-          <h1 style="margin:10px 0 0;font-size:34px;line-height:1.05;">Shoreline website + ops</h1>
-          <p style="margin:12px 0 0;font-size:16px;color:#d7e3f2;">Version v${htmlEscape(report.version)} • ${htmlEscape(report.generatedAt)}</p>
-        </div>
-        <div style="padding:24px 28px;">
-          <table style="width:100%;border-collapse:collapse;margin-bottom:22px;">
-            <tr><td style="padding:8px 0;color:#5a6b85;">Website</td><td style="padding:8px 0;text-align:right;"><a href="${htmlEscape(report.websiteUrl)}">${htmlEscape(report.websiteUrl)}</a></td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Ops</td><td style="padding:8px 0;text-align:right;"><a href="${htmlEscape(report.opsUrl)}">${htmlEscape(report.opsUrl)}</a></td></tr>
-          </table>
-          <h2 style="font-size:20px;margin:0 0 12px;">Business snapshot</h2>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-            <tr><td style="padding:8px 0;color:#5a6b85;">Customers</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.customers}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Bookings</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.bookings}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Upcoming next 7 days</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.upcomingBookings}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Invoices</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.invoices}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Open invoices</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.openInvoices}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Trackers</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.trackers}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Pending review requests</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.pendingReviews}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Communications last 7 days</td><td style="padding:8px 0;text-align:right;font-weight:700;">${report.counts.communicationsLast7Days}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Paid invoice revenue</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(report.revenue.paidInvoiceRevenue))}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Paid deposits collected</td><td style="padding:8px 0;text-align:right;font-weight:700;">${htmlEscape(formatCurrency(report.revenue.paidDepositsCollected))}</td></tr>
-          </table>
-          <h2 style="font-size:20px;margin:0 0 12px;">Integrations</h2>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
-            <tr><td style="padding:8px 0;color:#5a6b85;">Email</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.emailConfigured)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Owner booking alerts</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.bookingAlertsConfigured)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Weekly owner digest</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.ownerWeeklyDigestEnabled)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Stripe</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeConfigured)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Stripe webhook</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeWebhookConfigured)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">SMS</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.smsConfigured)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Review links</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.reviewLinksConfigured)}</td></tr>
-            <tr><td style="padding:8px 0;color:#5a6b85;">Social automation</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.socialConfigured)}</td></tr>
-          </table>
-          <h2 style="font-size:20px;margin:0 0 12px;">Upcoming bookings</h2>
-          <table style="width:100%;border-collapse:collapse;">
-            <thead>
-              <tr>
-                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Date</th>
-                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Time</th>
-                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Customer</th>
-                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Package</th>
-                <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Status</th>
-              </tr>
-            </thead>
-            <tbody>${upcomingRows}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  `;
+  const overviewCards = [
+    emailMetricCard('Customers', report.counts.customers.toLocaleString()),
+    emailMetricCard('Bookings', report.counts.bookings.toLocaleString()),
+    emailMetricCard('Upcoming 7 days', report.counts.upcomingBookings.toLocaleString(), 'accent'),
+    emailMetricCard('Open invoices', report.counts.openInvoices.toLocaleString()),
+    emailMetricCard('Paid invoice revenue', formatCurrency(report.revenue.paidInvoiceRevenue), 'success'),
+    emailMetricCard('Paid deposits', formatCurrency(report.revenue.paidDepositsCollected))
+  ].join('');
+  return shorelineEmailShell({
+    eyebrow: 'Weekly owner update',
+    title: 'Shoreline website + ops',
+    subtitle: `Version v${report.version} • ${report.generatedAt}`,
+    pills: [
+      emailPill(`Website live`, 'success'),
+      emailPill(`Ops live`, 'dark')
+    ],
+    actionHtml: [
+      emailActionButton('Open website', report.websiteUrl),
+      emailActionButton('Open ops', report.opsUrl, 'secondary')
+    ].join('&nbsp;'),
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${overviewCards}</div>
+      ${emailCardSection('Business snapshot', emailDetailRows([
+        { label: 'Customers', value: report.counts.customers.toLocaleString() },
+        { label: 'Bookings', value: report.counts.bookings.toLocaleString() },
+        { label: 'Invoices', value: report.counts.invoices.toLocaleString() },
+        { label: 'Trackers', value: report.counts.trackers.toLocaleString() },
+        { label: 'Pending review requests', value: report.counts.pendingReviews.toLocaleString() },
+        { label: 'Communications last 7 days', value: report.counts.communicationsLast7Days.toLocaleString() }
+      ]), { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Integrations', `
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:8px 0;color:#5a6b85;">Email</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.emailConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Owner booking alerts</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.bookingAlertsConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Weekly owner digest</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.ownerWeeklyDigestEnabled)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Stripe</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Stripe webhook</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeWebhookConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">SMS</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.smsConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Review links</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.reviewLinksConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Social automation</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.socialConfigured)}</td></tr>
+        </table>
+      `)}
+      ${emailCardSection('Upcoming bookings', `
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Date</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Time</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Customer</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Package</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Status</th>
+            </tr>
+          </thead>
+          <tbody>${upcomingRows}</tbody>
+        </table>
+      `, { background: '#ffffff', border: '#e3ebf3' })}
+    `,
+    footerHtml: `This digest was generated automatically from the live Shoreline CRM and website systems. Review the full ops dashboard at <a href="${htmlEscape(report.opsUrl)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(report.opsUrl)}</a>.`
+  });
 }
 
 async function maybeSendOwnerWeeklyDigest({ force = false } = {}) {
