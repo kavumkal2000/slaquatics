@@ -5172,6 +5172,22 @@ function ensureReviewRequestForBooking(booking) {
 function reviewRequestBooking(request = {}) {
   return bookings.find((booking) => Number(booking.id || 0) === Number(request.bookingId || 0)) || null;
 }
+function resolveReviewRequestContact(request = {}) {
+  const booking = reviewRequestBooking(request);
+  const customer = findCustomerForContact({
+    bookingId: request.bookingId,
+    name: request.customerName,
+    phone: request.phone,
+    email: request.email
+  }) || (booking ? findCustomerForBooking(booking) : null);
+  return {
+    booking,
+    customer,
+    customerName: String(customer?.name || booking?.name || request.customerName || '').trim(),
+    phone: String(customer?.phone || booking?.phone || request.phone || '').trim(),
+    email: String(customer?.email || booking?.email || request.email || '').trim()
+  };
+}
 function reviewRequestStillValid(request = {}) {
   if (String(request.status || '').toLowerCase() === 'reviewed') return true;
   const booking = reviewRequestBooking(request);
@@ -5279,8 +5295,9 @@ async function autoSendReviewForBooking(booking) {
     renderReviewHub({ skipQueueSync: true });
   }
   if (!request || String(request.status || '').toLowerCase() === 'reviewed' || request.sentAt) return false;
-  const canText = Boolean(integrations.smsConfigured && request.phone);
-  const canEmail = Boolean(integrations.emailConfigured && request.email);
+  const resolvedContact = resolveReviewRequestContact(request);
+  const canText = Boolean(integrations.smsConfigured && resolvedContact.phone);
+  const canEmail = Boolean(integrations.emailConfigured && resolvedContact.email);
   const preferred = integrations.reviewChannel === 'email' ? 'email' : 'text';
   const channel = preferred === 'email'
     ? (canEmail ? 'email' : canText ? 'text' : '')
@@ -5300,25 +5317,29 @@ async function sendReviewDrop(requestId, channel, options = {}) {
   const apiChannel = channel === 'text' ? 'sms' : 'email';
   const previousReviewRequests = JSON.parse(JSON.stringify(reviewRequests));
   const previousCustomers = JSON.parse(JSON.stringify(customers));
+  const resolvedContact = resolveReviewRequestContact(request);
   try {
     await requestJson('/api/ops/reviews/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         channel: apiChannel,
-        customerName: request.customerName,
-        phone: request.phone,
-        email: request.email
+        customerName: resolvedContact.customerName,
+        phone: resolvedContact.phone,
+        email: resolvedContact.email
       })
     });
+    request.customerName = resolvedContact.customerName || request.customerName;
+    request.phone = resolvedContact.phone || request.phone;
+    request.email = resolvedContact.email || request.email;
     request.sentAt = new Date().toISOString();
     request.channel = apiChannel;
     request.status = 'sent';
     touchCustomerActivity({
       bookingId: request.bookingId,
-      name: request.customerName,
-      phone: request.phone,
-      email: request.email
+      name: resolvedContact.customerName,
+      phone: resolvedContact.phone,
+      email: resolvedContact.email
     }, request.sentAt);
     const saved = await persistStateChange({silent:true});
     if (!saved) {
@@ -5339,6 +5360,7 @@ async function sendReviewDrop(requestId, channel, options = {}) {
 async function markReviewCompleted(requestId) {
   const request = reviewRequests.find((item) => item.id === requestId);
   if (!request) return;
+  const resolvedContact = resolveReviewRequestContact(request);
   const rating = window.prompt('Star rating (1-5)', '5');
   const reviewText = window.prompt('Paste the review text or a short summary', '');
   const previousReviews = JSON.parse(JSON.stringify(reviews));
@@ -5346,7 +5368,7 @@ async function markReviewCompleted(requestId) {
   reviews.unshift({
     id: nextId(reviews),
     bookingId: request.bookingId,
-    customerName: request.customerName,
+    customerName: resolvedContact.customerName || request.customerName,
     rating: Number(rating) || 5,
     text: reviewText || 'Review logged manually',
     date: new Date().toISOString(),
@@ -5407,19 +5429,24 @@ function renderReviewHub(options = {}) {
       : 'Add Google and/or Facebook review links above before sending automated review requests.';
   }
   if (requestList) {
-    requestList.innerHTML = pending.length ? sortNewestFirst(pending, (item) => item.sentAt || '').map((request) => `
+    requestList.innerHTML = pending.length ? sortNewestFirst(pending, (item) => item.sentAt || '').map((request) => {
+      const resolvedContact = resolveReviewRequestContact(request);
+      const canText = integrations.reviewLinksConfigured && integrations.smsConfigured && resolvedContact.phone;
+      const canEmail = integrations.reviewLinksConfigured && integrations.emailConfigured && resolvedContact.email;
+      return `
       <div class="list-row">
         <div class="list-row-main">
-          <strong>${escapeHtml(request.customerName)}</strong>
+          <strong>${escapeHtml(resolvedContact.customerName || request.customerName || 'Customer')}</strong>
           <div class="sub">${escapeHtml(request.sentAt ? `Last sent ${request.sentAt.slice(0, 10)}` : 'Ready to send now')}</div>
         </div>
         <div class="list-row-actions">
-          <button class="btn btn-primary btn-sm" ${integrations.reviewLinksConfigured && integrations.smsConfigured && request.phone ? '' : 'disabled style="opacity:0.45"'} onclick="sendReviewDrop(${request.id}, 'text')">Text request</button>
-          <button class="btn btn-ghost btn-sm" ${integrations.reviewLinksConfigured && integrations.emailConfigured && request.email ? '' : 'disabled style="opacity:0.45"'} onclick="sendReviewDrop(${request.id}, 'email')">Email request</button>
+          <button class="btn btn-primary btn-sm" ${canText ? '' : 'disabled style="opacity:0.45"'} onclick="sendReviewDrop(${request.id}, 'text')">Text request</button>
+          <button class="btn btn-ghost btn-sm" ${canEmail ? '' : 'disabled style="opacity:0.45"'} onclick="sendReviewDrop(${request.id}, 'email')">Email request</button>
           <button class="btn btn-ghost btn-sm" onclick="markReviewCompleted(${request.id})">Log review</button>
         </div>
       </div>
-    `).join('') : '<div class="empty"><div class="icon">🎉</div><p>No pending review drops right now.</p></div>';
+    `;
+    }).join('') : '<div class="empty"><div class="icon">🎉</div><p>No pending review drops right now.</p></div>';
   }
   if (logList) {
     logList.innerHTML = reviews.length ? sortNewestFirst(reviews, (item) => item.date).map((review) => `
