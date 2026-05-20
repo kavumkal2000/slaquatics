@@ -5151,7 +5151,10 @@ function renderCommsPanel() {
   }
   const current = ordered.find((customer) => String(customer.id) === String(select.value)) || ordered[0];
   if (!current) {
+    select.innerHTML = '';
     customerCard.innerHTML = '<p class="note-soft">Import or add a customer to start drafting follow-ups.</p>';
+    renderMassEmailDraft();
+    renderCommunications();
     return;
   }
   select.value = String(current.id);
