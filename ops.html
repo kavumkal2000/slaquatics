@@ -794,6 +794,15 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="compose-card">
       <h3>Mass email</h3>
       <p id="mass-provider-note">Draft one campaign and send it through the connected email provider.</p>
+      <div class="crm-toolbar" style="margin-top:1rem;">
+        <label style="display:flex;align-items:center;gap:0.55rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">
+          Audience
+          <select id="mass-email-audience" onchange="setMassEmailAudienceMode(this.value)">
+            <option value="all">Everyone with email</option>
+            <option value="selected">Only selected customers</option>
+          </select>
+        </label>
+      </div>
       <div style="margin-top:1rem;">
         <label for="mass-email-subject">Subject</label>
         <input id="mass-email-subject" type="text" value="Memorial Day weekend bookings are open at Shoreline Aquatics" oninput="renderMassEmailDraft()">
@@ -810,6 +819,17 @@ What’s included:
 - A launch walkthrough before you head out
 
 Reply to this email or call/text (469) 693-7164 if you want us to hold a Memorial Day weekend spot for your group.</textarea>
+      </div>
+      <div class="list-card" style="margin-top:1rem;">
+        <div class="crm-toolbar" style="margin-bottom:0.75rem;">
+          <input class="search-input" id="mass-email-search" placeholder="Search recipients..." oninput="filterMassEmailRecipients(this)">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="applyMassEmailQuickSelect('visible')">Select visible</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="applyMassEmailQuickSelect('vip')">Select VIP</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="applyMassEmailQuickSelect('followup')">Select follow-up</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="applyMassEmailQuickSelect('clear')">Clear</button>
+        </div>
+        <p class="note-soft" id="mass-email-selection-summary" style="margin:0 0 0.75rem;">0 selected</p>
+        <div class="list-stack" id="mass-email-recipient-list"></div>
       </div>
       <div class="mini-kpis">
         <div class="mini-kpi"><strong id="mass-email-count">0</strong><span>emails ready</span></div>
@@ -1642,6 +1662,9 @@ let crmSearchQuery = '';
 let waiverSearchQuery = '';
 let crmViewFilter = 'all';
 let crmSortMode = 'recent';
+let massEmailSearchQuery = '';
+let massEmailAudienceMode = 'all';
+let selectedMassEmailCustomerIds = new Set();
 let invoiceSearchQuery = '';
 let invoicePeriodFilter = 'month';
 let invoiceDateFrom = '';
@@ -4992,23 +5015,128 @@ function renderCommunications() {
     </tr>
   `).join('') : '<tr><td colspan="4"><div class="empty"><div class="icon">💬</div><p>No communications logged yet.</p></div></td></tr>';
 }
+function normalizeMassEmailSelection() {
+  const validIds = new Set(
+    customers
+      .filter((customer) => normalizeEmail(customer.email))
+      .map((customer) => Number(customer.id))
+  );
+  selectedMassEmailCustomerIds = new Set(
+    Array.from(selectedMassEmailCustomerIds)
+      .map((value) => Number(value))
+      .filter((value) => validIds.has(value))
+  );
+}
+function massEmailEligibleCustomers() {
+  return customers.filter((customer) => normalizeEmail(customer.email));
+}
+function massEmailRecipientMatchesSearch(customer) {
+  if (!massEmailSearchQuery) return true;
+  return [
+    customer.name,
+    customer.phone,
+    customer.email,
+    customer.company,
+    customer.source,
+    customer.crmTags,
+    customer.crmNotes,
+    customer.tag
+  ].join(' ').toLowerCase().includes(massEmailSearchQuery);
+}
+function massEmailVisibleCustomers() {
+  return sortCustomersForCRM(massEmailEligibleCustomers().filter(massEmailRecipientMatchesSearch));
+}
+function selectedMassEmailCustomers() {
+  normalizeMassEmailSelection();
+  return massEmailEligibleCustomers().filter((customer) => selectedMassEmailCustomerIds.has(Number(customer.id)));
+}
+function setMassEmailAudienceMode(value) {
+  massEmailAudienceMode = value === 'selected' ? 'selected' : 'all';
+  renderMassEmailDraft();
+}
+function filterMassEmailRecipients(input) {
+  massEmailSearchQuery = String(input?.value || '').trim().toLowerCase();
+  renderMassEmailDraft();
+}
+function toggleMassEmailRecipient(customerId, checked) {
+  const normalizedId = Number(customerId);
+  if (checked) selectedMassEmailCustomerIds.add(normalizedId);
+  else selectedMassEmailCustomerIds.delete(normalizedId);
+  renderMassEmailDraft();
+}
+function applyMassEmailQuickSelect(mode = 'visible') {
+  normalizeMassEmailSelection();
+  if (mode === 'clear') {
+    selectedMassEmailCustomerIds.clear();
+    renderMassEmailDraft();
+    return;
+  }
+  let targets = [];
+  if (mode === 'vip') {
+    targets = massEmailEligibleCustomers().filter((customer) => ['repeat', 'vip'].includes(String(customer.tag || '').toLowerCase()));
+  } else if (mode === 'followup') {
+    targets = massEmailEligibleCustomers().filter(customerNeedsFollowUp);
+  } else {
+    targets = massEmailVisibleCustomers();
+  }
+  targets.forEach((customer) => selectedMassEmailCustomerIds.add(Number(customer.id)));
+  renderMassEmailDraft();
+}
 function renderMassEmailDraft() {
-  const emails = uniqueValues(customers.map((customer) => normalizeEmail(customer.email)));
-  const phones = uniqueValues(customers.map((customer) => normalizePhone(customer.phone)));
-  const repeatCount = customers.filter((customer) => ['repeat', 'vip'].includes(customer.tag)).length;
+  normalizeMassEmailSelection();
+  const audienceInput = document.getElementById('mass-email-audience');
+  const searchInput = document.getElementById('mass-email-search');
+  if (audienceInput && audienceInput.value !== massEmailAudienceMode) audienceInput.value = massEmailAudienceMode;
+  if (searchInput && searchInput.value !== massEmailSearchQuery) searchInput.value = massEmailSearchQuery;
+  const eligibleCustomers = massEmailEligibleCustomers();
+  const visibleCustomers = massEmailVisibleCustomers();
+  const selectedCustomers = selectedMassEmailCustomers();
+  const audienceCustomers = massEmailAudienceMode === 'selected' ? selectedCustomers : eligibleCustomers;
+  const emails = uniqueValues(audienceCustomers.map((customer) => normalizeEmail(customer.email)));
+  const phones = uniqueValues(audienceCustomers.map((customer) => normalizePhone(customer.phone)));
+  const repeatCount = audienceCustomers.filter((customer) => ['repeat', 'vip'].includes(String(customer.tag || '').toLowerCase())).length;
   document.getElementById('mass-email-count').textContent = emails.length.toLocaleString();
   document.getElementById('mass-text-count').textContent = phones.length.toLocaleString();
   document.getElementById('mass-repeat-count').textContent = repeatCount.toLocaleString();
   const note = document.getElementById('mass-provider-note');
   const detail = document.getElementById('mass-provider-detail');
   const button = document.getElementById('mass-email-link');
+  const summary = document.getElementById('mass-email-selection-summary');
+  const list = document.getElementById('mass-email-recipient-list');
   if (note) note.textContent = integrations.emailConfigured
     ? 'Draft one campaign and send it through Resend from inside Shoreline Ops.'
     : 'Draft one campaign now. Add Resend credentials to send it directly from Shoreline Ops.';
   if (detail) detail.textContent = integrations.emailConfigured
-    ? 'Resend is configured. This will send one campaign with everyone on BCC.'
+    ? (massEmailAudienceMode === 'selected'
+      ? 'Resend is configured. This campaign will only send to the customers you selected below.'
+      : 'Resend is configured. This campaign will send to everyone in the CRM with a valid email on file.')
     : 'Resend is not configured yet, so the email provider send button will stay disabled.';
-  if (button) button.disabled = !integrations.emailConfigured || !emails.length;
+  if (button) button.disabled = !integrations.emailConfigured || !emails.length || (massEmailAudienceMode === 'selected' && !selectedCustomers.length);
+  if (summary) {
+    summary.textContent = massEmailAudienceMode === 'selected'
+      ? `${selectedCustomers.length} selected · ${eligibleCustomers.length} customers have email on file`
+      : `${eligibleCustomers.length} customers with email on file · ${selectedCustomers.length} currently selected`;
+  }
+  if (list) {
+    list.innerHTML = visibleCustomers.length ? visibleCustomers.map((customer) => {
+      const selected = selectedMassEmailCustomerIds.has(Number(customer.id));
+      const tags = [
+        customerNeedsFollowUp(customer) ? 'Follow-up due' : '',
+        customerHasWaiver(customer) ? 'Waiver on file' : '',
+        customerIsBest(customer) ? 'Best customer' : ''
+      ].filter(Boolean).join(' · ');
+      return `
+        <label class="list-row" style="align-items:flex-start;gap:0.75rem;cursor:pointer;">
+          <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleMassEmailRecipient(${Number(customer.id)}, this.checked)" style="margin-top:0.2rem;">
+          <div class="list-row-main">
+            <strong>${escapeHtml(customer.name || 'Customer')}</strong>
+            <div class="sub">${escapeHtml(customer.email || '')}${customer.phone ? ` · ${escapeHtml(customer.phone)}` : ''}</div>
+            <div class="sub">${escapeHtml(tags || customerLastTouchLabel(customer))}</div>
+          </div>
+        </label>
+      `;
+    }).join('') : '<div class="empty"><div class="icon">📬</div><p>No customers with email match this search.</p></div>';
+  }
 }
 function renderCommsPanel() {
   const select = document.getElementById('comm-customer');
@@ -5104,11 +5232,16 @@ async function sendDirectMessage(channel) {
   }
 }
 async function sendMassEmail() {
-  const bcc = uniqueValues(customers.map((customer) => normalizeEmail(customer.email)));
+  const audienceCustomers = massEmailAudienceMode === 'selected' ? selectedMassEmailCustomers() : massEmailEligibleCustomers();
+  const bcc = uniqueValues(audienceCustomers.map((customer) => normalizeEmail(customer.email)));
   const subject = document.getElementById('mass-email-subject')?.value.trim() || '';
   const body = document.getElementById('mass-email-body')?.value.trim() || '';
   if (!integrations.emailConfigured) {
     showToast('⚠️ Resend is not configured yet');
+    return;
+  }
+  if (massEmailAudienceMode === 'selected' && !audienceCustomers.length) {
+    showToast('⚠️ Select at least one customer before sending');
     return;
   }
   if (!bcc.length || !subject || !body) {
@@ -5128,7 +5261,7 @@ async function sendMassEmail() {
       })
     });
     const recipientEmails = new Set(bcc);
-    customers.forEach((customer) => {
+    audienceCustomers.forEach((customer) => {
       const email = normalizeEmail(customer.email);
       if (!email || !recipientEmails.has(email)) return;
       customer.lastActivity = sentAt;
