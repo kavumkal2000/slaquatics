@@ -5501,6 +5501,7 @@ async function sendReviewDrop(requestId, channel, options = {}) {
     }
     renderCRM();
     renderReminders();
+    renderCommsPanel();
     if (!options.preserveRender) renderReviewHub();
     if (!options.silent) showToast(apiChannel === 'sms' ? '⭐ Review text sent' : '⭐ Review email sent');
     return true;
