@@ -5518,21 +5518,33 @@ async function markReviewCompleted(requestId) {
   const reviewText = window.prompt('Paste the review text or a short summary', '');
   const previousReviews = JSON.parse(JSON.stringify(reviews));
   const previousReviewRequests = JSON.parse(JSON.stringify(reviewRequests));
+  const previousCustomers = JSON.parse(JSON.stringify(customers));
+  const reviewDate = new Date().toISOString();
   reviews.unshift({
     id: nextId(reviews),
     bookingId: request.bookingId,
     customerName: resolvedContact.customerName || request.customerName,
     rating: Number(rating) || 5,
     text: reviewText || 'Review logged manually',
-    date: new Date().toISOString(),
+    date: reviewDate,
     responded: false
   });
   request.status = 'reviewed';
+  touchCustomerActivity({
+    bookingId: request.bookingId,
+    name: resolvedContact.customerName,
+    phone: resolvedContact.phone,
+    email: resolvedContact.email
+  }, reviewDate);
   if (!(await persistStateChange())) {
     reviews = previousReviews;
     reviewRequests = previousReviewRequests;
+    customers = previousCustomers;
     return;
   }
+  renderCRM();
+  renderReminders();
+  renderCommsPanel();
   renderReviewHub();
   showToast('⭐ Review logged');
 }
