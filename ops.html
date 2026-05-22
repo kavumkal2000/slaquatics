@@ -5229,6 +5229,7 @@ async function sendDirectMessage(channel) {
     renderCommunications();
     renderCRM();
     renderReminders();
+    renderCommsPanel();
     showToast(logged ? (channel === 'sms' ? '📲 Text sent' : '✉️ Email sent') : '⚠️ Message sent, but the CRM log could not be saved');
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
@@ -5280,6 +5281,7 @@ async function sendMassEmail() {
     renderCommunications();
     renderCRM();
     renderReminders();
+    renderCommsPanel();
     showToast(logged ? `✉️ Mass email sent to ${bcc.length} recipients` : '⚠️ Mass email sent, but the CRM log could not be saved');
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
@@ -5307,6 +5309,7 @@ async function logCommunication() {
   renderCommunications();
   renderCRM();
   renderReminders();
+  renderCommsPanel();
   showToast('💬 Communication note saved');
 }
 
