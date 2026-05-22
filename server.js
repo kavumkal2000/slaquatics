@@ -785,10 +785,9 @@ function websiteBookingHoldIsActive(booking = {}, status = '') {
   const paymentStatus = String(booking.paymentStatus || '').trim().toLowerCase();
   if (booking.deposit || paymentStatus === 'paid') return true;
   if (paymentStatus === 'expired') return false;
-  if (paymentStatus === 'pending' || String(booking.paymentSessionId || '').trim()) return true;
 
   const anchor = Date.parse(String(booking.updatedAt || booking.createdAt || ''));
-  if (Number.isNaN(anchor)) return true;
+  if (Number.isNaN(anchor)) return false;
 
   return (Date.now() - anchor) < (PUBLIC_UNPAID_HOLD_MINUTES * 60 * 1000);
 }
