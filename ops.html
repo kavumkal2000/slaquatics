@@ -4358,6 +4358,8 @@ async function updateStatus(id, status) {
     renderUpcoming();
     renderDashboardMetrics();
     renderBookingBars();
+    renderCRM();
+    renderCommsPanel();
     renderReviewHub();
     renderReminders();
     renderWaivers();
@@ -4387,6 +4389,8 @@ async function confirmDeposit(id) {
     renderUpcoming();
     renderDashboardMetrics();
     renderBookingBars();
+    renderCRM();
+    renderCommsPanel();
     renderWaivers();
     updatePendingBadge();
     showToast(`💰 Deposit confirmed for ${booking.name}`);
