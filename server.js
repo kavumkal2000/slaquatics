@@ -2109,6 +2109,43 @@ async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyK
   return json;
 }
 
+function chunkList(items = [], size = 50) {
+  const normalizedSize = Math.max(1, Number(size) || 50);
+  const chunks = [];
+  for (let index = 0; index < items.length; index += normalizedSize) {
+    chunks.push(items.slice(index, index + normalizedSize));
+  }
+  return chunks;
+}
+
+async function sendResendMassEmail({ to, subject, text, html, bcc = [] }) {
+  const normalizedBcc = Array.from(new Set(
+    (Array.isArray(bcc) ? bcc : [bcc]).map(normalizeEmail).filter(Boolean)
+  ));
+  if (!normalizedBcc.length) {
+    throw new Error('At least one valid mass email recipient is required.');
+  }
+  const batches = chunkList(normalizedBcc, 50);
+  const results = [];
+  for (let index = 0; index < batches.length; index += 1) {
+    const batchRecipients = batches[index];
+    const result = await sendResendEmail({
+      to,
+      bcc: batchRecipients,
+      subject,
+      text,
+      html,
+      idempotencyKey: `mass-email-${Date.now()}-${index}-${batchRecipients.length}`
+    });
+    results.push(result);
+  }
+  return {
+    batches: batches.length,
+    recipientCount: normalizedBcc.length,
+    results
+  };
+}
+
 async function sendBookingConfirmationEmail(state, booking, session = {}, now = new Date().toISOString()) {
   if (!booking || booking.paymentStatus !== 'paid' || !booking.deposit) {
     return { sent: false, reason: 'booking-not-paid' };
@@ -3038,7 +3075,7 @@ async function handleApi(request, response, pathname) {
       }
       if (channel === 'mass-email') {
         const toRecipients = Array.isArray(body.to) && body.to.length ? body.to : [RESEND_FROM_EMAIL];
-        const result = await sendResendEmail({
+        const result = await sendResendMassEmail({
           to: toRecipients,
           bcc: body.bcc || [],
           subject: body.subject,
