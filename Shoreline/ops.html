@@ -2966,6 +2966,7 @@ async function saveInvoice() {
   renderWaivers();
   renderDashboardMetrics();
   renderCommsPanel();
+  renderReminders();
   showToast(existingInvoice ? '✅ Invoice updated' : '✅ Invoice saved');
 }
 async function deleteInvoice(invoiceId) {
@@ -2996,6 +2997,7 @@ async function deleteInvoice(invoiceId) {
   renderWaivers();
   renderDashboardMetrics();
   renderCommsPanel();
+  renderReminders();
   showToast('🗑️ Invoice removed');
 }
 function triggerCRMImport() {
