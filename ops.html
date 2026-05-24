@@ -18,8 +18,23 @@
 }
 html{scroll-behavior:smooth;}
 body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);min-height:100vh;display:flex;}
+body[data-ios-install='needed']{padding-top:5.6rem;}
 body[data-app-ready="false"] .app-loading{opacity:1;pointer-events:auto;}
 body[data-app-ready="true"] .app-loading{opacity:0;pointer-events:none;}
+.install-banner{
+  display:none;position:fixed;top:1rem;left:1rem;right:1rem;z-index:180;align-items:flex-start;gap:0.8rem;
+  padding:0.95rem 1rem;border-radius:18px;background:rgba(12,27,48,0.94);
+  border:1px solid rgba(26,158,212,0.22);box-shadow:0 20px 50px rgba(0,0,0,0.28);backdrop-filter:blur(18px)
+}
+body[data-ios-install='needed'] .install-banner{display:flex}
+.install-banner-copy strong{
+  display:block;font-size:0.78rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--wave)
+}
+.install-banner-copy p{margin-top:0.28rem;font-size:0.84rem;line-height:1.55;color:var(--white)}
+.install-banner-close{
+  margin-left:auto;background:transparent;border:none;color:var(--muted);font:inherit;font-size:1.1rem;
+  line-height:1;cursor:pointer;padding:0.2rem
+}
 .app-loading{
   position:fixed;inset:0;z-index:700;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(180deg, rgba(8,17,31,0.92), rgba(12,27,48,0.96));
@@ -415,6 +430,13 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/shoreline-ops-app-icon-180.png">
 </head>
 <body data-app-ready="false">
+<div class="install-banner">
+  <div class="install-banner-copy">
+    <strong>Use the Home Screen App</strong>
+    <p>For the clean iPhone app view, open Shoreline Ops from your home screen instead of a Safari tab.</p>
+  </div>
+  <button class="install-banner-close" type="button" aria-label="Dismiss install reminder" onclick="dismissInstallBanner()">×</button>
+</div>
 <div class="app-loading" id="app-loading">
   <div class="app-loading-card">
     <h2>Launching Ops</h2>
@@ -1706,6 +1728,22 @@ let editingMaintId = null;
 let trackers = [];
 let selectedTrackerId = null;
 let editingTrackerId = null;
+
+function isIosDevice() {
+  return /iPad|iPhone|iPod/i.test(window.navigator.userAgent || '');
+}
+
+function isStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function dismissInstallBanner() {
+  document.body.dataset.iosInstall = 'dismissed';
+}
+
+if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode()) {
+  document.body.dataset.iosInstall = 'needed';
+}
 
 let invoices = [];
 let communicationsLog = [];
