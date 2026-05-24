@@ -365,6 +365,7 @@ function verifyPasswordHash(password, encoded = '') {
 function authPermissionsForRole(role = 'owner') {
   return {
     canAccessBusinessData: true,
+    canAccessBookingsOnly: role === 'employee',
     canAccessSystem: role === 'developer',
     canAccessWebsiteDevelopment: role === 'developer'
   };

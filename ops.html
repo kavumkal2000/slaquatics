@@ -1374,6 +1374,7 @@ let currentSession = {
 function currentPermissions() {
   return currentSession?.user?.permissions || {
     canAccessBusinessData: true,
+    canAccessBookingsOnly: false,
     canAccessSystem: false,
     canAccessWebsiteDevelopment: false
   };
@@ -1451,9 +1452,28 @@ function updateModeBadge() {
 }
 function applyRolePermissions() {
   const permissions = currentPermissions();
+  const bookingsOnly = Boolean(permissions.canAccessBookingsOnly);
+  const bookingsButton = document.querySelector('.nav-item[onclick*="bookings"]');
   document.querySelectorAll('[data-role="developer"]').forEach((element) => {
     element.style.display = permissions.canAccessSystem ? '' : 'none';
   });
+  document.querySelectorAll('.sidebar .nav-item').forEach((element) => {
+    const isBookingsNav = element.getAttribute('onclick')?.includes("showPage('bookings'");
+    const isDeveloperNav = element.dataset.role === 'developer';
+    if (isDeveloperNav) return;
+    element.style.display = bookingsOnly ? (isBookingsNav ? '' : 'none') : '';
+  });
+  document.querySelectorAll('.sidebar .nav-section').forEach((element) => {
+    if (element.dataset.role === 'developer') {
+      element.style.display = permissions.canAccessSystem ? '' : 'none';
+      return;
+    }
+    element.style.display = bookingsOnly ? 'none' : '';
+  });
+  if (bookingsOnly && !document.getElementById('page-bookings')?.classList.contains('active')) {
+    showPage('bookings', bookingsButton);
+    return;
+  }
   if (!permissions.canAccessSystem && document.getElementById('page-system')?.classList.contains('active')) {
     const dashboardButton = document.querySelector('.nav-item[onclick*="dashboard"]');
     showPage('dashboard', dashboardButton);
@@ -3319,6 +3339,10 @@ function closeMobileNav() {
 function showPage(id, btn) {
   try {
   if (id === 'fuel') id = 'expenses';
+  if (currentPermissions().canAccessBookingsOnly && id !== 'bookings') {
+    id = 'bookings';
+    btn = document.querySelector('.nav-item[onclick*="bookings"]');
+  }
   if (id === 'system' && !currentPermissions().canAccessSystem) {
     showToast('⚠️ Only the developer login can access system controls');
     return;
@@ -6118,7 +6142,7 @@ function renderSystemPage() {
     <div class="list-row">
       <div class="list-row-main">
         <strong>Employee login</strong>
-        <div class="sub">Day-to-day ops access for bookings, customers, invoices, waivers, reviews, and reminders without developer controls.</div>
+        <div class="sub">Bookings-only access for mobile staff with the calendar and add-booking flow, without broader CRM or developer controls.</div>
       </div>
     </div>
     <div class="list-row">
