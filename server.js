@@ -21,7 +21,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
 const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
-const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'employee').trim().toLowerCase();
+const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'hugoprado').trim().toLowerCase();
 const OPS_EMPLOYEE_PASSWORD = process.env.OPS_EMPLOYEE_PASSWORD || LEGACY_OPS_PASSWORD || '';
 const OPS_OWNER_USERNAME = String(process.env.OPS_OWNER_USERNAME || 'owner').trim().toLowerCase();
 const OPS_OWNER_PASSWORD_HASH = process.env.OPS_OWNER_PASSWORD_HASH || '';
@@ -389,9 +389,9 @@ function listOpsUsers() {
       }
     },
     {
-      username: normalizeUsername(OPS_EMPLOYEE_USERNAME || 'employee'),
+      username: normalizeUsername(OPS_EMPLOYEE_USERNAME || 'hugoprado'),
       role: 'employee',
-      displayName: 'Employee',
+      displayName: 'Hugo Prado',
       matches(password = '') {
         return Boolean(OPS_EMPLOYEE_PASSWORD) && safeSecretEquals(password, OPS_EMPLOYEE_PASSWORD);
       }
@@ -462,7 +462,7 @@ function sessionUserPayload(session) {
   return {
     username: session.username,
     role: session.role,
-    displayName: matchedUser?.displayName || (session.role === 'developer' ? 'Developer' : session.role === 'employee' ? 'Employee' : 'Owner'),
+    displayName: matchedUser?.displayName || (session.role === 'developer' ? 'Developer' : session.role === 'employee' ? 'Hugo Prado' : 'Owner'),
     permissions: session.permissions || authPermissionsForRole(session.role)
   };
 }
