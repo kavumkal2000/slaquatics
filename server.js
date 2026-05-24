@@ -371,6 +371,19 @@ function authPermissionsForRole(role = 'owner') {
   };
 }
 
+function canManageFullOps(session = null) {
+  const role = normalizeOpsRole(session?.role);
+  return role === 'owner' || role === 'developer';
+}
+
+function canManageBookingOps(session = null) {
+  return canManageFullOps(session) || normalizeOpsRole(session?.role) === 'employee';
+}
+
+function canManageMessagingOps(session = null) {
+  return canManageFullOps(session);
+}
+
 function normalizeOpsRole(role = '') {
   const normalized = String(role || '').trim().toLowerCase();
   if (normalized === 'developer') return 'developer';
@@ -1024,6 +1037,71 @@ function ensureBookingPublicToken(booking) {
   return booking.publicToken;
 }
 
+function syncCustomersFromBookings(state, now = new Date().toISOString()) {
+  let changed = false;
+  (state.bookings || []).forEach((booking) => {
+    if (!booking || typeof booking !== 'object') return;
+    const directCustomer = Number(booking.customerId || 0)
+      ? (state.customers || []).find((customer) => Number(customer.id || 0) === Number(booking.customerId || 0))
+      : null;
+    const matchedCustomer = directCustomer || findMatchingCustomer(state, {
+      name: booking.name,
+      phone: booking.phone,
+      email: booking.email
+    });
+    const customer = matchedCustomer || {
+      id: nextId(state.customers),
+      name: String(booking.name || '').trim(),
+      phone: String(booking.phone || '').trim(),
+      email: String(booking.email || '').trim(),
+      bookings: 0,
+      totalSpent: 0,
+      lastBooking: '',
+      source: String(booking.source || 'Ops Booking').trim() || 'Ops Booking',
+      tag: '',
+      company: '',
+      crmTags: '',
+      crmNotes: '',
+      createdAt: now.split('T')[0],
+      lastActivity: String(booking.updatedAt || booking.createdAt || now),
+      importSource: 'ops'
+    };
+
+    if (!matchedCustomer) {
+      state.customers.push(customer);
+      changed = true;
+    }
+
+    const previousCustomerId = Number(booking.customerId || 0);
+    if (String(booking.name || '').trim()) customer.name = String(booking.name || '').trim();
+    if (String(booking.phone || '').trim()) customer.phone = String(booking.phone || '').trim();
+    if (String(booking.email || '').trim()) customer.email = String(booking.email || '').trim();
+    customer.source = String(customer.source || booking.source || 'Ops Booking').trim() || 'Ops Booking';
+    customer.importSource = customer.importSource || 'ops';
+    customer.lastActivity = String(booking.updatedAt || booking.createdAt || now);
+
+    if (booking.waiverSignedAt || booking.waiverSignature || booking.dateOfBirth || booking.waiverInitials || booking.waiverVerified || booking.emergencyName || booking.emergencyPhone || booking.waiver) {
+      applyWaiverToCustomer(customer, booking.waiver || {
+        signatureDate: booking.waiverSignedAt,
+        signature: booking.waiverSignature,
+        dateOfBirth: booking.dateOfBirth,
+        initials: booking.waiverInitials,
+        verified: booking.waiverVerified,
+        emergencyName: booking.emergencyName,
+        emergencyPhone: booking.emergencyPhone
+      }, booking.date, now);
+    }
+
+    booking.customerId = customer.id;
+    if (previousCustomerId !== Number(customer.id || 0)) {
+      changed = true;
+    }
+  });
+
+  (state.customers || []).forEach((customer) => updateCustomerRollup(state, customer));
+  return changed;
+}
+
 function invoiceMatchesCustomer(customer = {}, invoice = {}) {
   if (Number(customer.id || 0) > 0 && Number(invoice.customerId || 0) === Number(customer.id || 0)) return true;
   const customerPhone = phoneDigits(customer.phone);
@@ -1246,6 +1324,37 @@ function syncWebsiteBookingInvoices(state, now = new Date().toISOString()) {
     }
   });
   return changed;
+}
+
+function employeeVisibleState(state = {}) {
+  return {
+    bookings: clone(state.bookings || []),
+    customers: clone(state.customers || []),
+    expenses: [],
+    fuelLog: [],
+    maintLog: [],
+    trackers: [],
+    invoices: [],
+    communicationsLog: [],
+    reviewRequests: [],
+    reviews: [],
+    reviewSettings: clone(DEFAULT_STATE.reviewSettings),
+    socialPosts: [],
+    ownerWeeklyDigest: clone(DEFAULT_STATE.ownerWeeklyDigest),
+    importMeta: clone(DEFAULT_STATE.importMeta),
+    invoiceImportMeta: clone(DEFAULT_STATE.invoiceImportMeta)
+  };
+}
+
+function statePayloadForSession(state = {}, session = null) {
+  return normalizeOpsRole(session?.role) === 'employee' ? employeeVisibleState(state) : state;
+}
+
+function mergeEmployeeState(currentState = {}, incomingState = {}) {
+  const next = sanitizeState(currentState);
+  const incoming = sanitizeState(incomingState);
+  next.bookings = incoming.bookings;
+  return next;
 }
 
 function normalizeBookingStatus(status = '') {
@@ -3063,7 +3172,8 @@ async function handleApi(request, response, pathname) {
   }
 
   if (!pathname.startsWith('/api/ops/')) return false;
-  if (!isAuthenticated(request)) {
+  const session = getSession(request);
+  if (!session) {
     sendJson(response, 401, { error: 'Authentication required.' });
     return true;
   }
@@ -3076,22 +3186,30 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/state' && request.method === 'GET') {
     const state = await stateStore.read();
-    if (syncWebsiteBookingInvoices(state)) {
+    if (syncCustomersFromBookings(state) || syncWebsiteBookingInvoices(state)) {
       await stateStore.write(state);
     }
-    sendJson(response, 200, { state, storage: stateStore.kind });
+    sendJson(response, 200, { state: statePayloadForSession(state, session), storage: stateStore.kind });
     return true;
   }
 
   if (pathname === '/api/ops/state' && (request.method === 'PUT' || request.method === 'POST')) {
     try {
+      if (!canManageBookingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot edit operations data.' });
+        return true;
+      }
       const body = JSON.parse(await readRequestBody(request) || '{}');
       if (!isLikelyStatePayload(body)) {
         throw new Error('Malformed state payload.');
       }
-      syncWebsiteBookingInvoices(body);
-      const state = await stateStore.write(body);
-      sendJson(response, 200, { ok: true, state });
+      const nextState = normalizeOpsRole(session.role) === 'employee'
+        ? mergeEmployeeState(await stateStore.read(), body)
+        : sanitizeState(body);
+      syncCustomersFromBookings(nextState);
+      syncWebsiteBookingInvoices(nextState);
+      const state = await stateStore.write(nextState);
+      sendJson(response, 200, { ok: true, state: statePayloadForSession(state, session) });
       return true;
     } catch (error) {
       console.error('State write failed:', error);
@@ -3102,6 +3220,10 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/messages/send' && request.method === 'POST') {
     try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send CRM messages.' });
+        return true;
+      }
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const channel = String(body.channel || '').toLowerCase();
       if (channel === 'sms') {
@@ -3141,6 +3263,10 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/owner-weekly-update/send' && request.method === 'POST') {
     try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send owner updates.' });
+        return true;
+      }
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const result = await maybeSendOwnerWeeklyDigest({ force: Boolean(body.force) });
       sendJson(response, 200, { ok: true, result });
@@ -3153,6 +3279,10 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/reviews/send' && request.method === 'POST') {
     try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send review requests.' });
+        return true;
+      }
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const state = await stateStore.read();
       const reviewSettings = reviewSettingsForState(state);
@@ -3185,6 +3315,10 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/social/publish' && request.method === 'POST') {
     try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot publish social posts.' });
+        return true;
+      }
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const caption = String(body.caption || '').trim();
       if (!caption) {
