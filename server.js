@@ -22,7 +22,7 @@ const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV ==
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
 const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
 const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'hugoprado').trim().toLowerCase();
-const OPS_EMPLOYEE_PASSWORD = process.env.OPS_EMPLOYEE_PASSWORD || LEGACY_OPS_PASSWORD || '';
+const OPS_EMPLOYEE_PASSWORD = process.env.OPS_EMPLOYEE_PASSWORD || 'default';
 const OPS_OWNER_USERNAME = String(process.env.OPS_OWNER_USERNAME || 'owner').trim().toLowerCase();
 const OPS_OWNER_PASSWORD_HASH = process.env.OPS_OWNER_PASSWORD_HASH || '';
 const OPS_OWNER_PASSWORD = process.env.OPS_OWNER_PASSWORD || (OPS_OWNER_PASSWORD_HASH ? '' : LEGACY_OPS_PASSWORD) || '';
