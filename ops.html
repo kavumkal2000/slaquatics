@@ -1524,8 +1524,86 @@ function writeLocalBackup() {
 function shouldPromoteBackup(serverState, backupState) {
   return false;
 }
+const TRUSTED_DEVICE_STORAGE_KEY = 'shoreline_ops_device_v1';
+const TRUSTED_DEVICE_COOKIE_NAME = 'sla_ops_device';
+function randomDeviceToken() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+function buildTrustedDeviceLabel() {
+  const ua = window.navigator.userAgent || '';
+  const mode = isStandaloneMode() ? 'Home Screen App' : 'Browser';
+  if (/iPhone/i.test(ua)) return `iPhone ${mode}`;
+  if (/iPad/i.test(ua)) return `iPad ${mode}`;
+  if (/Android/i.test(ua)) return `Android ${mode}`;
+  if (/Macintosh/i.test(ua)) return `Mac ${mode}`;
+  return `Trusted ${mode}`;
+}
+function readCookieValue(name) {
+  return document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1) || '';
+}
+function persistTrustedDevice(device) {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  const encoded = encodeURIComponent(device.token);
+  try {
+    window.localStorage.setItem(TRUSTED_DEVICE_STORAGE_KEY, JSON.stringify(device));
+  } catch (error) {
+    console.warn('Could not save trusted device key:', error);
+  }
+  document.cookie = `${TRUSTED_DEVICE_COOKIE_NAME}=${encoded}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+}
+function getOrCreateTrustedDevice() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(TRUSTED_DEVICE_STORAGE_KEY) || 'null');
+    if (saved && typeof saved.token === 'string' && saved.token.trim()) {
+      const device = {
+        token: saved.token.trim(),
+        label: String(saved.label || buildTrustedDeviceLabel()).trim() || buildTrustedDeviceLabel(),
+        createdAt: String(saved.createdAt || '')
+      };
+      persistTrustedDevice(device);
+      return device;
+    }
+  } catch (error) {
+    console.warn('Could not read trusted device key:', error);
+  }
+  const cookieToken = decodeURIComponent(readCookieValue(TRUSTED_DEVICE_COOKIE_NAME) || '').trim();
+  if (cookieToken) {
+    const device = {
+      token: cookieToken,
+      label: buildTrustedDeviceLabel(),
+      createdAt: ''
+    };
+    persistTrustedDevice(device);
+    return device;
+  }
+  const device = {
+    token: randomDeviceToken(),
+    label: buildTrustedDeviceLabel(),
+    createdAt: new Date().toISOString()
+  };
+  persistTrustedDevice(device);
+  return device;
+}
+function trustedDeviceHeaders(extra = {}) {
+  const device = getOrCreateTrustedDevice();
+  return {
+    ...extra,
+    'X-Ops-Device-Token': device.token,
+    'X-Ops-Device-Label': device.label
+  };
+}
 async function requestJson(path, options = {}) {
-  const headers = { Accept: 'application/json', ...(options.headers || {}) };
+  const headers = trustedDeviceHeaders({ Accept: 'application/json', ...(options.headers || {}) });
   const response = await fetch(path, {
     credentials: 'same-origin',
     ...options,
@@ -1547,7 +1625,7 @@ async function detectBackendSession() {
   try {
     const response = await fetch('/api/auth/session', {
       credentials: 'same-origin',
-      headers: { Accept: 'application/json' }
+      headers: trustedDeviceHeaders({ Accept: 'application/json' })
     });
     if (!response.ok) return {available:false, authenticated:false, storage:'', user:null};
     const payload = await response.json().catch(() => ({}));

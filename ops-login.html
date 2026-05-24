@@ -198,6 +198,8 @@ const statusEl = document.getElementById('status');
 const submitBtn = document.getElementById('submit-btn');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
+const TRUSTED_DEVICE_STORAGE_KEY = 'shoreline_ops_device_v1';
+const TRUSTED_DEVICE_COOKIE_NAME = 'sla_ops_device';
 
 function isIosDevice() {
   return /iPad|iPhone|iPod/i.test(window.navigator.userAgent || '');
@@ -205,6 +207,88 @@ function isIosDevice() {
 
 function isStandaloneMode() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function randomDeviceToken() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  if (window.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+function buildTrustedDeviceLabel() {
+  const ua = window.navigator.userAgent || '';
+  const mode = isStandaloneMode() ? 'Home Screen App' : 'Browser';
+  if (/iPhone/i.test(ua)) return `iPhone ${mode}`;
+  if (/iPad/i.test(ua)) return `iPad ${mode}`;
+  if (/Android/i.test(ua)) return `Android ${mode}`;
+  if (/Macintosh/i.test(ua)) return `Mac ${mode}`;
+  return `Trusted ${mode}`;
+}
+
+function readCookieValue(name) {
+  return document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`))
+    ?.slice(name.length + 1) || '';
+}
+
+function persistTrustedDevice(device) {
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  const encoded = encodeURIComponent(device.token);
+  try {
+    window.localStorage.setItem(TRUSTED_DEVICE_STORAGE_KEY, JSON.stringify(device));
+  } catch (error) {
+    console.warn('Could not save trusted device key:', error);
+  }
+  document.cookie = `${TRUSTED_DEVICE_COOKIE_NAME}=${encoded}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+}
+
+function getOrCreateTrustedDevice() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(TRUSTED_DEVICE_STORAGE_KEY) || 'null');
+    if (saved && typeof saved.token === 'string' && saved.token.trim()) {
+      const device = {
+        token: saved.token.trim(),
+        label: String(saved.label || buildTrustedDeviceLabel()).trim() || buildTrustedDeviceLabel(),
+        createdAt: String(saved.createdAt || '')
+      };
+      persistTrustedDevice(device);
+      return device;
+    }
+  } catch (error) {
+    console.warn('Could not read trusted device key:', error);
+  }
+  const cookieToken = decodeURIComponent(readCookieValue(TRUSTED_DEVICE_COOKIE_NAME) || '').trim();
+  if (cookieToken) {
+    const device = {
+      token: cookieToken,
+      label: buildTrustedDeviceLabel(),
+      createdAt: ''
+    };
+    persistTrustedDevice(device);
+    return device;
+  }
+  const device = {
+    token: randomDeviceToken(),
+    label: buildTrustedDeviceLabel(),
+    createdAt: new Date().toISOString()
+  };
+  persistTrustedDevice(device);
+  return device;
+}
+
+function trustedDeviceHeaders(extra = {}) {
+  const device = getOrCreateTrustedDevice();
+  return {
+    ...extra,
+    'X-Ops-Device-Token': device.token,
+    'X-Ops-Device-Label': device.label
+  };
 }
 
 function dismissInstallBanner() {
@@ -222,7 +306,10 @@ function setStatus(message, type = '') {
 
 async function checkSession() {
   try {
-    const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
+    const response = await fetch('/api/auth/session', {
+      credentials: 'same-origin',
+      headers: trustedDeviceHeaders({ Accept: 'application/json' })
+    });
     if (!response.ok) {
       setStatus('This sign-in page becomes active after the private Render ops service is deployed.', 'error');
       submitBtn.disabled = true;
@@ -248,14 +335,14 @@ form.addEventListener('submit', async (event) => {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
+      headers: trustedDeviceHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ username: usernameInput.value, password: passwordInput.value })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(data.error || 'Sign-in failed');
     }
-    setStatus('Access granted. Opening Shoreline ops...', 'success');
+    setStatus(data.pairedDevice ? 'This phone is now approved. Opening Shoreline ops...' : 'Access granted. Opening Shoreline ops...', 'success');
     window.location.replace(LIVE_OPS_APP_URL);
   } catch (error) {
     setStatus(error.message || 'Sign-in failed', 'error');
