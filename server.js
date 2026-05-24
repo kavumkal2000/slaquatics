@@ -1091,13 +1091,42 @@ function findInvoiceForBooking(state, booking = {}) {
   )) || null;
 }
 
+function bookingInvoiceTotal(booking = {}) {
+  return Number((Number(booking.total || 0) + Number(booking.processingFeeAmount || 0)).toFixed(2));
+}
+
+function bookingUsesCheckoutDepositFlow(booking = {}) {
+  const source = String(booking.source || '').trim().toLowerCase();
+  const amountDueToday = Number(booking.amountDueToday || 0);
+  const total = bookingInvoiceTotal(booking);
+  return Boolean(
+    String(booking.publicToken || '').trim() ||
+    String(booking.paymentSessionId || '').trim() ||
+    source.includes('website') ||
+    source.includes('stripe') ||
+    source.includes('public') ||
+    (amountDueToday > 0 && total > 0 && amountDueToday < total)
+  );
+}
+
+function bookingCollectedAmountForInvoice(booking = {}) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  const total = bookingInvoiceTotal(booking);
+  if (paymentStatus !== 'paid') return 0;
+  if (bookingUsesCheckoutDepositFlow(booking)) {
+    const dueToday = Number(booking.amountDueToday || 0);
+    if (dueToday > 0) {
+      return Number(Math.min(dueToday, total).toFixed(2));
+    }
+  }
+  return total > 0 ? total : 0;
+}
+
 function invoiceStatusForBooking(booking = {}) {
   const bookingStatus = normalizeBookingStatus(booking.status);
   if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
-  const total = Number(booking.total || 0) + Number(booking.processingFeeAmount || 0);
-  const collected = booking.paymentStatus === 'paid'
-    ? Number(booking.amountDueToday || 0)
-    : 0;
+  const total = bookingInvoiceTotal(booking);
+  const collected = bookingCollectedAmountForInvoice(booking);
   if (collected >= total && total > 0) return 'paid';
   if (collected > 0) return 'partially paid';
   if (bookingStatus === 'draft') return 'draft';
@@ -1106,9 +1135,7 @@ function invoiceStatusForBooking(booking = {}) {
 }
 
 function mergedCollectedAmountForBookingInvoice(existingInvoice = null, booking = {}) {
-  const bookingCollected = booking.paymentStatus === 'paid'
-    ? Number(booking.amountDueToday || 0)
-    : 0;
+  const bookingCollected = bookingCollectedAmountForInvoice(booking);
   const invoiceCollected = Number(existingInvoice?.paidAmount || 0);
   return Number(Math.max(bookingCollected, invoiceCollected, 0).toFixed(2));
 }
@@ -1116,7 +1143,7 @@ function mergedCollectedAmountForBookingInvoice(existingInvoice = null, booking 
 function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
   const bookingStatus = normalizeBookingStatus(booking.status);
   if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
-  const total = Number((Number(booking.total || 0) + Number(booking.processingFeeAmount || 0)).toFixed(2));
+  const total = bookingInvoiceTotal(booking);
   const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
   if (collected >= total && total > 0) return 'paid';
   if (collected > 0) return 'partially paid';
