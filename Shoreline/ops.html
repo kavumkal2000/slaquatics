@@ -1670,6 +1670,7 @@ let invoicePeriodFilter = 'month';
 let invoiceDateFrom = '';
 let invoiceDateTo = '';
 let editingInvoiceId = null;
+let invoiceCustomerContextId = null;
 
 let expenses = [];
 let editingExpenseId = null;
@@ -2740,11 +2741,16 @@ function createManualInvoiceNumber() {
   const existingCount = invoices.filter((invoice) => String(invoice.invoiceNumber || '').startsWith(`SLA-${datePart}-`)).length + 1;
   return `SLA-${datePart}-${String(existingCount).padStart(3, '0')}`;
 }
+function setInvoiceCustomerContext(customer = null) {
+  const resolvedCustomer = customer && Number(customer.id) ? customer : null;
+  invoiceCustomerContextId = resolvedCustomer ? Number(resolvedCustomer.id) : null;
+  document.getElementById('i-customer-name').value = resolvedCustomer?.name || '';
+  document.getElementById('i-customer-phone').value = resolvedCustomer?.phone || '';
+  document.getElementById('i-customer-email').value = resolvedCustomer?.email || '';
+}
 function resetInvoiceForm() {
   editingInvoiceId = null;
-  document.getElementById('i-customer-name').value = '';
-  document.getElementById('i-customer-phone').value = '';
-  document.getElementById('i-customer-email').value = '';
+  setInvoiceCustomerContext(null);
   document.getElementById('i-invoice-name').value = '';
   document.getElementById('i-issue-date').value = today();
   document.getElementById('i-due-date').value = today();
@@ -2762,6 +2768,18 @@ function resetInvoiceForm() {
   document.getElementById('invoice-modal-title').textContent = 'New Invoice';
   document.getElementById('invoice-save-button').textContent = 'Save Invoice';
 }
+function openInvoiceModalForCustomer(customerId) {
+  const customer = customers.find((item) => Number(item.id) === Number(customerId));
+  if (!customer) {
+    showToast('⚠️ Customer record not found');
+    return;
+  }
+  resetInvoiceForm();
+  setInvoiceCustomerContext(customer);
+  document.getElementById('invoice-modal-title').textContent = 'New Invoice';
+  document.getElementById('invoice-save-button').textContent = 'Save Invoice';
+  openModal('invoice-modal');
+}
 function openInvoiceModal(invoiceId = null) {
   resetInvoiceForm();
   if (invoiceId !== null && invoiceId !== undefined) {
@@ -2771,10 +2789,14 @@ function openInvoiceModal(invoiceId = null) {
       return;
     }
     const contact = invoiceDisplayContact(invoice);
+    const linkedCustomer = linkedCustomerForInvoice(invoice);
     editingInvoiceId = Number(invoice.id);
-    document.getElementById('i-customer-name').value = contact.name || '';
-    document.getElementById('i-customer-phone').value = contact.phone || '';
-    document.getElementById('i-customer-email').value = contact.email || '';
+    setInvoiceCustomerContext(linkedCustomer);
+    if (!linkedCustomer) {
+      document.getElementById('i-customer-name').value = contact.name || '';
+      document.getElementById('i-customer-phone').value = contact.phone || '';
+      document.getElementById('i-customer-email').value = contact.email || '';
+    }
     document.getElementById('i-invoice-name').value = invoice.invoiceName || '';
     document.getElementById('i-issue-date').value = invoice.issueDate || today();
     document.getElementById('i-due-date').value = invoice.dueDate || invoice.issueDate || today();
@@ -2897,8 +2919,11 @@ async function saveInvoice() {
   if (!existingInvoice) invoices.unshift(invoice);
 
   let customer = null;
-  if (hasMeaningfulCustomer) {
-    customer = customers.find((item) => (
+  const contextualCustomer = invoiceCustomerContextId
+    ? customers.find((item) => Number(item.id) === Number(invoiceCustomerContextId))
+    : null;
+  if (hasMeaningfulCustomer || contextualCustomer) {
+    customer = contextualCustomer || customers.find((item) => (
       (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(phone)) ||
       (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(email)) ||
       (normalizeName(item.name) && normalizeName(item.name) === normalizeName(customerName))
@@ -4795,6 +4820,7 @@ function renderCRM() {
               <div class="customer-detail-value ${c.crmNotes ? '' : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
             </div>
             <div class="customer-detail-actions">
+              <button class="btn btn-primary btn-sm" onclick="openInvoiceModalForCustomer(${Number(c.id)})">Create Invoice</button>
               <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
               ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
               ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : ''}
