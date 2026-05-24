@@ -21,6 +21,8 @@ const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toSt
 const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
 const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
+const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'employee').trim().toLowerCase();
+const OPS_EMPLOYEE_PASSWORD = process.env.OPS_EMPLOYEE_PASSWORD || LEGACY_OPS_PASSWORD || '';
 const OPS_OWNER_USERNAME = String(process.env.OPS_OWNER_USERNAME || 'owner').trim().toLowerCase();
 const OPS_OWNER_PASSWORD_HASH = process.env.OPS_OWNER_PASSWORD_HASH || '';
 const OPS_OWNER_PASSWORD = process.env.OPS_OWNER_PASSWORD || (OPS_OWNER_PASSWORD_HASH ? '' : LEGACY_OPS_PASSWORD) || '';
@@ -368,6 +370,13 @@ function authPermissionsForRole(role = 'owner') {
   };
 }
 
+function normalizeOpsRole(role = '') {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (normalized === 'developer') return 'developer';
+  if (normalized === 'employee') return 'employee';
+  return 'owner';
+}
+
 function listOpsUsers() {
   return [
     {
@@ -376,6 +385,14 @@ function listOpsUsers() {
       displayName: 'Developer',
       matches(password = '') {
         return Boolean(OPS_DEV_PASSWORD) && safeSecretEquals(password, OPS_DEV_PASSWORD);
+      }
+    },
+    {
+      username: normalizeUsername(OPS_EMPLOYEE_USERNAME || 'employee'),
+      role: 'employee',
+      displayName: 'Employee',
+      matches(password = '') {
+        return Boolean(OPS_EMPLOYEE_PASSWORD) && safeSecretEquals(password, OPS_EMPLOYEE_PASSWORD);
       }
     },
     {
@@ -402,7 +419,7 @@ function createSessionToken(user = {}) {
     nonce,
     expiresAt: Date.now() + SESSION_TTL_MS,
     username: normalizeUsername(user.username || ''),
-    role: user.role === 'developer' ? 'developer' : 'owner'
+    role: normalizeOpsRole(user.role)
   })).toString('base64url');
   return `${payload}.${signToken(payload)}`;
 }
@@ -421,11 +438,12 @@ function verifySessionToken(token = '') {
   try {
     const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     if (!decoded || Number(decoded.expiresAt || 0) < Date.now()) return null;
+    const role = normalizeOpsRole(decoded.role);
     return {
       username: normalizeUsername(decoded.username || ''),
-      role: decoded.role === 'developer' ? 'developer' : 'owner',
+      role,
       expiresAt: Number(decoded.expiresAt || 0),
-      permissions: authPermissionsForRole(decoded.role)
+      permissions: authPermissionsForRole(role)
     };
   } catch {
     return null;
@@ -443,7 +461,7 @@ function sessionUserPayload(session) {
   return {
     username: session.username,
     role: session.role,
-    displayName: matchedUser?.displayName || (session.role === 'developer' ? 'Developer' : 'Owner'),
+    displayName: matchedUser?.displayName || (session.role === 'developer' ? 'Developer' : session.role === 'employee' ? 'Employee' : 'Owner'),
     permissions: session.permissions || authPermissionsForRole(session.role)
   };
 }

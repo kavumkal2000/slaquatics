@@ -960,12 +960,12 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
     <div class="kpi-card"><div class="label">Storage</div><div class="value" id="system-kpi-storage">Private sync</div><div class="delta up" id="system-kpi-storage-meta">Shared server-backed CRM</div></div>
     <div class="kpi-card"><div class="label">Signed in as</div><div class="value" id="system-kpi-role">Developer</div><div class="delta up" id="system-kpi-role-meta">Full control</div></div>
     <div class="kpi-card"><div class="label">Connected services</div><div class="value" id="system-kpi-integrations">0</div><div class="delta up" id="system-kpi-integrations-meta">SMS, email, reviews, payments</div></div>
-    <div class="kpi-card"><div class="label">Role split</div><div class="value" id="system-kpi-access">2</div><div class="delta up" id="system-kpi-access-meta">Developer and owner logins</div></div>
+    <div class="kpi-card"><div class="label">Role split</div><div class="value" id="system-kpi-access">3</div><div class="delta up" id="system-kpi-access-meta">Developer, owner, and employee logins</div></div>
   </div>
   <div class="compose-grid">
     <div class="list-card">
       <h3>Developer access</h3>
-      <p>This screen stays visible only to the developer login. The owner login keeps full business access without website-development controls.</p>
+      <p>This screen stays visible only to the developer login. Owner and employee logins keep business access without website-development controls.</p>
       <div class="list-stack" id="system-access-list" style="margin-top:1rem;"></div>
     </div>
     <div class="list-card">
@@ -6049,8 +6049,8 @@ function renderSystemPage() {
     : 'Business access only';
   document.getElementById('system-kpi-integrations').textContent = String(connectedServices);
   document.getElementById('system-kpi-integrations-meta').textContent = 'Connected service checks';
-  document.getElementById('system-kpi-access').textContent = '2';
-  document.getElementById('system-kpi-access-meta').textContent = 'Developer and owner logins';
+  document.getElementById('system-kpi-access').textContent = '3';
+  document.getElementById('system-kpi-access-meta').textContent = 'Developer, owner, and employee logins';
 
   accessList.innerHTML = `
     <div class="list-row">
@@ -6063,6 +6063,12 @@ function renderSystemPage() {
       <div class="list-row-main">
         <strong>Owner login</strong>
         <div class="sub">Full business data access without website-development controls.</div>
+      </div>
+    </div>
+    <div class="list-row">
+      <div class="list-row-main">
+        <strong>Employee login</strong>
+        <div class="sub">Day-to-day ops access for bookings, customers, invoices, waivers, reviews, and reminders without developer controls.</div>
       </div>
     </div>
     <div class="list-row">

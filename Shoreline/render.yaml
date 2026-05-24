@@ -31,6 +31,10 @@ services:
         sync: false
       - key: OPS_DEV_PASSWORD
         sync: false
+      - key: OPS_EMPLOYEE_USERNAME
+        sync: false
+      - key: OPS_EMPLOYEE_PASSWORD
+        sync: false
       - key: OPS_OWNER_USERNAME
         sync: false
       - key: OPS_OWNER_PASSWORD
