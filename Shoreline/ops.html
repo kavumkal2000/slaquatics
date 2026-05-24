@@ -2748,6 +2748,23 @@ function setInvoiceCustomerContext(customer = null) {
   document.getElementById('i-customer-phone').value = resolvedCustomer?.phone || '';
   document.getElementById('i-customer-email').value = resolvedCustomer?.email || '';
 }
+function latestOpenInvoiceForCustomer(customerId) {
+  const targetId = Number(customerId || 0);
+  if (!targetId) return null;
+  return invoices
+    .filter((invoice) => Number(linkedCustomerForInvoice(invoice)?.id || 0) === targetId)
+    .filter((invoice) => {
+      const normalized = normalizeInvoiceStatus(invoice.status);
+      return invoiceOutstandingAmount(invoice) > 0 || ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalized);
+    })
+    .sort((left, right) => {
+      const leftDate = dateValue(left.issueDate || left.dueDate);
+      const rightDate = dateValue(right.issueDate || right.dueDate);
+      const leftTime = leftDate ? leftDate.getTime() : 0;
+      const rightTime = rightDate ? rightDate.getTime() : 0;
+      return rightTime - leftTime || Number(right.id || 0) - Number(left.id || 0);
+    })[0] || null;
+}
 function resetInvoiceForm() {
   editingInvoiceId = null;
   setInvoiceCustomerContext(null);
@@ -2768,14 +2785,23 @@ function resetInvoiceForm() {
   document.getElementById('invoice-modal-title').textContent = 'New Invoice';
   document.getElementById('invoice-save-button').textContent = 'Save Invoice';
 }
-function openInvoiceModalForCustomer(customerId) {
+function openInvoiceModalForCustomer(customerId, mode = 'invoice') {
   const customer = customers.find((item) => Number(item.id) === Number(customerId));
   if (!customer) {
     showToast('⚠️ Customer record not found');
     return;
   }
+  if (mode === 'payment') {
+    const openInvoice = latestOpenInvoiceForCustomer(customer.id);
+    if (openInvoice) {
+      openInvoiceModal(Number(openInvoice.id));
+      return;
+    }
+  }
   resetInvoiceForm();
   setInvoiceCustomerContext(customer);
+  document.getElementById('i-status').value = mode === 'payment' ? 'Paid' : 'Open';
+  updateInvoicePaymentHelper(mode === 'payment' ? 'Record a payment for this customer.' : 'Create an invoice for this customer.');
   document.getElementById('invoice-modal-title').textContent = 'New Invoice';
   document.getElementById('invoice-save-button').textContent = 'Save Invoice';
   openModal('invoice-modal');
@@ -4820,11 +4846,9 @@ function renderCRM() {
               <div class="customer-detail-value ${c.crmNotes ? '' : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
             </div>
             <div class="customer-detail-actions">
-              <button class="btn btn-primary btn-sm" onclick="openInvoiceModalForCustomer(${Number(c.id)})">Create Invoice</button>
+              <button class="btn btn-primary btn-sm" onclick="openInvoiceModalForCustomer(${Number(c.id)}, 'payment')">Payment</button>
+              <button class="btn btn-ghost btn-sm" onclick="openInvoiceModalForCustomer(${Number(c.id)}, 'invoice')">Invoice</button>
               <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
-              ${c.phone ? `<a href="tel:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
-              ${c.phone ? `<a href="sms:${phoneHref(c.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">💬 Text</a>` : ''}
-              ${c.email ? `<a href="mailto:${encodeURIComponent(c.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : ''}
               <button class="btn btn-danger btn-sm" onclick="deleteCustomer(${Number(c.id)})">Delete</button>
             </div>
           </div>
