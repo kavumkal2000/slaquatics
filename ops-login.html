@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#08111f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SLA Ops">
 <title>Shoreline Ops Login</title>
+<link rel="manifest" href="/ops-app.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/images/shoreline-ops-app-icon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -150,6 +157,7 @@ code{
         </form>
         <div class="support">
           If the private CRM is unavailable, contact Shoreline support or your site administrator.
+          On iPhone, open this in Safari, tap Share, then Add to Home Screen.
         </div>
       </div>
     </section>
@@ -216,6 +224,14 @@ form.addEventListener('submit', async (event) => {
     if (passwordInput.value) passwordInput.select();
   }
 });
+
+if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/ops-sw.js').catch((error) => {
+      console.error('Ops service worker registration failed:', error);
+    });
+  });
+}
 
 checkSession();
 </script>
