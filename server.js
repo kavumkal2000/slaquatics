@@ -506,7 +506,7 @@ function trustedDeviceHashFromRequest(request) {
   return trustedDeviceHash(trustedDeviceTokenFromRequest(request));
 }
 
-async function registerOrValidateTrustedDevice(user = {}, request, now = new Date().toISOString()) {
+async function registerOrValidateTrustedDevice(user = {}, request, now = new Date().toISOString(), options = {}) {
   const tokenHash = trustedDeviceHashFromRequest(request);
   if (!tokenHash) {
     return {
@@ -520,6 +520,7 @@ async function registerOrValidateTrustedDevice(user = {}, request, now = new Dat
   const username = normalizeUsername(user.username || '');
   const role = normalizeOpsRole(user.role);
   const label = trustedDeviceLabelFromRequest(request);
+  const allowReplace = Boolean(options.allowReplace);
   const devices = Array.isArray(registry.users?.[username]) ? [...registry.users[username]] : [];
   const existingIndex = devices.findIndex((device) => device.tokenHash === tokenHash);
   if (existingIndex >= 0) {
@@ -536,11 +537,24 @@ async function registerOrValidateTrustedDevice(user = {}, request, now = new Dat
     return { ok: true, tokenHash, device: next, paired: false };
   }
   if (devices.length > 0) {
+    if (allowReplace) {
+      const nextDevice = {
+        tokenHash,
+        label,
+        firstApprovedAt: now,
+        lastSeenAt: now,
+        role
+      };
+      registry.users[username] = [nextDevice];
+      await trustedDeviceStore.write(registry);
+      return { ok: true, tokenHash, device: nextDevice, paired: true, replaced: true };
+    }
     return {
       ok: false,
       status: 403,
       code: 'device_not_approved',
-      error: 'This phone is not approved for this Shoreline login.'
+      error: 'This phone is not approved for this Shoreline login.',
+      canReplaceDevice: true
     };
   }
   const nextDevice = {
@@ -2843,16 +2857,20 @@ async function handleApi(request, response, pathname) {
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const username = String(body.username || '');
       const password = String(body.password || '');
+      const replaceTrustedDevice = Boolean(body.replaceTrustedDevice);
       const user = findOpsUser(username, password);
       if (!user) {
         sendJson(response, 401, { error: 'Incorrect username or password.' });
         return true;
       }
-      const trustResult = await registerOrValidateTrustedDevice(user, request, new Date().toISOString());
+      const trustResult = await registerOrValidateTrustedDevice(user, request, new Date().toISOString(), {
+        allowReplace: replaceTrustedDevice
+      });
       if (!trustResult.ok) {
         sendJson(response, trustResult.status || 403, {
           error: trustResult.error || 'This device is not approved.',
-          code: trustResult.code || 'device_not_approved'
+          code: trustResult.code || 'device_not_approved',
+          canReplaceDevice: Boolean(trustResult.canReplaceDevice)
         });
         return true;
       }
@@ -2860,6 +2878,7 @@ async function handleApi(request, response, pathname) {
       sendJson(response, 200, {
         ok: true,
         pairedDevice: Boolean(trustResult.paired),
+        replacedDevice: Boolean(trustResult.replaced),
         user: {
           username: user.username,
           role: user.role,

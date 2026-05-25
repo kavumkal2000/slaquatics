@@ -119,6 +119,13 @@ input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(26,15
   font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer
 }
 .submit:disabled{opacity:0.65;cursor:wait}
+.secondary-action{
+  width:100%;margin-top:0.75rem;padding:0.88rem 1rem;border-radius:14px;
+  border:1px solid rgba(26,158,212,0.28);background:rgba(255,255,255,0.04);color:var(--white);
+  font:inherit;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer
+}
+.secondary-action[hidden]{display:none}
+.secondary-action:disabled{opacity:0.65;cursor:wait}
 .status{
   margin-top:1rem;min-height:1.35rem;font-size:0.88rem;color:var(--muted)
 }
@@ -176,6 +183,7 @@ code{
             <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your Shoreline ops password" required>
           </div>
           <button class="submit" id="submit-btn" type="submit">Unlock Ops</button>
+          <button class="secondary-action" id="approve-device-btn" type="button" hidden>Approve This Phone</button>
           <div class="status" id="status">Checking private service status...</div>
         </form>
         <div class="support">
@@ -196,10 +204,13 @@ if (window.location.protocol === 'file:') {
 const form = document.getElementById('login-form');
 const statusEl = document.getElementById('status');
 const submitBtn = document.getElementById('submit-btn');
+const approveDeviceBtn = document.getElementById('approve-device-btn');
 const usernameInput = document.getElementById('username');
 const passwordInput = document.getElementById('password');
 const TRUSTED_DEVICE_STORAGE_KEY = 'shoreline_ops_device_v1';
 const TRUSTED_DEVICE_COOKIE_NAME = 'sla_ops_device';
+const INSTALL_BANNER_DISMISS_STORAGE_KEY = 'shoreline_ops_install_banner_dismissed_v1';
+const INSTALL_BANNER_DISMISS_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 function isIosDevice() {
   return /iPad|iPhone|iPod/i.test(window.navigator.userAgent || '');
@@ -292,16 +303,40 @@ function trustedDeviceHeaders(extra = {}) {
 }
 
 function dismissInstallBanner() {
+  try {
+    window.localStorage.setItem(INSTALL_BANNER_DISMISS_STORAGE_KEY, String(Date.now()));
+  } catch (error) {
+    console.warn('Could not persist install banner dismissal:', error);
+  }
   document.body.dataset.iosInstall = 'dismissed';
 }
 
-if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode()) {
+function shouldShowInstallBanner() {
+  try {
+    const saved = Number(window.localStorage.getItem(INSTALL_BANNER_DISMISS_STORAGE_KEY) || 0);
+    if (saved && Number.isFinite(saved) && Date.now() - saved < INSTALL_BANNER_DISMISS_TTL_MS) return false;
+  } catch (error) {
+    console.warn('Could not read install banner dismissal:', error);
+  }
+  return true;
+}
+
+if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode() && shouldShowInstallBanner()) {
   document.body.dataset.iosInstall = 'needed';
 }
 
 function setStatus(message, type = '') {
   statusEl.textContent = message;
   statusEl.className = `status${type ? ` ${type}` : ''}`;
+}
+
+function setBusy(isBusy) {
+  submitBtn.disabled = isBusy;
+  approveDeviceBtn.disabled = isBusy;
+}
+
+function setApprovalMode(enabled) {
+  approveDeviceBtn.hidden = !enabled;
 }
 
 async function checkSession() {
@@ -327,28 +362,52 @@ async function checkSession() {
   }
 }
 
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  submitBtn.disabled = true;
-  setStatus('Signing in...');
+async function submitLogin({ replaceTrustedDevice = false } = {}) {
+  setBusy(true);
+  setStatus(replaceTrustedDevice ? 'Approving this phone...' : 'Signing in...');
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       credentials: 'same-origin',
       headers: trustedDeviceHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ username: usernameInput.value, password: passwordInput.value })
+      body: JSON.stringify({
+        username: usernameInput.value,
+        password: passwordInput.value,
+        replaceTrustedDevice
+      })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+      if (data.code === 'device_not_approved' && data.canReplaceDevice) {
+        setApprovalMode(true);
+        throw new Error('This login is paired to another phone. Tap Approve This Phone to switch it here.');
+      }
       throw new Error(data.error || 'Sign-in failed');
     }
-    setStatus(data.pairedDevice ? 'This phone is now approved. Opening Shoreline ops...' : 'Access granted. Opening Shoreline ops...', 'success');
+    setApprovalMode(false);
+    setStatus(
+      data.replacedDevice
+        ? 'This phone is now approved. Opening Shoreline ops...'
+        : data.pairedDevice
+          ? 'This phone is now approved. Opening Shoreline ops...'
+          : 'Access granted. Opening Shoreline ops...',
+      'success'
+    );
     window.location.replace(LIVE_OPS_APP_URL);
   } catch (error) {
     setStatus(error.message || 'Sign-in failed', 'error');
-    submitBtn.disabled = false;
+    setBusy(false);
     if (passwordInput.value) passwordInput.select();
   }
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  await submitLogin();
+});
+
+approveDeviceBtn.addEventListener('click', async () => {
+  await submitLogin({ replaceTrustedDevice: true });
 });
 
 if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
