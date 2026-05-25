@@ -19,6 +19,7 @@
 html{scroll-behavior:smooth;}
 body{font-family:'DM Sans',sans-serif;background:var(--navy);color:var(--white);min-height:100vh;display:flex;}
 body[data-ios-install='needed']{padding-top:5.6rem;}
+body[data-native-app='true'] .install-banner{display:none !important}
 body[data-app-ready="false"] .app-loading{opacity:1;pointer-events:auto;}
 body[data-app-ready="true"] .app-loading{opacity:0;pointer-events:none;}
 .install-banner{
@@ -1815,11 +1816,19 @@ function isStandaloneMode() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+function isNativeOpsApp() {
+  return /ShorelineOpsNative/i.test(window.navigator.userAgent || '');
+}
+
 function dismissInstallBanner() {
   document.body.dataset.iosInstall = 'dismissed';
 }
 
-if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode()) {
+if (isNativeOpsApp()) {
+  document.body.dataset.nativeApp = 'true';
+}
+
+if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode() && !isNativeOpsApp()) {
   document.body.dataset.iosInstall = 'needed';
 }
 

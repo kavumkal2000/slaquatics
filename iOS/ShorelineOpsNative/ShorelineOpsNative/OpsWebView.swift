@@ -14,11 +14,16 @@ final class OpsWebViewStore: ObservableObject {
     weak var webView: WKWebView?
 
     @Published var isLoading = true
+    @Published var hasLoadedOnce = false
     @Published var statusText = "Connecting to private ops…"
     @Published var blockedMessage: String?
+    @Published var pageTitle = "Shoreline Ops"
+    @Published var pageSubtitle = "Private operations"
+    @Published var canGoBack = false
 
     func attach(_ webView: WKWebView) {
         self.webView = webView
+        updateNavigationState(from: webView)
     }
 
     func loadHome() {
@@ -39,9 +44,17 @@ final class OpsWebViewStore: ObservableObject {
         }
     }
 
+    func goBack() {
+        guard let webView, webView.canGoBack else { return }
+        blockedMessage = nil
+        statusText = "Returning to the last screen…"
+        webView.goBack()
+    }
+
     func handleNavigationStart(url: URL?) {
         isLoading = true
         blockedMessage = nil
+        updatePageMetadata(for: url)
         if let host = url?.host, !host.isEmpty {
             statusText = "Loading \(host)…"
         } else {
@@ -49,9 +62,12 @@ final class OpsWebViewStore: ObservableObject {
         }
     }
 
-    func handleNavigationSuccess(url: URL?) {
+    func handleNavigationSuccess(webView: WKWebView) {
         isLoading = false
+        hasLoadedOnce = true
         blockedMessage = nil
+        updateNavigationState(from: webView)
+        let url = webView.url
         if let host = url?.host, allowedHosts.contains(host.lowercased()) {
             statusText = "Connected to private ops"
         } else {
@@ -61,13 +77,13 @@ final class OpsWebViewStore: ObservableObject {
 
     func handleNavigationFailure(_ error: Error) {
         isLoading = false
-        blockedMessage = error.localizedDescription
+        blockedMessage = userFacingMessage(for: error)
         statusText = "Connection problem"
     }
 
     func blockExternalNavigation(for url: URL) {
         isLoading = false
-        blockedMessage = "External link blocked in the native app: \(url.host ?? url.absoluteString)"
+        blockedMessage = "That link opens outside Shoreline Ops, so it stays blocked in the iPhone app."
         statusText = "External link blocked"
     }
 
@@ -90,6 +106,54 @@ final class OpsWebViewStore: ObservableObject {
 
         return false
     }
+
+    private func updateNavigationState(from webView: WKWebView?) {
+        canGoBack = webView?.canGoBack ?? false
+        updatePageMetadata(for: webView?.url, title: webView?.title)
+    }
+
+    private func updatePageMetadata(for url: URL?, title: String? = nil) {
+        let cleanTitle = String(title ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleanTitle.isEmpty {
+            pageTitle = cleanTitle
+        } else if let host = url?.host, !host.isEmpty {
+            pageTitle = host == "shoreline-aquatics-ops.onrender.com" ? "Shoreline Ops" : host
+        } else {
+            pageTitle = "Shoreline Ops"
+        }
+
+        if let host = url?.host, !host.isEmpty {
+            if host == "shoreline-aquatics-ops.onrender.com" {
+                pageSubtitle = "Live private CRM"
+            } else if allowedHosts.contains(host.lowercased()) {
+                pageSubtitle = "Shoreline secure view"
+            } else {
+                pageSubtitle = host
+            }
+        } else {
+            pageSubtitle = "Private operations"
+        }
+    }
+
+    private func userFacingMessage(for error: Error) -> String {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorNotConnectedToInternet:
+                return "No internet connection. Reconnect and try again."
+            case NSURLErrorTimedOut:
+                return "Shoreline Ops took too long to respond. Try reloading."
+            case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost:
+                return "Couldn’t reach the Shoreline server right now."
+            case NSURLErrorCancelled:
+                return blockedMessage ?? "Loading was interrupted."
+            default:
+                break
+            }
+        }
+        return nsError.localizedDescription
+    }
 }
 
 struct OpsWebView: UIViewRepresentable {
@@ -108,9 +172,10 @@ struct OpsWebView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
-        webView.allowsBackForwardNavigationGestures = false
+        webView.allowsBackForwardNavigationGestures = true
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.keyboardDismissMode = .interactive
+        webView.scrollView.showsVerticalScrollIndicator = false
         webView.isOpaque = false
         webView.backgroundColor = UIColor.clear
         webView.scrollView.backgroundColor = UIColor.clear
@@ -139,7 +204,7 @@ struct OpsWebView: UIViewRepresentable {
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             Task { @MainActor in
-                store.handleNavigationSuccess(url: webView.url)
+                store.handleNavigationSuccess(webView: webView)
             }
         }
 

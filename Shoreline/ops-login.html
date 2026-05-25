@@ -40,6 +40,7 @@ body[data-ios-install='needed']{padding-top:6.5rem}
   box-shadow:0 20px 50px rgba(0,0,0,0.28);backdrop-filter:blur(18px)
 }
 body[data-ios-install='needed'] .install-banner{display:flex}
+body[data-native-app='true'] .install-banner{display:none !important}
 .install-banner-copy strong{
   display:block;font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;color:#7fe6ff
 }
@@ -185,7 +186,7 @@ code{
           <button class="submit" id="submit-btn" type="submit">Unlock Ops</button>
           <div class="status" id="status">Checking private service status...</div>
         </form>
-        <div class="support">
+        <div class="support" id="support-copy">
           If the private CRM is unavailable, contact Shoreline support or your site administrator.
           On iPhone, open this in Safari, tap Share, then Add to Home Screen.
         </div>
@@ -216,6 +217,10 @@ function isStandaloneMode() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+function isNativeOpsApp() {
+  return /ShorelineOpsNative/i.test(window.navigator.userAgent || '');
+}
+
 function dismissInstallBanner() {
   try {
     window.localStorage.setItem(INSTALL_BANNER_DISMISS_STORAGE_KEY, String(Date.now()));
@@ -235,7 +240,15 @@ function shouldShowInstallBanner() {
   return true;
 }
 
-if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode() && shouldShowInstallBanner()) {
+if (isNativeOpsApp()) {
+  document.body.dataset.nativeApp = 'true';
+  const supportCopy = document.getElementById('support-copy');
+  if (supportCopy) {
+    supportCopy.textContent = 'If the private CRM is unavailable, contact Shoreline support or your site administrator.';
+  }
+}
+
+if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode() && !isNativeOpsApp() && shouldShowInstallBanner()) {
   document.body.dataset.iosInstall = 'needed';
 }
 
