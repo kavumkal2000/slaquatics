@@ -15,12 +15,9 @@ const HOST = '0.0.0.0';
 const PUBLIC_DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'ops-store.json');
-const TRUSTED_DEVICE_FILE = path.join(DATA_DIR, 'ops-trusted-devices.json');
 const COOKIE_NAME = 'sla_ops_session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-const OPS_DEVICE_TOKEN_HEADER = 'x-ops-device-token';
-const OPS_DEVICE_LABEL_HEADER = 'x-ops-device-label';
 const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
 const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
@@ -129,10 +126,6 @@ const DEFAULT_STATE = {
   invoiceImportMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false}
 };
 
-const DEFAULT_TRUSTED_DEVICES = {
-  users: {}
-};
-
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -174,39 +167,6 @@ function normalizeOwnerWeeklyDigest(value) {
         lastWeekKey: String(value.lastWeekKey || '')
       }
     : clone(DEFAULT_STATE.ownerWeeklyDigest);
-}
-
-function sanitizeTrustedDeviceEntry(value = {}) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const tokenHash = String(value.tokenHash || value.deviceHash || '').trim().toLowerCase();
-  if (!tokenHash) return null;
-  return {
-    tokenHash,
-    label: String(value.label || '').trim().slice(0, 120),
-    firstApprovedAt: String(value.firstApprovedAt || value.approvedAt || ''),
-    lastSeenAt: String(value.lastSeenAt || ''),
-    role: normalizeOpsRole(value.role)
-  };
-}
-
-function sanitizeTrustedDevices(value = {}) {
-  const payload = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  const sourceUsers = payload.users && typeof payload.users === 'object' && !Array.isArray(payload.users)
-    ? payload.users
-    : {};
-  const users = {};
-  for (const [rawUsername, rawDevices] of Object.entries(sourceUsers)) {
-    const username = normalizeUsername(rawUsername);
-    if (!username) continue;
-    const devices = Array.isArray(rawDevices) ? rawDevices : [];
-    const nextDevices = devices
-      .map((device) => sanitizeTrustedDeviceEntry(device))
-      .filter(Boolean);
-    if (nextDevices.length) {
-      users[username] = nextDevices;
-    }
-  }
-  return { users };
 }
 
 const STATE_TOP_LEVEL_KEYS = [
@@ -365,25 +325,7 @@ async function createStateStore() {
   return createFileJsonStore(STORE_FILE, DEFAULT_STATE, sanitizeState);
 }
 
-async function createTrustedDeviceStore() {
-  if (process.env.DATABASE_URL) {
-    try {
-      return await createPostgresJsonStore(process.env.DATABASE_URL, 'ops_trusted_devices', DEFAULT_TRUSTED_DEVICES, sanitizeTrustedDevices);
-    } catch (error) {
-      if (REQUIRE_SERVER_STORE) {
-        throw new Error(`Trusted device store unavailable and file fallback is disabled: ${error.message}`);
-      }
-      console.error('Trusted device store unavailable, falling back to file store.', error);
-    }
-  }
-  if (REQUIRE_SERVER_STORE) {
-    throw new Error('DATABASE_URL is required because server-side file fallback is disabled.');
-  }
-  return createFileJsonStore(TRUSTED_DEVICE_FILE, DEFAULT_TRUSTED_DEVICES, sanitizeTrustedDevices);
-}
-
 const stateStore = await createStateStore();
-const trustedDeviceStore = await createTrustedDeviceStore();
 
 function parseCookies(cookieHeader = '') {
   return Object.fromEntries(
@@ -485,90 +427,6 @@ function findOpsUser(username = '', password = '') {
   return listOpsUsers().find((user) => user.username === normalized && user.matches(password)) || null;
 }
 
-function trustedDeviceLabelFromRequest(request) {
-  const headerValue = request.headers[OPS_DEVICE_LABEL_HEADER];
-  const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-  return String(value || '').trim().slice(0, 120);
-}
-
-function trustedDeviceTokenFromRequest(request) {
-  const headerValue = request.headers[OPS_DEVICE_TOKEN_HEADER];
-  const value = Array.isArray(headerValue) ? headerValue[0] : headerValue;
-  return String(value || '').trim();
-}
-
-function trustedDeviceHash(token = '') {
-  if (!token) return '';
-  return crypto.createHash('sha256').update(String(token)).digest('hex');
-}
-
-function trustedDeviceHashFromRequest(request) {
-  return trustedDeviceHash(trustedDeviceTokenFromRequest(request));
-}
-
-async function registerOrValidateTrustedDevice(user = {}, request, now = new Date().toISOString(), options = {}) {
-  const tokenHash = trustedDeviceHashFromRequest(request);
-  if (!tokenHash) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'missing_device_token',
-      error: 'This device is missing its private Shoreline app key. Open the ops app from an approved phone and try again.'
-    };
-  }
-  const registry = await trustedDeviceStore.read();
-  const username = normalizeUsername(user.username || '');
-  const role = normalizeOpsRole(user.role);
-  const label = trustedDeviceLabelFromRequest(request);
-  const allowReplace = Boolean(options.allowReplace);
-  const devices = Array.isArray(registry.users?.[username]) ? [...registry.users[username]] : [];
-  const existingIndex = devices.findIndex((device) => device.tokenHash === tokenHash);
-  if (existingIndex >= 0) {
-    const existing = devices[existingIndex];
-    const next = {
-      ...existing,
-      label: label || existing.label || '',
-      lastSeenAt: now,
-      role
-    };
-    devices[existingIndex] = next;
-    registry.users[username] = devices;
-    await trustedDeviceStore.write(registry);
-    return { ok: true, tokenHash, device: next, paired: false };
-  }
-  if (devices.length > 0) {
-    if (allowReplace) {
-      const nextDevice = {
-        tokenHash,
-        label,
-        firstApprovedAt: now,
-        lastSeenAt: now,
-        role
-      };
-      registry.users[username] = [nextDevice];
-      await trustedDeviceStore.write(registry);
-      return { ok: true, tokenHash, device: nextDevice, paired: true, replaced: true };
-    }
-    return {
-      ok: false,
-      status: 403,
-      code: 'device_not_approved',
-      error: 'This phone is not approved for this Shoreline login.',
-      canReplaceDevice: true
-    };
-  }
-  const nextDevice = {
-    tokenHash,
-    label,
-    firstApprovedAt: now,
-    lastSeenAt: now,
-    role
-  };
-  registry.users[username] = [nextDevice];
-  await trustedDeviceStore.write(registry);
-  return { ok: true, tokenHash, device: nextDevice, paired: true };
-}
-
 function createSessionToken(user = {}, deviceIdHash = '') {
   const nonce = crypto.randomBytes(16).toString('hex');
   const payload = Buffer.from(JSON.stringify({
@@ -612,11 +470,6 @@ function getSession(request) {
   const cookies = parseCookies(request.headers.cookie || '');
   const session = verifySessionToken(cookies[COOKIE_NAME] || '');
   if (!session) return null;
-  if (!session.deviceIdHash) return null;
-  const requestDeviceHash = trustedDeviceHashFromRequest(request);
-  if (!requestDeviceHash || !safeSecretEquals(requestDeviceHash, session.deviceIdHash)) {
-    return null;
-  }
   return session;
 }
 
@@ -2857,28 +2710,14 @@ async function handleApi(request, response, pathname) {
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const username = String(body.username || '');
       const password = String(body.password || '');
-      const replaceTrustedDevice = Boolean(body.replaceTrustedDevice);
       const user = findOpsUser(username, password);
       if (!user) {
         sendJson(response, 401, { error: 'Incorrect username or password.' });
         return true;
       }
-      const trustResult = await registerOrValidateTrustedDevice(user, request, new Date().toISOString(), {
-        allowReplace: replaceTrustedDevice
-      });
-      if (!trustResult.ok) {
-        sendJson(response, trustResult.status || 403, {
-          error: trustResult.error || 'This device is not approved.',
-          code: trustResult.code || 'device_not_approved',
-          canReplaceDevice: Boolean(trustResult.canReplaceDevice)
-        });
-        return true;
-      }
-      setSessionCookie(response, user, trustResult.tokenHash);
+      setSessionCookie(response, user);
       sendJson(response, 200, {
         ok: true,
-        pairedDevice: Boolean(trustResult.paired),
-        replacedDevice: Boolean(trustResult.replaced),
         user: {
           username: user.username,
           role: user.role,
