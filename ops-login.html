@@ -110,7 +110,7 @@ label{
 }
 input{
   width:100%;padding:0.95rem 1rem;border-radius:14px;border:1px solid rgba(255,255,255,0.12);
-  background:rgba(255,255,255,0.05);color:var(--white);font:inherit
+  background:rgba(255,255,255,0.05);color:var(--white);font:inherit;font-size:16px
 }
 input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(26,158,212,0.12)}
 .field{margin-bottom:1rem}
@@ -246,6 +246,11 @@ if (isNativeOpsApp()) {
   if (supportCopy) {
     supportCopy.textContent = 'If the private CRM is unavailable, contact Shoreline support or your site administrator.';
   }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister());
+    }).catch(() => {});
+  }
 }
 
 if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode() && !isNativeOpsApp() && shouldShowInstallBanner()) {
@@ -315,7 +320,7 @@ form.addEventListener('submit', async (event) => {
   await submitLogin();
 });
 
-if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+if ('serviceWorker' in navigator && window.location.protocol !== 'file:' && !isNativeOpsApp()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/ops-sw.js').catch((error) => {
       console.error('Ops service worker registration failed:', error);

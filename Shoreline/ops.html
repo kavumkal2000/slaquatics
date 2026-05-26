@@ -1826,6 +1826,11 @@ function dismissInstallBanner() {
 
 if (isNativeOpsApp()) {
   document.body.dataset.nativeApp = 'true';
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister());
+    }).catch(() => {});
+  }
 }
 
 if (window.location.protocol !== 'file:' && isIosDevice() && !isStandaloneMode() && !isNativeOpsApp()) {
@@ -6462,7 +6467,7 @@ async function bootApp() {
     document.body.dataset.appReady = 'true';
   }
 }
-if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+if ('serviceWorker' in navigator && window.location.protocol !== 'file:' && !isNativeOpsApp()) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/ops-sw.js').catch((error) => {
       console.error('Ops service worker registration failed:', error);

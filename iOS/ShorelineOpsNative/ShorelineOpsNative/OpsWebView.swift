@@ -159,6 +159,24 @@ final class OpsWebViewStore: ObservableObject {
 struct OpsWebView: UIViewRepresentable {
     let store: OpsWebViewStore
 
+    private static let nativeBootstrapScript = """
+    window.__SHORELINE_NATIVE_APP__ = true;
+    document.documentElement.dataset.nativeApp = 'true';
+    document.addEventListener('DOMContentLoaded', function () {
+      if (document.body) {
+        document.body.dataset.nativeApp = 'true';
+      }
+      try {
+        localStorage.setItem('shoreline_ops_install_banner_dismissed_v1', String(Date.now()));
+      } catch (error) {}
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          registrations.forEach(function (registration) { registration.unregister(); });
+        }).catch(function () {});
+      }
+    });
+    """
+
     func makeCoordinator() -> Coordinator {
         Coordinator(store: store)
     }
@@ -169,6 +187,13 @@ struct OpsWebView: UIViewRepresentable {
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.applicationNameForUserAgent = "ShorelineOpsNative/1.0"
         configuration.websiteDataStore = .default()
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: Self.nativeBootstrapScript,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+        )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -176,6 +201,8 @@ struct OpsWebView: UIViewRepresentable {
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.keyboardDismissMode = .interactive
         webView.scrollView.showsVerticalScrollIndicator = false
+        webView.scrollView.bounces = false
+        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 ShorelineOpsNative/1.0"
         webView.isOpaque = false
         webView.backgroundColor = UIColor.clear
         webView.scrollView.backgroundColor = UIColor.clear
