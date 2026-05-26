@@ -1204,6 +1204,39 @@ function bookingCollectedAmountForInvoice(booking = {}) {
   return total > 0 ? total : 0;
 }
 
+function bookingInvoiceHasManualOverride(existingInvoice = null, booking = {}) {
+  if (!existingInvoice) return false;
+  const rawFields = existingInvoice.rawFields || {};
+  const explicitFlag = String(rawFields.manualBookingInvoiceOverride || '').trim().toLowerCase();
+  if (explicitFlag === 'true') return true;
+  const manualTotal = Number(rawFields.manualTotalOverride || 0);
+  const syncedTotal = bookingInvoiceTotal(booking);
+  return manualTotal > 0 && Math.abs(manualTotal - syncedTotal) > 0.009;
+}
+
+function effectiveInvoiceTotalForBooking(existingInvoice = null, booking = {}) {
+  if (bookingInvoiceHasManualOverride(existingInvoice, booking)) {
+    const manualTotal = Number(existingInvoice?.rawFields?.manualTotalOverride || existingInvoice?.total || 0);
+    if (manualTotal > 0) {
+      return Number(manualTotal.toFixed(2));
+    }
+  }
+  return bookingInvoiceTotal(booking);
+}
+
+function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  const total = Number(targetTotal || 0);
+  if (paymentStatus !== 'paid') return 0;
+  if (bookingUsesCheckoutDepositFlow(booking)) {
+    const dueToday = Number(booking.amountDueToday || 0);
+    if (dueToday > 0) {
+      return Number(Math.min(dueToday, total).toFixed(2));
+    }
+  }
+  return total > 0 ? total : 0;
+}
+
 function invoiceStatusForBooking(booking = {}) {
   const bookingStatus = normalizeBookingStatus(booking.status);
   if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
@@ -1217,15 +1250,16 @@ function invoiceStatusForBooking(booking = {}) {
 }
 
 function mergedCollectedAmountForBookingInvoice(existingInvoice = null, booking = {}) {
-  const bookingCollected = bookingCollectedAmountForInvoice(booking);
-  const invoiceCollected = Number(existingInvoice?.paidAmount || 0);
+  const total = effectiveInvoiceTotalForBooking(existingInvoice, booking);
+  const bookingCollected = bookingCollectedAmountForInvoiceTotal(booking, total);
+  const invoiceCollected = Math.min(Number(existingInvoice?.paidAmount || 0), total || Number(existingInvoice?.paidAmount || 0));
   return Number(Math.max(bookingCollected, invoiceCollected, 0).toFixed(2));
 }
 
 function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
   const bookingStatus = normalizeBookingStatus(booking.status);
   if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
-  const total = bookingInvoiceTotal(booking);
+  const total = effectiveInvoiceTotalForBooking(existingInvoice, booking);
   const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
   if (collected >= total && total > 0) return 'paid';
   if (collected > 0) return 'partially paid';
@@ -1239,10 +1273,31 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   const existingInvoice = findInvoiceForBooking(state, booking);
   const issueDate = bookingInvoiceDate(booking, now);
   const dueDate = String(booking.date || issueDate).trim() || issueDate;
-  const rentalTotal = Number(booking.total || 0);
-  const processingFee = Number(booking.processingFeeAmount || 0);
-  const total = Number((rentalTotal + processingFee).toFixed(2));
+  const syncedRentalTotal = Number(booking.total || 0);
+  const syncedProcessingFee = Number(booking.processingFeeAmount || 0);
+  const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
+  const hasManualOverride = bookingInvoiceHasManualOverride(existingInvoice, booking);
+  const rentalTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : syncedRentalTotal;
+  const processingFee = hasManualOverride ? Number(existingInvoice?.taxAmount || 0) : syncedProcessingFee;
+  const total = hasManualOverride ? effectiveInvoiceTotalForBooking(existingInvoice, booking) : syncedTotal;
   const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
+  const defaultInvoiceName = `${booking.craftLabel || CRAFT_LABELS[normalizeCraftKey(booking.craftKey || booking.craft)] || 'Rental'} booking`;
+  const defaultLineItems = [
+    {
+      name: `${booking.craftLabel || 'Rental'} • ${invoiceDurationText(booking.duration) || 'Custom duration'}`,
+      description: `Booking for ${booking.date || 'TBD'} at ${formatTimeLabel(booking.time)}`,
+      amount: syncedRentalTotal,
+      quantity: 1,
+      currency: 'USD'
+    },
+    ...(syncedProcessingFee > 0 ? [{
+      name: 'Processing Fee',
+      description: 'Secure checkout and card processing fee',
+      amount: syncedProcessingFee,
+      quantity: 1,
+      currency: 'USD'
+    }] : [])
+  ];
   const invoice = existingInvoice || {
     id: nextId(state.invoices),
     invoiceNumber: createWebsiteInvoiceNumber(booking, now),
@@ -1255,7 +1310,9 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   };
 
   invoice.bookingId = Number(booking.id || 0);
-  invoice.invoiceName = `${booking.craftLabel || CRAFT_LABELS[normalizeCraftKey(booking.craftKey || booking.craft)] || 'Rental'} booking`;
+  invoice.invoiceName = hasManualOverride
+    ? String(existingInvoice?.invoiceName || defaultInvoiceName).trim() || defaultInvoiceName
+    : defaultInvoiceName;
   invoice.customerId = Number(booking.customerId || 0) || invoice.customerId || 0;
   invoice.customerName = String(booking.name || invoice.customerName || '').trim();
   invoice.customerPhone = String(booking.phone || invoice.customerPhone || '').trim();
@@ -1273,22 +1330,9 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   invoice.craftKey = String(booking.craftKey || normalizeCraftKey(booking.craft || '') || '').trim();
   invoice.durationHours = Number(booking.duration || 0);
   invoice.durationLabel = invoiceDurationText(booking.duration);
-  invoice.lineItems = [
-    {
-      name: `${booking.craftLabel || 'Rental'} • ${invoiceDurationText(booking.duration) || 'Custom duration'}`,
-      description: `Booking for ${booking.date || 'TBD'} at ${formatTimeLabel(booking.time)}`,
-      amount: rentalTotal,
-      quantity: 1,
-      currency: 'USD'
-    },
-    ...(processingFee > 0 ? [{
-      name: 'Processing Fee',
-      description: 'Secure checkout and card processing fee',
-      amount: processingFee,
-      quantity: 1,
-      currency: 'USD'
-    }] : [])
-  ];
+  invoice.lineItems = hasManualOverride && Array.isArray(existingInvoice?.lineItems) && existingInvoice.lineItems.length
+    ? existingInvoice.lineItems
+    : defaultLineItems;
   invoice.rawFields = {
     ...(invoice.rawFields || {}),
     source: 'website booking',
@@ -1305,7 +1349,9 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
     processingFeeAmount: String(processingFee.toFixed(2)),
     amountDueToday: String(Number(booking.amountDueToday || 0).toFixed(2)),
     bookingDate: String(booking.date || ''),
-    bookingTime: String(booking.time || '')
+    bookingTime: String(booking.time || ''),
+    manualBookingInvoiceOverride: hasManualOverride ? 'true' : '',
+    manualTotalOverride: hasManualOverride ? String(total.toFixed(2)) : ''
   };
 
   if (!existingInvoice) {

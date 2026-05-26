@@ -2893,6 +2893,16 @@ function createManualInvoiceNumber() {
   const existingCount = invoices.filter((invoice) => String(invoice.invoiceNumber || '').startsWith(`SLA-${datePart}-`)).length + 1;
   return `SLA-${datePart}-${String(existingCount).padStart(3, '0')}`;
 }
+function linkedBookingForInvoiceRecord(invoice = {}) {
+  const bookingId = Number(invoice?.bookingId || 0);
+  if (!bookingId) return null;
+  return bookings.find((booking) => Number(booking.id || 0) === bookingId) || null;
+}
+function syncedBookingInvoiceTotal(invoice = {}) {
+  const booking = linkedBookingForInvoiceRecord(invoice);
+  if (!booking) return 0;
+  return Number((Number(booking.total || 0) + Number(booking.processingFeeAmount || 0)).toFixed(2));
+}
 function setInvoiceCustomerContext(customer = null) {
   const resolvedCustomer = customer && Number(customer.id) ? customer : null;
   invoiceCustomerContextId = resolvedCustomer ? Number(resolvedCustomer.id) : null;
@@ -3033,6 +3043,12 @@ async function saveInvoice() {
   const explicitPaidAmount = Math.max(0, Number(document.getElementById('i-paid-amount').value || 0));
   const paymentMethod = getInvoicePaymentMethod();
   const notes = document.getElementById('i-notes').value.trim();
+  const bookingLinkedInvoice = Boolean(existingInvoice && Number(existingInvoice.bookingId || 0) > 0);
+  const keepManualBookingOverride = Boolean(
+    bookingLinkedInvoice &&
+    syncedBookingInvoiceTotal(existingInvoice) > 0 &&
+    Math.abs(total - syncedBookingInvoiceTotal(existingInvoice)) > 0.009
+  );
   let paidAmount = Math.min(explicitPaidAmount, total);
   let finalStatus = invoiceStatusSelectValue(status);
   if (finalStatus === 'Paid') {
@@ -3091,7 +3107,9 @@ async function saveInvoice() {
     rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : '',
     balanceDue: String(invoice.balanceDue || 0),
     paymentMethod,
-    collectedAmount: paidAmount ? String(paidAmount) : ''
+    collectedAmount: paidAmount ? String(paidAmount) : '',
+    manualBookingInvoiceOverride: keepManualBookingOverride ? 'true' : '',
+    manualTotalOverride: keepManualBookingOverride ? String(total.toFixed(2)) : ''
   });
 
   if (!existingInvoice) invoices.unshift(invoice);
