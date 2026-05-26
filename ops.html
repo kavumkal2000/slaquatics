@@ -1113,12 +1113,12 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
           </select>
         </div>
         <div class="form-group"><label>Rental length</label>
-          <select id="i-duration" onchange="applyInvoiceRentalAutofill()">
+          <select id="i-duration" onchange="handleInvoiceDurationChange()">
             <option value="">Select duration</option>
           </select>
         </div>
         <div class="form-group"><label>Line item <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="text" id="i-line-item" placeholder="Auto-fills if left blank"></div>
-        <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00" oninput="updateInvoicePaymentHelper()"></div>
+        <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00" oninput="handleInvoiceAmountInput()"></div>
         <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Rental pricing helper</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-rental-helper">Pick a rental package and duration to auto-fill the title, line item, and amount. For a quick manual invoice, just enter the amount.</div></div>
         <div class="form-group"><label>Status</label>
           <select id="i-status" onchange="updateInvoicePaymentHelper()">
@@ -1794,6 +1794,7 @@ let invoiceDateFrom = '';
 let invoiceDateTo = '';
 let editingInvoiceId = null;
 let invoiceCustomerContextId = null;
+let invoiceAmountManuallyEdited = false;
 
 let expenses = [];
 let editingExpenseId = null;
@@ -2849,6 +2850,27 @@ function updateInvoicePaymentHelper(message = '') {
   if (balanceInput) balanceInput.value = remaining ? remaining.toFixed(2) : '0.00';
   helper.textContent = `${message ? `${message} ` : ''}Collected ${moneyLabel(collected)} • Remaining ${moneyLabel(remaining)}. Mark the invoice paid when you collect the full balance.`;
 }
+function suggestedInvoiceAmount(packageKey = '', duration = 0) {
+  return Number(PRICING[packageKey]?.[Number(duration || 0)] || 0);
+}
+function setInvoiceAmountManualStateFromCurrentForm() {
+  const packageKey = document.getElementById('i-package')?.value || '';
+  const duration = Number(document.getElementById('i-duration')?.value || 0);
+  const total = Math.max(0, Number(document.getElementById('i-total')?.value || 0));
+  const suggested = suggestedInvoiceAmount(packageKey, duration);
+  invoiceAmountManuallyEdited = Boolean(packageKey && duration && total > 0 && suggested > 0 && Math.abs(total - suggested) > 0.009);
+}
+function handleInvoiceAmountInput() {
+  setInvoiceAmountManualStateFromCurrentForm();
+  const packageKey = document.getElementById('i-package')?.value || '';
+  const duration = Number(document.getElementById('i-duration')?.value || 0);
+  const total = Math.max(0, Number(document.getElementById('i-total')?.value || 0));
+  const suggested = suggestedInvoiceAmount(packageKey, duration);
+  if (invoiceAmountManuallyEdited && packageKey && duration && suggested > 0) {
+    updateInvoiceRentalHelper(`Custom amount kept at ${moneyLabel(total)}. Package default is ${moneyLabel(suggested)}.`);
+  }
+  updateInvoicePaymentHelper();
+}
 function applyInvoiceRentalAutofill() {
   const packageEl = document.getElementById('i-package');
   const durationEl = document.getElementById('i-duration');
@@ -2874,18 +2896,27 @@ function applyInvoiceRentalAutofill() {
   const durationLabel = invoiceDurationText(duration);
   if (invoiceNameEl) invoiceNameEl.value = `${craftLabel} rental`;
   if (lineItemEl) lineItemEl.value = `${craftLabel} • ${durationLabel}`;
-  if (totalEl) totalEl.value = amount.toFixed(2);
-  updateInvoiceRentalHelper(`${craftLabel} • ${durationLabel} auto-filled to ${moneyLabel(amount)}.`);
+  if (totalEl && !invoiceAmountManuallyEdited) {
+    totalEl.value = amount.toFixed(2);
+    updateInvoiceRentalHelper(`${craftLabel} • ${durationLabel} auto-filled to ${moneyLabel(amount)}.`);
+  } else {
+    updateInvoiceRentalHelper(`Custom amount kept. ${craftLabel} • ${durationLabel} normally prices at ${moneyLabel(amount)}.`);
+  }
   updateInvoicePaymentHelper();
 }
 function handleInvoicePackageChange() {
   const packageEl = document.getElementById('i-package');
   const craftKey = packageEl?.value || '';
+  invoiceAmountManuallyEdited = false;
   populateInvoiceDurationOptions(craftKey);
   if (!craftKey) {
     updateInvoiceRentalHelper();
     return;
   }
+  applyInvoiceRentalAutofill();
+}
+function handleInvoiceDurationChange() {
+  invoiceAmountManuallyEdited = false;
   applyInvoiceRentalAutofill();
 }
 function createManualInvoiceNumber() {
@@ -2930,6 +2961,7 @@ function latestOpenInvoiceForCustomer(customerId) {
 function resetInvoiceForm() {
   editingInvoiceId = null;
   setInvoiceCustomerContext(null);
+  invoiceAmountManuallyEdited = false;
   document.getElementById('i-invoice-name').value = '';
   document.getElementById('i-issue-date').value = today();
   document.getElementById('i-due-date').value = today();
@@ -2994,6 +3026,7 @@ function openInvoiceModal(invoiceId = null) {
     populateInvoiceDurationOptions(document.getElementById('i-package').value, inferredDuration);
     document.getElementById('i-line-item').value = Array.isArray(invoice.lineItems) && invoice.lineItems[0] ? (invoice.lineItems[0].name || invoice.lineItems[0].description || '') : '';
     document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
+    setInvoiceAmountManualStateFromCurrentForm();
     document.getElementById('i-status').value = invoiceStatusSelectValue(invoice.status);
     document.getElementById('i-paid-amount').value = invoiceCollectedAmount(invoice) ? String(invoiceCollectedAmount(invoice)) : '';
     document.getElementById('i-balance-due').value = invoiceOutstandingAmount(invoice).toFixed(2);
@@ -3044,10 +3077,13 @@ async function saveInvoice() {
   const paymentMethod = getInvoicePaymentMethod();
   const notes = document.getElementById('i-notes').value.trim();
   const bookingLinkedInvoice = Boolean(existingInvoice && Number(existingInvoice.bookingId || 0) > 0);
+  const syncedBookingTotal = bookingLinkedInvoice ? syncedBookingInvoiceTotal(existingInvoice) : 0;
   const keepManualBookingOverride = Boolean(
     bookingLinkedInvoice &&
-    syncedBookingInvoiceTotal(existingInvoice) > 0 &&
-    Math.abs(total - syncedBookingInvoiceTotal(existingInvoice)) > 0.009
+    (
+      invoiceAmountManuallyEdited ||
+      (syncedBookingTotal > 0 && Math.abs(total - syncedBookingTotal) > 0.009)
+    )
   );
   let paidAmount = Math.min(explicitPaidAmount, total);
   let finalStatus = invoiceStatusSelectValue(status);
