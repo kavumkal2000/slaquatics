@@ -71,17 +71,19 @@ struct ContentView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                Image(systemName: "water.waves")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
+                Image("ShorelineBrandMark")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(6)
             }
-            .frame(width: 48, height: 48)
+            .frame(width: 54, height: 54)
             .shadow(color: .black.opacity(0.22), radius: 12, y: 8)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Shoreline Ops")
-                    .font(.system(size: 20, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
+                Image("ShorelineBrandWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 172, height: 54, alignment: .leading)
 
                 Text(store.pageSubtitle)
                     .font(.system(size: 12, weight: .semibold))
@@ -183,13 +185,28 @@ struct ContentView: View {
     private var launchOverlay: some View {
         VStack(spacing: 16) {
             ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.09))
-                    .frame(width: 72, height: 72)
-                Image(systemName: "water.waves")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.white)
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0 / 255, green: 183 / 255, blue: 255 / 255).opacity(0.92),
+                                Color(red: 18 / 255, green: 112 / 255, blue: 255 / 255).opacity(0.9)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image("ShorelineBrandMark")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(12)
             }
+            .frame(width: 104, height: 104)
+
+            Image("ShorelineBrandWordmark")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 260)
 
             VStack(spacing: 6) {
                 Text("Opening Shoreline Ops")
