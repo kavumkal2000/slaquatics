@@ -1117,9 +1117,8 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="">Select duration</option>
           </select>
         </div>
-        <div class="form-group"><label>Line item <span style="color:var(--muted);font-weight:400;">optional</span></label><input type="text" id="i-line-item" placeholder="Auto-fills if left blank"></div>
+        <input type="hidden" id="i-line-item">
         <div class="form-group"><label>Amount</label><input type="number" id="i-total" min="0" step="0.01" placeholder="0.00" oninput="handleInvoiceAmountInput()"></div>
-        <div class="form-group" style="grid-column:1/-1;"><label style="font-size:0.72rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;">Rental pricing helper</label><div style="padding:0.7rem 0.85rem;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);font-size:0.82rem;color:var(--muted);" id="invoice-rental-helper">Pick a rental package and duration to auto-fill the title, line item, and amount. For a quick manual invoice, just enter the amount.</div></div>
         <div class="form-group"><label>Status</label>
           <select id="i-status" onchange="updateInvoicePaymentHelper()">
             <option value="Paid">Paid</option>
