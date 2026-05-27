@@ -3217,12 +3217,16 @@ async function saveInvoice() {
   }
   closeModal('invoice-modal');
   resetInvoiceForm();
+  renderBookings();
   renderInvoices();
   renderCRM();
   renderWaivers();
+  renderUpcoming();
   renderDashboardMetrics();
+  renderBookingBars();
   renderCommsPanel();
   renderReminders();
+  updatePendingBadge();
   showToast(existingInvoice ? '✅ Invoice updated' : '✅ Invoice saved');
 }
 async function deleteInvoice(invoiceId) {
@@ -3248,12 +3252,16 @@ async function deleteInvoice(invoiceId) {
     closeModal('invoice-modal');
     resetInvoiceForm();
   }
+  renderBookings();
   renderInvoices();
   renderCRM();
   renderWaivers();
+  renderUpcoming();
   renderDashboardMetrics();
+  renderBookingBars();
   renderCommsPanel();
   renderReminders();
+  updatePendingBadge();
   showToast('🗑️ Invoice removed');
 }
 function triggerCRMImport() {

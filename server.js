@@ -1376,6 +1376,42 @@ function syncWebsiteBookingInvoices(state, now = new Date().toISOString()) {
   return changed;
 }
 
+function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
+  let changed = false;
+  (state.bookings || []).forEach((booking) => {
+    if (!booking || !Number(booking.id || 0)) return;
+    const bookingStatus = normalizeBookingStatus(booking.status);
+    if (['cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(bookingStatus)) return;
+    const invoice = findInvoiceForBooking(state, booking);
+    if (!invoice) return;
+    const invoiceStatus = normalizeInvoiceStatus(invoice.status);
+    const invoiceTotal = Number(invoice.total || 0);
+    const collected = Number(invoiceCollectedAmount(invoice) || 0);
+    const dueToday = Number(booking.amountDueToday || 0);
+    const checkoutDepositSatisfied = bookingUsesCheckoutDepositFlow(booking) && dueToday > 0 && collected >= (dueToday - 0.009);
+    const fullyPaid = invoiceStatus === 'paid' || (invoiceTotal > 0 && collected >= (invoiceTotal - 0.009));
+    if (!checkoutDepositSatisfied && !fullyPaid) return;
+
+    if (String(booking.paymentStatus || '').trim().toLowerCase() !== 'paid') {
+      booking.paymentStatus = 'paid';
+      changed = true;
+    }
+    if (!booking.deposit) {
+      booking.deposit = true;
+      changed = true;
+    }
+    if (!String(booking.paymentCompletedAt || '').trim()) {
+      booking.paymentCompletedAt = now;
+      changed = true;
+    }
+    if (['pending', 'draft'].includes(bookingStatus)) {
+      booking.status = 'confirmed';
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 function employeeVisibleState(state = {}) {
   return {
     bookings: clone(state.bookings || []),
@@ -3236,7 +3272,10 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/state' && request.method === 'GET') {
     const state = await stateStore.read();
-    if (syncCustomersFromBookings(state) || syncWebsiteBookingInvoices(state)) {
+    const invoiceToBookingChanged = syncBookingsFromInvoices(state);
+    const customerChanged = syncCustomersFromBookings(state);
+    const bookingToInvoiceChanged = syncWebsiteBookingInvoices(state);
+    if (invoiceToBookingChanged || customerChanged || bookingToInvoiceChanged) {
       await stateStore.write(state);
     }
     sendJson(response, 200, { state: statePayloadForSession(state, session), storage: stateStore.kind });
@@ -3256,6 +3295,7 @@ async function handleApi(request, response, pathname) {
       const nextState = normalizeOpsRole(session.role) === 'employee'
         ? mergeEmployeeState(await stateStore.read(), body)
         : sanitizeState(body);
+      syncBookingsFromInvoices(nextState);
       syncCustomersFromBookings(nextState);
       syncWebsiteBookingInvoices(nextState);
       const state = await stateStore.write(nextState);
