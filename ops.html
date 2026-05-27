@@ -3764,9 +3764,11 @@ function calcBookingPrice() {
 // ── SAVE BOOKING ──
 async function saveBooking() {
   const name = document.getElementById('b-name').value.trim();
+  const phone = document.getElementById('b-phone').value.trim();
+  const email = document.getElementById('b-email').value.trim();
   const craft = document.getElementById('b-craft').value;
   const dur = parseInt(document.getElementById('b-duration').value);
-  if(!name||!craft||!dur) { showToast('⚠️ Fill in name, craft, and duration'); return; }
+  if(!craft||!dur) { showToast('⚠️ Fill in craft and duration'); return; }
   const baseValue = PRICING[craft]?.[dur] || 0;
   if (!baseValue) { showToast('⚠️ That duration is not available for this package'); return; }
   const bookingValue = baseValue + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
@@ -3792,8 +3794,8 @@ async function saveBooking() {
   };
 
   bookingRecord.name = name;
-  bookingRecord.phone = document.getElementById('b-phone').value.trim();
-  bookingRecord.email = document.getElementById('b-email').value.trim();
+  bookingRecord.phone = phone;
+  bookingRecord.email = email;
   bookingRecord.craft = craft;
   bookingRecord.craftKey = craft;
   bookingRecord.duration = dur;
@@ -3806,35 +3808,39 @@ async function saveBooking() {
 
   if (!existingBooking) bookings.unshift(bookingRecord);
 
-  let customer = findCustomerForBooking(bookingRecord) || customers.find((item) => (
-    (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(bookingRecord.phone)) ||
-    (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(bookingRecord.email))
-  ));
+  const hasMeaningfulCustomer = meaningfulBookingCustomer(name, email, phone);
+  let customer = null;
+  if (hasMeaningfulCustomer) {
+    customer = findCustomerForBooking(bookingRecord) || customers.find((item) => (
+      (normalizePhone(item.phone) && normalizePhone(item.phone) === normalizePhone(bookingRecord.phone)) ||
+      (normalizeEmail(item.email) && normalizeEmail(item.email) === normalizeEmail(bookingRecord.email))
+    ));
 
-  if (customer) {
-    customer.name = bookingRecord.name;
-    customer.phone = bookingRecord.phone || customer.phone;
-    customer.email = bookingRecord.email || customer.email;
-    customer.source = customer.source || 'Direct';
-    customer.lastActivity = nowIso;
-  } else {
-    customer = {
-      id: nextId(customers),
-      name: bookingRecord.name,
-      phone: bookingRecord.phone,
-      email: bookingRecord.email,
-      bookings: 0,
-      totalSpent: 0,
-      lastBooking: 'N/A',
-      source: 'Direct',
-      tag: '',
-      createdAt: today(),
-      lastActivity: nowIso
-    };
-    customers.push(customer);
+    if (customer) {
+      if (bookingRecord.name) customer.name = bookingRecord.name;
+      customer.phone = bookingRecord.phone || customer.phone;
+      customer.email = bookingRecord.email || customer.email;
+      customer.source = customer.source || 'Direct';
+      customer.lastActivity = nowIso;
+    } else {
+      customer = {
+        id: nextId(customers),
+        name: bookingDisplayName(bookingRecord, 'Walk-up customer'),
+        phone: bookingRecord.phone,
+        email: bookingRecord.email,
+        bookings: 0,
+        totalSpent: 0,
+        lastBooking: 'N/A',
+        source: 'Direct',
+        tag: '',
+        createdAt: today(),
+        lastActivity: nowIso
+      };
+      customers.push(customer);
+    }
   }
 
-  bookingRecord.customerId = customer.id;
+  bookingRecord.customerId = customer ? customer.id : '';
   const previousCustomer = previousSnapshot ? findCustomerForBooking(previousSnapshot) : null;
   [previousCustomer, customer].forEach((item) => {
     if (item) syncCustomerRollup(item);
@@ -3879,7 +3885,7 @@ function renderUpcoming() {
     const paid = bookingIsPaid(b);
     return `
     <tr>
-      <td><strong>${escapeHtml(b.name)}</strong></td>
+      <td><strong>${escapeHtml(bookingDisplayName(b))}</strong></td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
       <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
@@ -4004,6 +4010,12 @@ function findCustomerForBooking(booking = {}) {
   if (!bookingName) return null;
   const nameMatches = customers.filter((customer) => normalizeName(customer.name) === bookingName);
   return nameMatches.length === 1 ? nameMatches[0] : null;
+}
+function bookingDisplayName(booking = {}, fallback = 'Walk-up booking') {
+  return String(booking?.name || booking?.email || booking?.phone || fallback).trim() || fallback;
+}
+function meaningfulBookingCustomer(name = '', email = '', phone = '') {
+  return Boolean(String(name || '').trim() || String(email || '').trim() || String(phone || '').trim());
 }
 function findCustomerForContact(contact = {}) {
   if (Number(contact.customerId || 0) > 0) {
@@ -4163,7 +4175,7 @@ function renderBookingAgenda() {
   agendaListEl.innerHTML = dayBookings.map((booking) => `
     <div class="agenda-item">
       <div class="agenda-item-main">
-        <strong>${escapeHtml(booking.name)}</strong>
+        <strong>${escapeHtml(bookingDisplayName(booking))}</strong>
         <div class="agenda-item-meta">${escapeHtml(bookingCraftLabel(booking))} · ${escapeHtml(bookingDurationLabel(booking))} · ${escapeHtml(formatTimeLabel(booking.time))}</div>
         <div class="agenda-item-meta">${booking.phone ? escapeHtml(booking.phone) : 'No phone on file'}${booking.drone ? ' · Drone coverage' : ''}</div>
       </div>
@@ -4212,7 +4224,7 @@ function renderBookingCalendar() {
         </div>
         <div class="calendar-day-meta">${dayBookings.length ? `${pendingCount} pending` : '&nbsp;'}</div>
         <div class="calendar-day-list">
-          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(normalizeBookingStatusValue(booking.status))}"><span class="calendar-pill-dot"></span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(booking.name))}</span></div>`).join('')}
+          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(normalizeBookingStatusValue(booking.status))}"><span class="calendar-pill-dot"></span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(bookingDisplayName(booking, 'Walk-up')))}</span></div>`).join('')}
           ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : ''}
         </div>
       </button>
@@ -4235,7 +4247,7 @@ function renderBookings(filter) {
     return `
     <tr data-status="${b.status}">
       <td>
-        <strong>${escapeHtml(b.name)}</strong>
+        <strong>${escapeHtml(bookingDisplayName(b))}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">
           ${b.waiverSignedAt ? `Waiver on file · ${escapeHtml(b.waiverSignedAt)}` : 'Waiver still needed'}
         </div>
@@ -4663,7 +4675,7 @@ async function confirmDeposit(id) {
     renderCommsPanel();
     renderWaivers();
     updatePendingBadge();
-    showToast(`💰 Deposit confirmed for ${booking.name}`);
+    showToast(`💰 Deposit confirmed for ${bookingDisplayName(booking)}`);
   } catch (error) {
     booking.deposit = previousDeposit;
     booking.paymentStatus = previousPaymentStatus;
@@ -4677,7 +4689,7 @@ async function deleteBooking(bookingId) {
     showToast('⚠️ Booking record not found');
     return;
   }
-  const confirmed = window.confirm(`Delete the booking for ${booking.name}? This cannot be undone from ops.`);
+  const confirmed = window.confirm(`Delete the booking for ${bookingDisplayName(booking)}? This cannot be undone from ops.`);
   if (!confirmed) return;
   const previousBookings = JSON.parse(JSON.stringify(bookings));
   const previousInvoices = JSON.parse(JSON.stringify(invoices));
@@ -6256,11 +6268,11 @@ function renderReminders() {
     <div class="reminder-card">
       <div class="reminder-icon">📅</div>
       <div class="reminder-body">
-        <div class="name">Reminder: ${escapeHtml(b.name)}</div>
+        <div class="name">Reminder: ${escapeHtml(bookingDisplayName(b))}</div>
         <div class="detail">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(b.date)} at ${escapeHtml(formatTimeLabel(b.time))}</div>
       </div>
       <div class="reminder-action">
-        ${b.phone ? `<a href="sms:${phoneHref(b.phone)}?body=${encodeURIComponent(`Hey ${firstName(b.name)}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${formatTimeLabel(b.time)}. Don't forget your ID! Questions? (469) 693-7164.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">Send reminder</span>'}
+        ${b.phone ? `<a href="sms:${phoneHref(b.phone)}?body=${encodeURIComponent(`Hey ${firstName(bookingDisplayName(b, 'there'))}! Reminder: your Shoreline Aquatics rental is on ${b.date} at ${formatTimeLabel(b.time)}. Don't forget your ID! Questions? (469) 693-7164.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">Send reminder</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">Send reminder</span>'}
       </div>
     </div>`).join('') : '<div class="empty"><div class="icon">🗓️</div><p>No scheduled rentals need reminders right now.</p></div>';
 

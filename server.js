@@ -1045,6 +1045,18 @@ function syncCustomersFromBookings(state, now = new Date().toISOString()) {
   let changed = false;
   (state.bookings || []).forEach((booking) => {
     if (!booking || typeof booking !== 'object') return;
+    const bookingHasCustomerInfo = Boolean(
+      String(booking.name || '').trim() ||
+      String(booking.phone || '').trim() ||
+      String(booking.email || '').trim()
+    );
+    if (!bookingHasCustomerInfo) {
+      if (Number(booking.customerId || 0)) {
+        booking.customerId = 0;
+        changed = true;
+      }
+      return;
+    }
     const directCustomer = Number(booking.customerId || 0)
       ? (state.customers || []).find((customer) => Number(customer.id || 0) === Number(booking.customerId || 0))
       : null;
