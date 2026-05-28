@@ -3798,10 +3798,14 @@ async function saveBooking() {
   bookingRecord.email = email;
   bookingRecord.craft = craft;
   bookingRecord.craftKey = craft;
+  bookingRecord.craftLabel = CRAFT_NAMES[craft] || bookingRecord.craftLabel || 'Rental';
   bookingRecord.duration = dur;
+  bookingRecord.durationLabel = dur === 8 ? 'Full Day' : `${dur}hrs`;
   bookingRecord.date = document.getElementById('b-date').value || 'TBD';
   bookingRecord.time = document.getElementById('b-time').value || '10:00';
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
+  bookingRecord.baseTotal = baseValue;
+  bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
   bookingRecord.notes = document.getElementById('b-notes').value.trim();
   bookingRecord.total = bookingValue;
   bookingRecord.updatedAt = nowIso;
