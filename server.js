@@ -1507,6 +1507,14 @@ function normalizeBookingStatus(status = '') {
   return String(status || '').trim().toLowerCase();
 }
 
+function bookingPaymentTone(booking = {}) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  if (booking.deposit || paymentStatus === 'paid') return 'success';
+  if (['expired', 'failed', 'canceled', 'cancelled', 'void'].includes(paymentStatus)) return 'danger';
+  if (['pending', 'sent'].includes(paymentStatus)) return 'accent';
+  return 'warning';
+}
+
 function updateCustomerRollup(state, customer) {
   const phoneKey = phoneDigits(customer.phone);
   const emailKey = normalizeEmail(customer.email);
@@ -2045,7 +2053,7 @@ function ownerBookingAlertHtml(booking = {}) {
     title: 'New booking request',
     subtitle: `${booking.name || booking.email || 'A customer'} submitted a new booking request and is ready for review.`,
     pills: [
-      emailPill(`Payment: ${String(booking.paymentStatus || 'unpaid')}`, normalizeEmail(String(booking.paymentStatus || '')).includes('paid') ? 'success' : 'warning'),
+      emailPill(`Payment: ${String(booking.paymentStatus || 'unpaid')}`, bookingPaymentTone(booking)),
       emailPill(`Status: ${String(booking.status || 'pending')}`, 'dark')
     ],
     actionHtml,
