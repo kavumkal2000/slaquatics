@@ -320,6 +320,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .compose-card textarea{width:100%;min-height:120px;resize:vertical;}
 .compose-card label{display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.35rem;}
 .compose-actions{display:flex;gap:0.6rem;flex-wrap:wrap;margin-top:0.9rem;}
+.mass-email-picker[hidden]{display:none !important;}
+.mass-email-recipient-list{max-height:260px;overflow:auto;padding-right:0.2rem;}
 .mini-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0.75rem;margin:1rem 0;}
 .mini-kpi{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:0.75rem 0.8rem;}
 .mini-kpi strong{display:block;font-size:1rem;color:var(--wave);}
@@ -818,7 +820,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
     <div class="compose-card">
       <h3>Mass email</h3>
-      <p id="mass-provider-note">Draft one campaign and send it through the connected email provider.</p>
+      <p id="mass-provider-note">Draft one campaign and Shoreline Ops will send it automatically in batches of up to 50 recipients.</p>
       <div class="crm-toolbar" style="margin-top:1rem;">
         <label style="display:flex;align-items:center;gap:0.55rem;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);">
           Audience
@@ -845,7 +847,7 @@ What’s included:
 
 Reply to this email or call/text (469) 693-7164 if you want us to hold a Memorial Day weekend spot for your group.</textarea>
       </div>
-      <div class="list-card" style="margin-top:1rem;">
+      <div class="list-card mass-email-picker" id="mass-email-recipient-panel" style="margin-top:1rem;" hidden>
         <div class="crm-toolbar" style="margin-bottom:0.75rem;">
           <input class="search-input" id="mass-email-search" placeholder="Search recipients..." oninput="filterMassEmailRecipients(this)">
           <button class="btn btn-ghost btn-sm" type="button" onclick="applyMassEmailQuickSelect('visible')">Select visible</button>
@@ -854,17 +856,17 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
           <button class="btn btn-ghost btn-sm" type="button" onclick="applyMassEmailQuickSelect('clear')">Clear</button>
         </div>
         <p class="note-soft" id="mass-email-selection-summary" style="margin:0 0 0.75rem;">0 selected</p>
-        <div class="list-stack" id="mass-email-recipient-list"></div>
+        <div class="list-stack mass-email-recipient-list" id="mass-email-recipient-list"></div>
       </div>
       <div class="mini-kpis">
         <div class="mini-kpi"><strong id="mass-email-count">0</strong><span>emails ready</span></div>
-        <div class="mini-kpi"><strong id="mass-text-count">0</strong><span>phones on file</span></div>
-        <div class="mini-kpi"><strong id="mass-repeat-count">0</strong><span>repeat or VIP</span></div>
+        <div class="mini-kpi"><strong id="mass-batch-count">0</strong><span>send batches</span></div>
+        <div class="mini-kpi"><strong id="mass-audience-count">0</strong><span>customers in audience</span></div>
       </div>
       <div class="compose-actions">
-        <button class="btn btn-primary btn-sm" id="mass-email-link" onclick="sendMassEmail()">Send mass email</button>
+        <button class="btn btn-primary btn-sm" id="mass-email-link" onclick="sendMassEmail()">Send campaign</button>
       </div>
-      <p class="note-soft" id="mass-provider-detail" style="margin-top:0.75rem;">Two-way texting and automated outbound email need connected provider credentials.</p>
+      <p class="note-soft" id="mass-provider-detail" style="margin-top:0.75rem;">Shoreline Ops sends mass emails in batches of up to 50 recipients. Two-way texting and direct sends still need connected provider credentials.</p>
     </div>
   </div>
   <div class="table-wrap">
@@ -5452,29 +5454,30 @@ function renderMassEmailDraft() {
   const selectedCustomers = selectedMassEmailCustomers();
   const audienceCustomers = massEmailAudienceMode === 'selected' ? selectedCustomers : eligibleCustomers;
   const emails = uniqueValues(audienceCustomers.map((customer) => normalizeEmail(customer.email)));
-  const phones = uniqueValues(audienceCustomers.map((customer) => normalizePhone(customer.phone)));
-  const repeatCount = audienceCustomers.filter((customer) => ['repeat', 'vip'].includes(String(customer.tag || '').toLowerCase())).length;
+  const batchCount = Math.ceil(emails.length / 50);
   document.getElementById('mass-email-count').textContent = emails.length.toLocaleString();
-  document.getElementById('mass-text-count').textContent = phones.length.toLocaleString();
-  document.getElementById('mass-repeat-count').textContent = repeatCount.toLocaleString();
+  document.getElementById('mass-batch-count').textContent = batchCount.toLocaleString();
+  document.getElementById('mass-audience-count').textContent = audienceCustomers.length.toLocaleString();
   const note = document.getElementById('mass-provider-note');
   const detail = document.getElementById('mass-provider-detail');
   const button = document.getElementById('mass-email-link');
   const summary = document.getElementById('mass-email-selection-summary');
   const list = document.getElementById('mass-email-recipient-list');
+  const panel = document.getElementById('mass-email-recipient-panel');
+  if (panel) panel.hidden = massEmailAudienceMode !== 'selected';
   if (note) note.textContent = integrations.emailConfigured
-    ? 'Draft one campaign and send it through Resend from inside Shoreline Ops.'
+    ? 'Draft one campaign and Shoreline Ops will send it through Resend in batches of up to 50 recipients.'
     : 'Draft one campaign now. Add Resend credentials to send it directly from Shoreline Ops.';
   if (detail) detail.textContent = integrations.emailConfigured
     ? (massEmailAudienceMode === 'selected'
-      ? 'Resend is configured. This campaign will only send to the customers you selected below.'
-      : 'Resend is configured. This campaign will send to everyone in the CRM with a valid email on file.')
+      ? `Resend is configured. This campaign will go to ${emails.length} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'} from your selected customers.`
+      : `Resend is configured. This campaign will go to ${emails.length} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'} from the CRM email list.`)
     : 'Resend is not configured yet, so the email provider send button will stay disabled.';
   if (button) button.disabled = !integrations.emailConfigured || !emails.length || (massEmailAudienceMode === 'selected' && !selectedCustomers.length);
   if (summary) {
     summary.textContent = massEmailAudienceMode === 'selected'
-      ? `${selectedCustomers.length} selected · ${eligibleCustomers.length} customers have email on file`
-      : `${eligibleCustomers.length} customers with email on file · ${selectedCustomers.length} currently selected`;
+      ? `${selectedCustomers.length} selected · ${emails.length} email recipients ready · sends in batches of 50`
+      : `${eligibleCustomers.length} customers with email on file`;
   }
   if (list) {
     list.innerHTML = visibleCustomers.length ? visibleCustomers.map((customer) => {
@@ -5613,7 +5616,7 @@ async function sendMassEmail() {
   }
   try {
     const sentAt = new Date().toISOString();
-    await requestJson('/api/ops/messages/send', {
+    const response = await requestJson('/api/ops/messages/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -5623,6 +5626,7 @@ async function sendMassEmail() {
         body
       })
     });
+    const batchCount = Number(response?.result?.batches) || Math.max(1, Math.ceil(bcc.length / 50));
     const recipientEmails = new Set(bcc);
     audienceCustomers.forEach((customer) => {
       const email = normalizeEmail(customer.email);
@@ -5641,7 +5645,7 @@ async function sendMassEmail() {
     renderCRM();
     renderReminders();
     renderCommsPanel();
-    showToast(logged ? `✉️ Mass email sent to ${bcc.length} recipients` : '⚠️ Mass email sent, but the CRM log could not be saved');
+    showToast(logged ? `✉️ Mass email sent to ${bcc.length} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}` : `⚠️ Mass email sent in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}, but the CRM log could not be saved`);
   } catch (error) {
     showToast(`⚠️ ${error.message}`);
   }
