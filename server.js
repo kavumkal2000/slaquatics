@@ -2434,6 +2434,40 @@ function reviewLinksHtml(state = null) {
   return links.join('<br>');
 }
 
+function reviewRequestEmailHtml(state = null, customerName = 'there') {
+  const reviewSettings = reviewSettingsForState(state);
+  const reviewActions = [
+    reviewSettings.googleUrl ? emailActionButton('Leave a Google review', reviewSettings.googleUrl) : '',
+    reviewSettings.facebookUrl ? emailActionButton('Leave a Facebook review', reviewSettings.facebookUrl, 'secondary') : ''
+  ].filter(Boolean).join('&nbsp;');
+  return shorelineEmailShell({
+    title: 'Thanks for riding with Shoreline',
+    subtitle: `${firstName(customerName)}, thanks again for choosing Shoreline Aquatics on Lake Lewisville.`,
+    pills: [
+      emailPill('Customer follow-up', 'accent'),
+      emailPill('Quick review request', 'dark')
+    ],
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics customers on the lake',
+    actionHtml: reviewActions,
+    bodyHtml: `
+      ${emailCardSection('We’d love your feedback', `
+        <p style="margin:0 0 14px;color:#40546c;font-size:15px;line-height:1.8;">
+          If you had a great time, a quick review helps Shoreline Aquatics reach more lake families and riders.
+        </p>
+        <p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">
+          ${reviewLinksHtml(state)}
+        </p>
+      `, { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Need anything else?', `
+        <p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">
+          Reply to this email if you want to book another ride, ask a question, or plan your next Lake Lewisville outing.
+        </p>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+    `
+  });
+}
+
 async function sendTwilioSms({ to, body }) {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
     throw new Error('Twilio SMS is not configured yet.');
@@ -3562,7 +3596,7 @@ async function handleApi(request, response, pathname) {
         'If you had a great time, we would really appreciate a quick review:',
         reviewLinksText(state)
       ].filter(Boolean).join('\n\n');
-      const html = `<p>Hey ${htmlEscape(firstName(customerName))}! Thanks again for riding with Shoreline Aquatics.</p><p>If you had a great time, we would really appreciate a quick review:</p><p>${reviewLinksHtml(state)}</p>`;
+      const html = reviewRequestEmailHtml(state, customerName);
 
       let result;
       if (channel === 'email') {
