@@ -1641,6 +1641,20 @@ function shorelineMapsUrl(address = SHORELINE_ADDRESS) {
   return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '';
 }
 
+function shorelineAssetUrl(path = '') {
+  const cleanPath = String(path || '').trim().replace(/^\/+/, '');
+  if (!cleanPath) return '';
+  return `${PUBLIC_SITE_URL}/${cleanPath}`;
+}
+
+function shorelineEmailLogoUrl() {
+  return shorelineAssetUrl('assets/images/shoreline-ops-app-icon-180.png');
+}
+
+function shorelineEmailHeroUrl() {
+  return shorelineAssetUrl('assets/images/shoreline-customer-group-wide.png');
+}
+
 function emailPill(label = '', tone = 'neutral') {
   const palette = {
     neutral: { background: '#e7eef6', color: '#32455f' },
@@ -1710,17 +1724,87 @@ function emailCardSection(title = '', bodyHtml = '', options = {}) {
   `;
 }
 
-function shorelineEmailShell({ eyebrow = 'Shoreline Aquatics', title = '', subtitle = '', pills = [], actionHtml = '', bodyHtml = '', footerHtml = '' } = {}) {
+function emailRichTextBodyHtml(text = '') {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const blocks = [];
+  let listItems = [];
+
+  const flushList = () => {
+    if (!listItems.length) return;
+    blocks.push(`
+      <ul style="margin:0 0 16px;padding-left:22px;color:#40546c;font-size:15px;line-height:1.8;">
+        ${listItems.map((item) => `<li style="margin:0 0 8px;">${htmlEscape(item)}</li>`).join('')}
+      </ul>
+    `);
+    listItems = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = String(rawLine || '').trim();
+    if (!line) {
+      flushList();
+      return;
+    }
+    if (/^[-*•]\s+/.test(line)) {
+      listItems.push(line.replace(/^[-*•]\s+/, ''));
+      return;
+    }
+    flushList();
+    blocks.push(`<p style="margin:0 0 16px;color:#40546c;font-size:15px;line-height:1.8;">${htmlEscape(line)}</p>`);
+  });
+  flushList();
+  return blocks.join('') || '<p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">Shoreline Aquatics</p>';
+}
+
+function opsOutboundEmailHtml({ subject = '', body = '', audienceLabel = 'Shoreline customer' } = {}) {
+  return shorelineEmailShell({
+    title: subject || 'Shoreline Aquatics update',
+    subtitle: `A message from Shoreline Aquatics for ${audienceLabel}.`,
+    pills: [
+      emailPill('Lake Lewisville', 'accent'),
+      emailPill('Shoreline update', 'dark')
+    ],
+    actionHtml: [
+      emailActionButton('Book with Shoreline', `${PUBLIC_SITE_URL}/jetski-booking/`),
+      emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`, 'secondary')
+    ].join('&nbsp;'),
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics riders on Lake Lewisville',
+    bodyHtml: `
+      ${emailCardSection('Message from Shoreline', emailRichTextBodyHtml(body), { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Quick contact', `
+        <p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">
+          Reply to this email, call/text <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>,
+          or visit <a href="${htmlEscape(PUBLIC_SITE_URL)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(PUBLIC_SITE_URL)}</a>.
+        </p>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+    `
+  });
+}
+
+function shorelineEmailShell({ eyebrow = 'Shoreline Aquatics', title = '', subtitle = '', pills = [], actionHtml = '', bodyHtml = '', footerHtml = '', heroImageUrl = '', heroImageAlt = 'Shoreline Aquatics', logoImageUrl = '' } = {}) {
   const pillHtml = pills.filter(Boolean).join('');
+  const logoUrl = logoImageUrl || shorelineEmailLogoUrl();
   return `
     <div style="margin:0;padding:0;background:#eef4f9;font-family:Arial,sans-serif;color:#10213a;">
       <div style="max-width:720px;margin:0 auto;padding:28px 16px;">
         <div style="background:#08111f;border-radius:26px;overflow:hidden;box-shadow:0 24px 64px rgba(8,17,31,0.18);">
           <div style="padding:28px 28px 22px;background:linear-gradient(180deg,#0b1730 0%,#08111f 100%);">
-            <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f4b63f;font-weight:800;">${htmlEscape(eyebrow)}</div>
+            <div style="display:flex;align-items:center;gap:14px;">
+              ${logoUrl ? `<img src="${htmlEscape(logoUrl)}" alt="Shoreline Aquatics logo" width="54" height="54" style="display:block;width:54px;height:54px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);padding:6px;object-fit:contain;">` : ''}
+              <div>
+                <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f4b63f;font-weight:800;">${htmlEscape(eyebrow)}</div>
+                <div style="margin-top:4px;font-size:13px;color:#d5e0ee;letter-spacing:0.08em;text-transform:uppercase;">Lake Lewisville • Hickory Creek, Texas</div>
+              </div>
+            </div>
             <h1 style="margin:12px 0 0;font-size:34px;line-height:1.06;color:#ffffff;">${htmlEscape(title)}</h1>
             <p style="margin:14px 0 0;font-size:16px;line-height:1.65;color:#d5e0ee;">${htmlEscape(subtitle)}</p>
             ${(pillHtml || actionHtml) ? `<div style="margin-top:18px;">${pillHtml}${actionHtml ? `<div style="margin-top:${pillHtml ? '14px' : '0'};">${actionHtml}</div>` : ''}</div>` : ''}
+            ${heroImageUrl ? `
+              <div style="margin-top:22px;border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:#10213a;">
+                <img src="${htmlEscape(heroImageUrl)}" alt="${htmlEscape(heroImageAlt)}" style="display:block;width:100%;height:auto;max-height:280px;object-fit:cover;">
+              </div>
+            ` : ''}
           </div>
           <div style="background:#ffffff;padding:24px 28px 26px;">
             ${bodyHtml}
@@ -1809,6 +1893,8 @@ function bookingConfirmationHtml(booking = {}) {
       emailPill('Payment confirmed', 'success'),
       emailPill('Lake Lewisville', 'accent')
     ],
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics riders enjoying a lake day',
     actionHtml,
     bodyHtml: `
       <div style="font-size:0;line-height:0;">${summaryCards}</div>
@@ -1889,6 +1975,8 @@ function bookingRequestHtml(booking = {}) {
       emailPill('Request received', 'accent'),
       emailPill('Awaiting deposit if unpaid', 'neutral')
     ],
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics rental customers',
     actionHtml: [
       emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`),
       emailActionButton('View the booking site', `${PUBLIC_SITE_URL}/jetski-booking/`, 'secondary')
@@ -3391,23 +3479,33 @@ async function handleApi(request, response, pathname) {
         return true;
       }
       if (channel === 'email') {
+        const html = body.html || opsOutboundEmailHtml({
+          subject: body.subject,
+          body: body.body,
+          audienceLabel: body.to || 'Shoreline customer'
+        });
         const result = await sendResendEmail({
           to: body.to,
           subject: body.subject,
           text: body.body,
-          html: body.html
+          html
         });
         sendJson(response, 200, { ok: true, channel, result });
         return true;
       }
       if (channel === 'mass-email') {
         const toRecipients = Array.isArray(body.to) && body.to.length ? body.to : [RESEND_FROM_EMAIL];
+        const html = body.html || opsOutboundEmailHtml({
+          subject: body.subject,
+          body: body.body,
+          audienceLabel: 'Shoreline guests'
+        });
         const result = await sendResendMassEmail({
           to: toRecipients,
           bcc: body.bcc || [],
           subject: body.subject,
           text: body.body,
-          html: body.html
+          html
         });
         sendJson(response, 200, { ok: true, channel, result });
         return true;
