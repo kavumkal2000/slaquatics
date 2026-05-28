@@ -169,6 +169,54 @@ function normalizeOwnerWeeklyDigest(value) {
     : clone(DEFAULT_STATE.ownerWeeklyDigest);
 }
 
+function ownerWeeklyDigestTimestamp(value) {
+  const parsed = Date.parse(String(value?.lastSentAt || ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function mergeOwnerWeeklyDigestState(currentValue, incomingValue) {
+  const current = normalizeOwnerWeeklyDigest(currentValue);
+  const incoming = normalizeOwnerWeeklyDigest(incomingValue);
+  const currentTimestamp = ownerWeeklyDigestTimestamp(current);
+  const incomingTimestamp = ownerWeeklyDigestTimestamp(incoming);
+  if (!current.lastWeekKey && !currentTimestamp) return incoming;
+  if (!incoming.lastWeekKey && !incomingTimestamp) return current;
+  if (current.lastWeekKey && incoming.lastWeekKey && current.lastWeekKey > incoming.lastWeekKey) {
+    return current;
+  }
+  if (currentTimestamp > incomingTimestamp) return current;
+  return incoming;
+}
+
+function communicationEntryKey(entry = {}) {
+  return [
+    String(entry.channel || '').trim(),
+    String(entry.date || '').trim(),
+    String(entry.message || '').trim()
+  ].join('|');
+}
+
+function mergeServerOwnedCommunications(currentLog = [], incomingLog = []) {
+  const merged = normalizeArray(incomingLog, DEFAULT_STATE.communicationsLog);
+  const seen = new Set(merged.map((entry) => communicationEntryKey(entry)));
+  normalizeArray(currentLog, DEFAULT_STATE.communicationsLog).forEach((entry) => {
+    if (String(entry?.channel || '').trim() !== 'owner-weekly-digest-email') return;
+    const key = communicationEntryKey(entry);
+    if (seen.has(key)) return;
+    merged.push(clone(entry));
+    seen.add(key);
+  });
+  merged.sort((left, right) => {
+    const leftTime = Date.parse(String(left?.date || ''));
+    const rightTime = Date.parse(String(right?.date || ''));
+    const normalizedLeft = Number.isFinite(leftTime) ? leftTime : 0;
+    const normalizedRight = Number.isFinite(rightTime) ? rightTime : 0;
+    if (normalizedRight !== normalizedLeft) return normalizedRight - normalizedLeft;
+    return Number(right?.id || 0) - Number(left?.id || 0);
+  });
+  return merged;
+}
+
 const STATE_TOP_LEVEL_KEYS = [
   'bookings',
   'customers',
@@ -3304,9 +3352,18 @@ async function handleApi(request, response, pathname) {
       if (!isLikelyStatePayload(body)) {
         throw new Error('Malformed state payload.');
       }
+      const currentState = await stateStore.read();
       const nextState = normalizeOpsRole(session.role) === 'employee'
-        ? mergeEmployeeState(await stateStore.read(), body)
+        ? mergeEmployeeState(currentState, body)
         : sanitizeState(body);
+      nextState.ownerWeeklyDigest = mergeOwnerWeeklyDigestState(
+        currentState.ownerWeeklyDigest,
+        nextState.ownerWeeklyDigest
+      );
+      nextState.communicationsLog = mergeServerOwnedCommunications(
+        currentState.communicationsLog,
+        nextState.communicationsLog
+      );
       syncBookingsFromInvoices(nextState);
       syncCustomersFromBookings(nextState);
       syncWebsiteBookingInvoices(nextState);
