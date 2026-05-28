@@ -4129,6 +4129,54 @@ function openBookingModal(bookingId = null, defaultDate = '') {
   openModal('booking-modal');
 }
 
+function bookingQuickActionOptions(booking = {}) {
+  const normalizedStatus = normalizeBookingStatusValue(booking.status);
+  const options = [];
+  if (normalizedStatus === 'pending') {
+    options.push({ value: 'confirm', label: 'Confirm' });
+  }
+  if (normalizedStatus === 'confirmed') {
+    options.push({ value: 'complete', label: 'Complete' });
+  }
+  if (!['completed', 'noshow', 'no-show'].includes(normalizedStatus)) {
+    options.push({ value: 'reschedule', label: 'Reschedule' });
+    options.push({ value: 'noshow', label: 'No-show' });
+  }
+  return options;
+}
+
+function bookingQuickActionControl(booking = {}) {
+  const options = bookingQuickActionOptions(booking);
+  if (!options.length) return '';
+  return `
+    <select class="input" style="min-width:145px;height:34px;padding:0 0.8rem;font-size:0.76rem;" onchange="handleBookingQuickAction(this, ${Number(booking.id)})">
+      <option value="">Action</option>
+      ${options.map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join('')}
+    </select>
+  `;
+}
+
+function handleBookingQuickAction(selectEl, bookingId) {
+  const action = String(selectEl?.value || '').trim().toLowerCase();
+  if (selectEl) selectEl.value = '';
+  if (!action) return;
+  if (action === 'reschedule') {
+    openBookingModal(bookingId);
+    return;
+  }
+  if (action === 'confirm') {
+    updateStatus(bookingId, 'confirmed');
+    return;
+  }
+  if (action === 'complete') {
+    updateStatus(bookingId, 'completed');
+    return;
+  }
+  if (action === 'noshow') {
+    updateStatus(bookingId, 'noshow');
+  }
+}
+
 function bookingsForDate(dateIso) {
   return scheduledBookings()
     .filter((booking) => booking.date === dateIso)
@@ -4187,7 +4235,7 @@ function renderBookingAgenda() {
         <div style="color:var(--wave);font-weight:500;">${bookingTotalLabel(booking)}</div>
         ${statusBadge(booking.status)}
         <div style="display:flex;gap:0.35rem;justify-content:flex-end;flex-wrap:wrap;margin-top:0.55rem;">
-          <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${booking.id})">Edit</button>
+          ${bookingQuickActionControl(booking)}
           <button class="btn btn-danger btn-sm" onclick="deleteBooking(${booking.id})">Delete</button>
         </div>
       </div>
@@ -4264,11 +4312,8 @@ function renderBookings(filter) {
       <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
       <td>${statusBadge(b.status)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-        <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
-        ${normalizedStatus==='pending'?`<button class="btn btn-success btn-sm" onclick="updateStatus(${b.id},'confirmed')">Confirm</button>`:''}
-        ${normalizedStatus==='confirmed'?`<button class="btn btn-ghost btn-sm" onclick="updateStatus(${b.id},'completed')">Done</button>`:''}
+        ${bookingQuickActionControl(b)}
         ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
-        ${!['noshow','no-show','completed'].includes(normalizedStatus)?`<button class="btn btn-danger btn-sm" onclick="updateStatus(${b.id},'noshow')">No-show</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
     </tr>`;
