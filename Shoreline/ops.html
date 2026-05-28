@@ -4293,7 +4293,7 @@ function renderBookingCalendar() {
     const isOtherMonth = cellDate.getMonth() !== calendarMonthCursor.getMonth();
     const isToday = cellIso === today();
     const isSelected = cellIso === selectedCalendarDate;
-    const pendingCount = dayBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending' && !bookingIsPaid(booking)).length;
+    const pendingCount = dayBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending').length;
 
     cells.push(`
       <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${dayBookings.length ? ' has-bookings' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" onclick="selectCalendarDate('${cellIso}')">
