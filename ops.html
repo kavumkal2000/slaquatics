@@ -3988,12 +3988,28 @@ function bookingScheduleSortKey(booking = {}) {
   return `${dateKey} ${bookingTimeValue(booking.time)}`;
 }
 
+function bookingStartDateTime(booking = {}) {
+  const bookingDate = dateValue(booking.date);
+  if (!bookingDate) return null;
+  const dateTime = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
+  const timeValue = String(booking.time || '').trim();
+  if (/^\d{1,2}:\d{2}$/.test(timeValue)) {
+    const [hourText = '0', minuteText = '0'] = timeValue.split(':');
+    const hour = Number(hourText);
+    const minute = Number(minuteText);
+    if (!Number.isNaN(hour) && !Number.isNaN(minute)) {
+      dateTime.setHours(hour, minute, 0, 0);
+    }
+  }
+  return dateTime;
+}
+
 function upcomingScheduledBookings(reference = new Date()) {
-  const startOfToday = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
+  const now = new Date(reference);
   return scheduledBookings()
     .filter((booking) => {
-      const bookingDate = dateValue(booking.date);
-      return Boolean(bookingDate) && bookingDate >= startOfToday;
+      const bookingStart = bookingStartDateTime(booking);
+      return Boolean(bookingStart) && bookingStart >= now;
     })
     .sort((left, right) => bookingScheduleSortKey(left).localeCompare(bookingScheduleSortKey(right)));
 }
