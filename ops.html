@@ -4805,7 +4805,7 @@ function renderFleetLegend() {
   if (!legend) return;
   const palette = ['#f5a623', '#7dd9ff', '#10b981', '#8b5cf6', '#ef4444'];
   const counts = new Map();
-  scheduledBookings().forEach((booking) => {
+  upcomingScheduledBookings().forEach((booking) => {
     const label = bookingCraftLabel(booking);
     counts.set(label, (counts.get(label) || 0) + 1);
   });
