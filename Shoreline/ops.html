@@ -3999,7 +3999,7 @@ function upcomingScheduledBookings(reference = new Date()) {
 }
 
 function pendingOpsBookings() {
-  return scheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending');
+  return upcomingScheduledBookings().filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending');
 }
 
 function updatePendingBadge() {
@@ -6316,13 +6316,8 @@ function renderReminders() {
       </div>
     </div>`).join('') : '<div class="empty"><div class="icon">🎉</div><p>No customers overdue for re-engagement!</p></div>';
 
-  const upcoming = scheduledBookings()
+  const upcoming = upcomingScheduledBookings()
     .filter((booking) => !['completed', 'noshow', 'no-show'].includes(normalizeBookingStatusValue(booking.status)))
-    .sort((left, right) => (
-      `${left.date || '9999-99-99'} ${bookingTimeValue(left.time)}`.localeCompare(
-        `${right.date || '9999-99-99'} ${bookingTimeValue(right.time)}`
-      )
-    ))
     .slice(0, 8);
   document.getElementById('upcoming-reminders').innerHTML = upcoming.length ? upcoming.map(b=>`
     <div class="reminder-card">
