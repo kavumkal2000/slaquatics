@@ -3877,13 +3877,8 @@ async function saveBooking() {
 
 // ── RENDER UPCOMING (dashboard) ──
 function renderUpcoming() {
-  const rows = scheduledBookings()
+  const rows = upcomingScheduledBookings()
     .filter((booking) => !['completed', 'noshow', 'no-show'].includes(normalizeBookingStatusValue(booking.status)))
-    .sort((left, right) => (
-      `${left.date || '9999-99-99'} ${bookingTimeValue(left.time)}`.localeCompare(
-        `${right.date || '9999-99-99'} ${bookingTimeValue(right.time)}`
-      )
-    ))
     .slice(0,5);
   document.getElementById('upcoming-bookings-table').innerHTML = rows.length ? rows.map((b) => {
     const paid = bookingIsPaid(b);
@@ -3985,6 +3980,22 @@ function bookingShowsOnSchedule(booking = {}) {
 
 function scheduledBookings() {
   return bookings.filter((booking) => bookingShowsOnSchedule(booking));
+}
+
+function bookingScheduleSortKey(booking = {}) {
+  const parsedDate = dateValue(booking.date);
+  const dateKey = parsedDate ? isoFromDate(parsedDate) : '9999-99-99';
+  return `${dateKey} ${bookingTimeValue(booking.time)}`;
+}
+
+function upcomingScheduledBookings(reference = new Date()) {
+  const startOfToday = new Date(reference.getFullYear(), reference.getMonth(), reference.getDate());
+  return scheduledBookings()
+    .filter((booking) => {
+      const bookingDate = dateValue(booking.date);
+      return Boolean(bookingDate) && bookingDate >= startOfToday;
+    })
+    .sort((left, right) => bookingScheduleSortKey(left).localeCompare(bookingScheduleSortKey(right)));
 }
 
 function pendingOpsBookings() {
@@ -4289,7 +4300,7 @@ function renderBookingCalendar() {
 
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
-  const visibleBookings = scheduledBookings();
+  const visibleBookings = upcomingScheduledBookings();
   const list = currentFilter==='all'
     ? visibleBookings
     : visibleBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
