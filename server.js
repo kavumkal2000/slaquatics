@@ -728,13 +728,31 @@ function formatDateLabel(value = '') {
   });
 }
 
+function parseBookingTimeParts(value = '') {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (!match) return null;
+  let [, hourText = '0', minuteText = '00', meridiem = ''] = match;
+  let hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (Number.isNaN(hour) || Number.isNaN(minute) || minute < 0 || minute > 59) return null;
+  if (meridiem) {
+    const upper = meridiem.toUpperCase();
+    if (hour < 1 || hour > 12) return null;
+    if (upper === 'PM' && hour < 12) hour += 12;
+    if (upper === 'AM' && hour === 12) hour = 0;
+  } else if (hour < 0 || hour > 23) {
+    return null;
+  }
+  return { hour, minute };
+}
+
 function formatTimeLabel(value = '') {
-  const [hourText = '', minuteText = '00'] = String(value || '').split(':');
-  const hour = Number(hourText);
-  if (Number.isNaN(hour)) return value || '-';
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  const twelveHour = hour % 12 || 12;
-  return `${twelveHour}:${minuteText} ${suffix}`;
+  const parsed = parseBookingTimeParts(value);
+  if (!parsed) return value || '-';
+  const suffix = parsed.hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = parsed.hour % 12 || 12;
+  return `${twelveHour}:${String(parsed.minute).padStart(2, '0')} ${suffix}`;
 }
 
 function formatDateTimeInTimeZone(value = new Date(), timeZone = OWNER_WEEKLY_DIGEST_TIMEZONE) {
@@ -832,11 +850,9 @@ function ownerWeeklyDigestSchedule(now = new Date()) {
 }
 
 function timeToMinutes(value = '') {
-  const [hourText = '', minuteText = '00'] = String(value || '').split(':');
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  if (Number.isNaN(hour) || Number.isNaN(minute)) return NaN;
-  return (hour * 60) + minute;
+  const parsed = parseBookingTimeParts(value);
+  if (!parsed) return NaN;
+  return (parsed.hour * 60) + parsed.minute;
 }
 
 function craftUsesBoat(craft = '') {
