@@ -3938,8 +3938,28 @@ function monthStart(date) {
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+function parseBookingTimeParts(timeValue) {
+  const raw = String(timeValue || '').trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (!match) return null;
+  let [, hourText = '0', minuteText = '0', meridiem = ''] = match;
+  let hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (Number.isNaN(hour) || Number.isNaN(minute) || minute < 0 || minute > 59) return null;
+  if (meridiem) {
+    const upper = meridiem.toUpperCase();
+    if (hour < 1 || hour > 12) return null;
+    if (upper === 'PM' && hour < 12) hour += 12;
+    if (upper === 'AM' && hour === 12) hour = 0;
+  } else if (hour < 0 || hour > 23) {
+    return null;
+  }
+  return { hour, minute };
+}
+
 function bookingTimeValue(timeValue) {
-  return String(timeValue || '99:99');
+  const parsed = parseBookingTimeParts(timeValue);
+  return parsed ? `${String(parsed.hour).padStart(2, '0')}:${String(parsed.minute).padStart(2, '0')}` : '99:99';
 }
 
 function normalizeBookingStatusValue(status) {
@@ -3994,15 +4014,9 @@ function bookingStartDateTime(booking = {}) {
   const bookingDate = dateValue(booking.date);
   if (!bookingDate) return null;
   const dateTime = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate());
-  const timeValue = String(booking.time || '').trim();
-  if (/^\d{1,2}:\d{2}$/.test(timeValue)) {
-    const [hourText = '0', minuteText = '0'] = timeValue.split(':');
-    const hour = Number(hourText);
-    const minute = Number(minuteText);
-    if (!Number.isNaN(hour) && !Number.isNaN(minute)) {
-      dateTime.setHours(hour, minute, 0, 0);
-    }
-  }
+  const parsedTime = parseBookingTimeParts(booking.time);
+  if (!parsedTime) return null;
+  dateTime.setHours(parsedTime.hour, parsedTime.minute, 0, 0);
   return dateTime;
 }
 
