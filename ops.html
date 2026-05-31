@@ -1943,7 +1943,21 @@ function formatTime(value) {
   const parsed = value instanceof Date ? value : parseFlexibleDate(value);
   if (parsed) return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`;
   const direct = String(value || '').trim();
-  return /^\d{1,2}:\d{2}$/.test(direct) ? direct.padStart(5, '0') : '10:00';
+  const match = direct.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  if (!match) return '10:00';
+  let [, hourText = '0', minuteText = '00', meridiem = ''] = match;
+  let hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (Number.isNaN(hour) || Number.isNaN(minute) || minute < 0 || minute > 59) return '10:00';
+  if (meridiem) {
+    const upper = meridiem.toUpperCase();
+    if (hour < 1 || hour > 12) return '10:00';
+    if (upper === 'PM' && hour < 12) hour += 12;
+    if (upper === 'AM' && hour === 12) hour = 0;
+  } else if (hour < 0 || hour > 23) {
+    return '10:00';
+  }
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 function formatTimeLabel(value) {
   const direct = String(value || '').trim();
@@ -4160,7 +4174,7 @@ function openBookingModal(bookingId = null, defaultDate = '') {
     document.getElementById('b-phone').value = booking.phone || '';
     document.getElementById('b-email').value = booking.email || '';
     document.getElementById('b-date').value = booking.date && booking.date !== 'TBD' ? booking.date : today();
-    document.getElementById('b-time').value = booking.time || '10:00';
+    document.getElementById('b-time').value = formatTime(booking.time);
     document.getElementById('b-craft').value = booking.craftKey || booking.craft || '';
     document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
     document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';
