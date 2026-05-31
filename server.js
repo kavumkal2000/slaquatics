@@ -953,6 +953,44 @@ function jetSkiUnitsBooked(state, options = {}) {
   ), 0);
 }
 
+function peakJetSkiUnitsBooked(state, options = {}) {
+  const requestedTime = String(options.time || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  const requestedStart = timeToMinutes(requestedTime);
+  if (!requestedTime || !requestedDuration || Number.isNaN(requestedStart)) return 0;
+
+  const requestedEnd = requestedStart + (requestedDuration * 60);
+  const events = [];
+
+  findJetSkiConflicts(state, options).forEach((booking) => {
+    const bookingStart = timeToMinutes(booking.time);
+    const bookingDuration = Number(booking.duration || 0);
+    const bookingUnits = craftJetSkiCount(String(booking.craftKey || booking.craft || ''));
+    if (Number.isNaN(bookingStart) || !bookingDuration || !bookingUnits) return;
+
+    const overlapStart = Math.max(requestedStart, bookingStart);
+    const overlapEnd = Math.min(requestedEnd, bookingStart + (bookingDuration * 60));
+    if (overlapEnd <= overlapStart) return;
+
+    events.push({ minute: overlapStart, delta: bookingUnits });
+    events.push({ minute: overlapEnd, delta: -bookingUnits });
+  });
+
+  events.sort((left, right) => {
+    if (left.minute !== right.minute) return left.minute - right.minute;
+    return left.delta - right.delta;
+  });
+
+  let current = 0;
+  let peak = 0;
+  events.forEach((event) => {
+    current += event.delta;
+    if (current > peak) peak = current;
+  });
+
+  return peak;
+}
+
 function hasInventoryConflict(state, options = {}) {
   const craft = String(options.craft || '').trim();
   const requiresBoat = craftUsesBoat(craft);
@@ -960,7 +998,7 @@ function hasInventoryConflict(state, options = {}) {
   if (!requiresBoat && !requestedJetSkis) return false;
   if (requiresBoat && findBoatConflicts(state, options).length) return true;
   if (requestedJetSkis > 0) {
-    return (jetSkiUnitsBooked(state, options) + requestedJetSkis) > TOTAL_PUBLIC_JET_SKIS;
+    return (peakJetSkiUnitsBooked(state, options) + requestedJetSkis) > TOTAL_PUBLIC_JET_SKIS;
   }
   return false;
 }
