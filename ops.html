@@ -1775,6 +1775,12 @@ const CRAFT_NAMES = {
   seadoo:'4 Yamaha Jet Skis',
   imported:'Imported booking'
 };
+const LEGACY_CRAFT_MAP = {
+  yamaha:'jetski2',
+  seadoo:'jetski4',
+  seadoo2:'jetski2',
+  seadoo4:'jetski4'
+};
 const AVATAR_COLORS = ['#1a9ed4','#10b981','#f59e0b','#8b5cf6','#ef4444','#0fb8e0'];
 
 let bookings = [];
@@ -1970,7 +1976,7 @@ function formatTimeLabel(value) {
   return `${twelveHour}:${minuteText} ${suffix}`;
 }
 function bookingCraftLabel(booking) {
-  const craftKey = booking.craftKey || booking.craft;
+  const craftKey = normalizeCraftKey(booking.craftKey || booking.craft);
   return booking.craftLabel || CRAFT_NAMES[craftKey] || 'Imported booking';
 }
 function bookingDurationLabel(booking) {
@@ -1982,8 +1988,18 @@ function bookingDurationLabel(booking) {
 function bookingTotalValue(booking) {
   const explicit = Number(booking.total);
   if (Number.isFinite(explicit) && explicit > 0) return explicit;
-  const craftKey = booking.craftKey || booking.craft;
+  const craftKey = normalizeCraftKey(booking.craftKey || booking.craft);
   return (PRICING[craftKey]?.[booking.duration] || 0) + (booking.drone ? 50 : 0);
+}
+function normalizeCraftKey(value = '') {
+  const raw = String(value || '').trim();
+  return LEGACY_CRAFT_MAP[raw] || raw;
+}
+function bookingEditorCraftValue(booking = {}) {
+  const direct = normalizeCraftKey(booking.craftKey || booking.craft);
+  if (direct && PRICING[direct]) return direct;
+  const guessed = guessCraftFromText(booking.craftLabel || booking.invoiceName || booking.notes || booking.name || '');
+  return guessed && PRICING[guessed] ? guessed : '';
 }
 function bookingTotalLabel(booking) {
   return `$${bookingTotalValue(booking).toLocaleString()}`;
@@ -3762,7 +3778,7 @@ function showToast(msg) {
 
 // ── BOOKING PRICE CALC ──
 function calcBookingPrice() {
-  const craft = document.getElementById('b-craft').value;
+  const craft = normalizeCraftKey(document.getElementById('b-craft').value);
   const dur = parseInt(document.getElementById('b-duration').value);
   const drone = document.getElementById('b-drone').value === 'yes';
   if(!craft || !dur) { document.getElementById('booking-total').textContent='$0'; document.getElementById('booking-breakdown').textContent='Select craft and duration'; return; }
@@ -3782,7 +3798,7 @@ async function saveBooking() {
   const name = document.getElementById('b-name').value.trim();
   const phone = document.getElementById('b-phone').value.trim();
   const email = document.getElementById('b-email').value.trim();
-  const craft = document.getElementById('b-craft').value;
+  const craft = normalizeCraftKey(document.getElementById('b-craft').value);
   const dur = parseInt(document.getElementById('b-duration').value);
   if(!craft||!dur) { showToast('⚠️ Fill in craft and duration'); return; }
   const baseValue = PRICING[craft]?.[dur] || 0;
@@ -4175,7 +4191,7 @@ function openBookingModal(bookingId = null, defaultDate = '') {
     document.getElementById('b-email').value = booking.email || '';
     document.getElementById('b-date').value = booking.date && booking.date !== 'TBD' ? booking.date : today();
     document.getElementById('b-time').value = formatTime(booking.time);
-    document.getElementById('b-craft').value = booking.craftKey || booking.craft || '';
+    document.getElementById('b-craft').value = bookingEditorCraftValue(booking);
     document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
     document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';
     document.getElementById('b-notes').value = booking.notes || '';
