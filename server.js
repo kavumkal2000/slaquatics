@@ -2733,6 +2733,24 @@ function ownerWeeklyDigestSubject(report) {
   return `Weekly Shoreline website + ops update • v${report.version}`;
 }
 
+function ownerWeeklyDigestLogForWeek(state = {}, weekKey = '') {
+  if (!weekKey) return null;
+  return normalizeArray(state.communicationsLog, DEFAULT_STATE.communicationsLog)
+    .filter((entry) => String(entry?.channel || '').trim() === 'owner-weekly-digest-email')
+    .map((entry) => {
+      const sentAt = Date.parse(String(entry?.date || ''));
+      if (!Number.isFinite(sentAt)) return null;
+      return {
+        entry,
+        sentAt,
+        weekKey: ownerWeeklyDigestSchedule(new Date(sentAt)).weekKey
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.sentAt - left.sentAt)
+    .find((item) => item.weekKey === weekKey)?.entry || null;
+}
+
 function ownerWeeklyDigestText(report) {
   const upcomingLines = report.upcomingBookings.length
     ? report.upcomingBookings.map((booking) => (
@@ -2866,9 +2884,20 @@ async function maybeSendOwnerWeeklyDigest({ force = false } = {}) {
     await stateStore.write(state);
   }
   const lastWeekKey = String(state.ownerWeeklyDigest?.lastWeekKey || '');
+  const existingDigestLog = ownerWeeklyDigestLogForWeek(state, schedule.weekKey);
   if (!force) {
     if (!schedule.pastSchedule) return { sent: false, reason: 'not-scheduled-yet', weekKey: schedule.weekKey };
     if (lastWeekKey === schedule.weekKey) return { sent: false, reason: 'already-sent', weekKey: schedule.weekKey };
+    if (existingDigestLog) {
+      const latestState = await stateStore.read();
+      latestState.ownerWeeklyDigest = {
+        lastSentAt: String(existingDigestLog.date || latestState.ownerWeeklyDigest?.lastSentAt || ''),
+        lastMessageId: String(latestState.ownerWeeklyDigest?.lastMessageId || ''),
+        lastWeekKey: schedule.weekKey
+      };
+      await stateStore.write(latestState);
+      return { sent: false, reason: 'already-logged-this-week', weekKey: schedule.weekKey };
+    }
   }
 
   const report = buildOwnerWeeklyDigestReport(state, schedule);
