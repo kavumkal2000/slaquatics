@@ -4328,7 +4328,6 @@ function renderBookingAgenda() {
         ${bookingCalendarStatusBadge(booking)}
         <div style="display:flex;gap:0.35rem;justify-content:flex-end;flex-wrap:wrap;margin-top:0.55rem;">
           <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${booking.id})">Edit</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteBooking(${booking.id})">Delete</button>
         </div>
       </div>
     </div>
@@ -4410,7 +4409,6 @@ function renderBookings(filter) {
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
         ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
-        <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="9"><div class="empty"><div class="icon">📅</div><p>No paid bookings match this filter yet.</p></div></td></tr>';
