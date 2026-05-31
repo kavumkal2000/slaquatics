@@ -185,8 +185,15 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .calendar-pill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--wave);}
 .calendar-pill.pending .calendar-pill-dot{background:var(--amber);}
 .calendar-pill.confirmed .calendar-pill-dot{background:var(--green);}
+.calendar-pill.unconfirmed .calendar-pill-dot{background:var(--red);}
 .calendar-pill.completed .calendar-pill-dot{background:var(--wave);}
 .calendar-pill.noshow .calendar-pill-dot{background:var(--red);}
+.calendar-pill-status{
+  display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:0.16rem 0.42rem;
+  font-size:0.58rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;flex-shrink:0;
+}
+.calendar-pill-status.confirmed{background:rgba(16,185,129,0.16);color:var(--green);}
+.calendar-pill-status.unconfirmed{background:rgba(239,68,68,0.16);color:var(--red);}
 .agenda-card{display:flex;flex-direction:column;}
 .agenda-head{display:flex;align-items:flex-start;justify-content:space-between;gap:0.8rem;margin-bottom:1rem;flex-wrap:wrap;}
 .agenda-date{font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:0.05em;line-height:1;}
@@ -208,6 +215,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:0.69rem;padding:0.25rem 0.65rem;border-radius:20px;font-weight:500;text-transform:uppercase;letter-spacing:0.07em;}
 .badge-confirmed{background:rgba(16,185,129,0.15);color:var(--green);}
 .badge-pending{background:rgba(245,158,11,0.15);color:var(--amber);}
+.badge-unconfirmed{background:rgba(239,68,68,0.15);color:var(--red);}
 .badge-noshow{background:rgba(239,68,68,0.15);color:var(--red);}
 .badge-completed{background:rgba(26,158,212,0.15);color:var(--wave);}
 .badge-cancelled{background:rgba(255,255,255,0.08);color:var(--muted);}
@@ -4249,6 +4257,17 @@ function handleBookingQuickAction(selectEl, bookingId) {
     updateStatus(bookingId, 'noshow');
   }
 }
+function bookingCalendarStatusValue(booking = {}) {
+  const normalized = normalizeBookingStatusValue(booking.status);
+  return ['confirmed', 'completed'].includes(normalized) ? 'confirmed' : 'unconfirmed';
+}
+function bookingCalendarStatusLabel(booking = {}) {
+  return bookingCalendarStatusValue(booking) === 'confirmed' ? 'Confirmed' : 'Unconfirmed';
+}
+function bookingCalendarStatusBadge(booking = {}) {
+  const status = bookingCalendarStatusValue(booking);
+  return `<span class="badge ${status === 'confirmed' ? 'badge-confirmed' : 'badge-unconfirmed'}">${bookingCalendarStatusLabel(booking)}</span>`;
+}
 
 function bookingsForDate(dateIso) {
   return scheduledBookings()
@@ -4306,9 +4325,9 @@ function renderBookingAgenda() {
       </div>
       <div class="agenda-item-right">
         <div style="color:var(--wave);font-weight:500;">${bookingTotalLabel(booking)}</div>
-        ${statusBadge(booking.status)}
+        ${bookingCalendarStatusBadge(booking)}
         <div style="display:flex;gap:0.35rem;justify-content:flex-end;flex-wrap:wrap;margin-top:0.55rem;">
-          ${bookingQuickActionControl(booking)}
+          <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${booking.id})">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteBooking(${booking.id})">Delete</button>
         </div>
       </div>
@@ -4339,7 +4358,11 @@ function renderBookingCalendar() {
     const isOtherMonth = cellDate.getMonth() !== calendarMonthCursor.getMonth();
     const isToday = cellIso === today();
     const isSelected = cellIso === selectedCalendarDate;
-    const pendingCount = dayBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === 'pending').length;
+    const confirmedCount = dayBookings.filter((booking) => bookingCalendarStatusValue(booking) === 'confirmed').length;
+    const unconfirmedCount = dayBookings.filter((booking) => bookingCalendarStatusValue(booking) === 'unconfirmed').length;
+    const statusSummary = [];
+    if (confirmedCount) statusSummary.push(`${confirmedCount} confirmed`);
+    if (unconfirmedCount) statusSummary.push(`${unconfirmedCount} unconfirmed`);
 
     cells.push(`
       <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${dayBookings.length ? ' has-bookings' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" onclick="selectCalendarDate('${cellIso}')">
@@ -4347,9 +4370,9 @@ function renderBookingCalendar() {
           <span class="calendar-day-num">${cellDate.getDate()}</span>
           ${dayBookings.length ? `<span class="calendar-day-count">${dayBookings.length}</span>` : ''}
         </div>
-        <div class="calendar-day-meta">${dayBookings.length ? `${pendingCount} pending` : '&nbsp;'}</div>
+        <div class="calendar-day-meta">${dayBookings.length ? escapeHtml(statusSummary.join(' · ')) : '&nbsp;'}</div>
         <div class="calendar-day-list">
-          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(normalizeBookingStatusValue(booking.status))}"><span class="calendar-pill-dot"></span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(bookingDisplayName(booking, 'Walk-up')))}</span></div>`).join('')}
+          ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(bookingCalendarStatusValue(booking))}"><span class="calendar-pill-dot"></span><span class="calendar-pill-status ${escapeHtml(bookingCalendarStatusValue(booking))}">${escapeHtml(bookingCalendarStatusLabel(booking))}</span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(bookingDisplayName(booking, 'Walk-up')))}</span></div>`).join('')}
           ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : ''}
         </div>
       </button>
@@ -4383,9 +4406,9 @@ function renderBookings(filter) {
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
-      <td>${statusBadge(b.status)}</td>
+      <td>${bookingCalendarStatusBadge(b)}</td>
       <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-        ${bookingQuickActionControl(b)}
+        <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
         ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="deleteBooking(${b.id})">Delete</button>
       </td>
