@@ -3408,11 +3408,13 @@ async function saveInvoice() {
     ? bookings.find((booking) => Number(booking.id || 0) === Number(invoice.bookingId || 0))
     : null;
   if (linkedBooking) {
+    const checkoutDueToday = bookingUsesCheckoutDepositFlow(linkedBooking) ? bookingDueTodayValue(linkedBooking) : 0;
+    const checkoutDepositSatisfied = checkoutDueToday > 0 && paidAmount >= (checkoutDueToday - 0.009);
     if (finalStatus === 'Paid' || (total > 0 && paidAmount >= (total - 0.009))) {
       linkedBooking.paymentStatus = 'paid';
       linkedBooking.deposit = true;
       if (normalizeBookingStatusValue(linkedBooking.status) === 'pending') linkedBooking.status = 'confirmed';
-    } else if (paidAmount > 0) {
+    } else if (checkoutDepositSatisfied) {
       linkedBooking.paymentStatus = 'paid';
       linkedBooking.deposit = true;
     }
