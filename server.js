@@ -1559,6 +1559,18 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
     const invoiceStatus = normalizeInvoiceStatus(invoice.status);
     const invoiceTotal = Number(invoice.total || 0);
     const collected = Number(invoiceCollectedAmount(invoice) || 0);
+    const processingFee = Number(bookingProcessingFeeAmountValue(booking) || 0);
+    const syncedRentalTotal = Number(Math.max(invoiceTotal - processingFee, 0).toFixed(2));
+    if (Math.abs(Number(booking.total || 0) - syncedRentalTotal) > 0.009) {
+      booking.total = syncedRentalTotal;
+      changed = true;
+    }
+    const existingDroneAmount = Number(booking.droneAmount || (booking.drone ? 50 : 0) || 0);
+    const nextBaseTotal = Number(Math.max(syncedRentalTotal - existingDroneAmount, 0).toFixed(2));
+    if (Math.abs(Number(booking.baseTotal || 0) - nextBaseTotal) > 0.009) {
+      booking.baseTotal = nextBaseTotal;
+      changed = true;
+    }
     const dueToday = bookingAmountDueTodayValue(booking);
     const checkoutDepositSatisfied = bookingUsesCheckoutDepositFlow(booking) && dueToday > 0 && collected >= (dueToday - 0.009);
     const fullyPaid = invoiceStatus === 'paid' || (invoiceTotal > 0 && collected >= (invoiceTotal - 0.009));

@@ -3493,6 +3493,11 @@ async function saveInvoice() {
   const linkedBooking = linkedBookingForInvoiceRecord(invoice);
   if (linkedBooking) {
     invoice.bookingId = Number(linkedBooking.id || 0);
+    const processingFee = Number(bookingProcessingFeeValue(linkedBooking) || 0);
+    const syncedRentalTotal = Number(Math.max(total - processingFee, 0).toFixed(2));
+    const existingDroneAmount = Number(linkedBooking.droneAmount || (linkedBooking.drone ? 50 : 0) || 0);
+    linkedBooking.total = syncedRentalTotal;
+    linkedBooking.baseTotal = Number(Math.max(syncedRentalTotal - existingDroneAmount, 0).toFixed(2));
     const checkoutDueToday = bookingUsesCheckoutDepositFlow(linkedBooking) ? bookingDueTodayValue(linkedBooking) : 0;
     const checkoutDepositSatisfied = checkoutDueToday > 0 && paidAmount >= (checkoutDueToday - 0.009);
     if (fullyPaidInvoice) {
