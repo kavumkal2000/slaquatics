@@ -558,6 +558,18 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <button class="tab" onclick="filterByStatus('completed',this)">Completed</button>
     <button class="tab" onclick="filterByStatus('noshow',this)">No-Shows</button>
   </div>
+  <div class="filter-row">
+    <select id="booking-period-filter" onchange="updateBookingFilters()">
+      <option value="all" selected>All upcoming</option>
+      <option value="today">Today</option>
+      <option value="week">This week</option>
+      <option value="month">This month</option>
+      <option value="custom">Custom range</option>
+    </select>
+    <input type="date" id="booking-date-from" onchange="updateBookingFilters()">
+    <input type="date" id="booking-date-to" onchange="updateBookingFilters()">
+    <div class="filter-summary" id="booking-filter-summary">Showing all upcoming bookings</div>
+  </div>
   <div class="calendar-shell">
     <div class="calendar-card">
       <div class="calendar-head">
@@ -612,6 +624,11 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </div>
   </div>
   <div class="filter-row">
+    <select id="invoice-date-basis" onchange="updateInvoiceFilters()">
+      <option value="booked">Booked day</option>
+      <option value="issue" selected>Issued date</option>
+      <option value="due">Due date</option>
+    </select>
     <select id="invoice-period-filter" onchange="updateInvoiceFilters()">
       <option value="all">All time</option>
       <option value="week">This week</option>
@@ -621,7 +638,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     </select>
     <input type="date" id="invoice-date-from" onchange="updateInvoiceFilters()">
     <input type="date" id="invoice-date-to" onchange="updateInvoiceFilters()">
-    <div class="filter-summary" id="invoice-filter-summary">Showing this month's revenue</div>
+    <div class="filter-summary" id="invoice-filter-summary">Showing this month's issued dates</div>
   </div>
   <input type="file" id="invoice-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleInvoiceImport(event)">
   <div class="import-panel">
@@ -1804,6 +1821,7 @@ let massEmailSearchQuery = '';
 let massEmailAudienceMode = 'all';
 let selectedMassEmailCustomerIds = new Set();
 let invoiceSearchQuery = '';
+let invoiceDateBasis = 'issue';
 let invoicePeriodFilter = 'month';
 let invoiceDateFrom = '';
 let invoiceDateTo = '';
@@ -2056,6 +2074,12 @@ function isSameMonth(date, reference = new Date()) {
 function isSameYear(date, reference = new Date()) {
   return Boolean(date) && date.getFullYear() === reference.getFullYear();
 }
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+function endOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+}
 function startOfWeek(date) {
   const next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   next.setDate(next.getDate() - next.getDay());
@@ -2086,7 +2110,13 @@ function inRange(date, from, to) {
   if (to && date > to) return false;
   return true;
 }
+function invoiceBookedDateValue(invoice = {}) {
+  const linkedBooking = linkedBookingForInvoiceRecord(invoice);
+  return dateValue(linkedBooking?.date || invoice.rawFields?.bookingDate || '');
+}
 function invoiceDateValue(invoice) {
+  if (invoiceDateBasis === 'due') return dateValue(invoice.dueDate || invoice.issueDate);
+  if (invoiceDateBasis === 'booked') return invoiceBookedDateValue(invoice) || dateValue(invoice.issueDate || invoice.dueDate);
   return dateValue(invoice.issueDate || invoice.dueDate);
 }
 function invoiceMatchesPeriod(invoice) {
@@ -2789,24 +2819,34 @@ function filterInvoices(input) {
   invoiceSearchQuery = String(input?.value || '').trim().toLowerCase();
   renderInvoices();
 }
+function formatFilterDateText(value = '') {
+  return value ? formatShortDate(value) : '—';
+}
+function invoiceDateBasisLabel() {
+  if (invoiceDateBasis === 'due') return 'due dates';
+  if (invoiceDateBasis === 'booked') return 'booked days';
+  return 'issued dates';
+}
 function updateInvoiceFilters() {
+  const basisEl = document.getElementById('invoice-date-basis');
   const periodEl = document.getElementById('invoice-period-filter');
   const fromEl = document.getElementById('invoice-date-from');
   const toEl = document.getElementById('invoice-date-to');
   const summaryEl = document.getElementById('invoice-filter-summary');
+  invoiceDateBasis = basisEl?.value || 'issue';
   invoicePeriodFilter = periodEl?.value || 'all';
   invoiceDateFrom = fromEl?.value || '';
   invoiceDateTo = toEl?.value || '';
   if (summaryEl) {
     const label = invoicePeriodFilter === 'week'
-      ? "Showing this week's invoices"
+      ? `Showing this week's ${invoiceDateBasisLabel()}`
       : invoicePeriodFilter === 'month'
-        ? "Showing this month's invoices"
+        ? `Showing this month's ${invoiceDateBasisLabel()}`
         : invoicePeriodFilter === 'year'
-          ? "Showing this year's invoices"
+          ? `Showing this year's ${invoiceDateBasisLabel()}`
           : invoicePeriodFilter === 'custom'
-            ? `Showing ${invoiceDateFrom || 'start'} to ${invoiceDateTo || 'today'}`
-            : 'Showing all invoices';
+            ? `Showing ${formatFilterDateText(invoiceDateFrom)} to ${formatFilterDateText(invoiceDateTo)} by ${invoiceDateBasisLabel()}`
+            : `Showing all invoices by ${invoiceDateBasisLabel()}`;
     summaryEl.textContent = label;
   }
   renderInvoices();
@@ -4138,7 +4178,7 @@ function renderUpcoming() {
     <tr>
       <td><strong>${escapeHtml(bookingDisplayName(b))}</strong></td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
-      <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
+      <td>${escapeHtml(formatShortDate(b.date))} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
@@ -4150,6 +4190,9 @@ function renderUpcoming() {
 
 // ── RENDER ALL BOOKINGS ──
 let currentFilter = 'all';
+let bookingPeriodFilter = 'all';
+let bookingDateFrom = '';
+let bookingDateTo = '';
 let calendarMonthCursor = monthStart(new Date());
 let selectedCalendarDate = today();
 let editingBookingId = null;
@@ -4179,7 +4222,7 @@ function inputDateValue(value) {
 
 function formatShortDate(value) {
   const parsed = dateValue(value);
-  return parsed ? parsed.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}) : '—';
+  return parsed ? parsed.toLocaleDateString('en-US', {month:'numeric', day:'numeric', year:'numeric'}) : '—';
 }
 
 function monthStart(date) {
@@ -4278,6 +4321,43 @@ function upcomingScheduledBookings(reference = new Date()) {
       return Boolean(bookingStart) && bookingStart >= now;
     })
     .sort((left, right) => bookingScheduleSortKey(left).localeCompare(bookingScheduleSortKey(right)));
+}
+function bookingMatchesPeriod(booking = {}) {
+  const targetDate = dateValue(booking.date);
+  const now = new Date();
+  if (!targetDate) return bookingPeriodFilter === 'all';
+  if (bookingPeriodFilter === 'today') return inRange(targetDate, startOfDay(now), endOfDay(now));
+  if (bookingPeriodFilter === 'week') return inRange(targetDate, startOfWeek(now), endOfWeek(now));
+  if (bookingPeriodFilter === 'month') return inRange(targetDate, startOfMonth(now), endOfMonth(now));
+  if (bookingPeriodFilter === 'custom') {
+    const from = bookingDateFrom ? parseIsoDate(bookingDateFrom) : null;
+    const toBase = bookingDateTo ? parseIsoDate(bookingDateTo) : null;
+    const to = toBase ? endOfDay(toBase) : null;
+    return inRange(targetDate, from, to);
+  }
+  return true;
+}
+function updateBookingFilters() {
+  const periodEl = document.getElementById('booking-period-filter');
+  const fromEl = document.getElementById('booking-date-from');
+  const toEl = document.getElementById('booking-date-to');
+  const summaryEl = document.getElementById('booking-filter-summary');
+  bookingPeriodFilter = periodEl?.value || 'all';
+  bookingDateFrom = fromEl?.value || '';
+  bookingDateTo = toEl?.value || '';
+  if (summaryEl) {
+    const label = bookingPeriodFilter === 'today'
+      ? "Showing today's bookings"
+      : bookingPeriodFilter === 'week'
+        ? "Showing this week's bookings"
+        : bookingPeriodFilter === 'month'
+          ? "Showing this month's bookings"
+          : bookingPeriodFilter === 'custom'
+            ? `Showing ${formatFilterDateText(bookingDateFrom)} to ${formatFilterDateText(bookingDateTo)}`
+            : 'Showing all upcoming bookings';
+    summaryEl.textContent = label;
+  }
+  renderBookings();
 }
 
 function pendingOpsBookings() {
@@ -4490,7 +4570,7 @@ function bookingsForDate(dateIso) {
 function formatAgendaDate(dateIso) {
   const date = parseIsoDate(dateIso);
   if (!date) return 'Choose a day';
-  return date.toLocaleDateString(undefined, {weekday:'long', month:'long', day:'numeric'});
+  return date.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'});
 }
 
 function shiftCalendarMonth(delta) {
@@ -4596,7 +4676,7 @@ function renderBookingCalendar() {
 
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
-  const visibleBookings = upcomingScheduledBookings();
+  const visibleBookings = upcomingScheduledBookings().filter((booking) => bookingMatchesPeriod(booking));
   const list = currentFilter==='all'
     ? visibleBookings
     : visibleBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
@@ -4608,12 +4688,12 @@ function renderBookings(filter) {
       <td>
         <strong>${escapeHtml(bookingDisplayName(b))}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.25rem;">
-          ${b.waiverSignedAt ? `Waiver on file · ${escapeHtml(b.waiverSignedAt)}` : 'Waiver still needed'}
+          ${b.waiverSignedAt ? `Waiver on file · ${escapeHtml(formatShortDate(b.waiverSignedAt))}` : 'Waiver still needed'}
         </div>
       </td>
       <td>${b.phone ? `<a href="tel:${phoneHref(b.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(b.phone)}</a>` : '<span style="color:var(--muted);">—</span>'}</td>
       <td>${escapeHtml(bookingCraftLabel(b))}</td>
-      <td>${escapeHtml(b.date)} ${escapeHtml(formatTimeLabel(b.time))}</td>
+      <td>${escapeHtml(formatShortDate(b.date))} ${escapeHtml(formatTimeLabel(b.time))}</td>
       <td>${escapeHtml(bookingDurationLabel(b))}</td>
       <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
       <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
@@ -5137,7 +5217,7 @@ function renderDashboardMetrics() {
   renderFleetLegend();
 }
 function renderInvoices() {
-  const filteredInvoices = sortNewestFirst(filteredInvoicesList(), (invoice) => invoice.issueDate || invoice.dueDate);
+  const filteredInvoices = sortNewestFirst(filteredInvoicesList(), (invoice) => invoiceDateValue(invoice));
   const paidInvoices = filteredInvoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0);
   const openInvoices = filteredInvoices.filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
   const unknownInvoices = filteredInvoices.filter((invoice) => !invoiceHasKnownCustomer(invoice));
@@ -5174,8 +5254,8 @@ function renderInvoices() {
         <strong>${escapeHtml(contact.name || 'Unknown')}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${contact.phone ? `<a href="tel:${phoneHref(contact.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(contact.phone)}</a>` : escapeHtml(contact.email || 'No contact')}</div>
       </td>
-      <td>${escapeHtml(invoice.issueDate || '—')}</td>
-      <td>${escapeHtml(invoice.dueDate || '—')}</td>
+      <td>${escapeHtml(formatShortDate(invoice.issueDate))}</td>
+      <td>${escapeHtml(formatShortDate(invoice.dueDate))}</td>
       <td>
         <div>${escapeHtml(invoiceLineSummary(invoice))}</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(Array.isArray(invoice.lineItems) ? `${invoice.lineItems.length} item${invoice.lineItems.length === 1 ? '' : 's'}` : '0 items')}</div>
