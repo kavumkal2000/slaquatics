@@ -1086,6 +1086,16 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="yes">Yes — $50</option>
           </select>
         </div>
+        <div class="form-group"><label>Status</label>
+          <select id="b-status">
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="noshow">No-show</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Amount</label><input type="number" id="b-amount" min="0" step="0.01" placeholder="0.00" oninput="handleBookingAmountInput()"></div>
         <hr class="form-divider">
         <div class="price-preview">
           <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.4rem;">Booking total</div>
@@ -4036,20 +4046,63 @@ function showToast(msg) {
 }
 
 // ── BOOKING PRICE CALC ──
-function calcBookingPrice() {
-  const craft = normalizeCraftKey(document.getElementById('b-craft').value);
-  const dur = parseInt(document.getElementById('b-duration').value);
-  const drone = document.getElementById('b-drone').value === 'yes';
-  if(!craft || !dur) { document.getElementById('booking-total').textContent='$0'; document.getElementById('booking-breakdown').textContent='Select craft and duration'; return; }
-  const base = PRICING[craft]?.[dur] || 0;
-  if (!base) {
-    document.getElementById('booking-total').textContent='$0';
-    document.getElementById('booking-breakdown').textContent='That duration is not available for this package';
+function suggestedBookingAmount() {
+  const craft = normalizeCraftKey(document.getElementById('b-craft')?.value || '');
+  const dur = parseInt(document.getElementById('b-duration')?.value || '0', 10);
+  const drone = document.getElementById('b-drone')?.value === 'yes';
+  if (!craft || !dur) return 0;
+  const base = Number(PRICING[craft]?.[dur] || 0);
+  if (!base) return 0;
+  return Number((base + (drone ? 50 : 0)).toFixed(2));
+}
+function updateBookingAmountPreview() {
+  const totalEl = document.getElementById('booking-total');
+  const breakdownEl = document.getElementById('booking-breakdown');
+  const amountEl = document.getElementById('b-amount');
+  const craft = normalizeCraftKey(document.getElementById('b-craft')?.value || '');
+  const dur = parseInt(document.getElementById('b-duration')?.value || '0', 10);
+  const drone = document.getElementById('b-drone')?.value === 'yes';
+  const suggested = suggestedBookingAmount();
+  const enteredText = String(amountEl?.value || '').trim();
+  const enteredValue = Number(enteredText || 0);
+  const hasEnteredAmount = enteredText !== '' && Number.isFinite(enteredValue) && enteredValue >= 0;
+  const displayAmount = hasEnteredAmount ? enteredValue : suggested;
+  totalEl.textContent = moneyLabel(displayAmount);
+  if (!craft || !dur) {
+    breakdownEl.textContent = 'Select craft and duration';
     return;
   }
-  const total = base + (drone ? 50 : 0);
-  document.getElementById('booking-total').textContent = '$'+total.toLocaleString();
-  document.getElementById('booking-breakdown').textContent = CRAFT_NAMES[craft]+' · '+dur+(dur===8?' hrs (full day)':'hrs')+(drone?' + Drone ($50)':'');
+  if (!suggested) {
+    breakdownEl.textContent = 'That duration is not available for this package';
+    return;
+  }
+  const summary = `${CRAFT_NAMES[craft]} · ${dur === 8 ? '8 hrs (full day)' : `${dur}hrs`}${drone ? ' + Drone ($50)' : ''}`;
+  if (bookingAmountManuallyEdited && hasEnteredAmount) {
+    breakdownEl.textContent = `${summary} · custom total ${moneyLabel(enteredValue)}`;
+    return;
+  }
+  breakdownEl.textContent = summary;
+}
+function handleBookingAmountInput() {
+  const amountEl = document.getElementById('b-amount');
+  const enteredText = String(amountEl?.value || '').trim();
+  const enteredValue = Number(enteredText || 0);
+  const suggested = suggestedBookingAmount();
+  bookingAmountManuallyEdited = enteredText !== '' && Number.isFinite(enteredValue) && Math.abs(enteredValue - suggested) > 0.009;
+  updateBookingAmountPreview();
+}
+function calcBookingPrice() {
+  const amountEl = document.getElementById('b-amount');
+  const suggested = suggestedBookingAmount();
+  if (!suggested) {
+    if (amountEl && !bookingAmountManuallyEdited) amountEl.value = '';
+    updateBookingAmountPreview();
+    return;
+  }
+  if (amountEl && !bookingAmountManuallyEdited) {
+    amountEl.value = suggested.toFixed(2);
+  }
+  updateBookingAmountPreview();
 }
 
 // ── SAVE BOOKING ──
@@ -4059,10 +4112,18 @@ async function saveBooking() {
   const email = document.getElementById('b-email').value.trim();
   const craft = normalizeCraftKey(document.getElementById('b-craft').value);
   const dur = parseInt(document.getElementById('b-duration').value);
+  const status = normalizeBookingStatusValue(document.getElementById('b-status').value) || 'pending';
   if(!craft||!dur) { showToast('⚠️ Fill in craft and duration'); return; }
   const baseValue = PRICING[craft]?.[dur] || 0;
   if (!baseValue) { showToast('⚠️ That duration is not available for this package'); return; }
-  const bookingValue = baseValue + (document.getElementById('b-drone').value==='yes' ? 50 : 0);
+  const suggestedValue = suggestedBookingAmount();
+  const enteredAmountText = String(document.getElementById('b-amount').value || '').trim();
+  const parsedAmount = enteredAmountText === '' ? suggestedValue : Number(enteredAmountText);
+  const bookingValue = Number(parsedAmount.toFixed(2));
+  if (!Number.isFinite(bookingValue) || bookingValue <= 0) {
+    showToast('⚠️ Enter a valid booking amount');
+    return;
+  }
   const previousBookings = JSON.parse(JSON.stringify(bookings));
   const previousCustomers = JSON.parse(JSON.stringify(customers));
   const existingBooking = editingBookingId
@@ -4074,6 +4135,7 @@ async function saveBooking() {
   }
 
   const previousSnapshot = existingBooking ? {...existingBooking} : null;
+  const amountChangedFromPrevious = previousSnapshot ? Math.abs(Number(previousSnapshot.total || 0) - bookingValue) > 0.009 : false;
   const nowIso = new Date().toISOString();
   const bookingRecord = existingBooking || {
     id: nextId(bookings),
@@ -4094,6 +4156,7 @@ async function saveBooking() {
   bookingRecord.durationLabel = dur === 8 ? 'Full Day' : `${dur}hrs`;
   bookingRecord.date = document.getElementById('b-date').value || 'TBD';
   bookingRecord.time = document.getElementById('b-time').value || '10:00';
+  bookingRecord.status = status;
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
   bookingRecord.baseTotal = baseValue;
   bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
@@ -4136,6 +4199,13 @@ async function saveBooking() {
   }
 
   bookingRecord.customerId = customer ? customer.id : '';
+  const linkedInvoice = linkedInvoiceForBookingRecord(bookingRecord);
+  if (linkedInvoice && amountChangedFromPrevious) {
+    linkedInvoice.rawFields = mergeCrmFields(linkedInvoice.rawFields, {
+      manualBookingInvoiceOverride: '',
+      manualTotalOverride: ''
+    });
+  }
   ensureLinkedInvoiceForBookingLocally(bookingRecord);
   const previousCustomer = previousSnapshot ? findCustomerForBooking(previousSnapshot) : null;
   [previousCustomer, customer].forEach((item) => {
@@ -4196,6 +4266,7 @@ let bookingDateTo = '';
 let calendarMonthCursor = monthStart(new Date());
 let selectedCalendarDate = today();
 let editingBookingId = null;
+let bookingAmountManuallyEdited = false;
 
 function localDateParts(iso) {
   if (!iso || iso === 'TBD') return null;
@@ -4463,6 +4534,7 @@ function refreshCustomerRollups() {
 
 function resetBookingForm(defaultDate = '') {
   editingBookingId = null;
+  bookingAmountManuallyEdited = false;
   document.getElementById('b-name').value = '';
   document.getElementById('b-phone').value = '';
   document.getElementById('b-email').value = '';
@@ -4471,6 +4543,8 @@ function resetBookingForm(defaultDate = '') {
   document.getElementById('b-craft').value = '';
   document.getElementById('b-duration').value = '';
   document.getElementById('b-drone').value = 'no';
+  document.getElementById('b-status').value = 'pending';
+  document.getElementById('b-amount').value = '';
   document.getElementById('b-notes').value = '';
   document.getElementById('booking-modal-title').textContent = 'New Booking';
   document.getElementById('booking-save-button').textContent = 'Confirm Booking';
@@ -4494,9 +4568,12 @@ function openBookingModal(bookingId = null, defaultDate = '') {
     document.getElementById('b-craft').value = bookingEditorCraftValue(booking);
     document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
     document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';
+    document.getElementById('b-status').value = normalizeBookingStatusValue(booking.status) || 'pending';
+    document.getElementById('b-amount').value = Number(booking.total || 0) > 0 ? Number(booking.total).toFixed(2) : '';
     document.getElementById('b-notes').value = booking.notes || '';
     document.getElementById('booking-modal-title').textContent = 'Edit Booking';
     document.getElementById('booking-save-button').textContent = 'Save Changes';
+    bookingAmountManuallyEdited = Math.abs(Number(booking.total || 0) - suggestedBookingAmount()) > 0.009;
     calcBookingPrice();
   }
   openModal('booking-modal');
