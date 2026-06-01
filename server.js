@@ -1562,21 +1562,28 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
     const dueToday = bookingAmountDueTodayValue(booking);
     const checkoutDepositSatisfied = bookingUsesCheckoutDepositFlow(booking) && dueToday > 0 && collected >= (dueToday - 0.009);
     const fullyPaid = invoiceStatus === 'paid' || (invoiceTotal > 0 && collected >= (invoiceTotal - 0.009));
-    if (!checkoutDepositSatisfied && !fullyPaid) return;
-
-    if (String(booking.paymentStatus || '').trim().toLowerCase() !== 'paid') {
-      booking.paymentStatus = 'paid';
+    const partialPayment = collected > 0 && !fullyPaid && !checkoutDepositSatisfied;
+    const nextPaymentStatus = (fullyPaid || checkoutDepositSatisfied)
+      ? 'paid'
+      : (partialPayment ? 'partial' : 'unpaid');
+    const currentPaymentStatus = String(booking.paymentStatus || '').trim().toLowerCase();
+    if (currentPaymentStatus !== nextPaymentStatus) {
+      booking.paymentStatus = nextPaymentStatus;
       changed = true;
     }
-    if (!booking.deposit) {
-      booking.deposit = true;
+    const shouldMarkDepositPaid = fullyPaid || checkoutDepositSatisfied;
+    if (Boolean(booking.deposit) !== shouldMarkDepositPaid) {
+      booking.deposit = shouldMarkDepositPaid;
       changed = true;
     }
-    if (!String(booking.paymentCompletedAt || '').trim()) {
-      booking.paymentCompletedAt = now;
+    const nextCompletedAt = shouldMarkDepositPaid
+      ? String(booking.paymentCompletedAt || now)
+      : '';
+    if (String(booking.paymentCompletedAt || '') !== nextCompletedAt) {
+      booking.paymentCompletedAt = nextCompletedAt;
       changed = true;
     }
-    if (['pending', 'draft'].includes(bookingStatus)) {
+    if (shouldMarkDepositPaid && ['pending', 'draft'].includes(bookingStatus)) {
       booking.status = 'confirmed';
       changed = true;
     }

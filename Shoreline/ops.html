@@ -3381,6 +3381,8 @@ async function saveInvoice() {
   } else if (finalStatus === 'Partially Paid') {
     finalStatus = 'Open';
   }
+  const fullyPaidInvoice = finalStatus === 'Paid' || (total > 0 && paidAmount >= (total - 0.009));
+  const partialInvoicePayment = paidAmount > 0 && !fullyPaidInvoice;
 
   const invoice = existingInvoice || {
     id: nextId(invoices),
@@ -3493,13 +3495,19 @@ async function saveInvoice() {
     invoice.bookingId = Number(linkedBooking.id || 0);
     const checkoutDueToday = bookingUsesCheckoutDepositFlow(linkedBooking) ? bookingDueTodayValue(linkedBooking) : 0;
     const checkoutDepositSatisfied = checkoutDueToday > 0 && paidAmount >= (checkoutDueToday - 0.009);
-    if (finalStatus === 'Paid' || (total > 0 && paidAmount >= (total - 0.009))) {
+    if (fullyPaidInvoice) {
       linkedBooking.paymentStatus = 'paid';
       linkedBooking.deposit = true;
+      linkedBooking.paymentCompletedAt = linkedBooking.paymentCompletedAt || new Date().toISOString();
       if (normalizeBookingStatusValue(linkedBooking.status) === 'pending') linkedBooking.status = 'confirmed';
     } else if (checkoutDepositSatisfied) {
       linkedBooking.paymentStatus = 'paid';
       linkedBooking.deposit = true;
+      linkedBooking.paymentCompletedAt = linkedBooking.paymentCompletedAt || new Date().toISOString();
+    } else {
+      linkedBooking.paymentStatus = partialInvoicePayment ? 'partial' : 'unpaid';
+      linkedBooking.deposit = false;
+      linkedBooking.paymentCompletedAt = '';
     }
     linkedBooking.updatedAt = new Date().toISOString();
     ensureLinkedInvoiceForBookingLocally(linkedBooking);
