@@ -2479,6 +2479,15 @@ function invoiceCollectedAmount(invoice = {}) {
     const total = Number(invoice.total || 0);
     return total > 0 ? Math.min(explicitPaid, total) : explicitPaid;
   }
+  const rawCollected = Math.max(
+    Number(invoice.rawFields?.collectedAmount || 0),
+    Number(invoice.rawFields?.paidAmount || 0),
+    0
+  );
+  if (rawCollected > 0) {
+    const total = Number(invoice.total || 0);
+    return total > 0 ? Math.min(rawCollected, total) : rawCollected;
+  }
   return normalizeInvoiceStatus(invoice.status) === 'paid' ? Number(invoice.total || 0) : 0;
 }
 function invoiceOutstandingAmount(invoice = {}) {
@@ -2642,8 +2651,17 @@ function importInvoicesFromCsv(rows, fileName) {
       discountAmount: parseMoney(rowValue(row, ['invoice discount amount', 'discount amount'])),
       taxAmount: parseMoney(rowValue(row, ['invoice tax amount', 'tax amount'])),
       total,
+      paidAmount: (() => {
+        const explicit = parseMoney(rowValue(row, ['paid amount', 'amount paid', 'collected amount', 'payment amount']));
+        if (explicit > 0) return explicit;
+        const balanceDue = parseMoney(rowValue(row, ['balance due', 'amount due', 'remaining balance']));
+        return total > 0 && balanceDue >= 0 && total >= balanceDue
+          ? Number(Math.max(total - balanceDue, 0).toFixed(2))
+          : 0;
+      })(),
       status: rowValue(row, ['status']) || 'Unknown',
       liveMode: rowValue(row, ['live mode']) || 'Unknown',
+      paymentMethod: rowValue(row, ['payment method', 'collection method', 'method']),
       lineItems: [lineItem],
       rawFields: collectCrmFields(row),
       importSource: 'admintribe'
@@ -2673,6 +2691,7 @@ function importInvoicesFromCsv(rows, fileName) {
         rawFields: {},
         ...incoming
       };
+      targetInvoice.balanceDue = Number(Math.max(Number(targetInvoice.total || 0) - invoiceCollectedAmount(targetInvoice), 0).toFixed(2));
       invoices.push(targetInvoice);
       added += 1;
     }
@@ -3128,6 +3147,7 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
     bookingId: String(booking.id || ''),
     bookingPublicToken: String(booking.publicToken || ''),
     paymentSessionId: String(booking.paymentSessionId || ''),
+    paymentIntentId: String(booking.paymentIntentId || ''),
     paymentStatus: String(booking.paymentStatus || ''),
     bookingStatus: String(booking.status || ''),
     rentalPackage: String(booking.craftKey || ''),
@@ -5033,12 +5053,13 @@ async function deleteBooking(bookingId) {
   const shouldCloseEditor = editingBookingId && Number(editingBookingId) === Number(bookingId);
   bookings = bookings.filter((item) => Number(item.id) !== Number(bookingId));
   invoices.forEach((invoice) => {
-    if (Number(invoice.bookingId || 0) !== Number(bookingId)) return;
+    if (!invoiceMatchesBookingRecord(invoice, booking)) return;
     invoice.bookingId = 0;
     invoice.rawFields = mergeCrmFields(invoice.rawFields, {
       bookingId: '',
       bookingPublicToken: '',
       paymentSessionId: '',
+      paymentIntentId: '',
       bookingStatus: 'deleted'
     });
   });

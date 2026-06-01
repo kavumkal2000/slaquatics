@@ -1253,6 +1253,15 @@ function invoiceCollectedAmount(invoice = {}) {
     const total = Number(invoice.total || 0);
     return total > 0 ? Math.min(explicitPaid, total) : explicitPaid;
   }
+  const rawCollected = Math.max(
+    Number(invoice.rawFields?.collectedAmount || 0),
+    Number(invoice.rawFields?.paidAmount || 0),
+    0
+  );
+  if (rawCollected > 0) {
+    const total = Number(invoice.total || 0);
+    return total > 0 ? Math.min(rawCollected, total) : rawCollected;
+  }
   return normalizeInvoiceStatus(invoice.status) === 'paid' ? Number(invoice.total || 0) : 0;
 }
 
@@ -1652,7 +1661,7 @@ function updateCustomerRollup(state, customer) {
 
   relatedInvoices.forEach((invoice) => {
     const collected = invoiceCollectedAmount(invoice);
-    const linkedBookingId = Number(invoice.bookingId || 0);
+    const linkedBookingId = Number(invoice.bookingId || invoice.rawFields?.bookingId || 0);
     if (linkedBookingId > 0) {
       relatedInvoiceBookingIds.add(linkedBookingId);
       linkedInvoiceCollectedTotals.set(
