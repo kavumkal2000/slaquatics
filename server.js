@@ -1240,6 +1240,7 @@ function invoiceMatchesCustomer(customer = {}, invoice = {}) {
 function normalizeInvoiceStatus(status = '') {
   const normalized = String(status || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
   if (normalized === 'paid in full') return 'paid';
+  if (normalized === 'fully paid' || normalized === 'full paid') return 'paid';
   if (normalized === 'partial' || normalized === 'partial paid' || normalized === 'partiallypaid') return 'partially paid';
   if (normalized === 'over due') return 'overdue';
   if (normalized === 'canceled') return 'cancelled';
@@ -1287,6 +1288,7 @@ function findInvoiceForBooking(state, booking = {}) {
   const paymentIntentId = String(booking.paymentIntentId || '').trim();
   return (state.invoices || []).find((invoice) => (
     (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
+    (bookingId > 0 && String(invoice.rawFields?.bookingId || '').trim() === String(bookingId)) ||
     (bookingToken && String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken) ||
     (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId) ||
     (paymentIntentId && String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId)

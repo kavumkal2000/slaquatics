@@ -3006,12 +3006,14 @@ function invoiceMatchesBookingRecord(invoice = {}, booking = {}) {
   const bookingId = Number(booking.id || 0);
   const bookingToken = String(booking.publicToken || '').trim();
   const paymentSessionId = String(booking.paymentSessionId || '').trim();
-  if (!bookingId && !bookingToken && !paymentSessionId) return false;
+  const paymentIntentId = String(booking.paymentIntentId || '').trim();
+  if (!bookingId && !bookingToken && !paymentSessionId && !paymentIntentId) return false;
   return Boolean(
     (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
     (bookingId > 0 && String(invoice.rawFields?.bookingId || '').trim() === String(bookingId)) ||
     (bookingToken && String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken) ||
-    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId)
+    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId) ||
+    (paymentIntentId && String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId)
   );
 }
 function linkedInvoiceForBookingRecord(booking = {}) {
