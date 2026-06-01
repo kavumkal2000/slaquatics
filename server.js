@@ -1119,12 +1119,16 @@ function findMatchingCustomer(state, payload = {}) {
 function findMatchingBooking(state, payload = {}) {
   const phoneKey = phoneDigits(payload.phone);
   const emailKey = normalizeEmail(payload.email);
+  const craftKey = normalizeCraftKey(payload.craftKey || payload.craft || '');
   const craftLabel = String(payload.craftLabel || '').trim();
   return state.bookings.find((booking) => (
     booking.date === payload.date &&
     booking.time === payload.time &&
     Number(booking.duration || 0) === Number(payload.duration || 0) &&
-    String(booking.craftLabel || '').trim() === craftLabel &&
+    (
+      (craftKey && normalizeCraftKey(booking.craftKey || booking.craft) === craftKey) ||
+      (craftLabel && String(booking.craftLabel || '').trim() === craftLabel)
+    ) &&
     (
       (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
       (emailKey && normalizeEmail(booking.email) === emailKey)
@@ -1280,21 +1284,31 @@ function findInvoiceForBooking(state, booking = {}) {
   const bookingId = Number(booking.id || 0);
   const bookingToken = String(booking.publicToken || '').trim();
   const paymentSessionId = String(booking.paymentSessionId || '').trim();
+  const paymentIntentId = String(booking.paymentIntentId || '').trim();
   return (state.invoices || []).find((invoice) => (
     (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
     (bookingToken && String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken) ||
-    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId)
+    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId) ||
+    (paymentIntentId && String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId)
   )) || null;
 }
 
 function bookingInvoiceTotal(booking = {}) {
-  return Number((Number(booking.total || 0) + Number(booking.processingFeeAmount || 0)).toFixed(2));
+  return Number((Number(booking.total || 0) + bookingProcessingFeeAmountValue(booking)).toFixed(2));
 }
 
 function bookingUsesCheckoutDepositFlow(booking = {}) {
   const source = String(booking.source || '').trim().toLowerCase();
   const amountDueToday = Number(booking.amountDueToday || 0);
-  const total = bookingInvoiceTotal(booking);
+  const rentalTotal = Number(booking.total || 0);
+  const explicitProcessingFee = Number(booking.processingFeeAmount);
+  const total = Number((
+    rentalTotal + (
+      Number.isFinite(explicitProcessingFee) && explicitProcessingFee >= 0
+        ? explicitProcessingFee
+        : 0
+    )
+  ).toFixed(2));
   return Boolean(
     String(booking.publicToken || '').trim() ||
     String(booking.paymentSessionId || '').trim() ||
@@ -1305,12 +1319,37 @@ function bookingUsesCheckoutDepositFlow(booking = {}) {
   );
 }
 
+function bookingDepositAmountValue(booking = {}, { useCheckoutFallback = true } = {}) {
+  const explicit = Number(booking.depositAmount);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return useCheckoutFallback && bookingUsesCheckoutDepositFlow(booking)
+    ? (BOOKING_DEPOSIT_CENTS / 100)
+    : 0;
+}
+
+function bookingProcessingFeeAmountValue(booking = {}, { useCheckoutFallback = true } = {}) {
+  const explicit = Number(booking.processingFeeAmount);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return useCheckoutFallback && bookingUsesCheckoutDepositFlow(booking)
+    ? (PROCESSING_FEE_CENTS / 100)
+    : 0;
+}
+
+function bookingAmountDueTodayValue(booking = {}, { useCheckoutFallback = true } = {}) {
+  const explicit = Number(booking.amountDueToday);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return Number((
+    bookingDepositAmountValue(booking, { useCheckoutFallback }) +
+    bookingProcessingFeeAmountValue(booking, { useCheckoutFallback })
+  ).toFixed(2));
+}
+
 function bookingCollectedAmountForInvoice(booking = {}) {
   const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
   const total = bookingInvoiceTotal(booking);
   if (paymentStatus !== 'paid') return 0;
   if (bookingUsesCheckoutDepositFlow(booking)) {
-    const dueToday = Number(booking.amountDueToday || 0);
+    const dueToday = bookingAmountDueTodayValue(booking, { useCheckoutFallback: false });
     if (dueToday > 0) {
       return Number(Math.min(dueToday, total).toFixed(2));
     }
@@ -1343,12 +1382,17 @@ function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0) {
   const total = Number(targetTotal || 0);
   if (paymentStatus !== 'paid') return 0;
   if (bookingUsesCheckoutDepositFlow(booking)) {
-    const dueToday = Number(booking.amountDueToday || 0);
+    const dueToday = bookingAmountDueTodayValue(booking, { useCheckoutFallback: false });
     if (dueToday > 0) {
       return Number(Math.min(dueToday, total).toFixed(2));
     }
   }
   return total > 0 ? total : 0;
+}
+
+function bookingCheckoutSessionIsActive(booking = {}) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  return paymentStatus === 'pending' || (Boolean(String(booking.paymentSessionId || '').trim()) && !['expired', 'failed', 'canceled', 'cancelled', 'void', 'paid'].includes(paymentStatus));
 }
 
 function invoiceStatusForBooking(booking = {}) {
@@ -1359,7 +1403,7 @@ function invoiceStatusForBooking(booking = {}) {
   if (collected >= total && total > 0) return 'paid';
   if (collected > 0) return 'partially paid';
   if (bookingStatus === 'draft') return 'draft';
-  if (booking.paymentStatus === 'pending' || booking.paymentSessionId) return 'sent';
+  if (bookingCheckoutSessionIsActive(booking)) return 'sent';
   return 'open';
 }
 
@@ -1378,7 +1422,7 @@ function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
   if (collected >= total && total > 0) return 'paid';
   if (collected > 0) return 'partially paid';
   if (bookingStatus === 'draft') return 'draft';
-  if (booking.paymentStatus === 'pending' || booking.paymentSessionId) return 'sent';
+  if (bookingCheckoutSessionIsActive(booking)) return 'sent';
   return 'open';
 }
 
@@ -1459,11 +1503,12 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
     rentalPackageLabel: String(booking.craftLabel || ''),
     rentalDurationHours: String(booking.duration || ''),
     rentalDurationLabel: invoiceDurationText(booking.duration),
-    depositAmount: String(Number(booking.depositAmount || 0).toFixed(2)),
-    processingFeeAmount: String(processingFee.toFixed(2)),
-    amountDueToday: String(Number(booking.amountDueToday || 0).toFixed(2)),
+    depositAmount: String(bookingDepositAmountValue(booking).toFixed(2)),
+    processingFeeAmount: String(bookingProcessingFeeAmountValue(booking).toFixed(2)),
+    amountDueToday: String(bookingAmountDueTodayValue(booking).toFixed(2)),
     bookingDate: String(booking.date || ''),
     bookingTime: String(booking.time || ''),
+    paymentIntentId: String(booking.paymentIntentId || ''),
     manualBookingInvoiceOverride: hasManualOverride ? 'true' : '',
     manualTotalOverride: hasManualOverride ? String(total.toFixed(2)) : ''
   };
@@ -1501,7 +1546,7 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
     const invoiceStatus = normalizeInvoiceStatus(invoice.status);
     const invoiceTotal = Number(invoice.total || 0);
     const collected = Number(invoiceCollectedAmount(invoice) || 0);
-    const dueToday = Number(booking.amountDueToday || 0);
+    const dueToday = bookingAmountDueTodayValue(booking);
     const checkoutDepositSatisfied = bookingUsesCheckoutDepositFlow(booking) && dueToday > 0 && collected >= (dueToday - 0.009);
     const fullyPaid = invoiceStatus === 'paid' || (invoiceTotal > 0 && collected >= (invoiceTotal - 0.009));
     if (!checkoutDepositSatisfied && !fullyPaid) return;
@@ -1561,6 +1606,21 @@ function normalizeBookingStatus(status = '') {
   return String(status || '').trim().toLowerCase();
 }
 
+function bookingStartDateTimeValue(booking = {}) {
+  const bookingDate = parseIsoDate(booking.date);
+  const parsedTime = parseBookingTimeParts(booking.time);
+  if (!bookingDate || !parsedTime) return null;
+  return new Date(
+    bookingDate.getFullYear(),
+    bookingDate.getMonth(),
+    bookingDate.getDate(),
+    parsedTime.hour,
+    parsedTime.minute,
+    0,
+    0
+  );
+}
+
 function bookingPaymentTone(booking = {}) {
   const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
   if (booking.deposit || paymentStatus === 'paid') return 'success';
@@ -1581,16 +1641,43 @@ function updateCustomerRollup(state, customer) {
       (emailKey && normalizeEmail(booking.email) === emailKey)
     );
   });
-  const paidInvoiceTotal = (state.invoices || [])
-    .filter((invoice) => invoiceMatchesCustomer(customer, invoice))
-    .reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
-  const bookingSpend = relatedBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
+  const relatedInvoices = (state.invoices || []).filter((invoice) => invoiceMatchesCustomer(customer, invoice));
+  const relatedInvoiceBookingIds = new Set();
+  const linkedInvoiceCollectedTotals = new Map();
+  let standaloneInvoiceCollected = 0;
+
+  relatedInvoices.forEach((invoice) => {
+    const collected = invoiceCollectedAmount(invoice);
+    const linkedBookingId = Number(invoice.bookingId || 0);
+    if (linkedBookingId > 0) {
+      relatedInvoiceBookingIds.add(linkedBookingId);
+      linkedInvoiceCollectedTotals.set(
+        linkedBookingId,
+        Number(((linkedInvoiceCollectedTotals.get(linkedBookingId) || 0) + collected).toFixed(2))
+      );
+      return;
+    }
+    standaloneInvoiceCollected += collected;
+  });
+
+  const bookingSpend = relatedBookings.reduce((sum, booking) => {
+    const bookingTotal = Number(booking.total || 0);
+    const linkedCollected = Number(linkedInvoiceCollectedTotals.get(Number(booking.id || 0)) || 0);
+    return sum + Math.max(bookingTotal, linkedCollected);
+  }, 0);
+
+  const orphanLinkedInvoiceCollected = Array.from(linkedInvoiceCollectedTotals.entries()).reduce((sum, [bookingId, collected]) => {
+    const hasBooking = relatedBookings.some((booking) => Number(booking.id || 0) === Number(bookingId));
+    return hasBooking ? sum : sum + collected;
+  }, 0);
+
   customer.bookings = relatedBookings.length;
-  customer.totalSpent = Math.max(bookingSpend, paidInvoiceTotal);
+  customer.totalSpent = Number((bookingSpend + standaloneInvoiceCollected + orphanLinkedInvoiceCollected).toFixed(2));
   customer.lastBooking = relatedBookings.length
     ? relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), '')
     : 'N/A';
   if (customer.bookings > 1 && customer.tag !== 'vip') customer.tag = 'repeat';
+  if (customer.bookings <= 1 && customer.tag === 'repeat') customer.tag = '';
 }
 
 function publicCustomerPayload(customer) {
@@ -1677,12 +1764,12 @@ function stripeWebhookConfigured() {
 }
 
 function bookingPaymentSummary(booking = {}) {
-  const depositAmount = Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100);
-  const processingFeeAmount = Number(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100);
+  const depositAmount = bookingDepositAmountValue(booking);
+  const processingFeeAmount = bookingProcessingFeeAmountValue(booking);
   return {
     depositAmount,
     processingFeeAmount,
-    amountDueToday: Number(booking.amountDueToday || (depositAmount + processingFeeAmount)),
+    amountDueToday: bookingAmountDueTodayValue(booking),
     paymentStatus: String(booking.paymentStatus || (booking.deposit ? 'paid' : 'unpaid')),
     paymentSessionId: String(booking.paymentSessionId || ''),
     paymentCompletedAt: String(booking.paymentCompletedAt || ''),
@@ -1695,7 +1782,7 @@ function bookingEmailLocation(booking = {}) {
 }
 
 function bookingRemainingBalance(booking = {}) {
-  return Math.max(Number(booking.total || 0) - Number(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100), 0);
+  return Math.max(Number(booking.total || 0) - bookingDepositAmountValue(booking), 0);
 }
 
 function shorelineMapsUrl(address = SHORELINE_ADDRESS) {
@@ -1884,6 +1971,9 @@ function bookingConfirmationText(booking = {}) {
   const arrivalLines = ARRIVAL_INSTRUCTIONS.map((line, index) => `${index + 1}. ${line}`).join('\n');
   const safetyLines = SAFETY_BRIEFING_POINTS.map((line, index) => `${index + 1}. ${line}`).join('\n');
   const remainingBalance = bookingRemainingBalance(booking);
+  const depositAmount = bookingDepositAmountValue(booking);
+  const processingFeeAmount = bookingProcessingFeeAmountValue(booking);
+  const amountDueToday = bookingAmountDueTodayValue(booking);
   return [
     `Hi ${firstName(booking.name)},`,
     '',
@@ -1898,9 +1988,9 @@ function bookingConfirmationText(booking = {}) {
     `Party size: ${booking.partySize || 'Not provided'}`,
     `Aerial drone coverage: ${booking.drone ? 'Included' : 'Not included'}`,
     `Quoted total: ${formatCurrency(booking.total || 0)}`,
-    `Deposit received: ${formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100)}`,
-    `Processing fee: ${formatCurrency(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)}`,
-    `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)))}`,
+    `Deposit received: ${formatCurrency(depositAmount)}`,
+    `Processing fee: ${formatCurrency(processingFeeAmount)}`,
+    `Paid today: ${formatCurrency(amountDueToday)}`,
     `Remaining balance: ${formatCurrency(remainingBalance)}`,
     '',
     'Launch notes',
@@ -1926,6 +2016,9 @@ function bookingConfirmationText(booking = {}) {
 
 function bookingConfirmationHtml(booking = {}) {
   const remainingBalance = bookingRemainingBalance(booking);
+  const depositAmount = bookingDepositAmountValue(booking);
+  const processingFeeAmount = bookingProcessingFeeAmountValue(booking);
+  const amountDueToday = bookingAmountDueTodayValue(booking);
   const arrivalList = ARRIVAL_INSTRUCTIONS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
   const safetyList = SAFETY_BRIEFING_POINTS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
   const actionHtml = [
@@ -1935,7 +2028,7 @@ function bookingConfirmationHtml(booking = {}) {
   const summaryCards = [
     emailMetricCard('Rental date', formatDateLabel(booking.date)),
     emailMetricCard('Start time', formatTimeLabel(booking.time)),
-    emailMetricCard('Paid today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))), 'success'),
+    emailMetricCard('Paid today', formatCurrency(amountDueToday), 'success'),
     emailMetricCard('Balance due at launch', formatCurrency(remainingBalance), 'accent')
   ].join('');
   const detailRows = emailDetailRows([
@@ -1945,8 +2038,8 @@ function bookingConfirmationHtml(booking = {}) {
     { label: 'Party size', value: booking.partySize || 'Not provided' },
     { label: 'Drone coverage', value: booking.drone ? 'Included' : 'Not included' },
     { label: 'Quoted total', value: formatCurrency(booking.total || 0) },
-    { label: 'Deposit received', value: formatCurrency(booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100), valueColor: '#0f8b53' },
-    { label: 'Processing fee', value: formatCurrency(booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100) }
+    { label: 'Deposit received', value: formatCurrency(depositAmount), valueColor: '#0f8b53' },
+    { label: 'Processing fee', value: formatCurrency(processingFeeAmount) }
   ]);
   return shorelineEmailShell({
     title: 'Your booking is confirmed',
@@ -2062,6 +2155,7 @@ function ownerBookingAlertSubject(booking = {}) {
 }
 
 function ownerBookingAlertText(booking = {}) {
+  const amountDueToday = bookingAmountDueTodayValue(booking);
   return [
     'A new Shoreline booking request was submitted.',
     '',
@@ -2074,7 +2168,7 @@ function ownerBookingAlertText(booking = {}) {
     `Start time: ${formatTimeLabel(booking.time)}`,
     `Party size: ${booking.partySize || 'Not provided'}`,
     `Quoted total: ${formatCurrency(booking.total || 0)}`,
-    `Amount due today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100)))}`,
+    `Amount due today: ${formatCurrency(amountDueToday)}`,
     `Payment status: ${booking.paymentStatus || 'unpaid'}`,
     `Booking status: ${booking.status || 'pending'}`,
     `Meeting spot: ${bookingEmailLocation(booking)}`,
@@ -2086,10 +2180,11 @@ function ownerBookingAlertText(booking = {}) {
 
 function ownerBookingAlertHtml(booking = {}) {
   const actionHtml = emailActionButton('Open Shoreline Ops', OPS_APP_URL);
+  const amountDueToday = bookingAmountDueTodayValue(booking);
   const summaryCards = [
     emailMetricCard('Rental date', formatDateLabel(booking.date)),
     emailMetricCard('Start time', formatTimeLabel(booking.time)),
-    emailMetricCard('Amount due today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100) + (booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100))), 'accent'),
+    emailMetricCard('Amount due today', formatCurrency(amountDueToday), 'accent'),
     emailMetricCard('Quoted total', formatCurrency(booking.total || 0))
   ].join('');
   const detailRows = emailDetailRows([
@@ -2670,29 +2765,38 @@ async function sendBookingConfirmationEmail(state, booking, session = {}, now = 
   return { sent: true, result };
 }
 
-function bookingQualifiesForUpcomingDigest(booking = {}, todayKey = '', horizonKey = '') {
+function bookingQualifiesForUpcomingDigest(booking = {}, schedule = ownerWeeklyDigestSchedule()) {
   const status = normalizeBookingStatus(booking.status);
   const date = String(booking.date || '').trim();
-  if (!date || !todayKey || !horizonKey) return false;
-  if (date < todayKey || date > horizonKey) return false;
+  if (!date || !schedule?.todayKey || !schedule?.horizonKey) return false;
+  if (date < schedule.todayKey || date > schedule.horizonKey) return false;
+  const bookingStart = bookingStartDateTimeValue(booking);
+  if (bookingStart && bookingStart < schedule.now) return false;
   return !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status);
 }
 
 function buildOwnerWeeklyDigestReport(state, schedule = ownerWeeklyDigestSchedule()) {
   const integrations = integrationStatus(state);
+  const activeBookings = (state.bookings || []).filter((booking) => {
+    const status = normalizeBookingStatus(booking.status);
+    return !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status);
+  });
   const paidInvoices = (state.invoices || []).filter((invoice) => invoiceCollectedAmount(invoice) > 0);
   const openInvoices = (state.invoices || []).filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
   const paidInvoiceRevenue = paidInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
-  const paidDepositsCollected = (state.bookings || [])
-    .filter((booking) => booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid')
-    .reduce((sum, booking) => sum + Number(booking.amountDueToday || ((booking.depositAmount || (BOOKING_DEPOSIT_CENTS / 100)) + (booking.processingFeeAmount || (PROCESSING_FEE_CENTS / 100))) || 0), 0);
-  const upcomingBookings = (state.bookings || [])
-    .filter((booking) => bookingQualifiesForUpcomingDigest(booking, schedule.todayKey, schedule.horizonKey))
-    .sort((left, right) => (
-      String(left.date || '').localeCompare(String(right.date || ''))
-      || String(left.time || '').localeCompare(String(right.time || ''))
-      || String(left.name || '').localeCompare(String(right.name || ''))
-    ));
+  const paidDepositsCollected = activeBookings
+    .filter((booking) => bookingUsesCheckoutDepositFlow(booking) && (booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid'))
+    .reduce((sum, booking) => sum + bookingAmountDueTodayValue(booking), 0);
+  const upcomingBookings = activeBookings
+    .filter((booking) => bookingQualifiesForUpcomingDigest(booking, schedule))
+    .sort((left, right) => {
+      const leftStart = bookingStartDateTimeValue(left);
+      const rightStart = bookingStartDateTimeValue(right);
+      if (leftStart && rightStart && leftStart.getTime() !== rightStart.getTime()) {
+        return leftStart.getTime() - rightStart.getTime();
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''));
+    });
   const recentCommunications = (state.communicationsLog || []).filter((item) => {
     const sentAt = Date.parse(item?.date || '');
     return Number.isFinite(sentAt) && sentAt >= (schedule.now.getTime() - (7 * 24 * 60 * 60 * 1000));
@@ -2705,7 +2809,7 @@ function buildOwnerWeeklyDigestReport(state, schedule = ownerWeeklyDigestSchedul
     opsUrl: OPS_APP_URL,
     counts: {
       customers: (state.customers || []).length,
-      bookings: (state.bookings || []).length,
+      bookings: activeBookings.length,
       invoices: (state.invoices || []).length,
       trackers: (state.trackers || []).length,
       upcomingBookings: upcomingBookings.length,
