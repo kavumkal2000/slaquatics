@@ -2965,9 +2965,16 @@ function createManualInvoiceNumber() {
   return `SLA-${datePart}-${String(existingCount).padStart(3, '0')}`;
 }
 function linkedBookingForInvoiceRecord(invoice = {}) {
-  const bookingId = Number(invoice?.bookingId || 0);
-  if (!bookingId) return null;
-  return bookings.find((booking) => Number(booking.id || 0) === bookingId) || null;
+  const bookingId = Number(invoice?.bookingId || invoice?.rawFields?.bookingId || 0);
+  const bookingToken = String(invoice?.rawFields?.bookingPublicToken || '').trim();
+  const paymentSessionId = String(invoice?.rawFields?.paymentSessionId || '').trim();
+  const paymentIntentId = String(invoice?.rawFields?.paymentIntentId || '').trim();
+  return bookings.find((booking) => (
+    (bookingId > 0 && Number(booking.id || 0) === bookingId) ||
+    (bookingToken && String(booking.publicToken || '').trim() === bookingToken) ||
+    (paymentSessionId && String(booking.paymentSessionId || '').trim() === paymentSessionId) ||
+    (paymentIntentId && String(booking.paymentIntentId || '').trim() === paymentIntentId)
+  )) || null;
 }
 function syncedBookingInvoiceTotal(invoice = {}) {
   const booking = linkedBookingForInvoiceRecord(invoice);
@@ -3017,7 +3024,9 @@ function bookingInvoiceHasManualOverrideLocally(existingInvoice = null, booking 
   if (explicitFlag === 'true') return true;
   const manualTotal = Number(rawFields.manualTotalOverride || 0);
   const syncedTotal = Number((Number(booking.total || 0) + bookingProcessingFeeValue(booking)).toFixed(2));
-  return manualTotal > 0 && Math.abs(manualTotal - syncedTotal) > 0.009;
+  if (manualTotal > 0 && Math.abs(manualTotal - syncedTotal) > 0.009) return true;
+  const savedTotal = Number(existingInvoice.total || 0);
+  return savedTotal > 0 && Math.abs(savedTotal - syncedTotal) > 0.009;
 }
 function effectiveInvoiceTotalForBookingLocally(existingInvoice = null, booking = {}) {
   if (bookingInvoiceHasManualOverrideLocally(existingInvoice, booking)) {
@@ -3276,8 +3285,11 @@ async function saveInvoice() {
   const explicitPaidAmount = Math.max(0, Number(document.getElementById('i-paid-amount').value || 0));
   const paymentMethod = getInvoicePaymentMethod();
   const notes = document.getElementById('i-notes').value.trim();
-  const bookingLinkedInvoice = Boolean(existingInvoice && Number(existingInvoice.bookingId || 0) > 0);
-  const syncedBookingTotal = bookingLinkedInvoice ? syncedBookingInvoiceTotal(existingInvoice) : 0;
+  const linkedBookingRecord = existingInvoice ? linkedBookingForInvoiceRecord(existingInvoice) : null;
+  const bookingLinkedInvoice = Boolean(linkedBookingRecord);
+  const syncedBookingTotal = bookingLinkedInvoice
+    ? Number((Number(linkedBookingRecord.total || 0) + bookingProcessingFeeValue(linkedBookingRecord)).toFixed(2))
+    : 0;
   const keepManualBookingOverride = Boolean(
     bookingLinkedInvoice &&
     (
@@ -3404,10 +3416,9 @@ async function saveInvoice() {
     }
   }
   invoice.customerId = customer ? customer.id : '';
-  const linkedBooking = Number(invoice.bookingId || 0) > 0
-    ? bookings.find((booking) => Number(booking.id || 0) === Number(invoice.bookingId || 0))
-    : null;
+  const linkedBooking = linkedBookingForInvoiceRecord(invoice);
   if (linkedBooking) {
+    invoice.bookingId = Number(linkedBooking.id || 0);
     const checkoutDueToday = bookingUsesCheckoutDepositFlow(linkedBooking) ? bookingDueTodayValue(linkedBooking) : 0;
     const checkoutDepositSatisfied = checkoutDueToday > 0 && paidAmount >= (checkoutDueToday - 0.009);
     if (finalStatus === 'Paid' || (total > 0 && paidAmount >= (total - 0.009))) {

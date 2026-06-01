@@ -1364,7 +1364,9 @@ function bookingInvoiceHasManualOverride(existingInvoice = null, booking = {}) {
   if (explicitFlag === 'true') return true;
   const manualTotal = Number(rawFields.manualTotalOverride || 0);
   const syncedTotal = bookingInvoiceTotal(booking);
-  return manualTotal > 0 && Math.abs(manualTotal - syncedTotal) > 0.009;
+  if (manualTotal > 0 && Math.abs(manualTotal - syncedTotal) > 0.009) return true;
+  const savedTotal = Number(existingInvoice.total || 0);
+  return savedTotal > 0 && Math.abs(savedTotal - syncedTotal) > 0.009;
 }
 
 function effectiveInvoiceTotalForBooking(existingInvoice = null, booking = {}) {
