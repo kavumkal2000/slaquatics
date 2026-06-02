@@ -4230,9 +4230,14 @@ async function saveBooking() {
     customers = previousCustomers;
     return;
   }
+  const reviewAutoSent = normalizeBookingStatusValue(bookingRecord.status) === 'completed' && normalizeBookingStatusValue(previousSnapshot?.status) !== 'completed'
+    ? await autoSendReviewForBooking(bookingRecord)
+    : false;
   updatePendingBadge();
   closeModal('booking-modal');
-  showToast(existingBooking ? '✅ Booking updated' : '✅ Booking saved');
+  showToast(reviewAutoSent
+    ? '✅ Booking saved and review request sent'
+    : existingBooking ? '✅ Booking updated' : '✅ Booking saved');
   selectedCalendarDate = bookingRecord.date || selectedCalendarDate;
   const bookingDateObj = parseIsoDate(bookingRecord.date);
   if (bookingDateObj) calendarMonthCursor = monthStart(bookingDateObj);
