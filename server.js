@@ -1635,7 +1635,10 @@ function mergeEmployeeState(currentState = {}, incomingState = {}) {
 }
 
 function normalizeBookingStatus(status = '') {
-  return String(status || '').trim().toLowerCase();
+  const normalized = String(status || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (normalized === 'no show') return 'noshow';
+  if (normalized === 'canceled') return 'cancelled';
+  return normalized;
 }
 
 function bookingStartDateTimeValue(booking = {}) {
