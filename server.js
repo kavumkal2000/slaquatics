@@ -1445,7 +1445,7 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   const issueDate = bookingInvoiceDate(booking, now);
   const dueDate = String(booking.date || issueDate).trim() || issueDate;
   const syncedRentalTotal = Number(booking.total || 0);
-  const syncedProcessingFee = Number(booking.processingFeeAmount || 0);
+  const syncedProcessingFee = bookingProcessingFeeAmountValue(booking);
   const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
   const hasManualOverride = bookingInvoiceHasManualOverride(existingInvoice, booking);
   const rentalTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : syncedRentalTotal;
