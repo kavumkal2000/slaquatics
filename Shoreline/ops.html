@@ -5175,10 +5175,13 @@ async function updateStatus(id, status) {
   const booking = bookings.find((item) => item.id === id);
   if (!booking) return;
   const previousStatus = booking.status;
+  const previousUpdatedAt = booking.updatedAt;
   booking.status = status;
+  booking.updatedAt = new Date().toISOString();
   try {
     if (!(await persistStateChange())) {
       booking.status = previousStatus;
+      booking.updatedAt = previousUpdatedAt;
       return;
     }
     const reviewAutoSent = normalizeBookingStatusValue(status) === 'completed' && normalizeBookingStatusValue(previousStatus) !== 'completed'
@@ -5198,6 +5201,7 @@ async function updateStatus(id, status) {
     showToast(reviewAutoSent ? '✅ Updated to completed and sent the review request' : `✅ Updated to ${status}`);
   } catch (error) {
     booking.status = previousStatus;
+    booking.updatedAt = previousUpdatedAt;
     showToast(`⚠️ ${error.message || 'Could not update booking status'}`);
   }
 }
@@ -5207,12 +5211,18 @@ async function confirmDeposit(id) {
   if (!booking) return;
   const previousDeposit = booking.deposit;
   const previousPaymentStatus = booking.paymentStatus;
+  const previousPaymentCompletedAt = booking.paymentCompletedAt;
+  const previousUpdatedAt = booking.updatedAt;
   booking.deposit = true;
   booking.paymentStatus = 'paid';
+  booking.paymentCompletedAt = new Date().toISOString();
+  booking.updatedAt = booking.paymentCompletedAt;
   try {
     if (!(await persistStateChange())) {
       booking.deposit = previousDeposit;
       booking.paymentStatus = previousPaymentStatus;
+      booking.paymentCompletedAt = previousPaymentCompletedAt;
+      booking.updatedAt = previousUpdatedAt;
       return;
     }
     renderBookings();
@@ -5228,6 +5238,8 @@ async function confirmDeposit(id) {
   } catch (error) {
     booking.deposit = previousDeposit;
     booking.paymentStatus = previousPaymentStatus;
+    booking.paymentCompletedAt = previousPaymentCompletedAt;
+    booking.updatedAt = previousUpdatedAt;
     showToast(`⚠️ ${error.message || 'Could not confirm the deposit'}`);
   }
 }
