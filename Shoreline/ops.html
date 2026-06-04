@@ -1798,6 +1798,8 @@ const PRICING = {
   yamaha:{2:300,3:450,4:560,6:720,8:900},
   seadoo:{2:600,3:900,4:1120,6:1440,8:1800}
 };
+const DEFAULT_BOOKING_DEPOSIT = 50;
+const DEFAULT_PROCESSING_FEE = 5;
 const CRAFT_NAMES = {
   jetski2:'2 Yamaha Jet Skis',
   jetski3:'3 Yamaha Jet Skis',
@@ -3048,27 +3050,41 @@ function linkedBookingForInvoiceRecord(invoice = {}) {
 function syncedBookingInvoiceTotal(invoice = {}) {
   const booking = linkedBookingForInvoiceRecord(invoice);
   if (!booking) return 0;
-  return Number((Number(booking.total || 0) + Number(booking.processingFeeAmount || 0)).toFixed(2));
+  return Number((Number(booking.total || 0) + bookingProcessingFeeValue(booking)).toFixed(2));
+}
+function bookingDepositAmountValue(booking = {}) {
+  const explicit = Number(booking.depositAmount);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return bookingUsesCheckoutDepositFlow(booking) ? DEFAULT_BOOKING_DEPOSIT : 0;
 }
 function bookingProcessingFeeValue(booking = {}) {
   const explicit = Number(booking.processingFeeAmount);
-  return Number.isFinite(explicit) && explicit >= 0 ? explicit : 0;
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return bookingUsesCheckoutDepositFlow(booking) ? DEFAULT_PROCESSING_FEE : 0;
 }
 function bookingDueTodayValue(booking = {}) {
   const explicit = Number(booking.amountDueToday);
-  return Number.isFinite(explicit) && explicit >= 0 ? explicit : 0;
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return Number((bookingDepositAmountValue(booking) + bookingProcessingFeeValue(booking)).toFixed(2));
 }
 function bookingUsesCheckoutDepositFlow(booking = {}) {
   const source = bookingSourceValue(booking);
-  const dueToday = bookingDueTodayValue(booking);
-  const total = Number((Number(booking.total || 0) + bookingProcessingFeeValue(booking)).toFixed(2));
+  const explicitDueToday = Number(booking.amountDueToday);
+  const explicitProcessingFee = Number(booking.processingFeeAmount);
+  const total = Number((
+    Number(booking.total || 0) + (
+      Number.isFinite(explicitProcessingFee) && explicitProcessingFee >= 0
+        ? explicitProcessingFee
+        : 0
+    )
+  ).toFixed(2));
   return Boolean(
     String(booking.publicToken || '').trim() ||
     String(booking.paymentSessionId || '').trim() ||
     source.includes('website') ||
     source.includes('stripe') ||
     source.includes('public') ||
-    (dueToday > 0 && total > 0 && dueToday < total)
+    (Number.isFinite(explicitDueToday) && explicitDueToday > 0 && total > 0 && explicitDueToday < total)
   );
 }
 function invoiceMatchesBookingRecord(invoice = {}, booking = {}) {
@@ -3204,7 +3220,7 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
     rentalPackageLabel: String(booking.craftLabel || ''),
     rentalDurationHours: String(booking.duration || ''),
     rentalDurationLabel: bookingDurationLabel(booking),
-    depositAmount: String(Number(booking.depositAmount || 0).toFixed(2)),
+    depositAmount: String(bookingDepositAmountValue(booking).toFixed(2)),
     processingFeeAmount: String(syncedProcessingFee.toFixed(2)),
     amountDueToday: String(bookingDueTodayValue(booking).toFixed(2)),
     bookingDate: String(booking.date || ''),
