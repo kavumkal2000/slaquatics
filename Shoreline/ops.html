@@ -4257,9 +4257,18 @@ async function saveBooking() {
   bookingRecord.customerId = customer ? customer.id : '';
   const linkedInvoice = linkedInvoiceForBookingRecord(bookingRecord);
   if (linkedInvoice && amountChangedFromPrevious) {
+    const nextProcessingFee = bookingProcessingFeeValue(bookingRecord);
+    const nextInvoiceTotal = Number((bookingValue + nextProcessingFee).toFixed(2));
+    const preservedCollected = Number(Math.min(Number(linkedInvoice.paidAmount || 0), nextInvoiceTotal || Number(linkedInvoice.paidAmount || 0)).toFixed(2));
+    linkedInvoice.subTotal = bookingValue;
+    linkedInvoice.taxAmount = nextProcessingFee;
+    linkedInvoice.total = nextInvoiceTotal;
+    linkedInvoice.paidAmount = preservedCollected;
+    linkedInvoice.balanceDue = Number(Math.max(nextInvoiceTotal - preservedCollected, 0).toFixed(2));
     linkedInvoice.rawFields = mergeCrmFields(linkedInvoice.rawFields, {
       manualBookingInvoiceOverride: '',
-      manualTotalOverride: ''
+      manualTotalOverride: '',
+      collectedAmount: preservedCollected ? String(preservedCollected) : ''
     });
   }
   ensureLinkedInvoiceForBookingLocally(bookingRecord);
