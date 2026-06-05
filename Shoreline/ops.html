@@ -3037,15 +3037,20 @@ function createManualInvoiceNumber() {
 }
 function linkedBookingForInvoiceRecord(invoice = {}) {
   const bookingId = Number(invoice?.bookingId || invoice?.rawFields?.bookingId || 0);
-  const bookingToken = String(invoice?.rawFields?.bookingPublicToken || '').trim();
-  const paymentSessionId = String(invoice?.rawFields?.paymentSessionId || '').trim();
-  const paymentIntentId = String(invoice?.rawFields?.paymentIntentId || '').trim();
+  const bookingToken = String(invoice?.bookingPublicToken || invoice?.rawFields?.bookingPublicToken || '').trim();
+  const paymentSessionId = String(invoice?.paymentSessionId || invoice?.rawFields?.paymentSessionId || '').trim();
+  const paymentIntentId = String(invoice?.paymentIntentId || invoice?.rawFields?.paymentIntentId || '').trim();
   return bookings.find((booking) => (
     (bookingId > 0 && Number(booking.id || 0) === bookingId) ||
     (bookingToken && String(booking.publicToken || '').trim() === bookingToken) ||
     (paymentSessionId && String(booking.paymentSessionId || '').trim() === paymentSessionId) ||
     (paymentIntentId && String(booking.paymentIntentId || '').trim() === paymentIntentId)
   )) || null;
+}
+function linkedBookingIdForInvoiceRecord(invoice = {}) {
+  const directId = Number(invoice?.bookingId || invoice?.rawFields?.bookingId || 0);
+  if (directId > 0) return directId;
+  return Number(linkedBookingForInvoiceRecord(invoice)?.id || 0);
 }
 function syncedBookingInvoiceTotal(invoice = {}) {
   const booking = linkedBookingForInvoiceRecord(invoice);
@@ -3096,9 +3101,18 @@ function invoiceMatchesBookingRecord(invoice = {}, booking = {}) {
   return Boolean(
     (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
     (bookingId > 0 && String(invoice.rawFields?.bookingId || '').trim() === String(bookingId)) ||
-    (bookingToken && String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken) ||
-    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId) ||
-    (paymentIntentId && String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId)
+    (bookingToken && (
+      String(invoice.bookingPublicToken || '').trim() === bookingToken ||
+      String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken
+    )) ||
+    (paymentSessionId && (
+      String(invoice.paymentSessionId || '').trim() === paymentSessionId ||
+      String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId
+    )) ||
+    (paymentIntentId && (
+      String(invoice.paymentIntentId || '').trim() === paymentIntentId ||
+      String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId
+    ))
   );
 }
 function linkedInvoiceForBookingRecord(booking = {}) {
@@ -3149,10 +3163,16 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
   if (!booking || !Number(booking.id || 0) || normalizeBookingStatusValue(booking.status) === 'draft') return null;
   const existingInvoice = linkedInvoiceForBookingRecord(booking);
   const nowIso = new Date().toISOString();
-  const issueDate = String(existingInvoice?.issueDate || '').trim()
+  const existingIssueDate = String(existingInvoice?.issueDate || '').trim();
+  const issueDate = existingIssueDate
     || inputDateValue(booking.updatedAt || booking.createdAt || nowIso)
     || today();
-  const dueDate = booking.date && booking.date !== 'TBD' ? booking.date : issueDate;
+  const previousBookingDate = String(existingInvoice?.rawFields?.bookingDate || '').trim();
+  const existingDueDate = String(existingInvoice?.dueDate || '').trim();
+  const nextAutoDueDate = booking.date && booking.date !== 'TBD' ? booking.date : issueDate;
+  const dueDate = existingDueDate && ![previousBookingDate, existingIssueDate].includes(existingDueDate)
+    ? existingDueDate
+    : nextAutoDueDate;
   const syncedRentalTotal = Number(booking.total || 0);
   const syncedProcessingFee = bookingProcessingFeeValue(booking);
   const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
@@ -3187,6 +3207,9 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
     createdAt: nowIso
   };
   invoice.bookingId = Number(booking.id || 0);
+  invoice.bookingPublicToken = String(booking.publicToken || '').trim();
+  invoice.paymentSessionId = String(booking.paymentSessionId || '').trim();
+  invoice.paymentIntentId = String(booking.paymentIntentId || '').trim();
   invoice.invoiceName = hasManualOverride
     ? String(existingInvoice?.invoiceName || defaultInvoiceName).trim() || defaultInvoiceName
     : defaultInvoiceName;
@@ -4560,10 +4583,32 @@ function paidInvoiceTotalForCustomer(customer = {}) {
 function syncCustomerRollup(customer) {
   if (!customer) return;
   const customerBookings = bookings.filter((booking) => customerMatchesBooking(customer, booking) && !bookingIsArchived(booking));
-  const bookingSpend = customerBookings.reduce((sum, booking) => sum + Number(booking.total || 0), 0);
-  const invoiceSpend = paidInvoiceTotalForCustomer(customer);
+  const relatedInvoices = invoices.filter((invoice) => invoiceMatchesCustomer(customer, invoice));
+  const linkedInvoiceCollectedTotals = new Map();
+  let standaloneInvoiceCollected = 0;
+  relatedInvoices.forEach((invoice) => {
+    const collected = invoiceCollectedAmount(invoice);
+    const linkedBookingId = linkedBookingIdForInvoiceRecord(invoice);
+    if (linkedBookingId > 0) {
+      linkedInvoiceCollectedTotals.set(
+        linkedBookingId,
+        Number(((linkedInvoiceCollectedTotals.get(linkedBookingId) || 0) + collected).toFixed(2))
+      );
+      return;
+    }
+    standaloneInvoiceCollected += collected;
+  });
+  const bookingSpend = customerBookings.reduce((sum, booking) => {
+    const bookingTotal = Number(booking.total || 0);
+    const linkedCollected = Number(linkedInvoiceCollectedTotals.get(Number(booking.id || 0)) || 0);
+    return sum + Math.max(bookingTotal, linkedCollected);
+  }, 0);
+  const orphanLinkedInvoiceCollected = Array.from(linkedInvoiceCollectedTotals.entries()).reduce((sum, [bookingId, collected]) => {
+    const hasBooking = customerBookings.some((booking) => Number(booking.id || 0) === Number(bookingId));
+    return hasBooking ? sum : sum + collected;
+  }, 0);
   customer.bookings = customerBookings.length;
-  customer.totalSpent = Math.max(bookingSpend, invoiceSpend);
+  customer.totalSpent = Number((bookingSpend + standaloneInvoiceCollected + orphanLinkedInvoiceCollected).toFixed(2));
   customer.lastBooking = customerBookings.reduce((latest, booking) => updateLatestDate(latest, booking.date), 'N/A');
 }
 
@@ -5263,6 +5308,9 @@ async function deleteBooking(bookingId) {
   invoices.forEach((invoice) => {
     if (!invoiceMatchesBookingRecord(invoice, booking)) return;
     invoice.bookingId = 0;
+    invoice.bookingPublicToken = '';
+    invoice.paymentSessionId = '';
+    invoice.paymentIntentId = '';
     invoice.rawFields = mergeCrmFields(invoice.rawFields, {
       bookingId: '',
       bookingPublicToken: '',

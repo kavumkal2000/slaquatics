@@ -1298,10 +1298,33 @@ function findInvoiceForBooking(state, booking = {}) {
   return (state.invoices || []).find((invoice) => (
     (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
     (bookingId > 0 && String(invoice.rawFields?.bookingId || '').trim() === String(bookingId)) ||
-    (bookingToken && String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken) ||
-    (paymentSessionId && String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId) ||
-    (paymentIntentId && String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId)
+    (bookingToken && (
+      String(invoice.bookingPublicToken || '').trim() === bookingToken ||
+      String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken
+    )) ||
+    (paymentSessionId && (
+      String(invoice.paymentSessionId || '').trim() === paymentSessionId ||
+      String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId
+    )) ||
+    (paymentIntentId && (
+      String(invoice.paymentIntentId || '').trim() === paymentIntentId ||
+      String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId
+    ))
   )) || null;
+}
+
+function linkedBookingIdForInvoice(state, invoice = {}) {
+  const directId = Number(invoice.bookingId || invoice.rawFields?.bookingId || 0);
+  if (directId > 0) return directId;
+  const bookingToken = String(invoice.bookingPublicToken || invoice.rawFields?.bookingPublicToken || '').trim();
+  const paymentSessionId = String(invoice.paymentSessionId || invoice.rawFields?.paymentSessionId || '').trim();
+  const paymentIntentId = String(invoice.paymentIntentId || invoice.rawFields?.paymentIntentId || '').trim();
+  const booking = (state.bookings || []).find((item) => (
+    (bookingToken && String(item.publicToken || '').trim() === bookingToken) ||
+    (paymentSessionId && String(item.paymentSessionId || '').trim() === paymentSessionId) ||
+    (paymentIntentId && String(item.paymentIntentId || '').trim() === paymentIntentId)
+  ));
+  return Number(booking?.id || 0);
 }
 
 function bookingInvoiceTotal(booking = {}) {
@@ -1360,7 +1383,7 @@ function bookingCollectedAmountForInvoice(booking = {}) {
   const total = bookingInvoiceTotal(booking);
   if (paymentStatus !== 'paid') return 0;
   if (bookingUsesCheckoutDepositFlow(booking)) {
-    const dueToday = bookingAmountDueTodayValue(booking, { useCheckoutFallback: false });
+    const dueToday = bookingAmountDueTodayValue(booking);
     if (dueToday > 0) {
       return Number(Math.min(dueToday, total).toFixed(2));
     }
@@ -1395,7 +1418,7 @@ function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0) {
   const total = Number(targetTotal || 0);
   if (paymentStatus !== 'paid') return 0;
   if (bookingUsesCheckoutDepositFlow(booking)) {
-    const dueToday = bookingAmountDueTodayValue(booking, { useCheckoutFallback: false });
+    const dueToday = bookingAmountDueTodayValue(booking);
     if (dueToday > 0) {
       return Number(Math.min(dueToday, total).toFixed(2));
     }
@@ -1442,8 +1465,14 @@ function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
 function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString()) {
   if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft') return null;
   const existingInvoice = findInvoiceForBooking(state, booking);
-  const issueDate = String(existingInvoice?.issueDate || '').trim() || bookingInvoiceDate(booking, now);
-  const dueDate = String(booking.date || issueDate).trim() || issueDate;
+  const existingIssueDate = String(existingInvoice?.issueDate || '').trim();
+  const issueDate = existingIssueDate || bookingInvoiceDate(booking, now);
+  const previousBookingDate = String(existingInvoice?.rawFields?.bookingDate || '').trim();
+  const existingDueDate = String(existingInvoice?.dueDate || '').trim();
+  const nextAutoDueDate = String(booking.date || issueDate).trim() || issueDate;
+  const dueDate = existingDueDate && ![previousBookingDate, existingIssueDate].includes(existingDueDate)
+    ? existingDueDate
+    : nextAutoDueDate;
   const syncedRentalTotal = Number(booking.total || 0);
   const syncedProcessingFee = bookingProcessingFeeAmountValue(booking);
   const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
@@ -1481,11 +1510,14 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   };
 
   invoice.bookingId = Number(booking.id || 0);
+  invoice.bookingPublicToken = String(booking.publicToken || '').trim();
+  invoice.paymentSessionId = String(booking.paymentSessionId || '').trim();
+  invoice.paymentIntentId = String(booking.paymentIntentId || '').trim();
   invoice.invoiceName = hasManualOverride
     ? String(existingInvoice?.invoiceName || defaultInvoiceName).trim() || defaultInvoiceName
     : defaultInvoiceName;
   invoice.customerId = Number(booking.customerId || 0) || invoice.customerId || 0;
-  invoice.customerName = String(booking.name || invoice.customerName || '').trim();
+  invoice.customerName = String(booking.name || invoice.customerName || '').trim() || 'Walk-up booking';
   invoice.customerPhone = String(booking.phone || invoice.customerPhone || '').trim();
   invoice.customerEmail = String(booking.email || invoice.customerEmail || '').trim();
   invoice.issueDate = issueDate;
@@ -1683,7 +1715,7 @@ function updateCustomerRollup(state, customer) {
 
   relatedInvoices.forEach((invoice) => {
     const collected = invoiceCollectedAmount(invoice);
-    const linkedBookingId = Number(invoice.bookingId || invoice.rawFields?.bookingId || 0);
+    const linkedBookingId = linkedBookingIdForInvoice(state, invoice);
     if (linkedBookingId > 0) {
       relatedInvoiceBookingIds.add(linkedBookingId);
       linkedInvoiceCollectedTotals.set(
