@@ -197,6 +197,11 @@ code{
 const LIVE_OPS_ORIGIN = 'https://shoreline-aquatics-ops.onrender.com';
 const LIVE_OPS_LOGIN_URL = `${LIVE_OPS_ORIGIN}/ops-login.html`;
 const LIVE_OPS_APP_URL = `${LIVE_OPS_ORIGIN}/ops.html`;
+const CURRENT_ORIGIN = window.location.origin;
+const CURRENT_OPS_LOGIN_URL = `${CURRENT_ORIGIN}/ops-login.html`;
+const CURRENT_OPS_APP_URL = `${CURRENT_ORIGIN}/ops.html`;
+const OPS_LOGIN_URL = window.location.protocol === 'file:' ? LIVE_OPS_LOGIN_URL : CURRENT_OPS_LOGIN_URL;
+const OPS_APP_URL = window.location.protocol === 'file:' ? LIVE_OPS_APP_URL : CURRENT_OPS_APP_URL;
 if (window.location.protocol === 'file:') {
   window.location.replace(LIVE_OPS_LOGIN_URL);
 }
@@ -279,7 +284,7 @@ async function checkSession() {
     }
     const data = await response.json();
     if (data.authenticated) {
-      window.location.replace(LIVE_OPS_APP_URL);
+      window.location.replace(OPS_APP_URL);
       return;
     }
     setStatus('Private service ready. Sign in with your Shoreline ops login.', 'success');
@@ -307,7 +312,7 @@ async function submitLogin() {
       throw new Error(data.error || 'Sign-in failed');
     }
     setStatus('Access granted. Opening Shoreline ops...', 'success');
-    window.location.replace(LIVE_OPS_APP_URL);
+    window.location.replace(OPS_APP_URL);
   } catch (error) {
     setStatus(error.message || 'Sign-in failed', 'error');
     setBusy(false);
