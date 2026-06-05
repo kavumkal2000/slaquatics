@@ -730,11 +730,11 @@ function formatDateLabel(value = '') {
 
 function parseBookingTimeParts(value = '') {
   const raw = String(value || '').trim();
-  const match = raw.match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i);
+  const match = raw.match(/^(\d{1,2})(?::(\d{2}))?(?:\s*([AP]M))?$/i);
   if (!match) return null;
   let [, hourText = '0', minuteText = '00', meridiem = ''] = match;
   let hour = Number(hourText);
-  const minute = Number(minuteText);
+  const minute = Number(minuteText || '00');
   if (Number.isNaN(hour) || Number.isNaN(minute) || minute < 0 || minute > 59) return null;
   if (meridiem) {
     const upper = meridiem.toUpperCase();
