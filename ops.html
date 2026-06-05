@@ -3149,7 +3149,9 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
   if (!booking || !Number(booking.id || 0) || normalizeBookingStatusValue(booking.status) === 'draft') return null;
   const existingInvoice = linkedInvoiceForBookingRecord(booking);
   const nowIso = new Date().toISOString();
-  const issueDate = inputDateValue(booking.updatedAt || booking.createdAt || nowIso) || today();
+  const issueDate = String(existingInvoice?.issueDate || '').trim()
+    || inputDateValue(booking.updatedAt || booking.createdAt || nowIso)
+    || today();
   const dueDate = booking.date && booking.date !== 'TBD' ? booking.date : issueDate;
   const syncedRentalTotal = Number(booking.total || 0);
   const syncedProcessingFee = bookingProcessingFeeValue(booking);

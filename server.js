@@ -1442,7 +1442,7 @@ function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
 function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString()) {
   if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft') return null;
   const existingInvoice = findInvoiceForBooking(state, booking);
-  const issueDate = bookingInvoiceDate(booking, now);
+  const issueDate = String(existingInvoice?.issueDate || '').trim() || bookingInvoiceDate(booking, now);
   const dueDate = String(booking.date || issueDate).trim() || issueDate;
   const syncedRentalTotal = Number(booking.total || 0);
   const syncedProcessingFee = bookingProcessingFeeAmountValue(booking);
