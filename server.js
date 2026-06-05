@@ -1413,7 +1413,7 @@ function effectiveInvoiceTotalForBooking(existingInvoice = null, booking = {}) {
   return bookingInvoiceTotal(booking);
 }
 
-function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0) {
+function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0, existingInvoice = null) {
   const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
   const total = Number(targetTotal || 0);
   if (paymentStatus !== 'paid') return 0;
@@ -1422,6 +1422,10 @@ function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0) {
     if (dueToday > 0) {
       return Number(Math.min(dueToday, total).toFixed(2));
     }
+  }
+  const existingPaidAmount = Number(existingInvoice?.paidAmount || 0);
+  if (existingPaidAmount > 0) {
+    return Number(Math.min(existingPaidAmount, total || existingPaidAmount).toFixed(2));
   }
   return total > 0 ? total : 0;
 }
@@ -1445,7 +1449,7 @@ function invoiceStatusForBooking(booking = {}) {
 
 function mergedCollectedAmountForBookingInvoice(existingInvoice = null, booking = {}) {
   const total = effectiveInvoiceTotalForBooking(existingInvoice, booking);
-  const bookingCollected = bookingCollectedAmountForInvoiceTotal(booking, total);
+  const bookingCollected = bookingCollectedAmountForInvoiceTotal(booking, total, existingInvoice);
   const invoiceCollected = Math.min(Number(existingInvoice?.paidAmount || 0), total || Number(existingInvoice?.paidAmount || 0));
   return Number(Math.max(bookingCollected, invoiceCollected, 0).toFixed(2));
 }

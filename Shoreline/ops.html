@@ -3138,7 +3138,8 @@ function effectiveInvoiceTotalForBookingLocally(existingInvoice = null, booking 
 }
 function collectedAmountForLinkedBookingInvoice(existingInvoice = null, booking = {}) {
   const total = effectiveInvoiceTotalForBookingLocally(existingInvoice, booking);
-  const existingCollected = Math.min(Number(existingInvoice?.paidAmount || 0), total || Number(existingInvoice?.paidAmount || 0));
+  const existingPaidAmount = Number(existingInvoice?.paidAmount || 0);
+  const existingCollected = Math.min(existingPaidAmount, total || existingPaidAmount);
   if (!bookingIsPaid(booking)) return Number(existingCollected.toFixed(2));
   if (bookingUsesCheckoutDepositFlow(booking)) {
     const dueToday = bookingDueTodayValue(booking);
@@ -3146,6 +3147,7 @@ function collectedAmountForLinkedBookingInvoice(existingInvoice = null, booking 
       return Number(Math.max(existingCollected, Math.min(dueToday, total)).toFixed(2));
     }
   }
+  if (existingPaidAmount > 0) return Number(existingCollected.toFixed(2));
   return total > 0 ? total : Number(existingCollected.toFixed(2));
 }
 function linkedBookingInvoiceStatus(existingInvoice = null, booking = {}) {
@@ -4212,8 +4214,8 @@ async function saveBooking() {
   bookingRecord.time = document.getElementById('b-time').value || '10:00';
   bookingRecord.status = status;
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
-  bookingRecord.baseTotal = baseValue;
   bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
+  bookingRecord.baseTotal = Number(Math.max(bookingValue - bookingRecord.droneAmount, 0).toFixed(2));
   bookingRecord.notes = document.getElementById('b-notes').value.trim();
   bookingRecord.total = bookingValue;
   bookingRecord.updatedAt = nowIso;
