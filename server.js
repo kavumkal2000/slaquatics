@@ -1642,7 +1642,7 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
 function employeeVisibleState(state = {}) {
   return {
     bookings: clone(state.bookings || []),
-    customers: clone(state.customers || []),
+    customers: [],
     expenses: [],
     fuelLog: [],
     maintLog: [],
