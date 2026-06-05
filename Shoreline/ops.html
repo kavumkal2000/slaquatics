@@ -506,7 +506,6 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div class="kpi-grid">
     <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);" id="dashboard-kpi-pending">0</div><div class="delta warn" id="dashboard-kpi-pending-meta">Waiting on follow-up</div></div>
     <div class="kpi-card"><div class="label">Monthly revenue</div><div class="value" style="color:var(--green);" id="dashboard-kpi-revenue">$0</div><div class="delta up" id="dashboard-kpi-revenue-meta">Current month revenue</div></div>
-    <div class="kpi-card"><div class="label">Net profit after fuel/delivery</div><div class="value" style="color:var(--amber);" id="dashboard-kpi-profit">$0</div><div class="delta warn" id="dashboard-kpi-profit-meta">Revenue minus direct costs</div></div>
     <div class="kpi-card"><div class="label">Bookings this month</div><div class="value" id="dashboard-kpi-bookings">0</div><div class="delta up" id="dashboard-kpi-bookings-meta">0 scheduled this month</div></div>
   </div>
 
@@ -5378,9 +5377,7 @@ function renderFleetLegend() {
 }
 function renderDashboardMetrics() {
   const pendingDeposits = pendingOpsBookings().length;
-  const monthExpenseTotal = expensePeriodTotal('month');
   const revenue = revenueThisMonth();
-  const profit = revenue - monthExpenseTotal;
   const monthlyBookings = scheduledBookings().filter((booking) => isSameMonth(dateValue(booking.date))).length;
   const collectedInvoicesThisMonth = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice))).length;
 
@@ -5388,8 +5385,6 @@ function renderDashboardMetrics() {
   const pendingMeta = document.getElementById('dashboard-kpi-pending-meta');
   const revenueEl = document.getElementById('dashboard-kpi-revenue');
   const revenueMeta = document.getElementById('dashboard-kpi-revenue-meta');
-  const profitEl = document.getElementById('dashboard-kpi-profit');
-  const profitMeta = document.getElementById('dashboard-kpi-profit-meta');
   const bookingsEl = document.getElementById('dashboard-kpi-bookings');
   const bookingsMeta = document.getElementById('dashboard-kpi-bookings-meta');
 
@@ -5397,8 +5392,6 @@ function renderDashboardMetrics() {
   if (pendingMeta) pendingMeta.textContent = pendingDeposits ? `${pendingDeposits} paid bookings still need ops confirmation` : 'No paid bookings are waiting on ops follow-up';
   if (revenueEl) revenueEl.textContent = `$${Math.round(revenue).toLocaleString()}`;
   if (revenueMeta) revenueMeta.textContent = collectedInvoicesThisMonth ? 'Invoice payments collected this month' : 'Paid bookings recognized this month';
-  if (profitEl) profitEl.textContent = `$${Math.round(profit).toLocaleString()}`;
-  if (profitMeta) profitMeta.textContent = `${moneyLabel(monthExpenseTotal)} tracked expenses this month`;
   if (bookingsEl) bookingsEl.textContent = monthlyBookings.toLocaleString();
   if (bookingsMeta) bookingsMeta.textContent = `${monthlyBookings} rentals scheduled this month`;
   renderFleetLegend();
