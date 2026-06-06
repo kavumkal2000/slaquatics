@@ -4183,8 +4183,23 @@ const server = http.createServer(async (request, response) => {
     await serveFile(response, filePath);
   } catch (error) {
     console.error('Unhandled request error:', error);
-    sendJson(response, 500, { error: 'Internal server error.' });
+    // Only respond if we have not already started sending a response — otherwise
+    // sendJson would throw "headers already sent" and leave the socket hanging.
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: 'Internal server error.' });
+    } else {
+      try { response.end(); } catch { /* socket already gone */ }
+    }
   }
+});
+
+// Last-resort process guards: log and stay up rather than letting a stray
+// rejection or error in a timer/callback take the whole ops server down.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
 });
 
 server.listen(PORT, HOST, () => {
