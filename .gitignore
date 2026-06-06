@@ -1,2 +1,11 @@
 node_modules/
 data/
+
+# macOS
+.DS_Store
+
+# Xcode user data & derived data (not source)
+xcuserdata/
+*.xcuserstate
+.deriveddata-ios*/
+iOS/**/project.xcworkspace/
