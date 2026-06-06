@@ -515,8 +515,10 @@ function clearLoginFailures(key) {
   loginAttempts.delete(key);
 }
 
-// ── STARTUP CONFIG VALIDATION (warn on insecure defaults; never crashes login) ──
-function validateAuthConfig() {
+// ── CONFIG VALIDATION (warn on insecure defaults; never crashes login) ──
+// Pure check: returns warning strings without logging, so it can also back the
+// developer System-health endpoint.
+function collectAuthConfigWarnings() {
   const warnings = [];
   if (!process.env.SESSION_SECRET) {
     warnings.push('SESSION_SECRET is not set — sessions reset on every restart/deploy (everyone gets logged out). Set a fixed random SESSION_SECRET.');
@@ -532,6 +534,11 @@ function validateAuthConfig() {
       warnings.push('A role is using the shared OPS_PASSWORD fallback — give each role its own password so one leak does not expose all accounts.');
     }
   }
+  return warnings;
+}
+
+function validateAuthConfig() {
+  const warnings = collectAuthConfigWarnings();
   if (warnings.length) {
     console.warn('\n⚠️  Shoreline Ops — auth configuration warnings:');
     warnings.forEach((w) => console.warn(`   • ${w}`));
@@ -3922,6 +3929,34 @@ async function handleApi(request, response, pathname) {
   if (pathname === '/api/ops/integrations/status' && request.method === 'GET') {
     const state = await stateStore.read();
     sendJson(response, 200, { ok: true, integrations: integrationStatus(state) });
+    return true;
+  }
+
+  // Developer-only system health: surfaces auth/config warnings + runtime info
+  // so the developer can verify production config from the System page instead
+  // of digging through server logs.
+  if (pathname === '/api/ops/system/health' && request.method === 'GET') {
+    if (!authPermissionsForRole(session.role).canAccessSystem) {
+      sendJson(response, 403, { error: 'Developer access required.' });
+      return true;
+    }
+    const state = await stateStore.read();
+    const warnings = collectAuthConfigWarnings();
+    sendJson(response, 200, {
+      ok: true,
+      runtime: {
+        node: process.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        production: IS_PRODUCTION,
+        storage: stateStore.kind,
+        sessionSecretSet: Boolean(process.env.SESSION_SECRET)
+      },
+      auth: {
+        ok: warnings.length === 0,
+        warnings
+      },
+      integrations: integrationStatus(state)
+    });
     return true;
   }
 
