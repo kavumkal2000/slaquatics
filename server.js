@@ -17,8 +17,19 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'ops-store.json');
 const COOKIE_NAME = 'sla_ops_session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// Session signing key. SET THIS IN PRODUCTION — if unset it is random per
+// process, so every restart/deploy invalidates all sessions (logs everyone out).
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
+
+// ── OPS ACCOUNTS ────────────────────────────────────────────────────────────
+// Three roles (developer / employee / owner). Each resolves a username + password
+// from env. Dev-only fallbacks make local work easy; in production set a distinct
+// password per role (owner via OPS_OWNER_PASSWORD_HASH, preferred).
+// LEGACY_OPS_PASSWORD is a single SHARED fallback kept only for backward-compat —
+// validateAuthConfig() warns at startup if any role still relies on it or on a
+// weak default. Credential resolution below is intentionally unchanged.
+const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (IS_PRODUCTION ? '' : 'shoreline-admin');
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
 const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
 const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'hugoprado').trim().toLowerCase();
@@ -473,6 +484,66 @@ function findOpsUser(username = '', password = '') {
   const normalized = normalizeUsername(username);
   if (!normalized) return null;
   return listOpsUsers().find((user) => user.username === normalized && user.matches(password)) || null;
+}
+
+// ── LOGIN RATE LIMITING (brute-force protection) ──
+const LOGIN_MAX_ATTEMPTS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;   // failures are counted within this window
+const LOGIN_LOCK_MS = 15 * 60 * 1000;     // lockout duration once the limit trips
+const loginAttempts = new Map();          // key -> { count, firstAt, lockedUntil }
+
+function clientIpFor(request) {
+  const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || request.socket?.remoteAddress || 'unknown';
+}
+function loginRateKey(request, username = '') {
+  return `${clientIpFor(request)}|${normalizeUsername(username)}`;
+}
+function loginLockRemainingMs(key) {
+  const record = loginAttempts.get(key);
+  if (record && record.lockedUntil > Date.now()) return record.lockedUntil - Date.now();
+  return 0;
+}
+function registerLoginFailure(key) {
+  const now = Date.now();
+  if (loginAttempts.size > 5000) { // opportunistic cleanup so the map can't grow unbounded
+    for (const [existingKey, record] of loginAttempts) {
+      if (record.lockedUntil < now && (now - record.firstAt) > LOGIN_WINDOW_MS) loginAttempts.delete(existingKey);
+    }
+  }
+  let record = loginAttempts.get(key);
+  if (!record || (now - record.firstAt) > LOGIN_WINDOW_MS) record = { count: 0, firstAt: now, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= LOGIN_MAX_ATTEMPTS) record.lockedUntil = now + LOGIN_LOCK_MS;
+  loginAttempts.set(key, record);
+}
+function clearLoginFailures(key) {
+  loginAttempts.delete(key);
+}
+
+// ── STARTUP CONFIG VALIDATION (warn on insecure defaults; never crashes login) ──
+function validateAuthConfig() {
+  const warnings = [];
+  if (!process.env.SESSION_SECRET) {
+    warnings.push('SESSION_SECRET is not set — sessions reset on every restart/deploy (everyone gets logged out). Set a fixed random SESSION_SECRET.');
+  }
+  if (IS_PRODUCTION) {
+    if (!process.env.OPS_OWNER_PASSWORD && !OPS_OWNER_PASSWORD_HASH) {
+      warnings.push('No owner password configured — set OPS_OWNER_PASSWORD_HASH (preferred) or OPS_OWNER_PASSWORD.');
+    }
+    if (OPS_EMPLOYEE_PASSWORD === 'default') {
+      warnings.push("Employee password is the weak default 'default' — set OPS_EMPLOYEE_PASSWORD.");
+    }
+    if (LEGACY_OPS_PASSWORD && (OPS_DEV_PASSWORD === LEGACY_OPS_PASSWORD || OPS_OWNER_PASSWORD === LEGACY_OPS_PASSWORD)) {
+      warnings.push('A role is using the shared OPS_PASSWORD fallback — give each role its own password so one leak does not expose all accounts.');
+    }
+  }
+  if (warnings.length) {
+    console.warn('\n⚠️  Shoreline Ops — auth configuration warnings:');
+    warnings.forEach((w) => console.warn(`   • ${w}`));
+    console.warn('');
+  }
+  return warnings;
 }
 
 function createSessionToken(user = {}, deviceIdHash = '') {
@@ -3335,11 +3406,19 @@ async function handleApi(request, response, pathname) {
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const username = String(body.username || '');
       const password = String(body.password || '');
+      const rateKey = loginRateKey(request, username);
+      const lockMs = loginLockRemainingMs(rateKey);
+      if (lockMs > 0) {
+        sendJson(response, 429, { error: `Too many attempts. Try again in ${Math.ceil(lockMs / 60000)} minute(s).` });
+        return true;
+      }
       const user = findOpsUser(username, password);
       if (!user) {
+        registerLoginFailure(rateKey);
         sendJson(response, 401, { error: 'Incorrect username or password.' });
         return true;
       }
+      clearLoginFailures(rateKey);
       setSessionCookie(response, user);
       sendJson(response, 200, {
         ok: true,
@@ -4110,6 +4189,7 @@ const server = http.createServer(async (request, response) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Shoreline ops server listening on http://${HOST}:${PORT} using ${stateStore.kind} storage`);
+  validateAuthConfig();
   scheduleOwnerWeeklyDigestCheck();
   const weeklyDigestTimer = setInterval(() => {
     scheduleOwnerWeeklyDigestCheck();
