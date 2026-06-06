@@ -1064,6 +1064,11 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
       <p>Use this view to confirm that the private CRM, payments, messaging, and review automations are configured the way you expect.</p>
       <div class="list-stack" id="system-status-list" style="margin-top:1rem;"></div>
     </div>
+    <div class="list-card">
+      <h3>Security &amp; configuration</h3>
+      <p>Live server-side security and runtime checks. Set any flagged environment variables on the host to clear warnings.</p>
+      <div class="list-stack" id="system-security-list" style="margin-top:1rem;"><div class="list-row"><div class="list-row-main"><div class="sub">Loading server health…</div></div></div></div>
+    </div>
   </div>
 </div>
 
@@ -7185,6 +7190,54 @@ function renderSystemPage() {
       <div class="list-row-actions"><span class="badge ${(integrations.reviewLinksConfigured && integrations.reviewAutomationEnabled) ? 'badge-confirmed' : 'badge-pending'}">${(integrations.reviewLinksConfigured && integrations.reviewAutomationEnabled) ? 'ready' : 'partial'}</span></div>
     </div>
   `;
+  loadSystemHealth();
+}
+
+// ── DEVELOPER SYSTEM HEALTH (reads the developer-only health endpoint) ──
+function healthRow(title, detail, level) {
+  const badge = level === 'ok'
+    ? '<span class="badge badge-confirmed">ok</span>'
+    : level === 'warn'
+      ? '<span class="badge badge-noshow">action</span>'
+      : '<span class="badge badge-pending">info</span>';
+  return `<div class="list-row"><div class="list-row-main"><strong>${escapeHtml(title)}</strong><div class="sub">${escapeHtml(detail)}</div></div><div class="list-row-actions">${badge}</div></div>`;
+}
+function formatUptime(seconds) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+  return `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h`;
+}
+async function loadSystemHealth() {
+  const host = document.getElementById('system-security-list');
+  if (!host) return;
+  if ((currentSession?.user?.role) !== 'developer') {
+    host.innerHTML = `<div class="list-row"><div class="list-row-main"><div class="sub">Available to the developer login only.</div></div></div>`;
+    return;
+  }
+  try {
+    const data = await requestJson('/api/ops/system/health');
+    const rows = [];
+    rows.push(healthRow('Session secret',
+      data.runtime?.sessionSecretSet
+        ? 'Fixed SESSION_SECRET is set — logins persist across restarts.'
+        : 'SESSION_SECRET is not set — everyone is logged out on each restart or deploy.',
+      data.runtime?.sessionSecretSet ? 'ok' : 'warn'));
+    (data.auth?.warnings || [])
+      .filter((warning) => !/SESSION_SECRET/.test(warning)) // covered by the dedicated row above
+      .forEach((warning) => rows.push(healthRow('Config warning', warning, 'warn')));
+    if (data.auth?.ok) rows.push(healthRow('Auth configuration', 'No security warnings — credentials and secret are configured.', 'ok'));
+    rows.push(healthRow('Runtime',
+      `Node ${data.runtime?.node || '?'} · ${data.runtime?.production ? 'production' : 'development'} · ${data.runtime?.storage || '?'} storage · up ${formatUptime(data.runtime?.uptimeSeconds)}.`,
+      'neutral'));
+    host.innerHTML = rows.join('');
+  } catch (error) {
+    const message = error?.status === 404
+      ? 'Health endpoint not deployed yet (ships with the backend update).'
+      : `Could not load server health (${String(error?.message || 'error')}).`;
+    host.innerHTML = `<div class="list-row"><div class="list-row-main"><div class="sub">${escapeHtml(message)}</div></div></div>`;
+  }
 }
 
 // ── DASHBOARD BARS ──
