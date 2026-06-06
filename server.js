@@ -698,6 +698,19 @@ function phoneDigits(value = '') {
   return String(value || '').replace(/\D/g, '');
 }
 
+function mergeTagList(existing = '', additions = []) {
+  const base = String(existing || '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const merged = new Set(base);
+  additions.forEach((tag) => {
+    const normalized = String(tag || '').trim();
+    if (normalized) merged.add(normalized);
+  });
+  return [...merged].join(', ');
+}
+
 function htmlEscape(value = '') {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -1018,6 +1031,25 @@ function blockedStartTimesForCraft(state, options = {}) {
       duration: requestedDuration
     })
   ));
+}
+
+function availabilitySnapshotForStartTime(state, options = {}) {
+  const craft = String(options.craft || '').trim();
+  const requiresBoat = craftUsesBoat(craft);
+  const requestedJetSkis = craftJetSkiCount(craft);
+  const boatAvailable = requiresBoat ? findBoatConflicts(state, options).length === 0 : true;
+  const openJetSkis = requestedJetSkis > 0
+    ? Math.max(0, TOTAL_PUBLIC_JET_SKIS - peakJetSkiUnitsBooked(state, options))
+    : TOTAL_PUBLIC_JET_SKIS;
+  const canBook = boatAvailable && (requestedJetSkis <= 0 || openJetSkis >= requestedJetSkis);
+  return {
+    time: String(options.time || '').trim(),
+    label: formatTimeLabel(options.time),
+    boatAvailable,
+    requestedJetSkis,
+    openJetSkis,
+    canBook
+  };
 }
 
 function assertPublicAvailability(state, options = {}) {
@@ -2576,6 +2608,69 @@ function upsertWaiverOnlyFromPayload(state, payload = {}, now = new Date().toISO
   return { state, customer, existingCustomer };
 }
 
+function upsertSeasonalLeadFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  const firstName = String(payload.firstName || payload.name || '').trim();
+  const phone = String(payload.phone || '').trim();
+  const email = String(payload.email || '').trim();
+  const preferredChannel = String(payload.preferredChannel || (phone ? 'sms' : 'email')).trim().toLowerCase() === 'sms'
+    ? 'sms'
+    : 'email';
+
+  if (!firstName || (!phone && !email)) {
+    throw new Error('First name and either a phone number or email are required.');
+  }
+
+  const existingCustomer = findMatchingCustomer(state, { name: firstName, phone, email });
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: firstName,
+    phone,
+    email,
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Seasonal Waitlist',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = firstName || customer.name || 'Seasonal lead';
+  if (phone) customer.phone = phone;
+  if (email) customer.email = email;
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Seasonal Waitlist';
+  customer.importSource = customer.importSource || 'website';
+  customer.crmTags = mergeTagList(customer.crmTags, [
+    'Seasonal lead',
+    preferredChannel === 'sms' ? 'SMS lead' : 'Email lead'
+  ]);
+  customer.crmFields = mergeCrmFields(customer.crmFields, {
+    seasonalLead: 'true',
+    seasonalLeadChannel: preferredChannel,
+    seasonalLeadCapturedAt: now
+  });
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    customerId: customer.id,
+    customerName: customer.name,
+    channel: 'seasonal-lead',
+    message: `Off-season ${preferredChannel.toUpperCase()} opt-in captured from the booking page.`,
+    timestamp: now
+  });
+
+  return { state, customer, existingCustomer, preferredChannel };
+}
+
 function findBookingForStripeSession(state, session = {}) {
   const bookingId = Number(session?.metadata?.bookingId || session?.client_reference_id || 0);
   if (bookingId) {
@@ -3336,25 +3431,41 @@ async function handleApi(request, response, pathname) {
 
     const availabilityType = craftAvailabilityType(craft);
     if (availabilityType === 'none') {
+      const slotDetails = PUBLIC_BOOKING_START_TIMES.map((time) => ({
+        time,
+        label: formatTimeLabel(time),
+        boatAvailable: true,
+        requestedJetSkis: 0,
+        openJetSkis: TOTAL_PUBLIC_JET_SKIS,
+        canBook: true
+      }));
       sendPublicJson(response, request, 200, {
         ok: true,
         availabilityType,
         requiresAvailabilityCheck: false,
         blockedTimes: [],
         availableTimes: [...PUBLIC_BOOKING_START_TIMES],
-        nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || ''
+        nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || '',
+        slotDetails
       });
       return true;
     }
 
     const state = await stateStore.read();
-    const blockedTimes = blockedStartTimesForCraft(state, {
+    const availabilityOptions = {
       date,
       duration,
       craft,
       publicToken
-    });
-    const availableTimes = PUBLIC_BOOKING_START_TIMES.filter((time) => !blockedTimes.includes(time));
+    };
+    const slotDetails = PUBLIC_BOOKING_START_TIMES.map((time) => (
+      availabilitySnapshotForStartTime(state, {
+        ...availabilityOptions,
+        time
+      })
+    ));
+    const blockedTimes = slotDetails.filter((slot) => !slot.canBook).map((slot) => slot.time);
+    const availableTimes = slotDetails.filter((slot) => slot.canBook).map((slot) => slot.time);
 
     sendPublicJson(response, request, 200, {
       ok: true,
@@ -3362,9 +3473,32 @@ async function handleApi(request, response, pathname) {
       requiresAvailabilityCheck: true,
       blockedTimes,
       availableTimes,
-      nextOpenTime: availableTimes[0] || ''
+      nextOpenTime: availableTimes[0] || '',
+      slotDetails
     });
     return true;
+  }
+
+  if (pathname === '/api/public/seasonal-lead' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { customer, preferredChannel } = upsertSeasonalLeadFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        preferredChannel,
+        customer: publicCustomerPayload(customer)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the seasonal lead.'
+      });
+      return true;
+    }
   }
 
   if (pathname === '/api/public/booking-draft' && request.method === 'POST') {
