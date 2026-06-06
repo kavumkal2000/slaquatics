@@ -5928,6 +5928,20 @@ function toggleCustomerDetail(customerId) {
   renderCRM();
 }
 
+function rebookCustomer(customerId) {
+  const customer = customers.find((item) => Number(item.id) === Number(customerId));
+  if (!customer) return;
+  openBookingModal(); // opens a fresh "New Booking" form
+  const nameEl = document.getElementById('b-name');
+  const phoneEl = document.getElementById('b-phone');
+  const emailEl = document.getElementById('b-email');
+  if (nameEl) nameEl.value = customer.name || '';
+  if (phoneEl) phoneEl.value = customer.phone || '';
+  if (emailEl) emailEl.value = customer.email || '';
+  if (typeof calcBookingPrice === 'function') calcBookingPrice();
+  showToast(`Rebooking ${customer.name || 'customer'} — pick craft, date & time`);
+}
+
 function renderCRM() {
   const searchedCustomers = customers.filter((customer) => {
     if (!crmSearchQuery) return true;
@@ -5972,6 +5986,7 @@ function renderCRM() {
     `;
     const detailPieces = [c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ');
     const contactLine = [c.phone, c.email].filter(Boolean).map(escapeHtml).join(' · ') || 'No contact info saved';
+    const cleanPhone = String(c.phone || '').replace(/[^\d+]/g, '');
     const sinceLast = dateValue(c.lastBooking) ? `${daysSince(c.lastBooking)}d` : '—';
     return `
       <div class="customer-card">
@@ -6015,6 +6030,9 @@ function renderCRM() {
               <div class="customer-detail-value ${c.crmNotes ? '' : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
             </div>
             <div class="customer-detail-actions">
+              ${cleanPhone ? `<a class="btn btn-success btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;" href="tel:${cleanPhone}">📞 Call</a>` : ''}
+              ${cleanPhone ? `<a class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;" href="sms:${cleanPhone}">💬 Text</a>` : ''}
+              <button class="btn btn-primary btn-sm" onclick="rebookCustomer(${Number(c.id)})">🔁 Rebook</button>
               <button class="btn btn-primary btn-sm" onclick="openInvoiceModalForCustomer(${Number(c.id)}, 'payment')">Payment</button>
               <button class="btn btn-ghost btn-sm" onclick="openInvoiceModalForCustomer(${Number(c.id)}, 'invoice')">Invoice</button>
               <button class="btn btn-primary btn-sm" onclick="openCustomerModal(${Number(c.id)})">Edit</button>
