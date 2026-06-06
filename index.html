@@ -326,6 +326,30 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .calc-include-item { background: rgba(245,166,35,0.1); color: var(--gold); border: 1px solid rgba(245,166,35,0.25); font-size: 0.69rem; padding: 0.25rem 0.65rem; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.07em; }
 .calc-book-btn { width: 100%; padding: 1rem; background: var(--gold); color: #08111f; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; text-decoration: none; display: block; text-align: center; white-space: normal; line-height: 1.35; }
 .calc-book-btn:hover { background: var(--orange); }
+/* ── REAL-TIME AVAILABILITY ── */
+.avail-section { padding: 4.5rem 2rem; background: var(--deep); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.avail-inner { max-width: 920px; margin: 0 auto; text-align: center; }
+.avail-sub { color: var(--muted); font-size: 1rem; margin: 0.6rem auto 1.7rem; max-width: 620px; line-height: 1.6; }
+.avail-controls { display: inline-flex; align-items: center; gap: 0.7rem; margin-bottom: 1.5rem; flex-wrap: wrap; justify-content: center; }
+.avail-controls label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.avail-controls input[type="date"] { background: var(--navy); border: 1px solid var(--border); border-radius: 10px; color: var(--white); padding: 0.72rem 0.95rem; font-family: inherit; font-size: 0.95rem; }
+.avail-status { font-size: 1.08rem; font-weight: 500; margin-bottom: 1.3rem; min-height: 1.4rem; color: var(--white); }
+.avail-status .ok { color: var(--wave); }
+.avail-status .full { color: var(--gold); }
+.avail-slots { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; }
+.avail-slot { display: inline-flex; flex-direction: column; align-items: center; min-width: 98px; padding: 0.7rem 1rem; border-radius: 12px; text-decoration: none; border: 1px solid var(--border); transition: transform 0.15s ease, border-color 0.2s; }
+.avail-slot.open { background: rgba(245,166,35,0.12); border-color: rgba(245,166,35,0.4); color: var(--white); }
+.avail-slot.open:hover { transform: translateY(-2px); border-color: var(--gold); }
+.avail-slot.booked { background: rgba(255,255,255,0.03); color: var(--muted); cursor: not-allowed; opacity: 0.5; }
+.avail-slot .slot-time { font-size: 1.04rem; font-weight: 600; }
+.avail-slot .slot-meta { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 0.28rem; }
+.avail-slot.open .slot-meta { color: var(--gold); }
+.avail-note { font-size: 0.82rem; color: var(--muted); margin-top: 1.7rem; line-height: 1.6; }
+.avail-note a { color: var(--gold); text-decoration: none; }
+@media (max-width: 760px) {
+  .avail-section { padding: 3rem 1.1rem; }
+  .avail-slot { min-width: 0; flex: 1 1 27%; }
+}
 .price-match { text-align: center; margin-top: 0.8rem; font-size: 0.78rem; color: rgba(255,255,255,0.6); }
 .price-match span { color: var(--gold); }
 .booking-calendar-shell { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr); gap: 1rem; margin-bottom: 1.35rem; }
@@ -1323,6 +1347,22 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="trust-item"><div class="trust-num">100%</div><div class="trust-label">Licensed & Insured</div></div>
   </div>
 </div>
+
+<!-- AVAILABILITY -->
+<section id="availability" class="avail-section">
+  <div class="avail-inner">
+    <div class="section-tag">Real-Time Availability</div>
+    <h2>See What's Open</h2>
+    <p class="avail-sub">Pick a date and check open jet-ski start times before you book — straight from our live schedule.</p>
+    <div class="avail-controls">
+      <label for="avail-date">Rental date</label>
+      <input type="date" id="avail-date">
+    </div>
+    <div class="avail-status" id="avail-status">Checking today's availability…</div>
+    <div class="avail-slots" id="avail-slots"></div>
+    <div class="avail-note">Open times shown for a 2-hour jet-ski rental. Boats are captained and booked separately — <a href="tel:4696937164">call (469) 693-7164</a> to confirm any date.</div>
+  </div>
+</section>
 
 <!-- FLEET -->
 <section id="fleet" class="fleet-section">
@@ -2361,6 +2401,62 @@ calcBoatPrice();
 calcBundlePrice();
 renderReviewCarousel();
 startReviewAutoplay();
+
+// ── REAL-TIME AVAILABILITY WIDGET ──
+(function initAvailability() {
+  const dateInput = document.getElementById('avail-date');
+  const statusEl = document.getElementById('avail-status');
+  const slotsEl = document.getElementById('avail-slots');
+  if (!dateInput || !statusEl || !slotsEl) return;
+  function todayIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  function dateLabel(iso) {
+    const parts = String(iso).split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) return 'that date';
+    return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+  const today = todayIso();
+  dateInput.value = today;
+  dateInput.min = today;
+
+  async function check() {
+    const date = dateInput.value;
+    if (!date) return;
+    statusEl.textContent = 'Checking availability…';
+    statusEl.className = 'avail-status';
+    slotsEl.innerHTML = '';
+    try {
+      const res = await fetch(`/api/public/availability?date=${encodeURIComponent(date)}&craft=jetski2&duration=2`);
+      if (!res.ok) throw new Error('unavailable');
+      const data = await res.json();
+      const slots = Array.isArray(data.slotDetails) ? data.slotDetails : [];
+      if (!slots.length) { statusEl.textContent = `Call (469) 693-7164 to check ${dateLabel(date)}.`; return; }
+      const openCount = slots.filter((s) => s.canBook).length;
+      if (openCount === 0) {
+        statusEl.innerHTML = `<span class="full">Fully booked on ${dateLabel(date)} — call (469) 693-7164 for the waitlist.</span>`;
+      } else {
+        statusEl.innerHTML = `<span class="ok">✅ ${openCount} open jet-ski time${openCount > 1 ? 's' : ''} on ${dateLabel(date)}</span>`;
+      }
+      slotsEl.innerHTML = slots.map((s) => {
+        const label = String(s.label || s.time || '');
+        if (s.canBook) {
+          const href = `./jetski-booking/?type=jetski&craft=jetski2&hours=2&date=${encodeURIComponent(date)}&time=${encodeURIComponent(s.time || '')}`;
+          const open = Number(s.openJetSkis);
+          const meta = Number.isFinite(open) ? `${open} ski${open === 1 ? '' : 's'} open` : 'Book';
+          return `<a class="avail-slot open" href="${href}"><span class="slot-time">${label}</span><span class="slot-meta">${meta}</span></a>`;
+        }
+        return `<div class="avail-slot booked"><span class="slot-time">${label}</span><span class="slot-meta">Booked</span></div>`;
+      }).join('');
+    } catch (err) {
+      statusEl.textContent = 'Live availability is taking a moment — call (469) 693-7164 and we’ll check for you.';
+      slotsEl.innerHTML = '';
+    }
+  }
+  dateInput.addEventListener('change', check);
+  check();
+})();
 </script>
 
 </body>
