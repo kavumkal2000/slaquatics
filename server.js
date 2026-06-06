@@ -17,8 +17,19 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'ops-store.json');
 const COOKIE_NAME = 'sla_ops_session';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// Session signing key. SET THIS IN PRODUCTION — if unset it is random per
+// process, so every restart/deploy invalidates all sessions (logs everyone out).
 const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'shoreline-admin');
+
+// ── OPS ACCOUNTS ────────────────────────────────────────────────────────────
+// Three roles (developer / employee / owner). Each resolves a username + password
+// from env. Dev-only fallbacks make local work easy; in production set a distinct
+// password per role (owner via OPS_OWNER_PASSWORD_HASH, preferred).
+// LEGACY_OPS_PASSWORD is a single SHARED fallback kept only for backward-compat —
+// validateAuthConfig() warns at startup if any role still relies on it or on a
+// weak default. Credential resolution below is intentionally unchanged.
+const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (IS_PRODUCTION ? '' : 'shoreline-admin');
 const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
 const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
 const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'hugoprado').trim().toLowerCase();
@@ -439,40 +450,101 @@ function normalizeOpsRole(role = '') {
   return 'owner';
 }
 
+// Single source of truth for ops accounts (one row per role). Each resolves a
+// username + password (or password hash) from the env config above. This
+// replaces three near-identical hand-written objects; behavior is unchanged.
+const OPS_ACCOUNTS = [
+  { role: 'developer', username: OPS_DEV_USERNAME, displayName: 'Developer', password: OPS_DEV_PASSWORD, passwordHash: '' },
+  { role: 'employee', username: OPS_EMPLOYEE_USERNAME, displayName: 'Hugo Prado', password: OPS_EMPLOYEE_PASSWORD, passwordHash: '' },
+  { role: 'owner', username: OPS_OWNER_USERNAME, displayName: 'Owner', password: OPS_OWNER_PASSWORD, passwordHash: OPS_OWNER_PASSWORD_HASH }
+];
+
 function listOpsUsers() {
-  return [
-    {
-      username: normalizeUsername(OPS_DEV_USERNAME || 'developer'),
-      role: 'developer',
-      displayName: 'Developer',
-      matches(password = '') {
-        return Boolean(OPS_DEV_PASSWORD) && safeSecretEquals(password, OPS_DEV_PASSWORD);
-      }
-    },
-    {
-      username: normalizeUsername(OPS_EMPLOYEE_USERNAME || 'hugoprado'),
-      role: 'employee',
-      displayName: 'Hugo Prado',
-      matches(password = '') {
-        return Boolean(OPS_EMPLOYEE_PASSWORD) && safeSecretEquals(password, OPS_EMPLOYEE_PASSWORD);
-      }
-    },
-    {
-      username: normalizeUsername(OPS_OWNER_USERNAME || 'owner'),
-      role: 'owner',
-      displayName: 'Owner',
-      matches(password = '') {
-        if (OPS_OWNER_PASSWORD) return safeSecretEquals(password, OPS_OWNER_PASSWORD);
-        return verifyPasswordHash(password, OPS_OWNER_PASSWORD_HASH);
-      }
+  return OPS_ACCOUNTS.map((account) => ({
+    username: normalizeUsername(account.username),
+    role: account.role,
+    displayName: account.displayName,
+    // Constant-time compare for a configured plaintext password; otherwise fall
+    // back to scrypt hash verification. Empty password + empty hash => no login.
+    matches(password = '') {
+      if (account.password) return safeSecretEquals(password, account.password);
+      if (account.passwordHash) return verifyPasswordHash(password, account.passwordHash);
+      return false;
     }
-  ];
+  }));
 }
 
 function findOpsUser(username = '', password = '') {
   const normalized = normalizeUsername(username);
   if (!normalized) return null;
   return listOpsUsers().find((user) => user.username === normalized && user.matches(password)) || null;
+}
+
+// ── LOGIN RATE LIMITING (brute-force protection) ──
+const LOGIN_MAX_ATTEMPTS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;   // failures are counted within this window
+const LOGIN_LOCK_MS = 15 * 60 * 1000;     // lockout duration once the limit trips
+const loginAttempts = new Map();          // key -> { count, firstAt, lockedUntil }
+
+function clientIpFor(request) {
+  const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return forwarded || request.socket?.remoteAddress || 'unknown';
+}
+function loginRateKey(request, username = '') {
+  return `${clientIpFor(request)}|${normalizeUsername(username)}`;
+}
+function loginLockRemainingMs(key) {
+  const record = loginAttempts.get(key);
+  if (record && record.lockedUntil > Date.now()) return record.lockedUntil - Date.now();
+  return 0;
+}
+function registerLoginFailure(key) {
+  const now = Date.now();
+  if (loginAttempts.size > 5000) { // opportunistic cleanup so the map can't grow unbounded
+    for (const [existingKey, record] of loginAttempts) {
+      if (record.lockedUntil < now && (now - record.firstAt) > LOGIN_WINDOW_MS) loginAttempts.delete(existingKey);
+    }
+  }
+  let record = loginAttempts.get(key);
+  if (!record || (now - record.firstAt) > LOGIN_WINDOW_MS) record = { count: 0, firstAt: now, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= LOGIN_MAX_ATTEMPTS) record.lockedUntil = now + LOGIN_LOCK_MS;
+  loginAttempts.set(key, record);
+}
+function clearLoginFailures(key) {
+  loginAttempts.delete(key);
+}
+
+// ── CONFIG VALIDATION (warn on insecure defaults; never crashes login) ──
+// Pure check: returns warning strings without logging, so it can also back the
+// developer System-health endpoint.
+function collectAuthConfigWarnings() {
+  const warnings = [];
+  if (!process.env.SESSION_SECRET) {
+    warnings.push('SESSION_SECRET is not set — sessions reset on every restart/deploy (everyone gets logged out). Set a fixed random SESSION_SECRET.');
+  }
+  if (IS_PRODUCTION) {
+    if (!process.env.OPS_OWNER_PASSWORD && !OPS_OWNER_PASSWORD_HASH) {
+      warnings.push('No owner password configured — set OPS_OWNER_PASSWORD_HASH (preferred) or OPS_OWNER_PASSWORD.');
+    }
+    if (OPS_EMPLOYEE_PASSWORD === 'default') {
+      warnings.push("Employee password is the weak default 'default' — set OPS_EMPLOYEE_PASSWORD.");
+    }
+    if (LEGACY_OPS_PASSWORD && (OPS_DEV_PASSWORD === LEGACY_OPS_PASSWORD || OPS_OWNER_PASSWORD === LEGACY_OPS_PASSWORD)) {
+      warnings.push('A role is using the shared OPS_PASSWORD fallback — give each role its own password so one leak does not expose all accounts.');
+    }
+  }
+  return warnings;
+}
+
+function validateAuthConfig() {
+  const warnings = collectAuthConfigWarnings();
+  if (warnings.length) {
+    console.warn('\n⚠️  Shoreline Ops — auth configuration warnings:');
+    warnings.forEach((w) => console.warn(`   • ${w}`));
+    console.warn('');
+  }
+  return warnings;
 }
 
 function createSessionToken(user = {}, deviceIdHash = '') {
@@ -696,6 +768,19 @@ function priceForSelection(craft = '', duration = 0, drone = false) {
 
 function phoneDigits(value = '') {
   return String(value || '').replace(/\D/g, '');
+}
+
+function mergeTagList(existing = '', additions = []) {
+  const base = String(existing || '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const merged = new Set(base);
+  additions.forEach((tag) => {
+    const normalized = String(tag || '').trim();
+    if (normalized) merged.add(normalized);
+  });
+  return [...merged].join(', ');
 }
 
 function htmlEscape(value = '') {
@@ -1018,6 +1103,25 @@ function blockedStartTimesForCraft(state, options = {}) {
       duration: requestedDuration
     })
   ));
+}
+
+function availabilitySnapshotForStartTime(state, options = {}) {
+  const craft = String(options.craft || '').trim();
+  const requiresBoat = craftUsesBoat(craft);
+  const requestedJetSkis = craftJetSkiCount(craft);
+  const boatAvailable = requiresBoat ? findBoatConflicts(state, options).length === 0 : true;
+  const openJetSkis = requestedJetSkis > 0
+    ? Math.max(0, TOTAL_PUBLIC_JET_SKIS - peakJetSkiUnitsBooked(state, options))
+    : TOTAL_PUBLIC_JET_SKIS;
+  const canBook = boatAvailable && (requestedJetSkis <= 0 || openJetSkis >= requestedJetSkis);
+  return {
+    time: String(options.time || '').trim(),
+    label: formatTimeLabel(options.time),
+    boatAvailable,
+    requestedJetSkis,
+    openJetSkis,
+    canBook
+  };
 }
 
 function assertPublicAvailability(state, options = {}) {
@@ -2576,6 +2680,69 @@ function upsertWaiverOnlyFromPayload(state, payload = {}, now = new Date().toISO
   return { state, customer, existingCustomer };
 }
 
+function upsertSeasonalLeadFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  const firstName = String(payload.firstName || payload.name || '').trim();
+  const phone = String(payload.phone || '').trim();
+  const email = String(payload.email || '').trim();
+  const preferredChannel = String(payload.preferredChannel || (phone ? 'sms' : 'email')).trim().toLowerCase() === 'sms'
+    ? 'sms'
+    : 'email';
+
+  if (!firstName || (!phone && !email)) {
+    throw new Error('First name and either a phone number or email are required.');
+  }
+
+  const existingCustomer = findMatchingCustomer(state, { name: firstName, phone, email });
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: firstName,
+    phone,
+    email,
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Seasonal Waitlist',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = firstName || customer.name || 'Seasonal lead';
+  if (phone) customer.phone = phone;
+  if (email) customer.email = email;
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Seasonal Waitlist';
+  customer.importSource = customer.importSource || 'website';
+  customer.crmTags = mergeTagList(customer.crmTags, [
+    'Seasonal lead',
+    preferredChannel === 'sms' ? 'SMS lead' : 'Email lead'
+  ]);
+  customer.crmFields = mergeCrmFields(customer.crmFields, {
+    seasonalLead: 'true',
+    seasonalLeadChannel: preferredChannel,
+    seasonalLeadCapturedAt: now
+  });
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    customerId: customer.id,
+    customerName: customer.name,
+    channel: 'seasonal-lead',
+    message: `Off-season ${preferredChannel.toUpperCase()} opt-in captured from the booking page.`,
+    timestamp: now
+  });
+
+  return { state, customer, existingCustomer, preferredChannel };
+}
+
 function findBookingForStripeSession(state, session = {}) {
   const bookingId = Number(session?.metadata?.bookingId || session?.client_reference_id || 0);
   if (bookingId) {
@@ -3240,11 +3407,19 @@ async function handleApi(request, response, pathname) {
       const body = JSON.parse(await readRequestBody(request) || '{}');
       const username = String(body.username || '');
       const password = String(body.password || '');
+      const rateKey = loginRateKey(request, username);
+      const lockMs = loginLockRemainingMs(rateKey);
+      if (lockMs > 0) {
+        sendJson(response, 429, { error: `Too many attempts. Try again in ${Math.ceil(lockMs / 60000)} minute(s).` });
+        return true;
+      }
       const user = findOpsUser(username, password);
       if (!user) {
+        registerLoginFailure(rateKey);
         sendJson(response, 401, { error: 'Incorrect username or password.' });
         return true;
       }
+      clearLoginFailures(rateKey);
       setSessionCookie(response, user);
       sendJson(response, 200, {
         ok: true,
@@ -3336,25 +3511,41 @@ async function handleApi(request, response, pathname) {
 
     const availabilityType = craftAvailabilityType(craft);
     if (availabilityType === 'none') {
+      const slotDetails = PUBLIC_BOOKING_START_TIMES.map((time) => ({
+        time,
+        label: formatTimeLabel(time),
+        boatAvailable: true,
+        requestedJetSkis: 0,
+        openJetSkis: TOTAL_PUBLIC_JET_SKIS,
+        canBook: true
+      }));
       sendPublicJson(response, request, 200, {
         ok: true,
         availabilityType,
         requiresAvailabilityCheck: false,
         blockedTimes: [],
         availableTimes: [...PUBLIC_BOOKING_START_TIMES],
-        nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || ''
+        nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || '',
+        slotDetails
       });
       return true;
     }
 
     const state = await stateStore.read();
-    const blockedTimes = blockedStartTimesForCraft(state, {
+    const availabilityOptions = {
       date,
       duration,
       craft,
       publicToken
-    });
-    const availableTimes = PUBLIC_BOOKING_START_TIMES.filter((time) => !blockedTimes.includes(time));
+    };
+    const slotDetails = PUBLIC_BOOKING_START_TIMES.map((time) => (
+      availabilitySnapshotForStartTime(state, {
+        ...availabilityOptions,
+        time
+      })
+    ));
+    const blockedTimes = slotDetails.filter((slot) => !slot.canBook).map((slot) => slot.time);
+    const availableTimes = slotDetails.filter((slot) => slot.canBook).map((slot) => slot.time);
 
     sendPublicJson(response, request, 200, {
       ok: true,
@@ -3362,9 +3553,32 @@ async function handleApi(request, response, pathname) {
       requiresAvailabilityCheck: true,
       blockedTimes,
       availableTimes,
-      nextOpenTime: availableTimes[0] || ''
+      nextOpenTime: availableTimes[0] || '',
+      slotDetails
     });
     return true;
+  }
+
+  if (pathname === '/api/public/seasonal-lead' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { customer, preferredChannel } = upsertSeasonalLeadFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        preferredChannel,
+        customer: publicCustomerPayload(customer)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the seasonal lead.'
+      });
+      return true;
+    }
   }
 
   if (pathname === '/api/public/booking-draft' && request.method === 'POST') {
@@ -3718,6 +3932,34 @@ async function handleApi(request, response, pathname) {
     return true;
   }
 
+  // Developer-only system health: surfaces auth/config warnings + runtime info
+  // so the developer can verify production config from the System page instead
+  // of digging through server logs.
+  if (pathname === '/api/ops/system/health' && request.method === 'GET') {
+    if (!authPermissionsForRole(session.role).canAccessSystem) {
+      sendJson(response, 403, { error: 'Developer access required.' });
+      return true;
+    }
+    const state = await stateStore.read();
+    const warnings = collectAuthConfigWarnings();
+    sendJson(response, 200, {
+      ok: true,
+      runtime: {
+        node: process.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        production: IS_PRODUCTION,
+        storage: stateStore.kind,
+        sessionSecretSet: Boolean(process.env.SESSION_SECRET)
+      },
+      auth: {
+        ok: warnings.length === 0,
+        warnings
+      },
+      integrations: integrationStatus(state)
+    });
+    return true;
+  }
+
   if (pathname === '/api/ops/state' && request.method === 'GET') {
     const state = await stateStore.read();
     const invoiceToBookingChanged = syncBookingsFromInvoices(state);
@@ -3970,12 +4212,28 @@ const server = http.createServer(async (request, response) => {
     await serveFile(response, filePath);
   } catch (error) {
     console.error('Unhandled request error:', error);
-    sendJson(response, 500, { error: 'Internal server error.' });
+    // Only respond if we have not already started sending a response — otherwise
+    // sendJson would throw "headers already sent" and leave the socket hanging.
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: 'Internal server error.' });
+    } else {
+      try { response.end(); } catch { /* socket already gone */ }
+    }
   }
+});
+
+// Last-resort process guards: log and stay up rather than letting a stray
+// rejection or error in a timer/callback take the whole ops server down.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
 });
 
 server.listen(PORT, HOST, () => {
   console.log(`Shoreline ops server listening on http://${HOST}:${PORT} using ${stateStore.kind} storage`);
+  validateAuthConfig();
   scheduleOwnerWeeklyDigestCheck();
   const weeklyDigestTimer = setInterval(() => {
     scheduleOwnerWeeklyDigestCheck();
