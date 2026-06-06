@@ -3,12 +3,89 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Start a Shoreline Aquatics booking request, choose your package, pick your rental day, and sign the waiver before sending the request.">
+<meta name="description" content="See live Shoreline Aquatics availability, choose an open Lake Lewisville rental time, and continue to the contact, waiver, and $55 checkout step.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking/">
 <title>Book a Rental | Shoreline Aquatics</title>
 <link rel="preconnect" href="https://shoreline-aquatics-ops.onrender.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "LocalBusiness",
+      "@id": "https://slaquatics.com/#business",
+      "name": "Shoreline Aquatics Jet Ski & Boat Rentals",
+      "url": "https://slaquatics.com/",
+      "image": "https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png",
+      "telephone": "+14696937164",
+      "priceRange": "$$",
+      "description": "Jet ski and boat rentals on Lake Lewisville with live availability, life jackets included, and a full safety orientation.",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "2000 Main St",
+        "addressLocality": "Hickory Creek",
+        "addressRegion": "TX",
+        "postalCode": "75065",
+        "addressCountry": "US"
+      },
+      "areaServed": ["Lewisville", "Denton", "Frisco", "Little Elm", "The Colony", "Corinth"],
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          "opens": "08:30",
+          "closes": "20:30"
+        }
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "5.0",
+        "reviewCount": "550"
+      },
+      "review": [
+        {
+          "@type": "Review",
+          "author": { "@type": "Person", "name": "Taimoor J." },
+          "reviewRating": { "@type": "Rating", "ratingValue": "5" },
+          "reviewBody": "Best experience on the lake. They walked us through everything and the jet skis were in perfect condition."
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://slaquatics.com/jetski-booking/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Do I need a boating license?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No license is needed. Shoreline Aquatics gives every rider a full orientation and safety walkthrough before launch."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is due today?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The booking step charges $55 today, which includes a $50 booking deposit and a $5 processing fee. The remaining balance is handled before launch."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are life jackets included?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Life jackets, fuel, and the safety briefing are included with Shoreline rentals."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -180,6 +257,222 @@ h1 span { color: var(--gold); }
   color: var(--ink);
   text-decoration: none;
   font-size: 0.88rem;
+}
+.hero-spotlight {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 24px;
+  padding: 30px;
+}
+.hero-badge-row,
+.policy-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+.policy-badge-row {
+  margin: 18px 0 10px;
+}
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.72rem 0.92rem;
+  border-radius: 999px;
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.26);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.trust-badge.wave {
+  background: rgba(15, 184, 224, 0.12);
+  border-color: rgba(15, 184, 224, 0.24);
+}
+.hero-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+}
+.hero-video-panel {
+  display: grid;
+  gap: 14px;
+}
+.hero-video-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  min-height: 320px;
+  background: #08111f;
+}
+.hero-video-shell video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-video-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 17, 31, 0.04) 0%, rgba(8, 17, 31, 0.5) 100%);
+  pointer-events: none;
+}
+.hero-video-play {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
+  border: 1px solid rgba(255,255,255,0.26);
+  background: rgba(8,17,31,0.74);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.72rem 1rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.hero-video-shell.autoplay-blocked .hero-video-play {
+  opacity: 1;
+  pointer-events: auto;
+}
+.hero-video-play:hover {
+  border-color: rgba(245,166,35,0.45);
+  transform: translateY(-1px);
+}
+.availability-spotlight-card,
+.first-timer-card,
+.waitlist-card {
+  padding: 24px 26px;
+}
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.slot-card {
+  border-radius: 18px;
+  padding: 0.95rem 1rem;
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
+}
+.slot-card strong {
+  display: block;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.slot-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.slot-card .slot-tag {
+  display: inline-flex;
+  margin-top: 10px;
+  border-radius: 999px;
+  padding: 0.24rem 0.6rem;
+  background: rgba(15, 184, 224, 0.12);
+  color: var(--wave);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.slot-card.warning .slot-tag {
+  background: rgba(245, 166, 35, 0.14);
+  color: var(--orange);
+}
+.slot-card.error .slot-tag {
+  background: rgba(182, 77, 77, 0.12);
+  color: var(--danger);
+}
+.first-time-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.first-time-item {
+  border-radius: 18px;
+  padding: 1rem;
+  background: rgba(11, 28, 48, 0.04);
+  border: 1px solid rgba(11, 28, 48, 0.08);
+}
+.first-time-item strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.live-review-link {
+  display: inline-flex;
+  margin-top: 12px;
+  color: var(--wave);
+  text-decoration: none;
+  font-weight: 700;
+}
+.waitlist-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.waitlist-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+.sticky-mobile-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 50;
+  display: none;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(8, 17, 31, 0.9);
+  box-shadow: 0 18px 45px rgba(8, 17, 31, 0.24);
+  backdrop-filter: blur(18px);
+}
+.sticky-mobile-link {
+  flex: 1;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 0.92rem 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.sticky-mobile-link.primary {
+  background: var(--gold);
+  color: #08111f;
+}
+.sticky-mobile-link.secondary {
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
 }
 .hero-side {
   display: grid;
@@ -733,6 +1026,11 @@ h1 span { color: var(--gold); }
     flex-direction: column;
     align-items: flex-start;
   }
+  .hero-spotlight,
+  .waitlist-grid,
+  .first-time-grid {
+    grid-template-columns: 1fr;
+  }
   .hero-card,
   .summary-card,
   .info-card,
@@ -745,8 +1043,21 @@ h1 span { color: var(--gold); }
   }
 }
 @media (max-width: 720px) {
+  body {
+    padding-bottom: 96px;
+  }
+  .sticky-mobile-bar {
+    display: flex;
+  }
   .hero-note-grid {
     grid-template-columns: 1fr;
+  }
+  .top-actions {
+    width: 100%;
+  }
+  .top-actions .btn {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
   }
   .calendar-head {
     align-items: flex-start;
@@ -778,14 +1089,86 @@ h1 span { color: var(--gold); }
         </div>
     </a>
       <div class="top-actions">
+        <a class="btn btn-ghost" href="sms:14696937164?&body=Hey%20Shoreline%20Aquatics%2C%20I%20want%20help%20choosing%20a%20rental%20time.">Text Us</a>
         <a class="btn btn-ghost" href="../waiver/">Contact + Waiver</a>
         <a class="btn btn-ghost" href="../privacy-policy/">Privacy Policy</a>
         <a class="btn btn-primary" href="tel:4696937164">Call (469) 693-7164</a>
       </div>
     </div>
 
+    <div class="hero">
+      <div class="hero-card hero-spotlight">
+        <div>
+          <div class="eyebrow">Live booking availability</div>
+          <h1>See Open Time Slots <span>Before You Book</span></h1>
+          <p class="hero-copy">
+            Pick the day first, see live availability right away, and move into the contact, waiver, and $55 checkout step only after you know your rental time is open.
+          </p>
+          <div class="hero-badge-row">
+            <span class="trust-badge">Free cancellation up to 48 hrs</span>
+            <span class="trust-badge wave">No license needed</span>
+            <span class="trust-badge">Life jackets included</span>
+          </div>
+          <div class="hero-action-row">
+            <a class="btn btn-primary" href="#booking-form-card">Book Now</a>
+            <a class="btn btn-ghost" href="sms:14696937164?&body=Hey%20Shoreline%20Aquatics%2C%20I%20want%20help%20choosing%20the%20best%20rental%20time.">Text Us</a>
+          </div>
+          <div class="contact-strip">
+            <a class="contact-pill" href="tel:4696937164">Call (469) 693-7164</a>
+            <a class="contact-pill" href="sms:14696937164?&body=Hey%20Shoreline%20Aquatics%2C%20I%20have%20a%20question%20about%20booking.">Tap to text</a>
+            <span class="contact-pill">Meet us at the launch · Lake Lewisville</span>
+          </div>
+        </div>
+        <div class="hero-video-panel">
+          <div class="hero-video-shell" id="hero-video-wrap">
+            <video id="hero-video" autoplay muted loop playsinline webkit-playsinline preload="auto" poster="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg">
+              <source src="https://storage.googleapis.com/msgsndr/3PgAS2jkeJsHjqRMEuF6/media/68181c55efb1e5d49ba97e25.mp4" type="video/mp4">
+            </video>
+            <button class="hero-video-play" id="hero-video-play" type="button">Tap to play video</button>
+          </div>
+          <div class="summary-card" id="live-reviews-card">
+            <div class="summary-kicker">Live Google reviews</div>
+            <div class="summary-title">Loading Shoreline reviews...</div>
+            <div class="summary-note">We’ll pull your live Google review link from the ops backend so renters can tap into real reviews before they book.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-card availability-spotlight-card">
+      <div class="mini-kicker">Real-time availability</div>
+      <h2>Open start times before the contact step</h2>
+      <p class="section-copy" id="availability-spotlight-copy">Choose the day and package below to see live open slots and how many jet skis are still open.</p>
+      <div class="slot-grid" id="availability-slot-grid">
+        <div class="slot-card">
+          <strong>Loading live slots</strong>
+          <span>We’re warming up the live booking system for today’s availability.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-card first-timer-card">
+      <div class="mini-kicker">First time?</div>
+      <h2>Here’s how it works</h2>
+      <p class="section-copy">This page is built to answer the nervous first-timer right away, before they bounce.</p>
+      <div class="first-time-grid">
+        <div class="first-time-item">
+          <strong>No license needed</strong>
+          <span>You do not need a boating license to rent here.</span>
+        </div>
+        <div class="first-time-item">
+          <strong>Full orientation</strong>
+          <span>Every ride starts with a safety walkthrough before launch.</span>
+        </div>
+        <div class="first-time-item">
+          <strong>Gear included</strong>
+          <span>Life jackets, fuel, and the launch briefing are included.</span>
+        </div>
+      </div>
+    </div>
+
     <div class="content-grid">
-      <div class="form-card">
+      <div class="form-card" id="booking-form-card">
         <h2 class="section-title">Pick the rental date first</h2>
         <p class="section-copy">
           Choose the date and start time here. The next page combines the rider contact form, waiver, and $55 checkout in one step.
@@ -892,6 +1275,9 @@ h1 span { color: var(--gold); }
           </div>
 
           <div class="status" id="form-status"></div>
+          <div class="policy-badge-row">
+            <span class="trust-badge">Free cancellation up to 48 hrs</span>
+          </div>
           <button class="btn btn-primary" type="submit">Continue To Contact + Waiver</button>
           <div class="footer-note">
             The next page combines the contact form, waiver, and $55 checkout in one clean step.
@@ -899,6 +1285,43 @@ h1 span { color: var(--gold); }
         </form>
       </div>
     </div>
+
+    <div class="info-card waitlist-card">
+      <div class="mini-kicker">Off-season remarketing</div>
+      <h2>Want first dibs next season?</h2>
+      <p class="section-copy">Join the Shoreline text or email list and we’ll save you as a seasonal lead in the CRM for launch-day offers next year.</p>
+      <form id="waitlist-form">
+        <div class="waitlist-grid">
+          <div class="field">
+            <label for="lead-first-name">First name</label>
+            <input id="lead-first-name" name="firstName" type="text" placeholder="Your first name" required>
+          </div>
+          <div class="field">
+            <label for="lead-phone">Phone number</label>
+            <input id="lead-phone" name="phone" type="tel" placeholder="(469) 555-1212">
+          </div>
+          <div class="field">
+            <label for="lead-email">Email</label>
+            <input id="lead-email" name="email" type="email" placeholder="you@example.com">
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px;max-width:260px;">
+          <label for="lead-channel">Best way to reach you</label>
+          <select id="lead-channel" name="preferredChannel">
+            <option value="sms">Text me</option>
+            <option value="email">Email me</option>
+          </select>
+        </div>
+        <div class="status" id="waitlist-status"></div>
+        <button class="btn btn-primary" type="submit">Join the waitlist</button>
+        <div class="waitlist-note">No spam. This goes into Shoreline’s CRM so you can be re-marketed to next season.</div>
+      </form>
+    </div>
+  </div>
+
+  <div class="sticky-mobile-bar">
+    <a class="sticky-mobile-link primary" href="#booking-form-card">Book Now</a>
+    <a class="sticky-mobile-link secondary" href="sms:14696937164?&body=Hey%20Shoreline%20Aquatics%2C%20I%20want%20help%20booking%20a%20rental.">Text Us</a>
   </div>
 
 <script>
@@ -944,6 +1367,8 @@ const LEGACY_CRAFT_MAP = {
   seadoo4: 'jetski4'
 };
 
+const FALLBACK_GOOGLE_REVIEW_URL = 'https://www.google.com/search?q=Shoreline+Aquatics+Lake+Lewisville+reviews';
+
 let currentType = 'jetski';
 let calendarMonthCursor = null;
 let selectedBookingDate = '';
@@ -956,6 +1381,8 @@ let draftAutoSaveTimer = null;
 let draftSavePromise = null;
 let lastSavedDraftKey = '';
 let lastSavedDraft = null;
+let integrationsStatus = null;
+let latestAvailability = null;
 
 function qs(id) {
   return document.getElementById(id);
@@ -1107,6 +1534,72 @@ function setAvailabilityNote(message = '', tone = '') {
   note.className = `field-hint${tone ? ` ${tone}` : ''}`;
 }
 
+function applyIntegrationStatus() {
+  const card = qs('live-reviews-card');
+  if (!card) return;
+  const googleUrl = integrationsStatus?.reviewGoogleUrl || FALLBACK_GOOGLE_REVIEW_URL;
+  const reviewConfigured = Boolean(integrationsStatus?.reviewGoogleUrl);
+  card.innerHTML = `
+    <div class="summary-kicker">Live Google reviews</div>
+    <div class="summary-total" style="font-size:3rem;">5.0★</div>
+    <div class="summary-title">${reviewConfigured ? 'Read the live Google review feed' : 'Google review link ready for renters'}</div>
+    <div class="summary-note">
+      ${reviewConfigured
+        ? 'Open the real Google review profile before booking if you want social proof straight from recent renters.'
+        : 'Your Google review link will show here once it is configured in Shoreline ops. The backup link still opens Google results.'}
+    </div>
+    <a class="live-review-link" href="${googleUrl}" target="_blank" rel="noopener noreferrer">Open live Google reviews</a>
+  `;
+}
+
+function renderAvailabilitySpotlight(slotDetails = [], availabilityType = availabilityLabelForCraft(qs('craft').value || '')) {
+  const grid = qs('availability-slot-grid');
+  const copy = qs('availability-spotlight-copy');
+  if (!grid || !copy) return;
+
+  const requestedJetSkis = getJetSkiCount(qs('craft').value || '');
+  const formattedDate = formatSelectedDate(selectedBookingDate);
+  const availableSlots = (slotDetails || []).filter((slot) => slot.canBook).slice(0, 6);
+
+  if (!selectedBookingDate) {
+    copy.textContent = 'Choose the day and package below to see live open slots and how many jet skis are still open.';
+    grid.innerHTML = '<div class="slot-card"><strong>Pick a rental day</strong><span>As soon as you choose the date, live start times will show here before the contact step.</span></div>';
+    return;
+  }
+
+  if (!availableSlots.length) {
+    copy.textContent = `No open ${availabilityType} start times are left on ${formattedDate}. Try another day or text Shoreline for help.`;
+    grid.innerHTML = `
+      <div class="slot-card error">
+        <strong>${formattedDate}</strong>
+        <span>That day is sold out for the current package and duration.</span>
+        <span class="slot-tag">Sold out</span>
+      </div>
+    `;
+    return;
+  }
+
+  copy.textContent = `Live open ${availabilityType} start times for ${formattedDate}. These update before the contact and waiver step.`;
+  grid.innerHTML = availableSlots.map((slot) => {
+    const urgencyClass = requestedJetSkis > 0 && slot.openJetSkis <= (requestedJetSkis + 1) ? ' warning' : '';
+    const availabilityLine = availabilityType === 'boat'
+      ? 'Boat open for this start'
+      : availabilityType === 'bundle'
+        ? `${slot.openJetSkis} skis open · ${slot.boatAvailable ? 'boat open' : 'boat booked'}`
+        : `${slot.openJetSkis} skis open`;
+    const tag = requestedJetSkis > 0 && slot.openJetSkis <= (requestedJetSkis + 1)
+      ? 'Going fast'
+      : 'Open now';
+    return `
+      <div class="slot-card${urgencyClass}">
+        <strong>${slot.label}</strong>
+        <span>${availabilityLine}</span>
+        <span class="slot-tag">${tag}</span>
+      </div>
+    `;
+  }).join('');
+}
+
 function refreshTimeOptions(blockedTimes = []) {
   const blocked = new Set(blockedTimes);
   const timeSelect = qs('time');
@@ -1132,7 +1625,14 @@ function prewarmOps() {
   backendWarmPromise = fetch(`${OPS_PUBLIC_API}/api/public/integrations/status`, {
     method: 'GET',
     headers: { Accept: 'application/json' }
-  }).catch(() => null);
+  })
+    .then((response) => response.json().catch(() => ({})))
+    .then((body) => {
+      integrationsStatus = body?.integrations || null;
+      applyIntegrationStatus();
+      return body;
+    })
+    .catch(() => null);
   return backendWarmPromise;
 }
 
@@ -1144,12 +1644,14 @@ async function refreshBoatAvailability(options = {}) {
   if (!payload.date || !payload.duration) {
     refreshTimeOptions([]);
     setAvailabilityNote('');
+    renderAvailabilitySpotlight([]);
     return;
   }
 
   if (!craftNeedsAvailabilityCheck(payload.craft)) {
     refreshTimeOptions([]);
     setAvailabilityNote('');
+    renderAvailabilitySpotlight([]);
     return;
   }
 
@@ -1176,8 +1678,10 @@ async function refreshBoatAvailability(options = {}) {
       throw new Error(body.error || `Could not check ${availabilityLabel} availability right now.`);
     }
 
+    latestAvailability = body;
     const blockedTimes = Array.isArray(body.blockedTimes) ? body.blockedTimes : [];
     const availableTimes = Array.isArray(body.availableTimes) ? body.availableTimes : [];
+    const slotDetails = Array.isArray(body.slotDetails) ? body.slotDetails : [];
     const responseLabel = body.availabilityType === 'bundle'
       ? 'bundle'
       : body.availabilityType === 'boat'
@@ -1186,6 +1690,7 @@ async function refreshBoatAvailability(options = {}) {
           ? 'jet ski'
           : availabilityLabel;
     refreshTimeOptions(blockedTimes);
+    renderAvailabilitySpotlight(slotDetails, responseLabel);
 
     if (!availableTimes.length) {
       setAvailabilityNote(`This ${responseLabel} package is fully booked for the available start times on this day. Choose another date.`, 'error');
@@ -1196,8 +1701,10 @@ async function refreshBoatAvailability(options = {}) {
     }
   } catch (error) {
     if (requestId !== activeAvailabilityRequest) return;
+    latestAvailability = null;
     refreshTimeOptions([]);
     setAvailabilityNote(error.message || `Could not check ${availabilityLabel} availability right now.`, 'warn');
+    renderAvailabilitySpotlight([]);
   } finally {
     if (requestId === activeAvailabilityRequest) updateSummary();
   }
@@ -1536,6 +2043,87 @@ async function handleSubmit(event) {
   }
 }
 
+async function handleWaitlistSubmit(event) {
+  event.preventDefault();
+  const status = qs('waitlist-status');
+  const payload = {
+    firstName: qs('lead-first-name').value.trim(),
+    phone: qs('lead-phone').value.trim(),
+    email: qs('lead-email').value.trim(),
+    preferredChannel: qs('lead-channel').value
+  };
+
+  if (!payload.firstName || (!payload.phone && !payload.email)) {
+    status.textContent = 'Please add your first name and either a phone number or email.';
+    status.classList.remove('success');
+    return;
+  }
+
+  status.textContent = 'Saving your Shoreline waitlist spot...';
+  status.classList.remove('success');
+
+  try {
+    const response = await fetch(`${OPS_PUBLIC_API}/api/public/seasonal-lead`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(body.error || 'We could not save your waitlist info right now.');
+    }
+    status.textContent = `You’re in. Shoreline saved your ${body.preferredChannel === 'sms' ? 'text' : 'email'} lead for next season.`;
+    status.classList.add('success');
+    event.target.reset();
+    qs('lead-channel').value = payload.preferredChannel;
+  } catch (error) {
+    status.textContent = error.message || 'We could not save your waitlist info right now.';
+    status.classList.remove('success');
+  }
+}
+
+function initHeroVideo() {
+  const heroVideo = qs('hero-video');
+  const heroVideoWrap = qs('hero-video-wrap');
+  const heroVideoPlay = qs('hero-video-play');
+  if (!heroVideo || !heroVideoWrap || !heroVideoPlay) return;
+
+  const showManualPlay = () => heroVideoWrap.classList.add('autoplay-blocked');
+  const hideManualPlay = () => heroVideoWrap.classList.remove('autoplay-blocked');
+
+  const autoplayPromise = heroVideo.play();
+  if (autoplayPromise && typeof autoplayPromise.catch === 'function') {
+    autoplayPromise.then(hideManualPlay).catch(showManualPlay);
+  }
+
+  heroVideoPlay.addEventListener('click', async () => {
+    try {
+      if (heroVideo.paused) {
+        heroVideo.muted = false;
+        await heroVideo.play();
+        hideManualPlay();
+        heroVideoPlay.textContent = 'Pause video';
+      } else {
+        heroVideo.pause();
+        heroVideoPlay.textContent = 'Play video';
+      }
+    } catch (error) {
+      showManualPlay();
+    }
+  });
+
+  heroVideo.addEventListener('play', () => {
+    heroVideoPlay.textContent = 'Pause video';
+  });
+  heroVideo.addEventListener('pause', () => {
+    heroVideoWrap.classList.add('autoplay-blocked');
+    heroVideoPlay.textContent = 'Play video';
+  });
+}
+
 document.querySelectorAll('.type-btn').forEach((button) => {
   button.addEventListener('click', () => {
     setType(button.dataset.type);
@@ -1578,12 +2166,15 @@ qs('date').addEventListener('change', (event) => {
   scheduleDraftSave();
 });
 qs('booking-form').addEventListener('submit', handleSubmit);
+qs('waitlist-form').addEventListener('submit', handleWaitlistSubmit);
 
 qs('date').value = todayLocalIso();
 qs('time').value = '10:00';
 selectedBookingDate = qs('date').value;
 (async function initBookingPage() {
   setType('jetski');
+  initHeroVideo();
+  applyIntegrationStatus();
   void prewarmOps();
   const params = new URLSearchParams(window.location.search);
   const bookingToken = params.get('booking');
