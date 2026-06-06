@@ -122,6 +122,25 @@ body[data-ios-install='needed'] .install-banner{display:flex}
 .kpi-card .delta.down{color:var(--red);}
 .kpi-card .delta.warn{color:var(--amber);}
 /* ── TODAY RUN-SHEET ── */
+/* ── NEEDS ATTENTION ── */
+.na-card{background:var(--deep);border:1px solid var(--border);border-radius:14px;padding:1rem 1.1rem;margin-bottom:1.6rem;}
+.na-card.na-clear{display:flex;align-items:center;gap:0.6rem;color:var(--muted);font-size:0.9rem;}
+.na-head{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;}
+.na-head h3{font-size:0.95rem;font-weight:600;color:#fff;}
+.na-count{background:var(--amber);color:#08111f;font-size:0.7rem;font-weight:700;padding:1px 8px;border-radius:999px;}
+.na-list{display:flex;flex-direction:column;gap:0.55rem;}
+.na-row{display:flex;align-items:center;justify-content:space-between;gap:0.8rem;padding:0.6rem 0.7rem;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;flex-wrap:wrap;transition:border-color 0.2s ease;}
+.na-row:hover{border-color:rgba(125,217,255,0.25);}
+.na-main{min-width:0;}
+.na-name{font-size:0.92rem;font-weight:600;color:#fff;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}
+.na-sub{font-size:0.76rem;color:var(--muted);margin-top:0.15rem;}
+.na-tag{font-size:0.62rem;text-transform:uppercase;letter-spacing:0.06em;padding:2px 7px;border-radius:999px;font-weight:600;}
+.na-tag.na-confirm{background:rgba(125,217,255,0.15);color:var(--wave);}
+.na-tag.na-waiver{background:rgba(245,158,11,0.15);color:var(--amber);}
+.na-btn{min-height:38px;padding:0 0.95rem;border-radius:9px;font-size:0.82rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;flex-shrink:0;}
+.na-btn.na-confirm{background:rgba(125,217,255,0.14);border-color:rgba(125,217,255,0.3);color:var(--wave);}
+.na-btn.na-waiver{background:rgba(245,158,11,0.14);border-color:rgba(245,158,11,0.32);color:var(--amber);}
+.na-more{font-size:0.78rem;color:var(--muted);margin-top:0.7rem;text-align:center;}
 .runsheet{margin-bottom:1.8rem;}
 .runsheet-head{display:flex;align-items:baseline;justify-content:space-between;gap:0.8rem;margin-bottom:0.95rem;flex-wrap:wrap;}
 .runsheet-head h2{font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:0.04em;color:#fff;}
@@ -4531,8 +4550,55 @@ function renderTodayRunSheet() {
   `;
 }
 
+// ── DASHBOARD "NEEDS ATTENTION" (actionable items across upcoming bookings) ──
+function dashboardNeedsAttentionItems() {
+  const upcoming = upcomingScheduledBookings();
+  const items = [];
+  upcoming.forEach((b) => {
+    if (normalizeBookingStatusValue(b.status) === 'pending') {
+      items.push({ booking: b, label: 'Needs confirmation', cls: 'na-confirm', action: `updateStatus(${Number(b.id)},'confirmed')`, actionLabel: '✓ Confirm' });
+    }
+  });
+  upcoming.forEach((b) => {
+    if (!String(b.waiverSignedAt || '').trim()) {
+      items.push({ booking: b, label: 'Waiver still needed', cls: 'na-waiver', action: `openBookingModal(${Number(b.id)})`, actionLabel: '📝 Open' });
+    }
+  });
+  return items.sort((a, b) => bookingScheduleSortKey(a.booking).localeCompare(bookingScheduleSortKey(b.booking)));
+}
+
+function renderNeedsAttention() {
+  const host = document.getElementById('dashboard-alerts');
+  if (!host) return;
+  const all = dashboardNeedsAttentionItems();
+  const items = all.slice(0, 8);
+  if (!items.length) {
+    host.innerHTML = `<div class="na-card na-clear"><span class="na-clear-icon">✅</span> All caught up — nothing needs attention right now.</div>`;
+    return;
+  }
+  const extra = all.length > items.length ? `<div class="na-more">+${all.length - items.length} more — see Bookings</div>` : '';
+  host.innerHTML = `
+    <div class="na-card">
+      <div class="na-head"><h3>⚡ Needs attention</h3><span class="na-count">${all.length}</span></div>
+      <div class="na-list">
+        ${items.map((it) => {
+          const b = it.booking;
+          return `<div class="na-row">
+            <div class="na-main">
+              <div class="na-name">${escapeHtml(bookingDisplayName(b))} <span class="na-tag ${it.cls}">${it.label}</span></div>
+              <div class="na-sub">${escapeHtml(formatShortDate(b.date))} ${escapeHtml(formatTimeLabel(b.time))} · ${escapeHtml(bookingCraftLabel(b))}</div>
+            </div>
+            <button class="na-btn ${it.cls}" onclick="${it.action}">${it.actionLabel}</button>
+          </div>`;
+        }).join('')}
+      </div>
+      ${extra}
+    </div>`;
+}
+
 function renderUpcoming() {
   renderTodayRunSheet();
+  renderNeedsAttention();
   const rows = upcomingScheduledBookings()
     .filter((booking) => !['completed', 'noshow', 'no-show'].includes(normalizeBookingStatusValue(booking.status)))
     .slice(0,5);
