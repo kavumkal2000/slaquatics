@@ -450,34 +450,28 @@ function normalizeOpsRole(role = '') {
   return 'owner';
 }
 
+// Single source of truth for ops accounts (one row per role). Each resolves a
+// username + password (or password hash) from the env config above. This
+// replaces three near-identical hand-written objects; behavior is unchanged.
+const OPS_ACCOUNTS = [
+  { role: 'developer', username: OPS_DEV_USERNAME, displayName: 'Developer', password: OPS_DEV_PASSWORD, passwordHash: '' },
+  { role: 'employee', username: OPS_EMPLOYEE_USERNAME, displayName: 'Hugo Prado', password: OPS_EMPLOYEE_PASSWORD, passwordHash: '' },
+  { role: 'owner', username: OPS_OWNER_USERNAME, displayName: 'Owner', password: OPS_OWNER_PASSWORD, passwordHash: OPS_OWNER_PASSWORD_HASH }
+];
+
 function listOpsUsers() {
-  return [
-    {
-      username: normalizeUsername(OPS_DEV_USERNAME || 'developer'),
-      role: 'developer',
-      displayName: 'Developer',
-      matches(password = '') {
-        return Boolean(OPS_DEV_PASSWORD) && safeSecretEquals(password, OPS_DEV_PASSWORD);
-      }
-    },
-    {
-      username: normalizeUsername(OPS_EMPLOYEE_USERNAME || 'hugoprado'),
-      role: 'employee',
-      displayName: 'Hugo Prado',
-      matches(password = '') {
-        return Boolean(OPS_EMPLOYEE_PASSWORD) && safeSecretEquals(password, OPS_EMPLOYEE_PASSWORD);
-      }
-    },
-    {
-      username: normalizeUsername(OPS_OWNER_USERNAME || 'owner'),
-      role: 'owner',
-      displayName: 'Owner',
-      matches(password = '') {
-        if (OPS_OWNER_PASSWORD) return safeSecretEquals(password, OPS_OWNER_PASSWORD);
-        return verifyPasswordHash(password, OPS_OWNER_PASSWORD_HASH);
-      }
+  return OPS_ACCOUNTS.map((account) => ({
+    username: normalizeUsername(account.username),
+    role: account.role,
+    displayName: account.displayName,
+    // Constant-time compare for a configured plaintext password; otherwise fall
+    // back to scrypt hash verification. Empty password + empty hash => no login.
+    matches(password = '') {
+      if (account.password) return safeSecretEquals(password, account.password);
+      if (account.passwordHash) return verifyPasswordHash(password, account.passwordHash);
+      return false;
     }
-  ];
+  }));
 }
 
 function findOpsUser(username = '', password = '') {
