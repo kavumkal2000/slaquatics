@@ -465,6 +465,29 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   .rs-actions{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
   .rs-btn{min-width:0;width:100%;}
 }
+/* ── CARDIFY Bookings & Invoices tables on phones (no horizontal scroll) ── */
+@media(max-width:760px){
+  .table-wrap:has(#bookings-table), .table-wrap:has(#invoice-table){border:none;background:transparent;overflow:visible;}
+  .table-wrap:has(#bookings-table) thead, .table-wrap:has(#invoice-table) thead{display:none;}
+  .table-wrap:has(#bookings-table) table, .table-wrap:has(#invoice-table) table,
+  .table-wrap:has(#bookings-table) tbody, .table-wrap:has(#invoice-table) tbody,
+  .table-wrap:has(#bookings-table) tr, .table-wrap:has(#invoice-table) tr,
+  .table-wrap:has(#bookings-table) td, .table-wrap:has(#invoice-table) td{display:block;width:auto;}
+  .table-wrap:has(#bookings-table) tr, .table-wrap:has(#invoice-table) tr{
+    background:var(--deep);border:1px solid var(--border);border-radius:12px;padding:0.85rem 1rem;margin-bottom:0.7rem;
+  }
+  .table-wrap:has(#bookings-table) td, .table-wrap:has(#invoice-table) td{
+    border:none !important;padding:0.28rem 0;display:flex;gap:0.9rem;align-items:baseline;justify-content:space-between;
+  }
+  .table-wrap:has(#bookings-table) td[data-label]::before, .table-wrap:has(#invoice-table) td[data-label]::before{
+    content:attr(data-label);color:var(--muted);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0;
+  }
+  .table-wrap:has(#bookings-table) td[data-label=""]::before, .table-wrap:has(#invoice-table) td[data-label=""]::before{content:none;}
+  .table-wrap:has(#bookings-table) td[data-label=""], .table-wrap:has(#invoice-table) td[data-label=""]{justify-content:flex-start;padding-top:0.6rem;}
+  .table-wrap:has(#bookings-table) td:first-child, .table-wrap:has(#invoice-table) td:first-child{
+    display:block;font-size:1.02rem;padding-bottom:0.55rem;margin-bottom:0.35rem;border-bottom:1px solid var(--border) !important;
+  }
+}
 @media(max-width:1100px){.calendar-shell{grid-template-columns:1fr;}.agenda-item{flex-direction:column;}.agenda-item-right{align-items:flex-start;}}
 @media(max-width:900px){.calendar-day{min-height:92px;padding:0.65rem 0.55rem 0.55rem;}.calendar-month-label{min-width:auto;}}
 @media(max-width:640px){.calendar-head,.agenda-head{align-items:flex-start;}.calendar-nav{width:100%;justify-content:space-between;}.calendar-weekdays,.calendar-grid{gap:0.3rem;}.calendar-day{min-height:84px;padding:0.55rem 0.45rem;}.calendar-day-num{font-size:0.84rem;}.calendar-day-meta{font-size:0.66rem;}.calendar-pill{padding:0.2rem 0.42rem;font-size:0.62rem;}.calendar-day-count{min-width:20px;height:20px;font-size:0.68rem;}}
@@ -5051,14 +5074,14 @@ function renderBookings(filter) {
           ${b.waiverSignedAt ? `Waiver on file · ${escapeHtml(formatShortDate(b.waiverSignedAt))}` : 'Waiver still needed'}
         </div>
       </td>
-      <td>${b.phone ? `<a href="tel:${phoneHref(b.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(b.phone)}</a>` : '<span style="color:var(--muted);">—</span>'}</td>
-      <td>${escapeHtml(bookingCraftLabel(b))}</td>
-      <td>${escapeHtml(formatShortDate(b.date))} ${escapeHtml(formatTimeLabel(b.time))}</td>
-      <td>${escapeHtml(bookingDurationLabel(b))}</td>
-      <td style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
-      <td>${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
-      <td>${bookingCalendarStatusBadge(b)}</td>
-      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+      <td data-label="Phone">${b.phone ? `<a href="tel:${phoneHref(b.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(b.phone)}</a>` : '<span style="color:var(--muted);">—</span>'}</td>
+      <td data-label="Craft">${escapeHtml(bookingCraftLabel(b))}</td>
+      <td data-label="Date">${escapeHtml(formatShortDate(b.date))} ${escapeHtml(formatTimeLabel(b.time))}</td>
+      <td data-label="Duration">${escapeHtml(bookingDurationLabel(b))}</td>
+      <td data-label="Total" style="color:var(--wave);font-weight:500;">${bookingTotalLabel(b)}</td>
+      <td data-label="Payment">${paid?'<span class="badge badge-confirmed">Paid</span>':'<span class="badge badge-noshow">Unpaid</span>'}</td>
+      <td data-label="Status">${bookingCalendarStatusBadge(b)}</td>
+      <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openBookingModal(${b.id})">Edit</button>
         ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
       </td>
@@ -5619,19 +5642,19 @@ function renderInvoices() {
         <strong>${escapeHtml(invoice.invoiceNumber || 'No number')}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(invoice.invoiceName || 'Invoice')}</div>
       </td>
-      <td>
+      <td data-label="Customer">
         <strong>${escapeHtml(contact.name || 'Unknown')}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${contact.phone ? `<a href="tel:${phoneHref(contact.phone)}" style="color:var(--wave);text-decoration:none;">${escapeHtml(contact.phone)}</a>` : escapeHtml(contact.email || 'No contact')}</div>
       </td>
-      <td>${escapeHtml(formatShortDate(invoice.issueDate))}</td>
-      <td>${escapeHtml(formatShortDate(invoice.dueDate))}</td>
-      <td>
+      <td data-label="Issued">${escapeHtml(formatShortDate(invoice.issueDate))}</td>
+      <td data-label="Due">${escapeHtml(formatShortDate(invoice.dueDate))}</td>
+      <td data-label="Items">
         <div>${escapeHtml(invoiceLineSummary(invoice))}</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(Array.isArray(invoice.lineItems) ? `${invoice.lineItems.length} item${invoice.lineItems.length === 1 ? '' : 's'}` : '0 items')}</div>
       </td>
-      <td style="color:var(--wave);font-weight:500;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Collected ${moneyLabel(invoiceCollectedAmount(invoice))} • Remaining ${moneyLabel(invoiceOutstandingAmount(invoice))}</div></td>
-      <td>${invoiceStatusBadge(invoice.status)}</td>
-      <td style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+      <td data-label="Amount" style="color:var(--wave);font-weight:500;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Collected ${moneyLabel(invoiceCollectedAmount(invoice))} • Remaining ${moneyLabel(invoiceOutstandingAmount(invoice))}</div></td>
+      <td data-label="Status">${invoiceStatusBadge(invoice.status)}</td>
+      <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${Number(invoice.id)})">Delete</button>
       </td>
