@@ -184,6 +184,7 @@ tbody td{padding:0.85rem 1.2rem;font-size:0.84rem;border-bottom:1px solid rgba(2
 tbody tr:last-child td{border-bottom:none;}
 tbody tr{transition:background 0.15s ease;}
 tbody tr:hover{background:rgba(125,217,255,0.06);}
+tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
 
 /* BOOKING CALENDAR */
 .calendar-shell{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,0.85fr);gap:1rem;margin-bottom:1.3rem;}
@@ -5689,6 +5690,35 @@ function renderDashboardMetrics() {
   if (bookingsMeta) bookingsMeta.textContent = `${monthlyBookings} rentals scheduled this month`;
   renderFleetLegend();
 }
+async function markInvoicePaid(invoiceId) {
+  const invoice = invoices.find((item) => Number(item.id) === Number(invoiceId));
+  if (!invoice) return;
+  const outstanding = invoiceOutstandingAmount(invoice);
+  if (outstanding <= 0) { showToast('Already fully collected ✓'); return; }
+  if (!confirm(`Mark this invoice fully paid? This records ${moneyLabel(outstanding)} collected.`)) return;
+  const prevStatus = invoice.status;
+  const prevPaid = invoice.paidAmount;
+  invoice.paidAmount = Number(invoice.total || 0);
+  invoice.status = 'paid';
+  try {
+    if (!(await persistStateChange())) {
+      invoice.status = prevStatus;
+      invoice.paidAmount = prevPaid;
+      showToast('⚠️ Could not save — try again');
+      return;
+    }
+    renderInvoices();
+    renderDashboardMetrics();
+    renderUpcoming();
+    renderCRM();
+    showToast(`✅ Marked paid — collected ${moneyLabel(outstanding)}`);
+  } catch (error) {
+    invoice.status = prevStatus;
+    invoice.paidAmount = prevPaid;
+    showToast(`⚠️ ${error.message || 'Could not mark invoice paid'}`);
+  }
+}
+
 function renderInvoices() {
   const filteredInvoices = sortNewestFirst(filteredInvoicesList(), (invoice) => invoiceDateValue(invoice));
   const paidInvoices = filteredInvoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0);
@@ -5715,7 +5745,7 @@ function renderInvoices() {
   const table = document.getElementById('invoice-table');
   if (!table) return;
   table.innerHTML = filteredInvoices.length ? filteredInvoices.map((invoice) => `
-    <tr>
+    <tr class="${invoiceOutstandingAmount(invoice) > 0 ? 'inv-owing' : ''}">
       ${(() => {
         const contact = invoiceDisplayContact(invoice);
         return `
@@ -5736,6 +5766,7 @@ function renderInvoices() {
       <td data-label="Amount" style="color:var(--wave);font-weight:500;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Collected ${moneyLabel(invoiceCollectedAmount(invoice))} • Remaining ${moneyLabel(invoiceOutstandingAmount(invoice))}</div></td>
       <td data-label="Status">${invoiceStatusBadge(invoice.status)}</td>
       <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" onclick="markInvoicePaid(${Number(invoice.id)})">💵 Mark Paid</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${Number(invoice.id)})">Delete</button>
       </td>
