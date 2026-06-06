@@ -63,8 +63,9 @@ body[data-ios-install='needed'] .install-banner{display:flex}
 .nav-section{padding:1rem 0.8rem 0.4rem;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.14em;color:var(--muted);}
 .nav-item{display:flex;align-items:center;gap:0.7rem;padding:0.65rem 1rem;margin:0 0.4rem;border-radius:8px;cursor:pointer;font-size:0.84rem;color:var(--muted);transition:all 0.18s;border:none;background:none;width:calc(100% - 0.8rem);text-align:left;}
 .nav-item:hover{background:rgba(26,158,212,0.08);color:var(--white);}
-.nav-item.active{background:rgba(26,158,212,0.14);color:var(--wave);}
-.nav-item .icon{font-size:1rem;width:20px;text-align:center;}
+.nav-item.active{background:rgba(26,158,212,0.16);color:var(--wave);font-weight:500;box-shadow:inset 3px 0 0 var(--wave);}
+.nav-item .icon{font-size:1rem;width:20px;text-align:center;transition:transform 0.15s ease;}
+.nav-item:hover .icon{transform:scale(1.12);}
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:0.6rem;padding:2px 6px;border-radius:10px;font-weight:500;}
 .sidebar-bottom{margin-top:auto;padding:1rem;border-top:1px solid var(--border);}
 .sidebar-bottom .version{font-size:0.7rem;color:var(--muted);}
