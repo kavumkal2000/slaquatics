@@ -1496,8 +1496,20 @@ function snapshotState() {
 function cloneReviewRequests(items = reviewRequests) {
   return items.map((item) => ({...item}));
 }
+// Canonical booking status set — defensive cleanup on load so legacy/restored
+// data (e.g. 'canceled', 'no-show', 'Cancelled') is normalized to one form.
+const CANONICAL_BOOKING_STATUSES = new Set(['pending', 'confirmed', 'completed', 'noshow', 'cancelled', 'draft']);
+function canonicalizeBookingStatuses(list) {
+  if (!Array.isArray(list)) return list;
+  list.forEach((booking) => {
+    if (!booking || typeof booking !== 'object' || booking.status == null) return;
+    const canon = normalizeBookingStatusValue(booking.status);
+    if (CANONICAL_BOOKING_STATUSES.has(canon) && canon !== booking.status) booking.status = canon;
+  });
+  return list;
+}
 function applyState(nextState = {}) {
-  if (Array.isArray(nextState.bookings)) bookings = nextState.bookings;
+  if (Array.isArray(nextState.bookings)) bookings = canonicalizeBookingStatuses(nextState.bookings);
   if (Array.isArray(nextState.customers)) customers = nextState.customers;
   if (Array.isArray(nextState.expenses)) expenses = nextState.expenses;
   if (Array.isArray(nextState.fuelLog)) fuelLog = nextState.fuelLog;
