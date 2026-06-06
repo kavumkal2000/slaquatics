@@ -256,6 +256,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .modal-body{padding:1.6rem;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
 .form-grid.full{grid-template-columns:1fr;}
+.modal-banner{border-radius:10px;padding:0.8rem 0.95rem;font-size:0.82rem;line-height:1.55;margin-bottom:1.1rem;}
+.modal-banner.warn{background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.38);color:#fbbf24;}
+.booking-hint{background:rgba(125,217,255,0.1);border:1px solid rgba(125,217,255,0.28);color:var(--wave);border-radius:9px;padding:0.6rem 0.8rem;font-size:0.8rem;line-height:1.5;}
 .form-group{display:flex;flex-direction:column;gap:0.4rem;}
 .form-group label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);}
 .form-group input,.form-group select,.form-group textarea{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:0.6rem 0.9rem;color:var(--white);font-family:'DM Sans',sans-serif;font-size:0.88rem;}
@@ -439,6 +442,8 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   .sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:block;}
   .nav-item{justify-content:flex-start;padding:0.7rem 1rem;}
   .main{margin-left:0;}
+  .modal{width:94vw;max-width:560px;}
+  .form-grid{grid-template-columns:1fr;}
   .kpi-grid{grid-template-columns:repeat(2,1fr);gap:0.7rem;margin-bottom:1.3rem;}
   .kpi-card{padding:0.85rem 0.95rem;}
   .kpi-card .value{font-size:1.7rem;}
@@ -1073,13 +1078,15 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
       <button class="modal-close" onclick="closeModal('booking-modal')">×</button>
     </div>
     <div class="modal-body">
+      <div class="modal-banner warn" id="booking-conflict" style="display:none;"></div>
       <div class="form-grid">
-        <div class="form-group"><label>Customer name</label><input type="text" id="b-name" placeholder="First Last" oninput="calcBookingPrice()"></div>
-        <div class="form-group"><label>Phone</label><input type="tel" id="b-phone" placeholder="Phone number"></div>
+        <div class="form-group"><label>Customer name</label><input type="text" id="b-name" placeholder="First Last" oninput="maybeAutofillCustomer('name');calcBookingPrice()"></div>
+        <div class="form-group"><label>Phone</label><input type="tel" id="b-phone" placeholder="Phone number" oninput="maybeAutofillCustomer('phone')"></div>
         <div class="form-group"><label>Email</label><input type="email" id="b-email" placeholder="email@example.com"></div>
+        <div class="booking-hint" id="booking-customer-hint" style="display:none;grid-column:1/-1;"></div>
         <div class="form-group"><label>Booking date</label><input type="date" id="b-date" oninput="calcBookingPrice()"></div>
         <div class="form-group"><label>Start time</label>
-          <select id="b-time">
+          <select id="b-time" onchange="calcBookingPrice()">
             <option value="10:00">10:00 AM</option>
             <option value="11:00">11:00 AM</option>
             <option value="12:00">12:00 PM</option>
@@ -4155,6 +4162,7 @@ function suggestedBookingAmount() {
   return Number((base + (drone ? 50 : 0)).toFixed(2));
 }
 function updateBookingAmountPreview() {
+  renderBookingConflicts();
   const totalEl = document.getElementById('booking-total');
   const breakdownEl = document.getElementById('booking-breakdown');
   const amountEl = document.getElementById('b-amount');
@@ -4202,6 +4210,74 @@ function calcBookingPrice() {
     amountEl.value = suggested.toFixed(2);
   }
   updateBookingAmountPreview();
+}
+
+// ── BOOKING CONFLICT DETECTION (double-booking guard) ──
+function craftUsesJetski(c) { c = String(c || ''); return c.indexOf('jetski') === 0 || c.indexOf('bundle') === 0; }
+function craftUsesBoat(c) { c = String(c || ''); return c === 'boat' || c.indexOf('bundle') === 0; }
+function craftsShareEquipment(a, b) {
+  return (craftUsesJetski(a) && craftUsesJetski(b)) || (craftUsesBoat(a) && craftUsesBoat(b));
+}
+function bookingTimeMinutes(timeValue) {
+  const parts = parseBookingTimeParts(timeValue);
+  return parts ? parts.hour * 60 + parts.minute : null;
+}
+function findBookingConflicts() {
+  const date = document.getElementById('b-date')?.value;
+  const craft = normalizeCraftKey(document.getElementById('b-craft')?.value || '');
+  const start = bookingTimeMinutes(document.getElementById('b-time')?.value);
+  const duration = Number(document.getElementById('b-duration')?.value) || 0;
+  if (!date || !craft || start === null) return [];
+  const end = start + (duration || 1) * 60;
+  return bookings.filter((b) => {
+    if (!b || (editingBookingId && Number(b.id) === Number(editingBookingId))) return false;
+    if (b.date !== date) return false;
+    if (['cancelled', 'noshow', 'completed', 'draft'].includes(normalizeBookingStatusValue(b.status))) return false;
+    if (!craftsShareEquipment(craft, normalizeCraftKey(b.craft))) return false;
+    const bStart = bookingTimeMinutes(b.time);
+    if (bStart === null) return false;
+    const bEnd = bStart + (Number(b.duration) || 1) * 60;
+    return start < bEnd && bStart < end;
+  });
+}
+function renderBookingConflicts() {
+  const el = document.getElementById('booking-conflict');
+  if (!el) return;
+  const conflicts = findBookingConflicts();
+  if (!conflicts.length) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const lines = conflicts.slice(0, 3).map((b) =>
+    `${escapeHtml(bookingDisplayName(b))} · ${escapeHtml(bookingCraftLabel(b))} @ ${escapeHtml(formatTimeLabel(b.time))}`
+  ).join('<br>');
+  const more = conflicts.length > 3 ? `<br>+${conflicts.length - 3} more` : '';
+  el.innerHTML = `⚠️ <strong>Possible double-booking</strong> — ${conflicts.length} active booking${conflicts.length > 1 ? 's' : ''} ${conflicts.length > 1 ? 'share' : 'shares'} equipment at this time:<br>${lines}${more}`;
+  el.style.display = 'block';
+}
+
+// ── RETURNING-CUSTOMER AUTOFILL ──
+function maybeAutofillCustomer(source) {
+  const hintEl = document.getElementById('booking-customer-hint');
+  if (editingBookingId) { if (hintEl) { hintEl.style.display = 'none'; hintEl.innerHTML = ''; } return; }
+  const nameEl = document.getElementById('b-name');
+  const phoneEl = document.getElementById('b-phone');
+  const emailEl = document.getElementById('b-email');
+  const phoneKey = normalizePhone(phoneEl?.value || '');
+  const nameKey = String(nameEl?.value || '').trim().toLowerCase();
+  let match = null;
+  if (phoneKey) match = customers.find((c) => normalizePhone(c.phone) === phoneKey);
+  if (!match && nameKey) {
+    const matches = customers.filter((c) => String(c.name || '').trim().toLowerCase() === nameKey);
+    if (matches.length === 1) match = matches[0];
+  }
+  if (!match) { if (hintEl) { hintEl.style.display = 'none'; hintEl.innerHTML = ''; } return; }
+  if (source !== 'name' && match.name && !nameEl.value.trim()) nameEl.value = match.name;
+  if (source !== 'phone' && match.phone && !phoneEl.value.trim()) phoneEl.value = match.phone;
+  if (match.email && !emailEl.value.trim()) emailEl.value = match.email;
+  if (hintEl) {
+    const priorCount = Number(match.bookings || 0);
+    const prior = priorCount > 0 ? ` · ${priorCount} prior booking${priorCount > 1 ? 's' : ''}` : '';
+    hintEl.innerHTML = `↩ <strong>Returning customer</strong> — ${escapeHtml(match.name || 'on file')}${prior}. Details filled in.`;
+    hintEl.style.display = 'block';
+  }
 }
 
 // ── SAVE BOOKING ──
@@ -4748,6 +4824,8 @@ function resetBookingForm(defaultDate = '') {
   document.getElementById('b-notes').value = '';
   document.getElementById('booking-modal-title').textContent = 'New Booking';
   document.getElementById('booking-save-button').textContent = 'Confirm Booking';
+  const hintEl = document.getElementById('booking-customer-hint');
+  if (hintEl) { hintEl.style.display = 'none'; hintEl.innerHTML = ''; }
   calcBookingPrice();
 }
 
