@@ -112,7 +112,8 @@ body[data-ios-install='needed'] .install-banner{display:flex}
 
 /* KPI CARDS */
 .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1.8rem;}
-.kpi-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.2rem 1.4rem;}
+.kpi-card{background:var(--deep);border-radius:14px;border:1px solid var(--border);padding:1.2rem 1.4rem;transition:border-color 0.2s ease, transform 0.15s ease;}
+.kpi-card:hover{border-color:rgba(125,217,255,0.3);transform:translateY(-2px);}
 .kpi-card .label{font-size:0.73rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);margin-bottom:0.5rem;}
 .kpi-card .value{font-family:'Bebas Neue',cursive;font-size:2.2rem;line-height:1;letter-spacing:0.04em;}
 .kpi-card .delta{font-size:0.76rem;margin-top:0.35rem;}
@@ -125,8 +126,14 @@ body[data-ios-install='needed'] .install-banner{display:flex}
 .runsheet-head h2{font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:0.04em;color:#fff;}
 .runsheet-sub{font-size:0.84rem;color:var(--muted);}
 .runsheet-sub strong{color:var(--wave);font-weight:600;}
-.rs-list{display:flex;flex-direction:column;gap:0.7rem;}
-.rs-card{background:var(--deep);border:1px solid var(--border);border-radius:14px;padding:0.95rem 1.05rem;}
+.rs-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0.8rem;align-items:start;}
+.rs-card{background:var(--deep);border:1px solid var(--border);border-radius:14px;padding:0.95rem 1.05rem;transition:border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;}
+.rs-card:hover{border-color:rgba(125,217,255,0.35);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,0.25);}
+.rs-card{border-left-width:3px;}
+.rs-card.rs-confirmed{border-left-color:var(--green);}
+.rs-card.rs-pending{border-left-color:var(--amber);}
+.rs-card.rs-completed{border-left-color:var(--wave);}
+.rs-card.rs-noshow,.rs-card.rs-cancelled{border-left-color:var(--red);}
 .rs-top{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;margin-bottom:0.45rem;}
 .rs-time{font-family:'Bebas Neue',cursive;font-size:1.18rem;letter-spacing:0.04em;color:var(--wave);}
 .rs-name{font-size:1.05rem;font-weight:600;color:#fff;}
@@ -462,6 +469,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   .crm-kpi-grid{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:520px){
+  .rs-list{grid-template-columns:1fr;}
   .rs-actions{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
   .rs-btn{min-width:0;width:100%;}
 }
@@ -4485,10 +4493,11 @@ function runSheetActions(b) {
 
 function runSheetCard(b) {
   const paid = bookingIsPaid(b);
+  const statusClass = `rs-${normalizeBookingStatusValue(b.status) || 'pending'}`;
   const payText = paid
     ? 'Deposit in ✓'
     : `${moneyLabel(Number(b.total || 0))} total — collect deposit`;
-  return `<div class="rs-card">
+  return `<div class="rs-card ${statusClass}">
     <div class="rs-top"><span class="rs-time">🕐 ${escapeHtml(formatTimeLabel(b.time) || 'Time TBD')}</span>${statusBadge(b.status)}</div>
     <div class="rs-name">${escapeHtml(bookingDisplayName(b))}</div>
     <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))} · ${bookingTotalLabel(b)}</div>
