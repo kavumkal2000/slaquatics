@@ -119,9 +119,33 @@ body[data-ios-install='needed'] .install-banner{display:flex}
 .kpi-card .delta.up{color:var(--green);}
 .kpi-card .delta.down{color:var(--red);}
 .kpi-card .delta.warn{color:var(--amber);}
+/* ── TODAY RUN-SHEET ── */
+.runsheet{margin-bottom:1.8rem;}
+.runsheet-head{display:flex;align-items:baseline;justify-content:space-between;gap:0.8rem;margin-bottom:0.95rem;flex-wrap:wrap;}
+.runsheet-head h2{font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:0.04em;color:#fff;}
+.runsheet-sub{font-size:0.84rem;color:var(--muted);}
+.runsheet-sub strong{color:var(--wave);font-weight:600;}
+.rs-list{display:flex;flex-direction:column;gap:0.7rem;}
+.rs-card{background:var(--deep);border:1px solid var(--border);border-radius:14px;padding:0.95rem 1.05rem;}
+.rs-top{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;margin-bottom:0.45rem;}
+.rs-time{font-family:'Bebas Neue',cursive;font-size:1.18rem;letter-spacing:0.04em;color:var(--wave);}
+.rs-name{font-size:1.05rem;font-weight:600;color:#fff;}
+.rs-sub{font-size:0.82rem;color:var(--muted);margin-top:0.2rem;}
+.rs-pay{font-size:0.82rem;margin-top:0.4rem;font-weight:600;}
+.rs-pay.paid{color:var(--green);}
+.rs-pay.due{color:var(--amber);}
+.rs-actions{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.85rem;}
+.rs-btn{flex:1 1 auto;min-width:88px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:0.35rem;border-radius:11px;font-size:0.86rem;font-weight:600;text-decoration:none;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:#fff;}
+.rs-btn:hover{border-color:rgba(125,217,255,0.4);}
+.rs-btn.call{background:rgba(16,185,129,0.14);border-color:rgba(16,185,129,0.3);color:var(--green);}
+.rs-btn.text{background:rgba(125,217,255,0.12);border-color:rgba(125,217,255,0.3);color:var(--wave);}
+.rs-btn.pay{background:rgba(245,166,35,0.16);border-color:rgba(245,166,35,0.38);color:var(--sky);}
+.rs-btn.confirm{background:rgba(125,217,255,0.14);border-color:rgba(125,217,255,0.3);color:var(--wave);}
+.rs-btn.done{background:rgba(16,185,129,0.14);border-color:rgba(16,185,129,0.3);color:var(--green);}
+.rs-empty{background:var(--deep);border:1px dashed var(--border);border-radius:14px;padding:1.7rem;text-align:center;color:var(--muted);font-size:0.9rem;}
 
 /* TABLE */
-.table-wrap{background:var(--deep);border-radius:14px;border:1px solid var(--border);overflow:hidden;}
+.table-wrap{background:var(--deep);border-radius:14px;border:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .table-header{padding:1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
 .table-title{font-size:0.9rem;font-weight:500;}
 .search-input{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:0.45rem 0.9rem;color:var(--white);font-family:'DM Sans',sans-serif;font-size:0.83rem;width:200px;}
@@ -415,7 +439,11 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   .sidebar-logo .brand,.sidebar-logo .sub,.nav-item span,.sidebar-bottom .version{display:block;}
   .nav-item{justify-content:flex-start;padding:0.7rem 1rem;}
   .main{margin-left:0;}
-  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);gap:0.7rem;margin-bottom:1.3rem;}
+  .kpi-card{padding:0.85rem 0.95rem;}
+  .kpi-card .value{font-size:1.7rem;}
+  .topbar-loc{display:none;}
+  .runsheet-head h2{font-size:1.4rem;}
   .maint-grid{grid-template-columns:1fr 1fr;}
   .topbar{padding:0.9rem 1rem;align-items:center;gap:0.75rem;}
   .topbar-right{flex-wrap:wrap;justify-content:flex-end;}
@@ -427,6 +455,10 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   .mini-kpis{grid-template-columns:1fr;}
   .crm-workspace-head{flex-direction:column;}
   .crm-kpi-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:520px){
+  .rs-actions{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
+  .rs-btn{min-width:0;width:100%;}
 }
 @media(max-width:1100px){.calendar-shell{grid-template-columns:1fr;}.agenda-item{flex-direction:column;}.agenda-item-right{align-items:flex-start;}}
 @media(max-width:900px){.calendar-day{min-height:92px;padding:0.65rem 0.55rem 0.55rem;}.calendar-month-label{min-width:auto;}}
@@ -490,7 +522,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
     <div class="topbar-title" id="page-title">Dashboard</div>
   </div>
   <div class="topbar-right">
-    <span style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
+    <span class="topbar-loc" style="font-size:0.8rem;color:var(--muted);">📍 Lake Lewisville · (469) 693-7164</span>
     <span class="ops-mode-pill browser" id="ops-mode-pill">Checking sync</span>
     <span class="ops-user-pill" id="ops-user-pill" style="display:none;"></span>
     <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="logout()" style="display:none;">Logout</button>
@@ -502,6 +534,9 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dashboard">
   <div class="alerts" id="dashboard-alerts"></div>
+
+  <!-- TODAY RUN-SHEET (mobile-first day-of workflow) -->
+  <div class="runsheet" id="today-runsheet"></div>
 
   <div class="kpi-grid">
     <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);" id="dashboard-kpi-pending">0</div><div class="delta warn" id="dashboard-kpi-pending-meta">Waiting on follow-up</div></div>
@@ -4304,7 +4339,69 @@ async function saveBooking() {
 }
 
 // ── RENDER UPCOMING (dashboard) ──
+// ── TODAY RUN-SHEET (mobile-first day-of workflow) ──
+function todaysRunSheetBookings() {
+  const iso = today();
+  return bookings
+    .filter((b) => b && b.date === iso)
+    .filter((b) => {
+      const s = normalizeBookingStatusValue(b.status);
+      return !s.includes('cancel') && s !== 'deleted' && !bookingIsArchived(b);
+    })
+    .sort((a, b) => bookingTimeValue(a.time).localeCompare(bookingTimeValue(b.time)));
+}
+
+function runSheetActions(b) {
+  const id = Number(b.id);
+  const status = normalizeBookingStatusValue(b.status);
+  const phone = String(b.phone || '').replace(/[^\d+]/g, '');
+  const btns = [];
+  if (phone) {
+    btns.push(`<a class="rs-btn call" href="tel:${escapeHtml(phone)}">📞 Call</a>`);
+    btns.push(`<a class="rs-btn text" href="sms:${escapeHtml(phone)}">💬 Text</a>`);
+  }
+  if (!bookingIsPaid(b)) btns.push(`<button class="rs-btn pay" onclick="confirmDeposit(${id})">💵 Collect</button>`);
+  if (status === 'pending') btns.push(`<button class="rs-btn confirm" onclick="updateStatus(${id},'confirmed')">✓ Confirm</button>`);
+  if (status === 'confirmed') btns.push(`<button class="rs-btn done" onclick="updateStatus(${id},'completed')">🏁 Done</button>`);
+  btns.push(`<button class="rs-btn" onclick="openBookingModal(${id})">✎ Edit</button>`);
+  return btns.join('');
+}
+
+function runSheetCard(b) {
+  const paid = bookingIsPaid(b);
+  const payText = paid
+    ? 'Deposit in ✓'
+    : `${moneyLabel(Number(b.total || 0))} total — collect deposit`;
+  return `<div class="rs-card">
+    <div class="rs-top"><span class="rs-time">🕐 ${escapeHtml(formatTimeLabel(b.time) || 'Time TBD')}</span>${statusBadge(b.status)}</div>
+    <div class="rs-name">${escapeHtml(bookingDisplayName(b))}</div>
+    <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))} · ${bookingTotalLabel(b)}</div>
+    <div class="rs-pay ${paid ? 'paid' : 'due'}">${payText}</div>
+    <div class="rs-actions">${runSheetActions(b)}</div>
+  </div>`;
+}
+
+function renderTodayRunSheet() {
+  const host = document.getElementById('today-runsheet');
+  if (!host) return;
+  const list = todaysRunSheetBookings();
+  const dateLabel = new Date().toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'});
+  const toCollect = list.filter((b) => !bookingIsPaid(b)).reduce((sum, b) => sum + Number(b.total || 0), 0);
+  const subParts = [`<strong>${list.length}</strong> ${list.length === 1 ? 'rental' : 'rentals'}`];
+  if (toCollect > 0) subParts.push(`<strong>${moneyLabel(toCollect)}</strong> to collect`);
+  host.innerHTML = `
+    <div class="runsheet-head">
+      <h2>Today · ${escapeHtml(dateLabel)}</h2>
+      <div class="runsheet-sub">${subParts.join(' · ')}</div>
+    </div>
+    ${list.length
+      ? `<div class="rs-list">${list.map(runSheetCard).join('')}</div>`
+      : `<div class="rs-empty">No rentals scheduled today. Tap <strong>+ New Booking</strong> to add one.</div>`}
+  `;
+}
+
 function renderUpcoming() {
+  renderTodayRunSheet();
   const rows = upcomingScheduledBookings()
     .filter((booking) => !['completed', 'noshow', 'no-show'].includes(normalizeBookingStatusValue(booking.status)))
     .slice(0,5);
