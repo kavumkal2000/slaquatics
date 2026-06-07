@@ -499,28 +499,26 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
   .rs-actions{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
   .rs-btn{min-width:0;width:100%;}
 }
-/* ── CARDIFY Bookings & Invoices tables on phones (no horizontal scroll) ── */
+/* ── CARDIFY all data tables on phones (no horizontal scroll) ── */
 @media(max-width:760px){
-  .table-wrap:has(#bookings-table), .table-wrap:has(#invoice-table){border:none;background:transparent;overflow:visible;}
-  .table-wrap:has(#bookings-table) thead, .table-wrap:has(#invoice-table) thead{display:none;}
-  .table-wrap:has(#bookings-table) table, .table-wrap:has(#invoice-table) table,
-  .table-wrap:has(#bookings-table) tbody, .table-wrap:has(#invoice-table) tbody,
-  .table-wrap:has(#bookings-table) tr, .table-wrap:has(#invoice-table) tr,
-  .table-wrap:has(#bookings-table) td, .table-wrap:has(#invoice-table) td{display:block;width:auto;}
-  .table-wrap:has(#bookings-table) tr, .table-wrap:has(#invoice-table) tr{
+  .table-wrap{border:none;background:transparent;overflow:visible;}
+  .table-wrap thead{display:none;}
+  .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td{display:block;width:auto;}
+  .table-wrap tr{
     background:var(--deep);border:1px solid var(--border);border-radius:12px;padding:0.85rem 1rem;margin-bottom:0.7rem;
   }
-  .table-wrap:has(#bookings-table) td, .table-wrap:has(#invoice-table) td{
+  .table-wrap td{
     border:none !important;padding:0.28rem 0;display:flex;gap:0.9rem;align-items:baseline;justify-content:space-between;
   }
-  .table-wrap:has(#bookings-table) td[data-label]::before, .table-wrap:has(#invoice-table) td[data-label]::before{
+  .table-wrap td[data-label]::before{
     content:attr(data-label);color:var(--muted);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0;
   }
-  .table-wrap:has(#bookings-table) td[data-label=""]::before, .table-wrap:has(#invoice-table) td[data-label=""]::before{content:none;}
-  .table-wrap:has(#bookings-table) td[data-label=""], .table-wrap:has(#invoice-table) td[data-label=""]{justify-content:flex-start;padding-top:0.6rem;}
-  .table-wrap:has(#bookings-table) td:first-child, .table-wrap:has(#invoice-table) td:first-child{
+  .table-wrap td[data-label=""]::before{content:none;}
+  .table-wrap td[data-label=""]{justify-content:flex-start;padding-top:0.6rem;}
+  .table-wrap td:first-child{
     display:block;font-size:1.02rem;padding-bottom:0.55rem;margin-bottom:0.35rem;border-bottom:1px solid var(--border) !important;
   }
+  .table-wrap td .empty, .table-wrap td:has(.empty){display:block;}
 }
 @media(max-width:1100px){.calendar-shell{grid-template-columns:1fr;}.agenda-item{flex-direction:column;}.agenda-item-right{align-items:flex-start;}}
 @media(max-width:900px){.calendar-day{min-height:92px;padding:0.65rem 0.55rem 0.55rem;}.calendar-month-label{min-width:auto;}}
@@ -5404,23 +5402,23 @@ function renderTracking() {
         <strong>${escapeHtml(tracker.name || 'Unnamed tracker')}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.model || 'Unknown model')}${tracker.serialNumber ? ` · S/N ${escapeHtml(tracker.serialNumber)}` : ''}</div>
       </td>
-      <td>
+      <td data-label="Assigned">
         <strong>${escapeHtml(tracker.assignedAsset || 'Unassigned / spare')}</strong>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.contactName || tracker.contactEmail || 'No account contact saved')}</div>
       </td>
-      <td>
+      <td data-label="Provider">
         <div>${escapeHtml(tracker.provider || 'Unknown provider')}</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.paymentPlan || 'No payment plan')}${tracker.trackingPlan ? ` · ${escapeHtml(tracker.trackingPlan)}` : ''}</div>
       </td>
-      <td>
+      <td data-label="Billing">
         <div style="color:var(--amber);font-weight:500;">${moneyLabel(tracker.monthlyFee || 0)}/mo</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Activation ${moneyLabel(tracker.activationFee || 0)}</div>
       </td>
-      <td>
+      <td data-label="Transaction">
         <div>${tracker.transactionId ? `Txn ${escapeHtml(tracker.transactionId)}` : 'No transaction saved'}</div>
         <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${tracker.authorizationCode ? `Auth ${escapeHtml(tracker.authorizationCode)} · ` : ''}${escapeHtml(trackerDateLabel(tracker.transactionDate))}</div>
       </td>
-      <td>
+      <td data-label="Status">
         <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-start;">
           ${trackerStatusBadge(tracker.status)}
           <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
@@ -5900,18 +5898,18 @@ function renderWaivers() {
           <strong>${escapeHtml(customer.name || 'Unnamed customer')}</strong>
           <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(customer.source || 'Website waiver')}</div>
         </td>
-        <td>${contactLine.length ? contactLine.join('<br>') : '<span style="color:var(--muted);">No contact info saved</span>'}</td>
-        <td>
+        <td data-label="Contact">${contactLine.length ? contactLine.join('<br>') : '<span style="color:var(--muted);">No contact info saved</span>'}</td>
+        <td data-label="Signed">
           <div>${escapeHtml(customerWaiverSignedLabel(customer))}</div>
           <div style="font-size:0.72rem;color:var(--green);margin-top:0.2rem;">${String(customer.waiverSignature || '').trim() ? 'Signature saved' : 'Signed waiver on file'}</div>
         </td>
-        <td style="color:var(--muted);">${customerWaiverDetailLabel(customer)}</td>
-        <td>${emergencyLine.length ? emergencyLine.join('<br>') : '<span style="color:var(--muted);">No emergency info saved</span>'}</td>
-        <td>
+        <td data-label="Waiver" style="color:var(--muted);">${customerWaiverDetailLabel(customer)}</td>
+        <td data-label="Emergency">${emergencyLine.length ? emergencyLine.join('<br>') : '<span style="color:var(--muted);">No emergency info saved</span>'}</td>
+        <td data-label="Bookings">
           <div>${Number(customer.bookings) || 0} booking${Number(customer.bookings) === 1 ? '' : 's'}</div>
           <div style="font-size:0.72rem;color:var(--wave);margin-top:0.2rem;">$${Number(customer.totalSpent || 0).toLocaleString()} total spent</div>
         </td>
-        <td>
+        <td data-label="">
           <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" onclick="openCustomerModal(${Number(customer.id)})">Edit</button>
             ${customer.phone ? `<a href="tel:${phoneHref(customer.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
@@ -6161,12 +6159,12 @@ function renderExpenses() {
   table.innerHTML = ordered.length ? ordered.map((expense) => `
     <tr>
       <td>${escapeHtml(formatShortDate(expense.date))}</td>
-      <td>${escapeHtml(expense.category)}</td>
-      <td>${escapeHtml(expenseScheduleLabel(expense))}</td>
-      <td><strong>${escapeHtml(expense.name)}</strong></td>
-      <td style="color:var(--muted);">${escapeHtml(expense.notes || '—')}</td>
-      <td style="color:var(--amber);font-weight:500;">$${Number(expense.amount || 0).toLocaleString()}</td>
-      <td>
+      <td data-label="Category">${escapeHtml(expense.category)}</td>
+      <td data-label="Schedule">${escapeHtml(expenseScheduleLabel(expense))}</td>
+      <td data-label="Expense"><strong>${escapeHtml(expense.name)}</strong></td>
+      <td data-label="Notes" style="color:var(--muted);">${escapeHtml(expense.notes || '—')}</td>
+      <td data-label="Amount" style="color:var(--amber);font-weight:500;">$${Number(expense.amount || 0).toLocaleString()}</td>
+      <td data-label="">
         <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm" onclick="openExpenseModal(${Number(expense.id)})">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteExpense(${Number(expense.id)})">Delete</button>
@@ -7131,7 +7129,7 @@ function renderMaint(options = {}) {
       </div>
     </div>`;
   }).join('');
-  document.getElementById('maint-log').innerHTML = sortNewestFirst(maintLog, (entry) => entry.date).map(m=>`<tr><td>${escapeHtml(m.craft)}</td><td>${escapeHtml(m.type)}</td><td>${escapeHtml(formatShortDate(m.date))}</td><td>${escapeHtml(String(m.hours))} hrs</td><td style="color:var(--amber);">${moneyLabel(m.cost || 0)}</td><td style="color:var(--muted);">${escapeHtml(m.notes || '—')}</td><td><div style="display:flex;gap:0.45rem;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openMaintModal(${Number(m.id)})">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteMaintEntry(${Number(m.id)})">Delete</button></div></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>No service history logged yet.</p></div></td></tr>';
+  document.getElementById('maint-log').innerHTML = sortNewestFirst(maintLog, (entry) => entry.date).map(m=>`<tr><td>${escapeHtml(m.craft)}</td><td data-label="Service">${escapeHtml(m.type)}</td><td data-label="Date">${escapeHtml(formatShortDate(m.date))}</td><td data-label="Hours">${escapeHtml(String(m.hours))} hrs</td><td data-label="Cost" style="color:var(--amber);">${moneyLabel(m.cost || 0)}</td><td data-label="Notes" style="color:var(--muted);">${escapeHtml(m.notes || '—')}</td><td data-label=""><div style="display:flex;gap:0.45rem;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openMaintModal(${Number(m.id)})">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteMaintEntry(${Number(m.id)})">Delete</button></div></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty"><div class="icon">🔧</div><p>No service history logged yet.</p></div></td></tr>';
 }
 
 async function saveMaint() {
