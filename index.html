@@ -346,6 +346,16 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 .avail-slot.open .slot-meta { color: var(--gold); }
 .avail-note { font-size: 0.82rem; color: var(--muted); margin-top: 1.7rem; line-height: 1.6; }
 .avail-note a { color: var(--gold); text-decoration: none; }
+.avail-notify { margin-top: 2rem; padding-top: 1.7rem; border-top: 1px solid var(--border); }
+.avail-notify-label { font-size: 0.95rem; color: var(--white); margin-bottom: 1rem; }
+.avail-notify-form { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; }
+.avail-notify-form input { background: var(--navy); border: 1px solid var(--border); border-radius: 10px; color: var(--white); padding: 0.75rem 0.95rem; font-family: inherit; font-size: 0.92rem; flex: 1 1 180px; max-width: 240px; }
+.avail-notify-form input::placeholder { color: rgba(255,255,255,0.45); }
+.avail-notify-form .btn-primary { flex: 0 0 auto; }
+.avail-notify-msg { margin-top: 0.9rem; font-size: 0.9rem; font-weight: 500; min-height: 1.2rem; }
+.avail-notify-msg.ok { color: var(--wave); }
+.avail-notify-msg.err { color: var(--gold); }
+@media (max-width: 760px) { .avail-notify-form input { max-width: none; flex: 1 1 100%; } .avail-notify-form .btn-primary { width: 100%; } }
 @media (max-width: 760px) {
   .avail-section { padding: 3rem 1.1rem; }
   .avail-slot { min-width: 0; flex: 1 1 27%; }
@@ -1361,6 +1371,16 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="avail-status" id="avail-status">Checking today's availability…</div>
     <div class="avail-slots" id="avail-slots"></div>
     <div class="avail-note">Open times shown for a 2-hour jet-ski rental. Boats are captained and booked separately — <a href="tel:4696937164">call (469) 693-7164</a> to confirm any date.</div>
+    <div class="avail-notify" id="avail-notify">
+      <p class="avail-notify-label">🔔 Booked up or planning ahead? Get a heads-up when spots open and when deals drop.</p>
+      <form class="avail-notify-form" id="avail-notify-form" novalidate>
+        <input type="text" id="lead-name" placeholder="First name" autocomplete="given-name">
+        <input type="tel" id="lead-phone" placeholder="Phone (for texts)" autocomplete="tel">
+        <input type="email" id="lead-email" placeholder="or Email" autocomplete="email">
+        <button type="submit" class="btn-primary" id="lead-submit">Notify Me</button>
+      </form>
+      <div class="avail-notify-msg" id="avail-notify-msg"></div>
+    </div>
   </div>
 </section>
 
@@ -2456,6 +2476,44 @@ startReviewAutoplay();
   }
   dateInput.addEventListener('change', check);
   check();
+})();
+
+// ── SEASONAL LEAD CAPTURE ("Notify Me") ──
+(function initLeadCapture() {
+  const form = document.getElementById('avail-notify-form');
+  const msg = document.getElementById('avail-notify-msg');
+  const submit = document.getElementById('lead-submit');
+  if (!form || !msg) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('lead-name').value.trim();
+    const phone = document.getElementById('lead-phone').value.trim();
+    const email = document.getElementById('lead-email').value.trim();
+    msg.className = 'avail-notify-msg';
+    if (!name) { msg.textContent = 'Please add your first name.'; msg.classList.add('err'); return; }
+    if (!phone && !email) { msg.textContent = 'Add a phone or email so we can reach you.'; msg.classList.add('err'); return; }
+    submit.disabled = true; submit.textContent = 'Sending…';
+    try {
+      const res = await fetch('/api/public/seasonal-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName: name, phone, email, preferredChannel: phone ? 'sms' : 'email' })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Something went wrong');
+      }
+      const data = await res.json();
+      form.reset();
+      msg.textContent = `✅ You're on the list! We'll reach out by ${data.preferredChannel === 'sms' ? 'text' : 'email'} when spots open.`;
+      msg.classList.add('ok');
+    } catch (err) {
+      msg.textContent = `${String(err.message || 'Could not sign you up')} — or just call (469) 693-7164.`;
+      msg.classList.add('err');
+    } finally {
+      submit.disabled = false; submit.textContent = 'Notify Me';
+    }
+  });
 })();
 </script>
 

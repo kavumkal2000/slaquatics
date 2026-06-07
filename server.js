@@ -783,6 +783,17 @@ function mergeTagList(existing = '', additions = []) {
   return [...merged].join(', ');
 }
 
+function mergeCrmFields(existing = {}, additions = {}) {
+  const base = (existing && typeof existing === 'object' && !Array.isArray(existing)) ? { ...existing } : {};
+  Object.entries(additions || {}).forEach(([key, value]) => {
+    const fieldKey = String(key || '').trim();
+    if (!fieldKey) return;
+    const fieldValue = String(value == null ? '' : value).trim();
+    if (fieldValue) base[fieldKey] = fieldValue;
+  });
+  return base;
+}
+
 function htmlEscape(value = '') {
   return String(value)
     .replace(/&/g, '&amp;')
