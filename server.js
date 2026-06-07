@@ -71,6 +71,10 @@ const BOOKING_DEPOSIT_CENTS = 5000;
 const PROCESSING_FEE_CENTS = 500;
 const DRONE_ADDON_CENTS = 5000;
 const TOTAL_PUBLIC_JET_SKIS = 4;
+// When true (default), the public availability check never marks a time as taken —
+// every start time stays bookable, so customers can double-book and the owner sorts
+// overlaps manually. Set ALLOW_DOUBLE_BOOKING=false to re-enable fleet-based blocking.
+const ALLOW_DOUBLE_BOOKING = !/^(false|0|no)$/i.test(process.env.ALLOW_DOUBLE_BOOKING || 'true');
 const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const PUBLIC_UNPAID_HOLD_MINUTES = Math.max(Number(process.env.PUBLIC_UNPAID_HOLD_MINUTES || 30), 1);
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
@@ -989,6 +993,7 @@ function websiteBookingHoldIsActive(booking = {}, status = '') {
 }
 
 function bookingBlocksAvailability(booking = {}) {
+  if (ALLOW_DOUBLE_BOOKING) return false; // double-booking allowed — no booking blocks public availability
   const status = String(booking.status || '').trim().toLowerCase();
   return Boolean(
     booking.date &&
