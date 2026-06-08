@@ -2273,7 +2273,8 @@ function invoiceMatchesPeriod(invoice) {
   if (invoicePeriodFilter === 'year') return inRange(targetDate, startOfYear(now), endOfYear(now));
   if (invoicePeriodFilter === 'custom') {
     const from = invoiceDateFrom ? parseIsoDate(invoiceDateFrom) : null;
-    const to = invoiceDateTo ? new Date(parseIsoDate(invoiceDateTo).getFullYear(), parseIsoDate(invoiceDateTo).getMonth(), parseIsoDate(invoiceDateTo).getDate(), 23, 59, 59, 999) : null;
+    const toRaw = invoiceDateTo ? parseIsoDate(invoiceDateTo) : null;
+    const to = toRaw ? new Date(toRaw.getFullYear(), toRaw.getMonth(), toRaw.getDate(), 23, 59, 59, 999) : null;
     return inRange(targetDate, from, to);
   }
   return true;

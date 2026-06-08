@@ -796,6 +796,12 @@ h1 span { color: var(--gold); }
 .calendar-day.other-month {
   opacity: 0.42;
 }
+.calendar-day.is-past,
+.calendar-day:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 .calendar-day.today {
   border-color: rgba(15, 184, 224, 0.34);
 }
@@ -1846,10 +1852,11 @@ function renderCalendar() {
     const isOtherMonth = cellDate.getMonth() !== calendarMonthCursor.getMonth();
     const isToday = cellIso === todayLocalIso();
     const isSelected = cellIso === selectedBookingDate;
-    const label = isSelected ? 'Selected' : (!isOtherMonth && offset < 14 ? 'Open' : '&nbsp;');
+    const isPast = cellIso < todayLocalIso();
+    const label = isSelected ? 'Selected' : (!isPast && !isOtherMonth && offset < 14 ? 'Open' : '&nbsp;');
 
     cells.push(`
-      <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" type="button" onclick="selectCalendarDate('${cellIso}')">
+      <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}${isPast ? ' is-past' : ''}" type="button"${isPast ? ' disabled aria-disabled="true"' : ` onclick="selectCalendarDate('${cellIso}')"`}>
         <div class="calendar-day-top">
           <span class="calendar-day-num">${cellDate.getDate()}</span>
           ${isSelected ? '<span class="calendar-day-badge">Go</span>' : ''}
@@ -2006,6 +2013,7 @@ function applyDraftBooking(booking) {
 
 function validatePayload(payload) {
   if (!payload.date || !payload.time) return 'Please choose the rental date and preferred start time.';
+  if (payload.date < todayLocalIso()) return 'Please choose today or a future date.';
   if (!payload.craft || !payload.duration || !payload.total) {
     return 'Please choose a valid package and duration before continuing.';
   }
@@ -2177,6 +2185,7 @@ qs('booking-form').addEventListener('submit', handleSubmit);
 qs('waitlist-form').addEventListener('submit', handleWaitlistSubmit);
 
 qs('date').value = todayLocalIso();
+qs('date').min = todayLocalIso();
 qs('time').value = '10:00';
 selectedBookingDate = qs('date').value;
 (async function initBookingPage() {

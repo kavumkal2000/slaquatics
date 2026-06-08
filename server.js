@@ -2783,7 +2783,7 @@ function applyStripeSessionToBooking(state, session = {}, now = new Date().toISO
   booking.paymentSessionId = String(session.id || booking.paymentSessionId || '');
   booking.paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : String(booking.paymentIntentId || '');
   booking.depositAmount = Number((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
-  booking.processingFeeAmount = Number((session?.metadata?.processingFeeAmount || booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100));
+  booking.processingFeeAmount = Number((Number(session?.metadata?.processingFeeAmount) || booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100).toFixed(2));
   booking.amountDueToday = Number(((session.amount_total || ((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS))) / 100).toFixed(2));
   booking.paymentStatus = String(session.payment_status || booking.paymentStatus || 'pending');
   booking.deposit = booking.paymentStatus === 'paid';
