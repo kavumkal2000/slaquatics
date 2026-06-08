@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node scripts/validate.js",
+    "smoke": "node scripts/smoke.js"
   },
   "dependencies": {
     "pg": "^8.16.3",
