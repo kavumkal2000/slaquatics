@@ -37,6 +37,11 @@ const OPS_EMPLOYEE_PASSWORD = process.env.OPS_EMPLOYEE_PASSWORD || 'default';
 const OPS_OWNER_USERNAME = String(process.env.OPS_OWNER_USERNAME || 'owner').trim().toLowerCase();
 const OPS_OWNER_PASSWORD_HASH = process.env.OPS_OWNER_PASSWORD_HASH || '';
 const OPS_OWNER_PASSWORD = process.env.OPS_OWNER_PASSWORD || (OPS_OWNER_PASSWORD_HASH ? '' : LEGACY_OPS_PASSWORD) || '';
+// Crew = most-restricted login (e.g. dock staff). Sees name + time + craft +
+// location only, and may only mark a booking arrived/done. No weak default in
+// production: must set OPS_CREW_PASSWORD to enable the login on the live site.
+const OPS_CREW_USERNAME = String(process.env.OPS_CREW_USERNAME || 'crew').trim().toLowerCase();
+const OPS_CREW_PASSWORD = process.env.OPS_CREW_PASSWORD || (IS_PRODUCTION ? '' : 'crew');
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
@@ -427,8 +432,9 @@ function verifyPasswordHash(password, encoded = '') {
 
 function authPermissionsForRole(role = 'owner') {
   return {
-    canAccessBusinessData: true,
+    canAccessBusinessData: role !== 'crew',
     canAccessBookingsOnly: role === 'employee',
+    canAccessCrewOnly: role === 'crew',
     canAccessSystem: role === 'developer',
     canAccessWebsiteDevelopment: role === 'developer'
   };
@@ -450,6 +456,7 @@ function canManageMessagingOps(session = null) {
 function normalizeOpsRole(role = '') {
   const normalized = String(role || '').trim().toLowerCase();
   if (normalized === 'developer') return 'developer';
+  if (normalized === 'crew') return 'crew';
   if (normalized === 'employee') return 'employee';
   return 'owner';
 }
@@ -460,6 +467,7 @@ function normalizeOpsRole(role = '') {
 const OPS_ACCOUNTS = [
   { role: 'developer', username: OPS_DEV_USERNAME, displayName: 'Developer', password: OPS_DEV_PASSWORD, passwordHash: '' },
   { role: 'employee', username: OPS_EMPLOYEE_USERNAME, displayName: 'Hugo Prado', password: OPS_EMPLOYEE_PASSWORD, passwordHash: '' },
+  { role: 'crew', username: OPS_CREW_USERNAME, displayName: 'Crew', password: OPS_CREW_PASSWORD, passwordHash: '' },
   { role: 'owner', username: OPS_OWNER_USERNAME, displayName: 'Owner', password: OPS_OWNER_PASSWORD, passwordHash: OPS_OWNER_PASSWORD_HASH }
 ];
 
@@ -1779,14 +1787,64 @@ function employeeVisibleState(state = {}) {
   };
 }
 
+// Crew sees ONLY what a dock hand needs: who, when, which craft, where. Every
+// other field (phone, email, totals, deposits, notes, customer records) is
+// dropped server-side, so it never reaches the crew browser at all.
+function crewVisibleState(state = {}) {
+  const bookings = (Array.isArray(state.bookings) ? state.bookings : [])
+    .map((b) => ({
+      id: b.id,
+      name: String(b.name || '').trim(),
+      date: String(b.date || '').trim(),
+      time: String(b.time || '').trim(),
+      craftLabel: String(b.craftLabel || b.craft || '').trim(),
+      location: String(b.location || '').trim(),
+      status: String(b.status || '').trim(),
+      checkedIn: Boolean(b.checkedIn)
+    }));
+  return {
+    bookings,
+    customers: [], expenses: [], fuelLog: [], maintLog: [], trackers: [],
+    invoices: [], communicationsLog: [], reviewRequests: [], reviews: [],
+    reviewSettings: clone(DEFAULT_STATE.reviewSettings),
+    socialPosts: [],
+    ownerWeeklyDigest: clone(DEFAULT_STATE.ownerWeeklyDigest),
+    importMeta: clone(DEFAULT_STATE.importMeta),
+    invoiceImportMeta: clone(DEFAULT_STATE.invoiceImportMeta)
+  };
+}
+
 function statePayloadForSession(state = {}, session = null) {
-  return normalizeOpsRole(session?.role) === 'employee' ? employeeVisibleState(state) : state;
+  const role = normalizeOpsRole(session?.role);
+  if (role === 'crew') return crewVisibleState(state);
+  if (role === 'employee') return employeeVisibleState(state);
+  return state;
 }
 
 function mergeEmployeeState(currentState = {}, incomingState = {}) {
   const next = sanitizeState(currentState);
   const incoming = sanitizeState(incomingState);
   next.bookings = incoming.bookings;
+  return next;
+}
+
+// Crew may ONLY flip check-in and mark a booking completed on EXISTING bookings.
+// Everything else in the incoming payload is ignored — no field edits, no new
+// bookings, no deletes, no touching other collections.
+function mergeCrewState(currentState = {}, incomingState = {}) {
+  const next = sanitizeState(currentState);
+  const updates = new Map(
+    (Array.isArray(incomingState.bookings) ? incomingState.bookings : [])
+      .map((b) => [Number(b.id), b])
+  );
+  next.bookings = next.bookings.map((booking) => {
+    const update = updates.get(Number(booking.id));
+    if (!update) return booking;
+    const out = { ...booking };
+    if (typeof update.checkedIn === 'boolean') out.checkedIn = update.checkedIn;
+    if (String(update.status || '').toLowerCase() === 'completed') out.status = 'completed';
+    return out;
+  });
   return next;
 }
 
@@ -3990,7 +4048,8 @@ async function handleApi(request, response, pathname) {
 
   if (pathname === '/api/ops/state' && (request.method === 'PUT' || request.method === 'POST')) {
     try {
-      if (!canManageBookingOps(session)) {
+      const writeRole = normalizeOpsRole(session.role);
+      if (!canManageBookingOps(session) && writeRole !== 'crew') {
         sendJson(response, 403, { error: 'This login cannot edit operations data.' });
         return true;
       }
@@ -3999,9 +4058,11 @@ async function handleApi(request, response, pathname) {
         throw new Error('Malformed state payload.');
       }
       const currentState = await stateStore.read();
-      const nextState = normalizeOpsRole(session.role) === 'employee'
-        ? mergeEmployeeState(currentState, body)
-        : sanitizeState(body);
+      const nextState = writeRole === 'crew'
+        ? mergeCrewState(currentState, body)
+        : writeRole === 'employee'
+          ? mergeEmployeeState(currentState, body)
+          : sanitizeState(body);
       nextState.ownerWeeklyDigest = mergeOwnerWeeklyDigestState(
         currentState.ownerWeeklyDigest,
         nextState.ownerWeeklyDigest

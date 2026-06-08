@@ -592,6 +592,41 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
 </div>
 <div class="content">
 
+<!-- ═══ CREW SCHEDULE (restricted crew login only) ═══ -->
+<style>
+  body.crew-mode .sidebar { display:none !important; }
+  body.crew-mode .main { margin-left:0 !important; }
+  .crew-wrap { max-width:680px; margin:0 auto; padding:0.5rem 0 2rem; }
+  .crew-head { margin:0.5rem 0 1.2rem; }
+  .crew-title { font-size:1.5rem; margin:0; }
+  .crew-sub { color:var(--muted); margin:0.25rem 0 0; font-size:0.95rem; }
+  .crew-group { margin-bottom:1.4rem; }
+  .crew-group-date { font-size:0.8rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:0 0 0.6rem; font-weight:700; }
+  .crew-card { display:flex; align-items:center; gap:0.9rem; background:var(--card,#15212e); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:0.85rem 1rem; margin-bottom:0.7rem; }
+  .crew-card.is-done { opacity:0.55; }
+  .crew-time { font-size:1.15rem; font-weight:800; min-width:84px; color:var(--accent,#0fb8e0); }
+  .crew-info { flex:1; min-width:0; }
+  .crew-name { font-weight:700; font-size:1.05rem; }
+  .crew-meta { color:var(--muted); font-size:0.85rem; margin-top:0.15rem; }
+  .crew-status { font-size:0.8rem; margin-top:0.3rem; }
+  .crew-actions { display:flex; flex-direction:column; gap:0.4rem; }
+  .crew-btn { border:1px solid rgba(255,255,255,0.16); background:transparent; color:inherit; border-radius:9px; padding:0.5rem 0.9rem; font-size:0.82rem; font-weight:700; cursor:pointer; min-width:88px; }
+  .crew-btn.arrive.on { background:rgba(46,204,113,0.18); border-color:rgba(46,204,113,0.5); }
+  .crew-btn.done { background:rgba(15,184,224,0.14); border-color:rgba(15,184,224,0.4); }
+  .crew-btn.done.on, .crew-btn.done:disabled { opacity:0.5; cursor:default; }
+  .crew-empty { text-align:center; color:var(--muted); padding:3rem 1rem; font-size:1.05rem; }
+  @media (max-width:520px){ .crew-card{ flex-wrap:wrap; } .crew-actions{ flex-direction:row; width:100%; } .crew-btn{ flex:1; } }
+</style>
+<div class="page" id="page-crew">
+  <div class="crew-wrap">
+    <div class="crew-head">
+      <h1 class="crew-title">Today's Schedule</h1>
+      <p class="crew-sub" id="crew-date-label"></p>
+    </div>
+    <div id="crew-list" class="crew-list"></div>
+  </div>
+</div>
+
 <!-- ═══ DASHBOARD ═══ -->
 <div class="page active" id="page-dashboard">
   <div class="alerts" id="dashboard-alerts"></div>
@@ -1560,6 +1595,7 @@ function currentPermissions() {
   return currentSession?.user?.permissions || {
     canAccessBusinessData: true,
     canAccessBookingsOnly: false,
+    canAccessCrewOnly: false,
     canAccessSystem: false,
     canAccessWebsiteDevelopment: false
   };
@@ -1647,8 +1683,104 @@ function updateModeBadge() {
     userPill.textContent = '';
   }
 }
+function isCrewMode() {
+  return Boolean(currentPermissions().canAccessCrewOnly);
+}
+function applyCrewMode() {
+  document.body.classList.add('crew-mode');
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  const newBtn = document.getElementById('topbar-booking-action');
+  if (newBtn) newBtn.style.display = 'none';
+  const mobileToggle = document.getElementById('mobile-nav-toggle');
+  if (mobileToggle) mobileToggle.style.display = 'none';
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = 'Schedule';
+  document.querySelectorAll('.page').forEach((p) => p.classList.toggle('active', p.id === 'page-crew'));
+  renderCrewSchedule();
+}
+function crewTodayIso() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function crewFormatTime(t) {
+  const m = String(t || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return String(t || '');
+  let h = Number(m[1]);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${m[2]} ${ampm}`;
+}
+function crewLongDate(iso) {
+  const parsed = (typeof parseIsoDate === 'function' ? parseIsoDate(iso) : null) || new Date(`${iso}T00:00:00`);
+  if (isNaN(parsed)) return iso;
+  return parsed.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function crewCard(b) {
+  const done = normalizeBookingStatusValue(b.status) === 'completed';
+  const arrived = Boolean(b.checkedIn);
+  const meta = [b.craftLabel, b.location].filter(Boolean).map(escapeHtml).join(' · ');
+  return `
+    <div class="crew-card${done ? ' is-done' : ''}">
+      <div class="crew-time">${escapeHtml(crewFormatTime(b.time))}</div>
+      <div class="crew-info">
+        <div class="crew-name">${escapeHtml(b.name || 'Guest')}</div>
+        <div class="crew-meta">${meta || '—'}</div>
+        <div class="crew-status">${done ? '🏁 Done' : (arrived ? '✅ Checked in' : '⏳ Not arrived yet')}</div>
+      </div>
+      <div class="crew-actions">
+        <button class="crew-btn arrive${arrived ? ' on' : ''}" onclick="crewMarkArrived(${Number(b.id)})">${arrived ? 'Undo' : 'Arrived'}</button>
+        <button class="crew-btn done${done ? ' on' : ''}" onclick="crewMarkDone(${Number(b.id)})"${done ? ' disabled' : ''}>Done</button>
+      </div>
+    </div>`;
+}
+function renderCrewSchedule() {
+  const list = document.getElementById('crew-list');
+  if (!list) return;
+  const today = crewTodayIso();
+  const dateLabel = document.getElementById('crew-date-label');
+  if (dateLabel) dateLabel.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const upcoming = (bookings || [])
+    .filter((b) => b && b.date && b.date >= today && normalizeBookingStatusValue(b.status) !== 'cancelled')
+    .sort((a, b) => (a.date === b.date ? String(a.time).localeCompare(String(b.time)) : a.date.localeCompare(b.date)));
+  if (!upcoming.length) {
+    list.innerHTML = '<div class="crew-empty">No upcoming bookings right now. 🌊</div>';
+    return;
+  }
+  const groups = [];
+  let cur = null;
+  for (const b of upcoming) {
+    if (!cur || cur.date !== b.date) { cur = { date: b.date, items: [] }; groups.push(cur); }
+    cur.items.push(b);
+  }
+  list.innerHTML = groups.map((g) => `
+    <div class="crew-group">
+      <div class="crew-group-date">${g.date === today ? 'Today' : escapeHtml(crewLongDate(g.date))}</div>
+      ${g.items.map(crewCard).join('')}
+    </div>`).join('');
+}
+async function crewMarkArrived(id) {
+  const booking = bookings.find((b) => Number(b.id) === Number(id));
+  if (!booking) return;
+  const prev = Boolean(booking.checkedIn);
+  booking.checkedIn = !prev;
+  if (!(await persistStateChange())) { booking.checkedIn = prev; showToast('⚠️ Could not save — try again'); return; }
+  renderCrewSchedule();
+  showToast(booking.checkedIn ? '✅ Marked arrived' : 'Check-in removed');
+}
+async function crewMarkDone(id) {
+  const booking = bookings.find((b) => Number(b.id) === Number(id));
+  if (!booking) return;
+  const prev = booking.status;
+  booking.status = 'completed';
+  if (!(await persistStateChange())) { booking.status = prev; showToast('⚠️ Could not save — try again'); return; }
+  renderCrewSchedule();
+  showToast('🏁 Marked done');
+}
 function applyRolePermissions() {
   const permissions = currentPermissions();
+  if (permissions.canAccessCrewOnly) { applyCrewMode(); return; }
   const bookingsOnly = Boolean(permissions.canAccessBookingsOnly);
   const bookingsButton = document.querySelector('.nav-item[onclick*="bookings"]');
   document.querySelectorAll('[data-role="developer"]').forEach((element) => {
@@ -1890,6 +2022,7 @@ async function loadData() {
   applyState(serverState);
   dedupeCustomers();
   refreshCustomerRollups();
+  if (isCrewMode()) renderCrewSchedule();
   return true;
 }
 async function loadIntegrationStatus() {
@@ -4132,6 +4265,18 @@ function closeMobileNav() {
 function showPage(id, btn) {
   try {
   if (id === 'fuel') id = 'expenses';
+  if (currentPermissions().canAccessCrewOnly) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const crewPage = document.getElementById('page-crew');
+    if (crewPage) crewPage.classList.add('active');
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.textContent = 'Schedule';
+    const tba = document.getElementById('topbar-booking-action');
+    if (tba) tba.style.display = 'none';
+    renderCrewSchedule();
+    closeMobileNav();
+    return;
+  }
   if (currentPermissions().canAccessBookingsOnly && id !== 'bookings') {
     id = 'bookings';
     btn = document.querySelector('.nav-item[onclick*="bookings"]');
