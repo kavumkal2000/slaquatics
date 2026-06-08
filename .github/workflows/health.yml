@@ -1,9 +1,11 @@
 name: Health
 
-# Catches bugs before they ship, and outages after.
-# - `check` runs on every push/PR to main: syntax + JSON-LD + pricing consistency.
-# - `smoke` runs daily and on-demand: hits the live site + API; a failure emails
-#   the repo owner automatically (GitHub default notification).
+# Three things:
+# - check: on every push/PR — syntax + JSON-LD + pricing consistency (blocks bad code)
+# - warm:  every 14 min — pings the node service so the FREE Render plan never hits
+#          its ~15-min idle spin-down (which causes slow/dead cold starts). Cheap;
+#          does not alert. The permanent fix is upgrading the service to Starter.
+# - smoke: daily + on-demand — full live health check; GitHub emails the owner on failure.
 
 on:
   push:
@@ -11,7 +13,8 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '*/30 * * * *'   # every 30 min — uptime check; GitHub emails on failure
+    - cron: '*/14 * * * *'   # keep-warm (free tier spins down at ~15 min idle)
+    - cron: '0 13 * * *'     # daily full health check
   workflow_dispatch: {}
 
 jobs:
@@ -25,8 +28,15 @@ jobs:
           node-version: 20
       - run: npm run check
 
+  warm:
+    if: github.event_name == 'schedule' && github.event.schedule == '*/14 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      # Single cheap request to wake/keep the node service warm. Never fails the run.
+      - run: curl -fsS --max-time 90 https://shoreline-aquatics-ops.onrender.com/api/health || true
+
   smoke:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: (github.event_name == 'schedule' && github.event.schedule == '0 13 * * *') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
