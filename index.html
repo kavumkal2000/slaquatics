@@ -2422,6 +2422,15 @@ calcBundlePrice();
 renderReviewCarousel();
 startReviewAutoplay();
 
+// Public API base. slaquatics.com is a STATIC deploy with no API of its own — the
+// public API (availability, seasonal-lead) runs on the ops node service. Use that
+// origin from the static site; stay same-origin when served by the node service.
+const PUBLIC_API_BASE = (
+  location.hostname.includes('shoreline-aquatics-ops') ||
+  location.hostname === '127.0.0.1' ||
+  location.hostname === 'localhost'
+) ? location.origin : 'https://shoreline-aquatics-ops.onrender.com';
+
 // ── REAL-TIME AVAILABILITY WIDGET ──
 (function initAvailability() {
   const dateInput = document.getElementById('avail-date');
@@ -2448,7 +2457,7 @@ startReviewAutoplay();
     statusEl.className = 'avail-status';
     slotsEl.innerHTML = '';
     try {
-      const res = await fetch(`/api/public/availability?date=${encodeURIComponent(date)}&craft=jetski2&duration=2`);
+      const res = await fetch(`${PUBLIC_API_BASE}/api/public/availability?date=${encodeURIComponent(date)}&craft=jetski2&duration=2`);
       if (!res.ok) throw new Error('unavailable');
       const data = await res.json();
       const slots = Array.isArray(data.slotDetails) ? data.slotDetails : [];
@@ -2494,7 +2503,7 @@ startReviewAutoplay();
     if (!phone && !email) { msg.textContent = 'Add a phone or email so we can reach you.'; msg.classList.add('err'); return; }
     submit.disabled = true; submit.textContent = 'Sending…';
     try {
-      const res = await fetch('/api/public/seasonal-lead', {
+      const res = await fetch(`${PUBLIC_API_BASE}/api/public/seasonal-lead`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firstName: name, phone, email, preferredChannel: phone ? 'sms' : 'email' })
