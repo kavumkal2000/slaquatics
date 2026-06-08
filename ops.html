@@ -4479,7 +4479,7 @@ async function saveBooking() {
   const phone = document.getElementById('b-phone').value.trim();
   const email = document.getElementById('b-email').value.trim();
   const craft = normalizeCraftKey(document.getElementById('b-craft').value);
-  const dur = parseInt(document.getElementById('b-duration').value);
+  const dur = parseInt(document.getElementById('b-duration').value, 10);
   const status = normalizeBookingStatusValue(document.getElementById('b-status').value) || 'pending';
   if(!craft||!dur) { showToast('⚠️ Fill in craft and duration'); return; }
   const baseValue = PRICING[craft]?.[dur] || 0;
@@ -4653,7 +4653,7 @@ function runSheetCard(b) {
   const statusClass = `rs-${normalizeBookingStatusValue(b.status) || 'pending'}`;
   const payText = paid
     ? 'Deposit in ✓'
-    : `${moneyLabel(Number(b.total || 0))} total — collect deposit`;
+    : `${moneyLabel(bookingTotalValue(b))} total — collect deposit`;
   return `<div class="rs-card ${statusClass}">
     <div class="rs-top"><span class="rs-time">🕐 ${escapeHtml(formatTimeLabel(b.time) || 'Time TBD')}</span>${statusBadge(b.status)}</div>
     <div class="rs-name">${escapeHtml(bookingDisplayName(b))}</div>
@@ -4668,7 +4668,7 @@ function renderTodayRunSheet() {
   if (!host) return;
   const list = todaysRunSheetBookings();
   const dateLabel = new Date().toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'});
-  const toCollect = list.filter((b) => !bookingIsPaid(b)).reduce((sum, b) => sum + Number(b.total || 0), 0);
+  const toCollect = list.filter((b) => !bookingIsPaid(b)).reduce((sum, b) => sum + bookingTotalValue(b), 0);
   const subParts = [`<strong>${list.length}</strong> ${list.length === 1 ? 'rental' : 'rentals'}`];
   if (toCollect > 0) subParts.push(`<strong>${moneyLabel(toCollect)}</strong> to collect`);
   host.innerHTML = `
