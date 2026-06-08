@@ -11,7 +11,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 13 * * *'   # ~8:00 AM Central daily — verify the live site is up
+    - cron: '*/30 * * * *'   # every 30 min — uptime check; GitHub emails on failure
   workflow_dispatch: {}
 
 jobs:
