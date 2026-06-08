@@ -2417,7 +2417,13 @@ function setReportDelta(deltaId, current, previous, { money = false, inverse = f
   if (!el) return;
   const diff = current - previous;
   if (current === 0 && previous === 0) { el.className = 'delta'; el.textContent = 'No activity yet'; return; }
-  const pct = previous !== 0 ? Math.round((diff / Math.abs(previous)) * 100) : 100;
+  if (previous === 0) {
+    // last month was zero — a percentage is meaningless, show it as new
+    el.className = 'delta ' + (inverse ? 'down' : 'up');
+    el.textContent = `▲ ${money ? moneyLabel(current) : current} — new this month`;
+    return;
+  }
+  const pct = Math.round((diff / Math.abs(previous)) * 100);
   const good = inverse ? diff <= 0 : diff >= 0;
   el.className = 'delta ' + (diff === 0 ? '' : good ? 'up' : 'down');
   const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '·';
