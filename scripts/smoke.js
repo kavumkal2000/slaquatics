@@ -16,21 +16,30 @@ const checks = [
   { name: 'API integrations', url: `${API}/api/public/integrations/status`, want: 200 },
 ];
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Try a check up to 3 times before declaring failure, so a momentary blip
+// (deploy in progress, cold start) doesn't trigger a false-alarm alert.
+async function attempt(c) {
+  const res = await fetch(c.url, { signal: AbortSignal.timeout(25000) });
+  const body = c.contains ? await res.text() : '';
+  const okStatus = res.status === c.want;
+  const okBody = !c.contains || body.includes(c.contains);
+  if (okStatus && okBody) return { pass: true, note: 'ok' };
+  return { pass: false, note: !okStatus ? `got ${res.status}, want ${c.want}` : `missing "${c.contains}"` };
+}
+
 let failed = 0;
 for (const c of checks) {
-  try {
-    const res = await fetch(c.url, { signal: AbortSignal.timeout(25000) });
-    const body = c.contains ? await res.text() : '';
-    const okStatus = res.status === c.want;
-    const okBody = !c.contains || body.includes(c.contains);
-    const pass = okStatus && okBody;
-    if (!pass) failed++;
-    const note = !okStatus ? `got ${res.status}, want ${c.want}` : (!okBody ? `missing "${c.contains}"` : 'ok');
-    console.log(`${pass ? '✅' : '❌'} ${c.name.padEnd(18)} ${note}`);
-  } catch (e) {
-    failed++;
-    console.log(`❌ ${c.name.padEnd(18)} ERROR ${e.message}`);
+  let result = null;
+  for (let i = 0; i < 3; i++) {
+    try { result = await attempt(c); }
+    catch (e) { result = { pass: false, note: `ERROR ${e.message}` }; }
+    if (result.pass) break;
+    if (i < 2) await sleep(5000);
   }
+  if (!result.pass) failed++;
+  console.log(`${result.pass ? '✅' : '❌'} ${c.name.padEnd(18)} ${result.note}`);
 }
 console.log('\n' + (failed === 0 ? `✅ All ${checks.length} checks passed` : `❌ ${failed} of ${checks.length} checks FAILED`));
 process.exit(failed === 0 ? 0 : 1);
