@@ -777,8 +777,8 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
   </div>
   <div class="filter-row">
     <select id="invoice-date-basis" onchange="updateInvoiceFilters()">
-      <option value="booked">Booked day</option>
-      <option value="issue" selected>Issued date</option>
+      <option value="booked" selected>Booked day</option>
+      <option value="issue">Issued date</option>
       <option value="due">Due date</option>
     </select>
     <select id="invoice-period-filter" onchange="updateInvoiceFilters()">
@@ -790,7 +790,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
     </select>
     <input type="date" id="invoice-date-from" onchange="updateInvoiceFilters()">
     <input type="date" id="invoice-date-to" onchange="updateInvoiceFilters()">
-    <div class="filter-summary" id="invoice-filter-summary">Showing this month's issued dates</div>
+    <div class="filter-summary" id="invoice-filter-summary">Showing this month's booked days</div>
   </div>
   <input type="file" id="invoice-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleInvoiceImport(event)">
   <div class="import-panel">
@@ -822,6 +822,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
       <input class="search-input" placeholder="Search customers..." oninput="filterCRM(this)">
       <button class="btn btn-ghost btn-sm" onclick="triggerCRMImport()">Import Admin Tribe CSV</button>
       <button class="btn btn-ghost btn-sm" onclick="openModal('crm-paste-modal')">Paste CRM CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="cleanupEmptyCustomers()">🧹 Clean up empty</button>
       <button class="btn btn-primary btn-sm" onclick="openCustomerModal()">+ Add Customer</button>
     </div>
   </div>
@@ -2102,7 +2103,7 @@ let massEmailSearchQuery = '';
 let massEmailAudienceMode = 'all';
 let selectedMassEmailCustomerIds = new Set();
 let invoiceSearchQuery = '';
-let invoiceDateBasis = 'issue';
+let invoiceDateBasis = 'booked';
 let invoicePeriodFilter = 'month';
 let invoiceDateFrom = '';
 let invoiceDateTo = '';
@@ -6413,6 +6414,47 @@ async function deleteCustomer(customerId) {
   renderReviewHub();
   renderReminders();
   showToast('🗑️ Customer removed');
+}
+
+// A customer counts as "empty" only when there is genuinely nothing on file:
+// no real name (blank or a placeholder), no phone, no email, no bookings, no
+// spend, no waiver, and no booking/invoice linked to them. Deliberately strict
+// so we never delete anyone who carries real information.
+const CUSTOMER_PLACEHOLDER_NAMES = new Set(['', 'imported customer', 'imported booking', 'guest', 'unknown', 'walk-in', 'walk in', 'n/a', 'customer', 'new customer']);
+function customerIsEmpty(customer = {}) {
+  const name = String(customer.name || '').trim().toLowerCase();
+  if (!CUSTOMER_PLACEHOLDER_NAMES.has(name)) return false;
+  if (String(customer.phone || '').trim()) return false;
+  if (String(customer.email || '').trim()) return false;
+  if ((Number(customer.bookings) || 0) > 0) return false;
+  if ((Number(customer.totalSpent) || 0) > 0) return false;
+  if (typeof customerHasWaiver === 'function' && customerHasWaiver(customer)) return false;
+  if (bookings.some((booking) => Number(booking.customerId || 0) === Number(customer.id))) return false;
+  if (invoices.some((invoice) => Number(invoice.customerId || 0) === Number(customer.id))) return false;
+  return true;
+}
+async function cleanupEmptyCustomers() {
+  const empties = customers.filter(customerIsEmpty);
+  if (!empties.length) {
+    showToast('✅ No empty customer records to remove — your count is already clean');
+    return;
+  }
+  const plural = empties.length === 1 ? '' : 's';
+  const confirmed = window.confirm(`Remove ${empties.length} blank customer record${plural}?\n\nThese have no name, phone, email, bookings, spend, or waiver. Everyone with any real info is kept.`);
+  if (!confirmed) return;
+  const removeIds = new Set(empties.map((customer) => Number(customer.id)));
+  const previousCustomers = customers.map((customer) => ({ ...customer }));
+  customers = customers.filter((customer) => !removeIds.has(Number(customer.id)));
+  if (Number(expandedCustomerId) && removeIds.has(Number(expandedCustomerId))) expandedCustomerId = null;
+  if (!(await persistStateChange())) {
+    customers = previousCustomers;
+    showToast('⚠️ Could not save — nothing was removed');
+    return;
+  }
+  renderCRM();
+  renderWaivers();
+  renderReminders();
+  showToast(`🧹 Removed ${empties.length} blank customer record${plural}`);
 }
 
 // ── EXPENSES ──
