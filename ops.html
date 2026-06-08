@@ -557,6 +557,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
   <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span><span>Dashboard</span></button>
   <button class="nav-item" onclick="showPage('bookings',this)"><span class="icon">📅</span><span>Bookings</span><span class="nav-badge" id="pending-badge">0</span></button>
   <div class="nav-section">Business</div>
+  <button class="nav-item" onclick="showPage('reports',this)"><span class="icon">📈</span><span>Reports</span></button>
   <button class="nav-item" onclick="showPage('invoices',this)"><span class="icon">🧾</span><span>Invoices</span></button>
   <button class="nav-item" onclick="showPage('crm',this)"><span class="icon">👥</span><span>Customers</span></button>
   <button class="nav-item" onclick="showPage('waivers',this)"><span class="icon">📝</span><span>Waivers</span></button>
@@ -632,6 +633,28 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
     <table>
       <thead><tr><th>Customer</th><th>Craft</th><th>Date</th><th>Duration</th><th>Total</th><th>Deposit</th><th>Status</th><th></th></tr></thead>
       <tbody id="upcoming-bookings-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ REPORTS ═══ -->
+<div class="page" id="page-reports">
+  <div class="section-head"><h2>Owner Reports</h2><div class="filter-summary">Revenue, bookings &amp; expenses at a glance · this month vs last</div></div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="label">Revenue · this month</div><div class="value" style="color:var(--green);" id="rep-revenue">$0</div><div class="delta" id="rep-revenue-delta">—</div></div>
+    <div class="kpi-card"><div class="label">Bookings · this month</div><div class="value" id="rep-bookings">0</div><div class="delta" id="rep-bookings-delta">—</div></div>
+    <div class="kpi-card"><div class="label">Expenses · this month</div><div class="value" style="color:var(--amber);" id="rep-expenses">$0</div><div class="delta" id="rep-expenses-delta">—</div></div>
+    <div class="kpi-card"><div class="label">Net · this month</div><div class="value" id="rep-net">$0</div><div class="delta" id="rep-net-delta">—</div></div>
+  </div>
+  <div class="chart-card" style="margin-top:1.6rem;">
+    <h3>Revenue — last 6 months</h3>
+    <div class="bar-chart" id="reports-revenue-bars"></div>
+  </div>
+  <div class="section-head" style="margin-top:1.6rem;"><h2>Monthly breakdown</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Month</th><th>Revenue</th><th>Bookings</th><th>Expenses</th><th>Net</th></tr></thead>
+      <tbody id="reports-table"></tbody>
     </table>
   </div>
 </div>
@@ -2373,6 +2396,79 @@ function revenueThisMonth() {
     return sum + bookingTotalValue(booking);
   }, 0);
 }
+
+// ── OWNER REPORTS ──
+function revenueForMonth(reference = new Date()) {
+  const collectedInvoices = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice), reference));
+  if (collectedInvoices.length) {
+    return collectedInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
+  }
+  return scheduledBookings().reduce((sum, booking) => {
+    if (!isSameMonth(dateValue(booking.date), reference)) return sum;
+    if (!bookingIsPaid(booking)) return sum;
+    return sum + bookingTotalValue(booking);
+  }, 0);
+}
+function bookingsCountForMonth(reference = new Date()) {
+  return scheduledBookings().filter((booking) => isSameMonth(dateValue(booking.date), reference)).length;
+}
+function setReportDelta(deltaId, current, previous, { money = false, inverse = false } = {}) {
+  const el = document.getElementById(deltaId);
+  if (!el) return;
+  const diff = current - previous;
+  if (current === 0 && previous === 0) { el.className = 'delta'; el.textContent = 'No activity yet'; return; }
+  const pct = previous !== 0 ? Math.round((diff / Math.abs(previous)) * 100) : 100;
+  const good = inverse ? diff <= 0 : diff >= 0;
+  el.className = 'delta ' + (diff === 0 ? '' : good ? 'up' : 'down');
+  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '·';
+  el.textContent = `${arrow} ${money ? moneyLabel(Math.abs(diff)) : Math.abs(diff)} (${pct >= 0 ? '+' : ''}${pct}%) vs last month`;
+}
+function renderReports() {
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const rev = revenueForMonth(now), revPrev = revenueForMonth(lastMonth);
+  const bk = bookingsCountForMonth(now), bkPrev = bookingsCountForMonth(lastMonth);
+  const exp = expensePeriodTotal('month', '', now), expPrev = expensePeriodTotal('month', '', lastMonth);
+  const net = rev - exp, netPrev = revPrev - expPrev;
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  set('rep-revenue', moneyLabel(rev));
+  set('rep-bookings', String(bk));
+  set('rep-expenses', moneyLabel(exp));
+  set('rep-net', moneyLabel(net));
+  const netEl = document.getElementById('rep-net');
+  if (netEl) netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+  setReportDelta('rep-revenue-delta', rev, revPrev, { money: true });
+  setReportDelta('rep-bookings-delta', bk, bkPrev, {});
+  setReportDelta('rep-expenses-delta', exp, expPrev, { money: true, inverse: true });
+  setReportDelta('rep-net-delta', net, netPrev, { money: true });
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const ref = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: `${MONTH_LABELS[ref.getMonth()]} ${String(ref.getFullYear()).slice(2)}`,
+      rev: revenueForMonth(ref),
+      bk: bookingsCountForMonth(ref),
+      exp: expensePeriodTotal('month', '', ref)
+    });
+  }
+  const maxRev = Math.max(...months.map((m) => m.rev), 1);
+  const barsEl = document.getElementById('reports-revenue-bars');
+  if (barsEl) barsEl.innerHTML = months.map((m) => `
+    <div class="bar-col">
+      <div class="bar-val">${moneyLabel(m.rev)}</div>
+      <div class="bar" style="height:${Math.round((m.rev / maxRev) * 100)}px;" title="${escapeHtml(m.label)}: ${moneyLabel(m.rev)}"></div>
+      <div class="bar-label">${escapeHtml(m.label)}</div>
+    </div>`).join('');
+  const tableEl = document.getElementById('reports-table');
+  if (tableEl) tableEl.innerHTML = months.slice().reverse().map((m) => `
+    <tr>
+      <td>${escapeHtml(m.label)}</td>
+      <td data-label="Revenue" style="color:var(--green);font-weight:500;">${moneyLabel(m.rev)}</td>
+      <td data-label="Bookings">${m.bk}</td>
+      <td data-label="Expenses" style="color:var(--amber);">${moneyLabel(m.exp)}</td>
+      <td data-label="Net" style="font-weight:500;">${moneyLabel(m.rev - m.exp)}</td>
+    </tr>`).join('');
+}
 function mapImportedStatus(stage, status) {
   const raw = `${stage || ''} ${status || ''}`.toLowerCase();
   if (/cancel/.test(raw)) return 'cancelled';
@@ -4011,10 +4107,11 @@ function showPage(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id); if(pageEl) pageEl.classList.add('active');
   if(btn) btn.classList.add('active');
-  const titles = {dashboard:'Dashboard',bookings:'Bookings',invoices:'Invoices',crm:'Customers',waivers:'Waivers',expenses:'Expenses',maintenance:'Maintenance',tracking:'Trackers',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
+  const titles = {dashboard:'Dashboard',reports:'Reports',bookings:'Bookings',invoices:'Invoices',crm:'Customers',waivers:'Waivers',expenses:'Expenses',maintenance:'Maintenance',tracking:'Trackers',comms:'Communications',reviews:'Reviews',social:'Social Posting',reminders:'Re-engagement',system:'System'};
   document.getElementById('page-title').textContent = titles[id]||id;
   const topbarBookingAction = document.getElementById('topbar-booking-action');
   if (topbarBookingAction) topbarBookingAction.style.display = id === 'bookings' ? 'none' : 'inline-flex';
+  if(id==='reports') renderReports();
   if(id==='bookings') renderBookings();
   if(id==='invoices') renderInvoices();
   if(id==='crm') renderCRM();
