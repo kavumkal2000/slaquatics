@@ -1913,6 +1913,14 @@ function applyQueryDefaults() {
     if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
   }
 
+  const time = params.get('time');
+  if (time) {
+    const timeSelect = qs('time');
+    if ([...timeSelect.options].some((option) => option.value === time)) {
+      timeSelect.value = time;
+    }
+  }
+
   updateSummary();
 }
 
