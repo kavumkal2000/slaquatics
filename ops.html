@@ -5858,16 +5858,30 @@ async function confirmDeposit(id) {
   const previousPaymentStatus = booking.paymentStatus;
   const previousPaymentCompletedAt = booking.paymentCompletedAt;
   const previousUpdatedAt = booking.updatedAt;
+  const previousInvoices = invoices.map((invoice) => ({ ...invoice }));
   booking.deposit = true;
   booking.paymentStatus = 'paid';
   booking.paymentCompletedAt = new Date().toISOString();
   booking.updatedAt = booking.paymentCompletedAt;
+
+  // Sync the booking's linked invoice so it reflects the collected deposit. The
+  // server re-derives a booking's deposit status from its invoice (and will
+  // auto-create an unpaid one otherwise), so without this the flag reverts on the
+  // next sync. ensureLinkedInvoiceForBookingLocally records the right amount for
+  // the booking type: the deposit due for checkout-flow bookings, full for manual.
+  ensureLinkedInvoiceForBookingLocally(booking);
+
+  const rollback = () => {
+    booking.deposit = previousDeposit;
+    booking.paymentStatus = previousPaymentStatus;
+    booking.paymentCompletedAt = previousPaymentCompletedAt;
+    booking.updatedAt = previousUpdatedAt;
+    invoices = previousInvoices;
+  };
+
   try {
     if (!(await persistStateChange())) {
-      booking.deposit = previousDeposit;
-      booking.paymentStatus = previousPaymentStatus;
-      booking.paymentCompletedAt = previousPaymentCompletedAt;
-      booking.updatedAt = previousUpdatedAt;
+      rollback();
       return;
     }
     renderBookings();
@@ -5881,10 +5895,7 @@ async function confirmDeposit(id) {
     updatePendingBadge();
     showToast(`💰 Deposit confirmed for ${bookingDisplayName(booking)}`);
   } catch (error) {
-    booking.deposit = previousDeposit;
-    booking.paymentStatus = previousPaymentStatus;
-    booking.paymentCompletedAt = previousPaymentCompletedAt;
-    booking.updatedAt = previousUpdatedAt;
+    rollback();
     showToast(`⚠️ ${error.message || 'Could not confirm the deposit'}`);
   }
 }
