@@ -2473,7 +2473,7 @@ const PUBLIC_API_BASE = (
         if (s.canBook) {
           const href = `./jetski-booking/?type=jetski&craft=jetski2&hours=2&date=${encodeURIComponent(date)}&time=${encodeURIComponent(s.time || '')}`;
           const open = Number(s.openJetSkis);
-          const meta = Number.isFinite(open) ? `${open} ski${open === 1 ? '' : 's'} open` : 'Book';
+          const meta = (Number.isFinite(open) && open > 0) ? `${open} ski${open === 1 ? '' : 's'} open` : 'Available';
           return `<a class="avail-slot open" href="${href}"><span class="slot-time">${label}</span><span class="slot-meta">${meta}</span></a>`;
         }
         return `<div class="avail-slot booked"><span class="slot-time">${label}</span><span class="slot-meta">Booked</span></div>`;

@@ -75,11 +75,18 @@ const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
 const PROCESSING_FEE_CENTS = 500;
 const DRONE_ADDON_CENTS = 5000;
-const TOTAL_PUBLIC_JET_SKIS = 4;
+// Informational fleet size for the "X skis open" display. Configurable via env
+// (e.g. raise it to include partner skis). Booking is NEVER blocked on jet-ski
+// capacity — see JETSKI_NEVER_BLOCK below — so this only affects the open count.
+const TOTAL_PUBLIC_JET_SKIS = Number(process.env.PUBLIC_JET_SKIS) > 0 ? Number(process.env.PUBLIC_JET_SKIS) : 10;
 // When true (default), the public availability check never marks a time as taken —
 // every start time stays bookable, so customers can double-book and the owner sorts
 // overlaps manually. Set ALLOW_DOUBLE_BOOKING=false to re-enable fleet-based blocking.
 const ALLOW_DOUBLE_BOOKING = !/^(false|0|no)$/i.test(process.env.ALLOW_DOUBLE_BOOKING || 'true');
+// Jet skis never block public booking, regardless of ALLOW_DOUBLE_BOOKING — the
+// owner sources partner skis for overflow, so a customer is never turned away.
+// Set JETSKI_NEVER_BLOCK=false to re-enable hard fleet-capacity blocking for skis.
+const JETSKI_NEVER_BLOCK = !/^(false|0|no)$/i.test(process.env.JETSKI_NEVER_BLOCK || 'true');
 const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 const PUBLIC_UNPAID_HOLD_MINUTES = Math.max(Number(process.env.PUBLIC_UNPAID_HOLD_MINUTES || 30), 1);
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
@@ -1108,6 +1115,8 @@ function hasInventoryConflict(state, options = {}) {
   if (!requiresBoat && !requestedJetSkis) return false;
   if (requiresBoat && findBoatConflicts(state, options).length) return true;
   if (requestedJetSkis > 0) {
+    // Never turn a jet-ski customer away — partner skis cover overflow.
+    if (JETSKI_NEVER_BLOCK) return false;
     return (peakJetSkiUnitsBooked(state, options) + requestedJetSkis) > TOTAL_PUBLIC_JET_SKIS;
   }
   return false;
@@ -1138,7 +1147,10 @@ function availabilitySnapshotForStartTime(state, options = {}) {
   const openJetSkis = requestedJetSkis > 0
     ? Math.max(0, TOTAL_PUBLIC_JET_SKIS - peakJetSkiUnitsBooked(state, options))
     : TOTAL_PUBLIC_JET_SKIS;
-  const canBook = boatAvailable && (requestedJetSkis <= 0 || openJetSkis >= requestedJetSkis);
+  // Jet-ski times are always bookable (partner-ski overflow); only a boat conflict
+  // can block. canBook stays tied to capacity only if JETSKI_NEVER_BLOCK is off.
+  const jetSkiBookable = JETSKI_NEVER_BLOCK || requestedJetSkis <= 0 || openJetSkis >= requestedJetSkis;
+  const canBook = boatAvailable && jetSkiBookable;
   return {
     time: String(options.time || '').trim(),
     label: formatTimeLabel(options.time),
