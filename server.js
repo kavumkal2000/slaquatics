@@ -436,7 +436,8 @@ function authPermissionsForRole(role = 'owner') {
     canAccessBookingsOnly: role === 'employee',
     canAccessCrewOnly: role === 'crew',
     canAccessSystem: role === 'developer',
-    canAccessWebsiteDevelopment: role === 'developer'
+    canAccessWebsiteDevelopment: role === 'developer',
+    hideMoney: role === 'employee'
   };
 }
 
@@ -1767,10 +1768,25 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
   return changed;
 }
 
+// Dollar-amount fields hidden from the employee role. The base rental price is
+// still derivable from craft+duration (public info), so the frontend also blanks
+// money labels for employees — this strip hides stored/custom amounts, deposits,
+// fees, and payment figures so they never reach the employee browser.
+const EMPLOYEE_HIDDEN_MONEY_FIELDS = ['total', 'baseTotal', 'depositAmount', 'processingFeeAmount', 'amountDueToday', 'droneAmount'];
+function stripEmployeeBookingMoney(booking = {}) {
+  const out = { ...booking };
+  for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) delete out[field];
+  return out;
+}
 function employeeVisibleState(state = {}) {
   return {
-    bookings: clone(state.bookings || []),
-    customers: [],
+    bookings: (Array.isArray(state.bookings) ? state.bookings : []).map(stripEmployeeBookingMoney),
+    // Employees get the customer list (contact info + history) but no spend totals.
+    customers: (Array.isArray(state.customers) ? state.customers : []).map((customer) => {
+      const out = { ...customer };
+      delete out.totalSpent;
+      return out;
+    }),
     expenses: [],
     fuelLog: [],
     maintLog: [],
@@ -1824,7 +1840,18 @@ function statePayloadForSession(state = {}, session = null) {
 function mergeEmployeeState(currentState = {}, incomingState = {}) {
   const next = sanitizeState(currentState);
   const incoming = sanitizeState(incomingState);
-  next.bookings = incoming.bookings;
+  // Employee edits to bookings are accepted, but every dollar amount is taken
+  // from the server's existing record (they can't see or change money). New
+  // bookings keep the frontend's PRICING-derived amount. Customers/invoices and
+  // all other collections stay exactly as the server has them (read-only here).
+  const currentBookingsById = new Map(next.bookings.map((booking) => [Number(booking.id), booking]));
+  next.bookings = incoming.bookings.map((booking) => {
+    const existing = currentBookingsById.get(Number(booking.id));
+    if (!existing) return booking;
+    const merged = { ...booking };
+    for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) merged[field] = existing[field];
+    return merged;
+  });
   return next;
 }
 

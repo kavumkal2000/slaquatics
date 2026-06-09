@@ -596,6 +596,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
 <style>
   body.crew-mode .sidebar { display:none !important; }
   body.crew-mode .main { margin-left:0 !important; }
+  body.hide-money .money-hide { display:none !important; }
   .crew-wrap { max-width:680px; margin:0 auto; padding:0.5rem 0 2rem; }
   .crew-head { margin:0.5rem 0 1.2rem; }
   .crew-title { font-size:1.5rem; margin:0; }
@@ -636,7 +637,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
 
   <div class="kpi-grid">
     <div class="kpi-card"><div class="label">Pending deposits</div><div class="value" style="color:var(--wave);" id="dashboard-kpi-pending">0</div><div class="delta warn" id="dashboard-kpi-pending-meta">Waiting on follow-up</div></div>
-    <div class="kpi-card"><div class="label">Monthly revenue</div><div class="value" style="color:var(--green);" id="dashboard-kpi-revenue">$0</div><div class="delta up" id="dashboard-kpi-revenue-meta">Current month revenue</div></div>
+    <div class="kpi-card money-hide"><div class="label">Monthly revenue</div><div class="value" style="color:var(--green);" id="dashboard-kpi-revenue">$0</div><div class="delta up" id="dashboard-kpi-revenue-meta">Current month revenue</div></div>
     <div class="kpi-card"><div class="label">Bookings this month</div><div class="value" id="dashboard-kpi-bookings">0</div><div class="delta up" id="dashboard-kpi-bookings-meta">0 scheduled this month</div></div>
   </div>
 
@@ -1255,7 +1256,7 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
-        <div class="form-group"><label>Amount</label><input type="number" id="b-amount" min="0" step="0.01" placeholder="0.00" oninput="handleBookingAmountInput()"></div>
+        <div class="form-group money-hide"><label>Amount</label><input type="number" id="b-amount" min="0" step="0.01" placeholder="0.00" oninput="handleBookingAmountInput()"></div>
         <hr class="form-divider">
         <div class="price-preview">
           <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.4rem;">Booking total</div>
@@ -1779,34 +1780,44 @@ async function crewMarkDone(id) {
   renderCrewSchedule();
   showToast('🏁 Marked done');
 }
+const EMPLOYEE_PAGES = ['dashboard', 'bookings', 'crm'];
 function applyRolePermissions() {
   const permissions = currentPermissions();
   if (permissions.canAccessCrewOnly) { applyCrewMode(); return; }
-  const bookingsOnly = Boolean(permissions.canAccessBookingsOnly);
-  const bookingsButton = document.querySelector('.nav-item[onclick*="bookings"]');
+  const employee = Boolean(permissions.canAccessBookingsOnly);
+  document.body.classList.toggle('hide-money', Boolean(permissions.hideMoney));
   document.querySelectorAll('[data-role="developer"]').forEach((element) => {
     element.style.display = permissions.canAccessSystem ? '' : 'none';
   });
+  if (employee) {
+    // Employee: a flat list of just the allowed pages (no section headers), money hidden.
+    document.querySelectorAll('.sidebar .nav-section').forEach((element) => { element.style.display = 'none'; });
+    document.querySelectorAll('.sidebar .nav-item').forEach((element) => {
+      if (element.dataset.role === 'developer') { element.style.display = 'none'; return; }
+      const onclick = element.getAttribute('onclick') || '';
+      const allowed = EMPLOYEE_PAGES.some((page) => onclick.includes(`showPage('${page}'`));
+      element.style.display = allowed ? '' : 'none';
+    });
+    const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
+    if (!EMPLOYEE_PAGES.includes(activePage)) {
+      showPage('dashboard', document.querySelector('.nav-item[onclick*="dashboard"]'));
+    }
+    return;
+  }
+  // Owner / developer: full navigation.
   document.querySelectorAll('.sidebar .nav-item').forEach((element) => {
-    const isBookingsNav = element.getAttribute('onclick')?.includes("showPage('bookings'");
-    const isDeveloperNav = element.dataset.role === 'developer';
-    if (isDeveloperNav) return;
-    element.style.display = bookingsOnly ? (isBookingsNav ? '' : 'none') : '';
+    if (element.dataset.role === 'developer') return;
+    element.style.display = '';
   });
   document.querySelectorAll('.sidebar .nav-section').forEach((element) => {
     if (element.dataset.role === 'developer') {
       element.style.display = permissions.canAccessSystem ? '' : 'none';
       return;
     }
-    element.style.display = bookingsOnly ? 'none' : '';
+    element.style.display = '';
   });
-  if (bookingsOnly && !document.getElementById('page-bookings')?.classList.contains('active')) {
-    showPage('bookings', bookingsButton);
-    return;
-  }
   if (!permissions.canAccessSystem && document.getElementById('page-system')?.classList.contains('active')) {
-    const dashboardButton = document.querySelector('.nav-item[onclick*="dashboard"]');
-    showPage('dashboard', dashboardButton);
+    showPage('dashboard', document.querySelector('.nav-item[onclick*="dashboard"]'));
   }
 }
 function showServerRequiredState(message = '') {
@@ -2306,10 +2317,15 @@ function bookingEditorCraftValue(booking = {}) {
   const guessed = guessCraftFromText(booking.craftLabel || booking.invoiceName || booking.notes || booking.name || '');
   return guessed && PRICING[guessed] ? guessed : '';
 }
+function hideMoneyForRole() {
+  return document.body.classList.contains('hide-money');
+}
 function bookingTotalLabel(booking) {
+  if (hideMoneyForRole()) return '—';
   return `$${bookingTotalValue(booking).toLocaleString()}`;
 }
 function moneyLabel(value) {
+  if (hideMoneyForRole()) return '—';
   return `$${Number(value || 0).toLocaleString(undefined, {
     minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
     maximumFractionDigits: 2
@@ -4278,9 +4294,9 @@ function showPage(id, btn) {
     closeMobileNav();
     return;
   }
-  if (currentPermissions().canAccessBookingsOnly && id !== 'bookings') {
-    id = 'bookings';
-    btn = document.querySelector('.nav-item[onclick*="bookings"]');
+  if (currentPermissions().canAccessBookingsOnly && !EMPLOYEE_PAGES.includes(id)) {
+    id = 'dashboard';
+    btn = document.querySelector('.nav-item[onclick*="dashboard"]');
   }
   if (id === 'system' && !currentPermissions().canAccessSystem) {
     showToast('⚠️ Only the developer login can access system controls');
@@ -4800,11 +4816,11 @@ function runSheetCard(b) {
   const statusClass = `rs-${normalizeBookingStatusValue(b.status) || 'pending'}`;
   const payText = paid
     ? 'Deposit in ✓'
-    : `${moneyLabel(bookingTotalValue(b))} total — collect deposit`;
+    : (hideMoneyForRole() ? 'Collect deposit' : `${moneyLabel(bookingTotalValue(b))} total — collect deposit`);
   return `<div class="rs-card ${statusClass}">
     <div class="rs-top"><span class="rs-time">🕐 ${escapeHtml(formatTimeLabel(b.time) || 'Time TBD')}</span>${statusBadge(b.status)}</div>
     <div class="rs-name">${escapeHtml(bookingDisplayName(b))}</div>
-    <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))} · ${bookingTotalLabel(b)}</div>
+    <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))}${hideMoneyForRole() ? '' : ` · ${bookingTotalLabel(b)}`}</div>
     <div class="rs-pay ${paid ? 'paid' : 'due'}">${payText}</div>
     <div class="rs-actions">${runSheetActions(b)}</div>
   </div>`;
@@ -4817,7 +4833,7 @@ function renderTodayRunSheet() {
   const dateLabel = new Date().toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'});
   const toCollect = list.filter((b) => !bookingIsPaid(b)).reduce((sum, b) => sum + bookingTotalValue(b), 0);
   const subParts = [`<strong>${list.length}</strong> ${list.length === 1 ? 'rental' : 'rentals'}`];
-  if (toCollect > 0) subParts.push(`<strong>${moneyLabel(toCollect)}</strong> to collect`);
+  if (toCollect > 0 && !hideMoneyForRole()) subParts.push(`<strong>${moneyLabel(toCollect)}</strong> to collect`);
   host.innerHTML = `
     <div class="runsheet-head">
       <h2>Today · ${escapeHtml(dateLabel)}</h2>
@@ -6187,7 +6203,7 @@ function renderWaivers() {
         <td data-label="Emergency">${emergencyLine.length ? emergencyLine.join('<br>') : '<span style="color:var(--muted);">No emergency info saved</span>'}</td>
         <td data-label="Bookings">
           <div>${Number(customer.bookings) || 0} booking${Number(customer.bookings) === 1 ? '' : 's'}</div>
-          <div style="font-size:0.72rem;color:var(--wave);margin-top:0.2rem;">$${Number(customer.totalSpent || 0).toLocaleString()} total spent</div>
+          <div style="font-size:0.72rem;color:var(--wave);margin-top:0.2rem;">${moneyLabel(customer.totalSpent)} total spent</div>
         </td>
         <td data-label="">
           <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
@@ -6724,7 +6740,7 @@ function renderCommsPanel() {
     <p>${current.phone ? escapeHtml(current.phone) : 'No phone on file'}${current.email ? ` · ${escapeHtml(current.email)}` : ''}</p>
     <div class="mini-kpis">
       <div class="mini-kpi"><strong>${current.bookings}</strong><span>bookings</span></div>
-      <div class="mini-kpi"><strong>$${Number(current.totalSpent || 0).toLocaleString()}</strong><span>lifetime</span></div>
+      <div class="mini-kpi money-hide"><strong>${moneyLabel(current.totalSpent)}</strong><span>lifetime</span></div>
       <div class="mini-kpi"><strong>${current.lastBooking === 'N/A' ? '—' : current.lastBooking}</strong><span>last booking</span></div>
     </div>
   `;
@@ -7527,7 +7543,7 @@ function renderReminders() {
       <div class="reminder-icon">👤</div>
       <div class="reminder-body">
         <div class="name">${escapeHtml(c.name)} <span style="color:var(--muted);font-weight:400;">· ${daysSince(c.lastBooking)} days ago</span></div>
-        <div class="detail">${escapeHtml(c.phone || 'No phone on file')} · ${c.bookings} prev booking${c.bookings!==1?'s':''} · $${c.totalSpent.toLocaleString()} total spent</div>
+        <div class="detail">${escapeHtml(c.phone || 'No phone on file')} · ${c.bookings} prev booking${c.bookings!==1?'s':''} · ${moneyLabel(c.totalSpent)} total spent</div>
       </div>
       <div class="reminder-action">
         ${c.phone ? `<a href="sms:${phoneHref(c.phone)}?body=${encodeURIComponent(`Hey ${firstName(c.name)}! It's Shoreline Aquatics — miss you on the lake! Book again this week and get 10% off. Reply YES to claim.`)}" class="btn btn-primary btn-sm" style="text-decoration:none;">💬 Text offer</a>` : '<span class="btn btn-primary btn-sm" style="opacity:0.45;cursor:default;">💬 Text offer</span>'}
