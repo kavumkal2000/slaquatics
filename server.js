@@ -1847,9 +1847,14 @@ function mergeEmployeeState(currentState = {}, incomingState = {}) {
   const currentBookingsById = new Map(next.bookings.map((booking) => [Number(booking.id), booking]));
   next.bookings = incoming.bookings.map((booking) => {
     const existing = currentBookingsById.get(Number(booking.id));
-    if (!existing) return booking;
     const merged = { ...booking };
-    for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) merged[field] = existing[field];
+    // Existing booking: restore the server's money (employee can't change it).
+    // New booking: drop any money fields entirely so an employee can't forge a
+    // total via a raw request — the real price is derived from craft+duration.
+    for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) {
+      if (existing) merged[field] = existing[field];
+      else delete merged[field];
+    }
     return merged;
   });
   return next;
