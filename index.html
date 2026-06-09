@@ -39,7 +39,7 @@ nav {
   background: rgba(8,17,31,0.92); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
-.nav-logo img { height: 90px; width: auto; display: block; }
+.nav-logo img { height: 125px; width: auto; display: block; }
 nav ul { list-style: none; display: flex; gap: 1.8rem; }
 nav ul a { color: var(--white); text-decoration: none; font-size: 0.82rem; letter-spacing: 0.07em; text-transform: uppercase; transition: color 0.2s; font-weight: 500; }
 nav ul a:hover { color: var(--gold); }
@@ -1104,7 +1104,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   #mobile-cta-bar { display: flex; }
   #btt { bottom: 5.4rem; right: 1rem; }
   nav { padding: 0.75rem 0.95rem; gap: 0.65rem; }
-  .nav-logo img { height: 58px; }
+  .nav-logo img { height: 78px; }
   .nav-right { gap: 0.7rem; margin-left: auto; }
   nav .btn-primary { padding: 0.72rem 0.9rem; font-size: 0.68rem; }
   .nav-menu-btn { width: 42px; height: 42px; border-radius: 10px; }
@@ -1357,32 +1357,6 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="trust-item"><div class="trust-num">100%</div><div class="trust-label">Licensed & Insured</div></div>
   </div>
 </div>
-
-<!-- AVAILABILITY -->
-<section id="availability" class="avail-section">
-  <div class="avail-inner">
-    <div class="section-tag">Real-Time Availability</div>
-    <h2>See What's Open</h2>
-    <p class="avail-sub">Pick a date and check open jet-ski start times before you book — straight from our live schedule.</p>
-    <div class="avail-controls">
-      <label for="avail-date">Rental date</label>
-      <input type="date" id="avail-date">
-    </div>
-    <div class="avail-status" id="avail-status">Checking today's availability…</div>
-    <div class="avail-slots" id="avail-slots"></div>
-    <div class="avail-note">Open times shown for a 2-hour jet-ski rental. Boats are captained and booked separately — <a href="tel:4696937164">call (469) 693-7164</a> to confirm any date.</div>
-    <div class="avail-notify" id="avail-notify">
-      <p class="avail-notify-label">🔔 Booked up or planning ahead? Get a heads-up when spots open and when deals drop.</p>
-      <form class="avail-notify-form" id="avail-notify-form" novalidate>
-        <input type="text" id="lead-name" placeholder="First name" autocomplete="given-name">
-        <input type="tel" id="lead-phone" placeholder="Phone (for texts)" autocomplete="tel">
-        <input type="email" id="lead-email" placeholder="or Email" autocomplete="email">
-        <button type="submit" class="btn-primary" id="lead-submit">Notify Me</button>
-      </form>
-      <div class="avail-notify-msg" id="avail-notify-msg"></div>
-    </div>
-  </div>
-</section>
 
 <!-- FLEET -->
 <section id="fleet" class="fleet-section">
