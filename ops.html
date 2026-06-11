@@ -1073,14 +1073,14 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
       <div class="form-group"><label>Facebook review link</label><input type="url" id="review-facebook-url" placeholder="https://..."></div>
       <div class="form-group"><label>Default review channel</label>
         <select id="review-default-channel">
-          <option value="sms">Text message</option>
           <option value="email">Email</option>
+          <option value="sms">Text message</option>
         </select>
       </div>
       <div class="form-group"><label>Auto-send when rental is completed</label>
         <select id="review-auto-send">
-          <option value="off">Off</option>
           <option value="on">On</option>
+          <option value="off">Off</option>
         </select>
       </div>
     </div>
@@ -6969,11 +6969,22 @@ function reviewMessage(name) {
   return `Hey ${firstName(name)}! Thanks again for riding with Shoreline Aquatics. If you had a great time, we'd really appreciate a quick review about your experience on the lake.`;
 }
 async function saveReviewSettings() {
+  const googleUrl = document.getElementById('review-google-url')?.value.trim() || '';
+  const facebookUrl = document.getElementById('review-facebook-url')?.value.trim() || '';
+  const hasLink = Boolean(googleUrl || facebookUrl);
+  const autoSendField = document.getElementById('review-auto-send')?.value;
+  // Pick a channel that's actually configured so it sends instead of silently
+  // failing — fall back to email when SMS (Twilio) isn't set up.
+  let channel = (document.getElementById('review-default-channel')?.value || 'email') === 'sms' ? 'sms' : 'email';
+  // Can't use SMS without Twilio — fall back to email so it actually sends.
+  if (channel === 'sms' && !integrations.smsConfigured) channel = 'email';
   const nextSettings = {
-    googleUrl: document.getElementById('review-google-url')?.value.trim() || '',
-    facebookUrl: document.getElementById('review-facebook-url')?.value.trim() || '',
-    autoSend: (document.getElementById('review-auto-send')?.value || 'off') === 'on',
-    channel: (document.getElementById('review-default-channel')?.value || 'sms') === 'email' ? 'email' : 'sms'
+    googleUrl,
+    facebookUrl,
+    // Setting a review link is the whole point of this page, so auto-send is on
+    // by default once a link exists — unless the owner explicitly picks Off.
+    autoSend: hasLink && autoSendField !== 'off',
+    channel
   };
   const previousReviewSettings = {...reviewSettings};
   reviewSettings = nextSettings;
@@ -7155,8 +7166,12 @@ function renderReviewHub(options = {}) {
   const settingsNote = document.getElementById('review-settings-note');
   if (googleInput) googleInput.value = reviewSettings.googleUrl || '';
   if (facebookInput) facebookInput.value = reviewSettings.facebookUrl || '';
-  if (channelInput) channelInput.value = reviewSettings.channel === 'email' ? 'email' : 'sms';
-  if (autoSendInput) autoSendInput.value = reviewSettings.autoSend ? 'on' : 'off';
+  if (channelInput) channelInput.value = (reviewSettings.channel === 'sms' && integrations.smsConfigured) ? 'sms' : 'email';
+  // Only force the toggle when a link already exists (reflecting a saved choice);
+  // for a fresh setup leave it at the 'On' default so pasting a link + Save is enough.
+  if (autoSendInput && (reviewSettings.googleUrl || reviewSettings.facebookUrl)) {
+    autoSendInput.value = reviewSettings.autoSend ? 'on' : 'off';
+  }
   if (settingsNote) {
     settingsNote.textContent = integrations.reviewLinksConfigured
       ? `Review links are configured. Auto-send is ${integrations.reviewAutomationEnabled ? 'on' : 'off'} and the default channel is ${integrations.reviewChannel}.`
