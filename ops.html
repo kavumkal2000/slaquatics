@@ -1247,6 +1247,18 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="yes">Yes — $50</option>
           </select>
         </div>
+        <div class="form-group"><label>Add karaoke?</label>
+          <select id="b-karaoke" onchange="calcBookingPrice()">
+            <option value="no">No karaoke</option>
+            <option value="yes">Yes — $50</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Add tube?</label>
+          <select id="b-tube" onchange="calcBookingPrice()">
+            <option value="no">No tube</option>
+            <option value="yes">Yes — $50</option>
+          </select>
+        </div>
         <div class="form-group"><label>Status</label>
           <select id="b-status">
             <option value="pending">Pending</option>
@@ -4513,10 +4525,13 @@ function suggestedBookingAmount() {
   const craft = normalizeCraftKey(document.getElementById('b-craft')?.value || '');
   const dur = parseInt(document.getElementById('b-duration')?.value || '0', 10);
   const drone = document.getElementById('b-drone')?.value === 'yes';
+  const karaoke = document.getElementById('b-karaoke')?.value === 'yes';
+  const tube = document.getElementById('b-tube')?.value === 'yes';
   if (!craft || !dur) return 0;
   const base = Number(PRICING[craft]?.[dur] || 0);
   if (!base) return 0;
-  return Number((base + (drone ? 50 : 0)).toFixed(2));
+  const addons = (drone ? 50 : 0) + (karaoke ? 50 : 0) + (tube ? 50 : 0);
+  return Number((base + addons).toFixed(2));
 }
 function updateBookingAmountPreview() {
   renderBookingConflicts();
@@ -4691,7 +4706,12 @@ async function saveBooking() {
   bookingRecord.status = status;
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
   bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
-  bookingRecord.baseTotal = Number(Math.max(bookingValue - bookingRecord.droneAmount, 0).toFixed(2));
+  bookingRecord.karaoke = document.getElementById('b-karaoke')?.value === 'yes';
+  bookingRecord.karaokeAmount = bookingRecord.karaoke ? 50 : 0;
+  bookingRecord.tube = document.getElementById('b-tube')?.value === 'yes';
+  bookingRecord.tubeAmount = bookingRecord.tube ? 50 : 0;
+  const addonTotal = bookingRecord.droneAmount + bookingRecord.karaokeAmount + bookingRecord.tubeAmount;
+  bookingRecord.baseTotal = Number(Math.max(bookingValue - addonTotal, 0).toFixed(2));
   bookingRecord.notes = document.getElementById('b-notes').value.trim();
   bookingRecord.total = bookingValue;
   bookingRecord.updatedAt = nowIso;
@@ -5224,6 +5244,8 @@ function resetBookingForm(defaultDate = '') {
   document.getElementById('b-craft').value = '';
   document.getElementById('b-duration').value = '';
   document.getElementById('b-drone').value = 'no';
+  if (document.getElementById('b-karaoke')) document.getElementById('b-karaoke').value = 'no';
+  if (document.getElementById('b-tube')) document.getElementById('b-tube').value = 'no';
   document.getElementById('b-status').value = 'pending';
   document.getElementById('b-amount').value = '';
   document.getElementById('b-notes').value = '';
@@ -5251,6 +5273,8 @@ function openBookingModal(bookingId = null, defaultDate = '') {
     document.getElementById('b-craft').value = bookingEditorCraftValue(booking);
     document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
     document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';
+    if (document.getElementById('b-karaoke')) document.getElementById('b-karaoke').value = booking.karaoke ? 'yes' : 'no';
+    if (document.getElementById('b-tube')) document.getElementById('b-tube').value = booking.tube ? 'yes' : 'no';
     document.getElementById('b-status').value = normalizeBookingStatusValue(booking.status) || 'pending';
     document.getElementById('b-amount').value = Number(booking.total || 0) > 0 ? Number(booking.total).toFixed(2) : '';
     document.getElementById('b-notes').value = booking.notes || '';

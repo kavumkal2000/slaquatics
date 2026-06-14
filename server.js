@@ -760,7 +760,7 @@ function normalizeCraftKey(value = '') {
 }
 
 function bookingTypeForCraft(craft = '') {
-  if (craft === 'boat') return 'boat';
+  if (craft === 'boat' || craft === 'partyboat') return 'boat';
   if (craft.startsWith('bundle')) return 'bundle';
   return 'jetski';
 }
@@ -2304,6 +2304,8 @@ function bookingConfirmationText(booking = {}) {
     `Meeting spot: ${bookingEmailLocation(booking)}`,
     `Party size: ${booking.partySize || 'Not provided'}`,
     `Aerial drone coverage: ${booking.drone ? 'Included' : 'Not included'}`,
+    `Karaoke setup: ${booking.karaoke ? 'Included' : 'Not included'}`,
+    `Towable tube: ${booking.tube ? 'Included' : 'Not included'}`,
     `Quoted total: ${formatCurrency(booking.total || 0)}`,
     `Deposit received: ${formatCurrency(depositAmount)}`,
     `Processing fee: ${formatCurrency(processingFeeAmount)}`,
@@ -2354,6 +2356,8 @@ function bookingConfirmationHtml(booking = {}) {
     { label: 'Meeting spot', value: bookingEmailLocation(booking) },
     { label: 'Party size', value: booking.partySize || 'Not provided' },
     { label: 'Drone coverage', value: booking.drone ? 'Included' : 'Not included' },
+    { label: 'Karaoke setup', value: booking.karaoke ? 'Included' : 'Not included' },
+    { label: 'Towable tube', value: booking.tube ? 'Included' : 'Not included' },
     { label: 'Quoted total', value: formatCurrency(booking.total || 0) },
     { label: 'Deposit received', value: formatCurrency(depositAmount), valueColor: '#0f8b53' },
     { label: 'Processing fee', value: formatCurrency(processingFeeAmount) }

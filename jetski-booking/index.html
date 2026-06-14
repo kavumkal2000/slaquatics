@@ -1490,7 +1490,8 @@ function getJetSkiCount(craft) {
 }
 
 function getHourlyRateLabel(craft, duration, basePrice) {
-  if (craft === 'boat') return '$120/hr';
+  if (craft === 'boat') return '$130/hr';
+  if (craft === 'partyboat') return '$160/hr';
   if (isBundleType(craft)) return 'Custom bundle pricing';
   const jetSkiCount = getJetSkiCount(craft);
   if (!jetSkiCount || !duration) return 'Included in package';
@@ -1782,6 +1783,12 @@ function updateSummary() {
   const duration = payload.duration;
   const durationLabel = payload.durationLabel;
   const droneEnabled = payload.drone;
+  const selectedAddons = [
+    payload.drone ? 'aerial drone video' : '',
+    payload.karaoke ? 'karaoke setup' : '',
+    payload.tube ? 'towable tube' : ''
+  ].filter(Boolean);
+  const addonsNote = selectedAddons.length ? ` Add-ons: ${selectedAddons.join(', ')} (+$50 each).` : '';
   const baseTotal = PRICING[craft]?.[duration] || 0;
   const selectedDateText = formatSelectedDate(selectedBookingDate);
   const selectedTime = formatTimeLabel(qs('time').value || '10:00');
@@ -1795,15 +1802,15 @@ function updateSummary() {
   qs('summary-value').textContent = getSavingsLabel(craft, duration, baseTotal);
 
   if (craft === 'boat') {
-    qs('summary-note').textContent = `Boat rental with captain included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ' Life jackets and a full tank are included.'}`;
+    qs('summary-note').textContent = `Boat rental with captain included.${addonsNote || ' Life jackets and a full tank are included.'}`;
     qs('summary-rate-label').textContent = 'Hourly rate';
     qs('summary-value-label').textContent = 'Included';
   } else if (isBundleType(craft)) {
-    qs('summary-note').textContent = `${durationLabel} bundle with Yamaha jet skis, the captained boat, life jackets, fuel, and briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
+    qs('summary-note').textContent = `${durationLabel} bundle with Yamaha jet skis, the captained boat, life jackets, fuel, and briefing included.${addonsNote}`;
     qs('summary-rate-label').textContent = 'Bundle rate';
     qs('summary-value-label').textContent = 'Included';
   } else {
-    qs('summary-note').textContent = `${durationLabel} rental with ${payload.craftLabel.toLowerCase()}, life jackets, a full tank, and a safety briefing included.${droneEnabled ? ' Aerial drone coverage is added to this request.' : ''}`;
+    qs('summary-note').textContent = `${durationLabel} rental with ${payload.craftLabel.toLowerCase()}, life jackets, a full tank, and a safety briefing included.${addonsNote}`;
     qs('summary-rate-label').textContent = 'Hourly rate';
     qs('summary-value-label').textContent = 'Savings';
   }
