@@ -4829,7 +4829,7 @@ function runSheetActions(b) {
     btns.push(`<a class="rs-btn call" href="tel:${escapeHtml(phone)}">📞 Call</a>`);
     btns.push(`<a class="rs-btn text" href="sms:${escapeHtml(phone)}">💬 Text</a>`);
   }
-  if (!bookingIsPaid(b)) btns.push(`<button class="rs-btn pay" onclick="confirmDeposit(${id})">💵 Collect</button>`);
+  if (!bookingIsPaid(b) && !hideMoneyForRole()) btns.push(`<button class="rs-btn pay" onclick="confirmDeposit(${id})">💵 Collect</button>`);
   if (status === 'pending') btns.push(`<button class="rs-btn confirm" onclick="updateStatus(${id},'confirmed')">✓ Confirm</button>`);
   if (status === 'confirmed') btns.push(`<button class="rs-btn done" onclick="updateStatus(${id},'completed')">🏁 Done</button>`);
   btns.push(`<button class="rs-btn" onclick="openBookingModal(${id})">✎ Edit</button>`);
@@ -4846,7 +4846,9 @@ function runSheetCard(b) {
     <div class="rs-top"><span class="rs-time">🕐 ${escapeHtml(formatTimeLabel(b.time) || 'Time TBD')}</span>${statusBadge(b.status)}</div>
     <div class="rs-name">${escapeHtml(bookingDisplayName(b))}</div>
     <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))}${hideMoneyForRole() ? '' : ` · ${bookingTotalLabel(b)}`}</div>
-    <div class="rs-pay ${paid ? 'paid' : 'due'}">${payText}</div>
+    ${hideMoneyForRole()
+      ? `<div class="rs-pay ${(b.waiverSigned || b.waiverSignedAt) ? 'paid' : 'due'}">${(b.waiverSigned || b.waiverSignedAt) ? '✅ Waiver signed' : '⚠️ Waiver not signed'}</div>`
+      : `<div class="rs-pay ${paid ? 'paid' : 'due'}">${payText}</div>`}
     <div class="rs-actions">${runSheetActions(b)}</div>
   </div>`;
 }

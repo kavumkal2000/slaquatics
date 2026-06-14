@@ -1802,23 +1802,35 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
   return changed;
 }
 
-// Dollar-amount fields hidden from the employee role. The base rental price is
-// still derivable from craft+duration (public info), so the frontend also blanks
-// money labels for employees — this strip hides stored/custom amounts, deposits,
-// fees, and payment figures so they never reach the employee browser.
+// The employee role (dock staff) may SEE only a guest's name, the schedule, and
+// whether they signed the waiver. Phone, email, notes, money, and signature
+// details are dropped server-side so they never reach the employee browser.
+const EMPLOYEE_VISIBLE_BOOKING_FIELDS = ['id', 'name', 'craft', 'craftKey', 'craftLabel', 'date', 'time', 'status', 'duration', 'durationLabel', 'location', 'checkedIn', 'waiverSignedAt', 'source', 'createdAt', 'updatedAt'];
+const EMPLOYEE_VISIBLE_CUSTOMER_FIELDS = ['id', 'name', 'waiverSignedAt', 'bookings', 'lastBooking', 'createdAt'];
+// Fields the employee may EDIT. Anything not listed (phone/email/notes/money) is
+// preserved from the server record on save, so a save never wipes hidden data.
+const EMPLOYEE_EDITABLE_BOOKING_FIELDS = ['name', 'craft', 'craftKey', 'craftLabel', 'date', 'time', 'status', 'duration', 'durationLabel', 'location', 'checkedIn', 'updatedAt'];
+// Still referenced by the frontend money-hide; kept for documentation.
 const EMPLOYEE_HIDDEN_MONEY_FIELDS = ['total', 'baseTotal', 'depositAmount', 'processingFeeAmount', 'amountDueToday', 'droneAmount', 'karaokeAmount', 'tubeAmount'];
-function stripEmployeeBookingMoney(booking = {}) {
-  const out = { ...booking };
-  for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) delete out[field];
+function pickFields(obj = {}, fields = []) {
+  const out = {};
+  for (const field of fields) if (obj[field] !== undefined) out[field] = obj[field];
   return out;
+}
+function waiverSignedFlag(record = {}) {
+  return Boolean(record.waiverOnFile || record.waiverSignedAt || (record.waiver && record.waiver.signedAt) || record.waiverSignature || record.waiverSigned);
 }
 function employeeVisibleState(state = {}) {
   return {
-    bookings: (Array.isArray(state.bookings) ? state.bookings : []).map(stripEmployeeBookingMoney),
-    // Employees get the customer list (contact info + history) but no spend totals.
+    bookings: (Array.isArray(state.bookings) ? state.bookings : []).map((booking) => {
+      const out = pickFields(booking, EMPLOYEE_VISIBLE_BOOKING_FIELDS);
+      out.waiverSigned = waiverSignedFlag(booking);
+      return out;
+    }),
     customers: (Array.isArray(state.customers) ? state.customers : []).map((customer) => {
-      const out = { ...customer };
-      delete out.totalSpent;
+      const out = pickFields(customer, EMPLOYEE_VISIBLE_CUSTOMER_FIELDS);
+      out.waiverOnFile = waiverSignedFlag(customer);
+      out.waiverSigned = out.waiverOnFile;
       return out;
     }),
     expenses: [],
@@ -1874,20 +1886,18 @@ function statePayloadForSession(state = {}, session = null) {
 function mergeEmployeeState(currentState = {}, incomingState = {}) {
   const next = sanitizeState(currentState);
   const incoming = sanitizeState(incomingState);
-  // Employee edits to bookings are accepted, but every dollar amount is taken
-  // from the server's existing record (they can't see or change money). New
-  // bookings keep the frontend's PRICING-derived amount. Customers/invoices and
-  // all other collections stay exactly as the server has them (read-only here).
+  // The employee only sees name + schedule + waiver, so on save we keep the FULL
+  // server record and overlay just the fields they may edit. Everything they can't
+  // see — phone, email, notes, money, signature — is preserved untouched, and they
+  // can't forge any of it. New bookings keep only their whitelisted fields.
+  // Customers/invoices/all other collections stay exactly as the server has them.
   const currentBookingsById = new Map(next.bookings.map((booking) => [Number(booking.id), booking]));
   next.bookings = incoming.bookings.map((booking) => {
     const existing = currentBookingsById.get(Number(booking.id));
-    const merged = { ...booking };
-    // Existing booking: restore the server's money (employee can't change it).
-    // New booking: drop any money fields entirely so an employee can't forge a
-    // total via a raw request — the real price is derived from craft+duration.
-    for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) {
-      if (existing) merged[field] = existing[field];
-      else delete merged[field];
+    if (!existing) return booking;
+    const merged = { ...existing };
+    for (const field of EMPLOYEE_EDITABLE_BOOKING_FIELDS) {
+      if (booking[field] !== undefined) merged[field] = booking[field];
     }
     return merged;
   });
