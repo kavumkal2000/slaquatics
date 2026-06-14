@@ -4043,8 +4043,15 @@ async function handleApi(request, response, pathname) {
         const session = event.data.object;
         const now = new Date().toISOString();
         const booking = applyStripeSessionToBooking(state, session, now);
-        if (booking?.paymentStatus === 'paid' && booking.deposit) {
+        if (!booking) {
+          console.error(`Stripe ${event.type} (${event.id}) matched no booking — possible orphaned payment for session ${session.id}.`);
+        }
+        // Stripe delivers webhooks at-least-once and retries on any non-2xx, so
+        // guard the confirmation email with a per-booking flag to avoid sending it
+        // again on a retry. (applyStripeSessionToBooking is itself idempotent.)
+        if (booking?.paymentStatus === 'paid' && booking.deposit && !booking.confirmationEmailSent) {
           await sendBookingConfirmationEmail(state, booking, session, now);
+          booking.confirmationEmailSent = true;
         }
         if (booking) {
           await stateStore.write(state);
