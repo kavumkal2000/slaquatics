@@ -1269,14 +1269,26 @@ h1 span { color: var(--gold); }
               </div>
             </div>
 
+            <div class="summary-card" style="margin-top:14px;">
+              <div class="summary-kicker">Add-ons · $50 each</div>
+              <label style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <input type="checkbox" id="addon-drone" style="width:18px;height:18px;accent-color:var(--gold);">
+                <span style="flex:1;">🚁 Aerial drone video</span><strong style="color:var(--gold);">+$50</strong>
+              </label>
+              <label style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.08);">
+                <input type="checkbox" id="addon-karaoke" style="width:18px;height:18px;accent-color:var(--gold);">
+                <span style="flex:1;">🎤 Karaoke setup</span><strong style="color:var(--gold);">+$50</strong>
+              </label>
+              <label style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;">
+                <input type="checkbox" id="addon-tube" style="width:18px;height:18px;accent-color:var(--gold);">
+                <span style="flex:1;">🛟 Towable tube</span><strong style="color:var(--gold);">+$50</strong>
+              </label>
+            </div>
+
             <div hidden aria-hidden="true">
               <span id="craft-label"></span>
               <select id="craft" name="craft" required></select>
               <select id="duration" name="duration" required></select>
-              <select id="drone" name="drone">
-                <option value="no">No aerial drone coverage</option>
-                <option value="yes">Add aerial drone video (+$50)</option>
-              </select>
             </div>
           </div>
 
@@ -1505,8 +1517,11 @@ function getCraftLabelForType(type) {
 function buildBookingPayloadBase() {
   const craft = qs('craft').value;
   const duration = Number(qs('duration').value || 0);
-  const drone = qs('drone').value === 'yes';
-  const total = (PRICING[craft]?.[duration] || 0) + (drone ? 50 : 0);
+  const drone = qs('addon-drone')?.checked || false;
+  const karaoke = qs('addon-karaoke')?.checked || false;
+  const tube = qs('addon-tube')?.checked || false;
+  const addonsTotal = (drone ? 50 : 0) + (karaoke ? 50 : 0) + (tube ? 50 : 0);
+  const total = (PRICING[craft]?.[duration] || 0) + addonsTotal;
   return {
     type: currentType,
     craft,
@@ -1514,7 +1529,9 @@ function buildBookingPayloadBase() {
     duration,
     durationLabel: duration === 8 ? 'Full Day (8 hours)' : `${duration} ${duration === 1 ? 'hour' : 'hours'}`,
     total,
-    drone
+    drone,
+    karaoke,
+    tube
   };
 }
 
@@ -1524,6 +1541,8 @@ function buildDraftComparableKey(payload = {}) {
     craft: payload.craft || '',
     duration: Number(payload.duration || 0),
     drone: Boolean(payload.drone),
+    karaoke: Boolean(payload.karaoke),
+    tube: Boolean(payload.tube),
     date: String(payload.date || ''),
     time: String(payload.time || ''),
     location: String(payload.location || '')
@@ -1913,9 +1932,10 @@ function applyQueryDefaults() {
 
   populateDurationOptions(hours);
 
-  if (drone === 'yes' || drone === 'no') {
-    qs('drone').value = drone;
-  }
+  const isYes = (v) => v === 'yes' || v === '1' || v === 'true';
+  if (qs('addon-drone')) qs('addon-drone').checked = isYes(drone);
+  if (qs('addon-karaoke')) qs('addon-karaoke').checked = isYes(params.get('karaoke'));
+  if (qs('addon-tube')) qs('addon-tube').checked = isYes(params.get('tube'));
 
   if (date) {
     selectedBookingDate = date;
@@ -1994,7 +2014,9 @@ function applyDraftBooking(booking) {
     populateDurationOptions(Number(booking.duration || 0));
   }
 
-  qs('drone').value = booking.drone ? 'yes' : 'no';
+  if (qs('addon-drone')) qs('addon-drone').checked = Boolean(booking.drone);
+  if (qs('addon-karaoke')) qs('addon-karaoke').checked = Boolean(booking.karaoke);
+  if (qs('addon-tube')) qs('addon-tube').checked = Boolean(booking.tube);
   if (booking.date) {
     selectedBookingDate = booking.date;
     qs('date').value = booking.date;
@@ -2165,10 +2187,13 @@ qs('duration').addEventListener('change', () => {
   refreshBoatAvailability({ quiet: true });
   scheduleDraftSave();
 });
-qs('drone').addEventListener('change', () => {
-  updateSummary();
-  bookingTouched = true;
-  scheduleDraftSave();
+['addon-drone', 'addon-karaoke', 'addon-tube'].forEach((id) => {
+  const el = qs(id);
+  if (el) el.addEventListener('change', () => {
+    updateSummary();
+    bookingTouched = true;
+    scheduleDraftSave();
+  });
 });
 qs('time').addEventListener('change', () => {
   updateSummary();

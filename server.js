@@ -75,6 +75,8 @@ const STRIPE_API_VERSION = '2026-02-25.clover';
 const BOOKING_DEPOSIT_CENTS = 5000;
 const PROCESSING_FEE_CENTS = 500;
 const DRONE_ADDON_CENTS = 5000;
+const KARAOKE_ADDON_CENTS = 5000;
+const TUBE_ADDON_CENTS = 5000;
 // Informational fleet size for the "X skis open" display. Configurable via env
 // (e.g. raise it to include partner skis). Booking is NEVER blocked on jet-ski
 // capacity — see JETSKI_NEVER_BLOCK below — so this only affects the open count.
@@ -768,14 +770,23 @@ function durationLabel(hours) {
   return amount === 8 ? 'Full Day (8 hours)' : `${amount} ${amount === 1 ? 'hour' : 'hours'}`;
 }
 
-function priceForSelection(craft = '', duration = 0, drone = false) {
+function priceForSelection(craft = '', duration = 0, addons = false) {
   const normalizedCraft = normalizeCraftKey(craft);
   const normalizedDuration = Number(duration || 0);
-  const droneEnabled = drone === true || drone === 'true' || drone === 'yes' || drone === 1 || drone === '1';
+  // Backward compatible: a boolean/string in the 3rd arg means drone only.
+  const opts = (addons && typeof addons === 'object') ? addons : { drone: addons };
+  const isOn = (v) => v === true || v === 'true' || v === 'yes' || v === 1 || v === '1';
+  const droneEnabled = isOn(opts.drone);
+  const karaokeEnabled = isOn(opts.karaoke);
+  const tubeEnabled = isOn(opts.tube);
   const baseAmount = PRICING_CENTS[normalizedCraft]?.[normalizedDuration];
   if (!baseAmount) {
     throw new Error('Please choose a valid package and duration before continuing.');
   }
+  const droneAmount = droneEnabled ? DRONE_ADDON_CENTS : 0;
+  const karaokeAmount = karaokeEnabled ? KARAOKE_ADDON_CENTS : 0;
+  const tubeAmount = tubeEnabled ? TUBE_ADDON_CENTS : 0;
+  const addonsAmount = droneAmount + karaokeAmount + tubeAmount;
   return {
     craft: normalizedCraft,
     type: bookingTypeForCraft(normalizedCraft),
@@ -783,9 +794,14 @@ function priceForSelection(craft = '', duration = 0, drone = false) {
     duration: normalizedDuration,
     durationLabel: durationLabel(normalizedDuration),
     drone: droneEnabled,
+    karaoke: karaokeEnabled,
+    tube: tubeEnabled,
     baseAmount,
-    droneAmount: droneEnabled ? DRONE_ADDON_CENTS : 0,
-    totalAmount: baseAmount + (droneEnabled ? DRONE_ADDON_CENTS : 0),
+    droneAmount,
+    karaokeAmount,
+    tubeAmount,
+    addonsAmount,
+    totalAmount: baseAmount + addonsAmount,
     bookingDepositAmount: BOOKING_DEPOSIT_CENTS
   };
 }
@@ -1788,7 +1804,7 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
 // still derivable from craft+duration (public info), so the frontend also blanks
 // money labels for employees — this strip hides stored/custom amounts, deposits,
 // fees, and payment figures so they never reach the employee browser.
-const EMPLOYEE_HIDDEN_MONEY_FIELDS = ['total', 'baseTotal', 'depositAmount', 'processingFeeAmount', 'amountDueToday', 'droneAmount'];
+const EMPLOYEE_HIDDEN_MONEY_FIELDS = ['total', 'baseTotal', 'depositAmount', 'processingFeeAmount', 'amountDueToday', 'droneAmount', 'karaokeAmount', 'tubeAmount'];
 function stripEmployeeBookingMoney(booking = {}) {
   const out = { ...booking };
   for (const field of EMPLOYEE_HIDDEN_MONEY_FIELDS) delete out[field];
@@ -1997,6 +2013,10 @@ function publicBookingPayload(booking = {}) {
     baseTotal: Number(booking.baseTotal || 0),
     drone: Boolean(booking.drone),
     droneAmount: Number(booking.droneAmount || 0),
+    karaoke: Boolean(booking.karaoke),
+    karaokeAmount: Number(booking.karaokeAmount || 0),
+    tube: Boolean(booking.tube),
+    tubeAmount: Number(booking.tubeAmount || 0),
     date: String(booking.date || '').trim(),
     time: String(booking.time || '').trim(),
     location: String(booking.location || '').trim(),
@@ -2585,7 +2605,7 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
   }
 
   const existingBooking = findBookingByPublicToken(state, payload.publicToken);
-  const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
+  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube });
   assertPublicAvailability(state, {
     craft: pricing.craft,
     date: payload.date,
@@ -2615,6 +2635,10 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
   booking.baseTotal = Number((pricing.baseAmount / 100).toFixed(2));
   booking.drone = pricing.drone;
   booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
+  booking.karaoke = pricing.karaoke;
+  booking.karaokeAmount = Number((pricing.karaokeAmount / 100).toFixed(2));
+  booking.tube = pricing.tube;
+  booking.tubeAmount = Number((pricing.tubeAmount / 100).toFixed(2));
   booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
   booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
   booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
@@ -2642,7 +2666,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     throw new Error('A completed waiver is required before saving this booking request.');
   }
 
-  const pricing = priceForSelection(payload.craft, payload.duration, payload.drone);
+  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube });
   const tokenBooking = findBookingByPublicToken(state, payload.publicToken);
   const matchedBooking = findMatchingBooking(state, {
     ...payload,
@@ -2708,6 +2732,10 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
   booking.baseTotal = Number((pricing.baseAmount / 100).toFixed(2));
   booking.drone = pricing.drone;
   booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
+  booking.karaoke = pricing.karaoke;
+  booking.karaokeAmount = Number((pricing.karaokeAmount / 100).toFixed(2));
+  booking.tube = pricing.tube;
+  booking.tubeAmount = Number((pricing.tubeAmount / 100).toFixed(2));
   booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
   booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
   booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
