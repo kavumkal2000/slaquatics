@@ -35,16 +35,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--navy); color: var(-
 nav {
   position: fixed; top: 0; width: 100%; z-index: 200;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0.8rem 3rem;
-  background: rgba(8,17,31,0.92); backdrop-filter: blur(14px);
+  padding: 0.45rem 3rem;
+  background: rgba(8,17,31,0.68); backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
 }
-.nav-logo img { height: 125px; width: auto; display: block; }
-nav ul { list-style: none; display: flex; gap: 1.8rem; }
-nav ul a { color: var(--white); text-decoration: none; font-size: 0.82rem; letter-spacing: 0.07em; text-transform: uppercase; transition: color 0.2s; font-weight: 500; }
+.nav-logo img { height: 102px; width: auto; display: block; }
+nav ul { list-style: none; display: flex; gap: 1.9rem; }
+nav ul a { color: var(--white); text-decoration: none; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; transition: color 0.2s; font-weight: 600; }
 nav ul a:hover { color: var(--gold); }
 .nav-right { display: flex; align-items: center; gap: 1.2rem; }
-.nav-phone { font-size: 0.88rem; font-weight: 500; color: var(--white); text-decoration: none; }
+.nav-phone { font-size: 0.98rem; font-weight: 600; color: var(--white); text-decoration: none; }
 .nav-phone:hover { color: var(--gold); }
 .nav-menu-btn {
   display: none;
@@ -1404,11 +1404,11 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             <div class="fleet-title">Boat Rental</div>
             <div class="fleet-stat">
               <div class="fleet-stat-label">Hourly rate</div>
-              <div class="fleet-stat-value">$120/hr</div>
+              <div class="fleet-stat-value">$130/hr</div>
             </div>
           </div>
           <p class="fleet-desc">For laid-back lake days, birthdays, and bigger groups, the captained boat gives your crew room to spread out while Shoreline handles the setup and ride plan.</p>
-          <div class="fleet-rate-note">The boat stays simple: <strong style="color:var(--gold);">$120 per hour</strong> with the captain included. Customers choose the exact duration when they continue to booking.</div>
+          <div class="fleet-rate-note">The boat stays simple: <strong style="color:var(--gold);">$130 per hour</strong> with the captain included. Customers choose the exact duration when they continue to booking.</div>
           <div class="fleet-perks">
             <span class="fleet-perk">Captain Included</span>
             <span class="fleet-perk">Up to 10 Guests</span>
@@ -1518,7 +1518,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <div>
           <div class="calc-result-box">
             <div class="calc-result-label">Your Total</div>
-            <div class="calc-result-price" id="js-price">$300</div>
+            <div class="calc-result-price" id="js-price">$315</div>
             <div class="calc-result-desc" id="js-desc">2 Yamaha Jet Skis · 2hrs · $75/hr per ski</div>
             <div class="calc-deposit-row">
               <div class="calc-deposit-item"><div class="dl">Deposit credit</div><div class="dv" style="color:var(--gold);">$50</div></div>
@@ -2108,13 +2108,14 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 <script>
 // ── CALC ──
 const PRICING = {
-  jetski2: {2:300,3:450,4:560,6:720,8:900},
-  jetski3: {2:450,3:675,4:840,6:1080,8:1350},
-  jetski4: {2:600,3:900,4:1120,6:1440,8:1800},
-  boat:    {1:120,2:240,3:360,4:480,6:720,8:960},
-  bundle2: {2:540,3:810,4:1040,6:1440,8:1860},
-  bundle3: {2:690,3:1035,4:1320,6:1800,8:2310},
-  bundle4: {2:840,3:1260,4:1600,6:2160,8:2760}
+  jetski2: {2:315,3:475,4:590,6:760,8:945},
+  jetski3: {2:475,3:710,4:885,6:1135,8:1420},
+  jetski4: {2:630,3:945,4:1180,6:1515,8:1890},
+  boat:    {1:130,2:255,3:380,4:505,6:760,8:1010},
+  bundle2: {2:570,3:855,4:1095,6:1515,8:1955},
+  bundle3: {2:725,3:1090,4:1390,6:1890,8:2430},
+  bundle4: {2:885,3:1325,4:1680,6:2270,8:2900},
+  partyboat: {2:320,3:480,4:640,6:960,8:1280}
 };
 const CRAFT_NAMES = {
   jetski2: '2 Yamaha Jet Skis',
@@ -2156,7 +2157,7 @@ function getJetSkiCount(craft) {
 }
 
 function getHourlyRateLabel(craft, hours, basePrice) {
-  if (craft === 'boat') return '$120/hr';
+  if (craft === 'boat') return '$130/hr';
   const jetSkiCount = getJetSkiCount(craft);
   if (!jetSkiCount || !hours) return '';
   const hourlyRate = Math.round(basePrice / jetSkiCount / hours);

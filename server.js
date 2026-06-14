@@ -108,14 +108,17 @@ const SAFETY_BRIEFING_POINTS = [
   'Idle out from the launch and stay slow near docks, swimmers, boats, and shoreline.',
   'If weather changes or anything feels wrong, slow down, stop safely, and call Shoreline.'
 ];
+// Rates include the 5% demand surcharge baked in (rounded up to the nearest $5).
+// The party boat is a flat $160/hr (already its demand rate — no extra surcharge).
 const PRICING_CENTS = {
-  jetski2: { 2: 30000, 3: 45000, 4: 56000, 6: 72000, 8: 90000 },
-  jetski3: { 2: 45000, 3: 67500, 4: 84000, 6: 108000, 8: 135000 },
-  jetski4: { 2: 60000, 3: 90000, 4: 112000, 6: 144000, 8: 180000 },
-  boat: { 1: 12000, 2: 24000, 3: 36000, 4: 48000, 6: 72000, 8: 96000 },
-  bundle2: { 2: 54000, 3: 81000, 4: 104000, 6: 144000, 8: 186000 },
-  bundle3: { 2: 69000, 3: 103500, 4: 132000, 6: 180000, 8: 231000 },
-  bundle4: { 2: 84000, 3: 126000, 4: 160000, 6: 216000, 8: 276000 }
+  jetski2: { 2: 31500, 3: 47500, 4: 59000, 6: 76000, 8: 94500 },
+  jetski3: { 2: 47500, 3: 71000, 4: 88500, 6: 113500, 8: 142000 },
+  jetski4: { 2: 63000, 3: 94500, 4: 118000, 6: 151500, 8: 189000 },
+  boat: { 1: 13000, 2: 25500, 3: 38000, 4: 50500, 6: 76000, 8: 101000 },
+  bundle2: { 2: 57000, 3: 85500, 4: 109500, 6: 151500, 8: 195500 },
+  bundle3: { 2: 72500, 3: 109000, 4: 139000, 6: 189000, 8: 243000 },
+  bundle4: { 2: 88500, 3: 132500, 4: 168000, 6: 227000, 8: 290000 },
+  partyboat: { 2: 32000, 3: 48000, 4: 64000, 6: 96000, 8: 128000 }
 };
 const CRAFT_LABELS = {
   jetski2: '2 Yamaha Jet Skis',
@@ -124,7 +127,8 @@ const CRAFT_LABELS = {
   boat: 'Boat Rental',
   bundle2: '2 Yamaha Jet Skis + Boat',
   bundle3: '3 Yamaha Jet Skis + Boat',
-  bundle4: '4 Yamaha Jet Skis + Boat'
+  bundle4: '4 Yamaha Jet Skis + Boat',
+  partyboat: 'Party Boat (up to 17)'
 };
 const LEGACY_CRAFT_MAP = {
   yamaha: 'jetski2',
