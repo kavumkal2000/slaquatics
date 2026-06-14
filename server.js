@@ -1762,8 +1762,10 @@ function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
       booking.total = syncedRentalTotal;
       changed = true;
     }
-    const existingDroneAmount = Number(booking.droneAmount || (booking.drone ? 50 : 0) || 0);
-    const nextBaseTotal = Number(Math.max(syncedRentalTotal - existingDroneAmount, 0).toFixed(2));
+    const existingAddonsAmount = Number(booking.droneAmount || (booking.drone ? DRONE_ADDON_CENTS / 100 : 0) || 0)
+      + Number(booking.karaokeAmount || (booking.karaoke ? KARAOKE_ADDON_CENTS / 100 : 0) || 0)
+      + Number(booking.tubeAmount || (booking.tube ? TUBE_ADDON_CENTS / 100 : 0) || 0);
+    const nextBaseTotal = Number(Math.max(syncedRentalTotal - existingAddonsAmount, 0).toFixed(2));
     if (Math.abs(Number(booking.baseTotal || 0) - nextBaseTotal) > 0.009) {
       booking.baseTotal = nextBaseTotal;
       changed = true;

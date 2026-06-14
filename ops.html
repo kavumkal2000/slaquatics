@@ -4555,7 +4555,9 @@ function updateBookingAmountPreview() {
     breakdownEl.textContent = 'That duration is not available for this package';
     return;
   }
-  const summary = `${CRAFT_NAMES[craft]} · ${dur === 8 ? '8 hrs (full day)' : `${dur}hrs`}${drone ? ' + Drone ($50)' : ''}`;
+  const karaoke = document.getElementById('b-karaoke')?.value === 'yes';
+  const tube = document.getElementById('b-tube')?.value === 'yes';
+  const summary = `${CRAFT_NAMES[craft]} · ${dur === 8 ? '8 hrs (full day)' : `${dur}hrs`}${drone ? ' + Drone ($50)' : ''}${karaoke ? ' + Karaoke ($50)' : ''}${tube ? ' + Tube ($50)' : ''}`;
   if (bookingAmountManuallyEdited && hasEnteredAmount) {
     breakdownEl.textContent = `${summary} · custom total ${moneyLabel(enteredValue)}`;
     return;
@@ -4673,6 +4675,7 @@ async function saveBooking() {
   }
   const previousBookings = JSON.parse(JSON.stringify(bookings));
   const previousCustomers = JSON.parse(JSON.stringify(customers));
+  const previousInvoices = JSON.parse(JSON.stringify(invoices));
   const existingBooking = editingBookingId
     ? bookings.find((booking) => Number(booking.id) === Number(editingBookingId))
     : null;
@@ -4776,6 +4779,7 @@ async function saveBooking() {
   if (!(await persistStateChange())) {
     bookings = previousBookings;
     customers = previousCustomers;
+    invoices = previousInvoices;
     return;
   }
   const reviewAutoSent = normalizeBookingStatusValue(bookingRecord.status) === 'completed' && normalizeBookingStatusValue(previousSnapshot?.status) !== 'completed'
