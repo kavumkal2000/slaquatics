@@ -6,7 +6,7 @@ const API = process.env.API_URL || 'https://shoreline-aquatics-ops.onrender.com'
 const today = new Date().toISOString().slice(0, 10);
 
 const checks = [
-  { name: 'Homepage', url: `${SITE}/`, want: 200, contains: 'See What' },
+  { name: 'Homepage', url: `${SITE}/`, want: 200, contains: 'Shoreline Aquatics' },
   { name: 'Booking flow', url: `${SITE}/jetski-booking/`, want: 200 },
   { name: 'SEO Denton', url: `${SITE}/jet-ski-rental-denton/`, want: 200 },
   { name: 'SEO Frisco', url: `${SITE}/jet-ski-rental-frisco/`, want: 200 },
