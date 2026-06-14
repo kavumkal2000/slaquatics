@@ -62,5 +62,49 @@ if (tables.some((t) => !t.p)) {
   else ok('PRICING consistent for all shared craft/duration prices');
 }
 
+// 3) SERVER-vs-SITE: the server (PRICING_CENTS, in cents) must charge exactly what
+//    the booking flow (PRICING, in dollars) shows — no quote-vs-charge gap.
+function parseCentsTable(file, varName) {
+  const src = fs.readFileSync(file, 'utf8');
+  const m = src.match(new RegExp(varName + '\\s*=\\s*\\{([\\s\\S]*?)\\n\\s*\\};'));
+  if (!m) return null;
+  const obj = {};
+  for (const km of m[1].matchAll(/([a-z0-9]+)\s*:\s*\{([^}]*)\}/g)) {
+    obj[km[1]] = {};
+    for (const pm of km[2].matchAll(/(\d+)\s*:\s*(\d+)/g)) obj[km[1]][pm[1]] = Number(pm[2]);
+  }
+  return obj;
+}
+const serverCents = parseCentsTable('server.js', 'PRICING_CENTS');
+const bookingDollars = parsePricing('jetski-booking/index.html');
+if (!serverCents || !bookingDollars) {
+  fail('Could not parse server PRICING_CENTS or booking PRICING for the server/site cross-check');
+} else {
+  const mism = [];
+  for (const craft of Object.keys(bookingDollars)) {
+    for (const dur of Object.keys(bookingDollars[craft])) {
+      const cents = serverCents[craft] && serverCents[craft][dur];
+      const expected = bookingDollars[craft][dur] * 100;
+      if (cents === undefined) mism.push(`server missing ${craft}[${dur}]`);
+      else if (cents !== expected) mism.push(`${craft}[${dur}] server=${cents}c vs site=$${bookingDollars[craft][dur]}`);
+    }
+  }
+  if (mism.length) mism.forEach((m) => fail('SERVER/SITE charge mismatch: ' + m));
+  else ok('Server charge matches the booking-flow price for every craft/duration');
+}
+
+// 4) Party boat must stay priced AND bookable (selectable in the booking flow).
+const bookingSrc = fs.readFileSync('jetski-booking/index.html', 'utf8');
+if (!bookingDollars || !bookingDollars.partyboat) fail('Party boat missing from the booking PRICING table');
+else if (!/TYPE_TO_CRAFTS[\s\S]*?boat:\s*\[[^\]]*partyboat/.test(bookingSrc)) fail('Party boat is priced but not selectable (missing from TYPE_TO_CRAFTS)');
+else ok('Party boat is priced and bookable');
+
+// 5) Every add-on amount must be defined on the server (drone/karaoke/tube).
+const serverSrc = fs.readFileSync('server.js', 'utf8');
+const missingAddon = ['DRONE_ADDON_CENTS', 'KARAOKE_ADDON_CENTS', 'TUBE_ADDON_CENTS']
+  .filter((name) => !new RegExp('const ' + name + '\\s*=\\s*\\d+').test(serverSrc));
+if (missingAddon.length) fail('Missing add-on amount constant(s): ' + missingAddon.join(', '));
+else ok('Add-on amounts defined (drone, karaoke, tube)');
+
 console.log('\n' + (failures === 0 ? '✅ Validation passed' : `❌ ${failures} validation failure(s)`));
 process.exit(failures === 0 ? 0 : 1);

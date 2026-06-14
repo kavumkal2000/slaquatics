@@ -13,6 +13,7 @@ const checks = [
   { name: 'SEO Lewisville', url: `${SITE}/jet-ski-rental-lewisville/`, want: 200 },
   { name: 'Ops login', url: `${SITE}/ops-login.html`, want: 200 },
   { name: 'API availability', url: `${API}/api/public/availability?date=${today}&craft=jetski2&duration=2`, want: 200, contains: '"ok":true' },
+  { name: 'Party boat bookable', url: `${API}/api/public/availability?date=${today}&craft=partyboat&duration=4`, want: 200, contains: '"ok":true' },
   { name: 'API integrations', url: `${API}/api/public/integrations/status`, want: 200 },
 ];
 
