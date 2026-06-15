@@ -1396,55 +1396,28 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 
       <div class="fleet-card" id="boat">
         <div class="fleet-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Pontoon boat on the water with a group enjoying a Lake Lewisville ride">
+          <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Spacious captained boat on Lake Lewisville for up to 14 guests">
         </div>
         <div class="fleet-body">
-          <div class="fleet-badge">Up to 10 Guests · Captain Included</div>
+          <div class="fleet-badge">Up to 14 Guests · Captain Included</div>
           <div class="fleet-title-row">
             <div class="fleet-title">Boat Rental</div>
-            <div class="fleet-stat">
-              <div class="fleet-stat-label">Hourly rate</div>
-              <div class="fleet-stat-value">$130/hr</div>
-            </div>
-          </div>
-          <p class="fleet-desc">For laid-back lake days, birthdays, and bigger groups, the captained boat gives your crew room to spread out while Shoreline handles the setup and ride plan.</p>
-          <div class="fleet-rate-note">The boat stays simple: <strong style="color:var(--gold);">$130 per hour</strong> with the captain included. Customers choose the exact duration when they continue to booking.</div>
-          <div class="fleet-perks">
-            <span class="fleet-perk">Captain Included</span>
-            <span class="fleet-perk">Up to 10 Guests</span>
-            <span class="fleet-perk">Life Jackets</span>
-            <span class="fleet-perk">Full Tank</span>
-            <span class="fleet-perk">Fast &amp; Easy Booking</span>
-            <span class="fleet-perk">Cooler</span>
-          </div>
-          <div class="fleet-actions">
-            <a href="#booking" class="btn-primary">Choose the Boat</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="fleet-card" id="partyboat">
-        <div class="fleet-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Spacious party boat on Lake Lewisville for up to 17 guests">
-        </div>
-        <div class="fleet-body">
-          <div class="fleet-badge">🛥️ NEW · Up to 17 Guests</div>
-          <div class="fleet-title-row">
-            <div class="fleet-title">Party Boat</div>
             <div class="fleet-stat">
               <div class="fleet-stat-label">Starting at</div>
               <div class="fleet-stat-value">$160/hr</div>
             </div>
           </div>
-          <p class="fleet-desc">Our spacious new party boat seats up to 17 — perfect for birthdays, bachelor/bachelorette parties, family gatherings, and lake days with friends.</p>
+          <p class="fleet-desc">Our spacious captained boat seats up to 14 — perfect for birthdays, bachelor/bachelorette parties, family gatherings, and laid-back lake days with friends.</p>
           <div class="fleet-perks">
-            <span class="fleet-perk">Seats up to 17</span>
+            <span class="fleet-perk">Seats up to 14</span>
             <span class="fleet-perk">Bluetooth Sound System</span>
-            <span class="fleet-perk">Room to Relax</span>
             <span class="fleet-perk">Captain Included</span>
+            <span class="fleet-perk">Life Jackets</span>
+            <span class="fleet-perk">Full Tank</span>
+            <span class="fleet-perk">Cooler</span>
           </div>
           <div class="fleet-actions">
-            <a href="./jetski-booking/?type=boat&amp;craft=partyboat" class="btn-primary">Book the Party Boat</a>
+            <a href="./jetski-booking/?type=boat&amp;craft=partyboat" class="btn-primary">Book the Boat</a>
           </div>
         </div>
       </div>
@@ -1570,9 +1543,6 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <div>
           <div class="calc-col-label">Choose your duration</div>
           <div class="calc-select-group" id="bt-dur-opts">
-            <div class="calc-option" data-hours="1" onclick="selectOpt('bt-dur-opts',this);calcBoatPrice()">
-              <div><div class="calc-option-name">1 Hour</div></div><div class="calc-check"></div>
-            </div>
             <div class="calc-option" data-hours="2" onclick="selectOpt('bt-dur-opts',this);calcBoatPrice()">
               <div><div class="calc-option-name">2 Hours</div></div><div class="calc-check"></div>
             </div>
@@ -1604,8 +1574,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <div>
           <div class="calc-result-box">
             <div class="calc-result-label">Your Total</div>
-            <div class="calc-result-price" id="bt-price">$480</div>
-            <div class="calc-result-desc" id="bt-desc">Boat Rental · 4 Hours · Up to 10 guests</div>
+            <div class="calc-result-price" id="bt-price">$640</div>
+            <div class="calc-result-desc" id="bt-desc">Boat Rental · 4 Hours · Up to 14 guests</div>
             <div class="calc-deposit-row">
               <div class="calc-deposit-item"><div class="dl">Due today</div><div class="dv" style="color:var(--gold);">$55</div></div>
               <div class="calc-deposit-item"><div class="dl">Captain</div><div class="dv" style="color:var(--gold);">Included</div></div>
@@ -1619,10 +1589,10 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <span class="calc-include-item">Full Tank</span>
               <span class="calc-include-item">Fast &amp; Easy Booking</span>
               <span class="calc-include-item">Cooler</span>
-              <span class="calc-include-item">Up to 10 Guests</span>
+              <span class="calc-include-item">Up to 14 Guests</span>
             </div>
           </div>
-          <a href="./jetski-booking/?type=boat&craft=boat&hours=4&total=480" class="calc-book-btn" id="bt-book-btn">Continue to Calendar &amp; Contact + Waiver →</a>
+          <a href="./jetski-booking/?type=boat&craft=partyboat&hours=4&total=640" class="calc-book-btn" id="bt-book-btn">Continue to Calendar &amp; Contact + Waiver →</a>
           <p class="price-match">Easy hourly pricing with the captain included. $55 due today at checkout.</p>
         </div>
       </div>
@@ -2183,7 +2153,7 @@ function getJetSkiCount(craft) {
 }
 
 function getHourlyRateLabel(craft, hours, basePrice) {
-  if (craft === 'boat') return '$130/hr';
+  if (craft === 'boat' || craft === 'partyboat') return '$160/hr';
   const jetSkiCount = getJetSkiCount(craft);
   if (!jetSkiCount || !hours) return '';
   const hourlyRate = Math.round(basePrice / jetSkiCount / hours);
@@ -2225,15 +2195,15 @@ function calcPrice() {
 function calcBoatPrice() {
   const hours = parseInt(getSelected('bt-dur-opts','hours')) || 4;
   const drone = getDroneSelection('bt-drone-opts');
-  const basePrice = PRICING.boat[hours] || 0;
+  const basePrice = PRICING.partyboat[hours] || 0;
   const price = basePrice + (drone ? 50 : 0);
   const hLabel = hours === 8 ? 'Full Day (8hrs)' : hours+'hr'+(hours>1?'s':'');
   document.getElementById('bt-price').textContent = '$'+price.toLocaleString();
-  document.getElementById('bt-desc').textContent = 'Boat Rental · '+hLabel+' · Up to 10 guests'+(drone ? ' · Drone added' : '');
+  document.getElementById('bt-desc').textContent = 'Boat Rental · '+hLabel+' · Up to 14 guests'+(drone ? ' · Drone added' : '');
   document.getElementById('bt-book-btn').textContent = 'Continue to Calendar & Contact + Waiver →';
   document.getElementById('bt-book-btn').href = buildBookingUrl({
     type: 'boat',
-    craft: 'boat',
+    craft: 'partyboat',
     hours,
     drone: drone ? 'yes' : 'no',
     total: price

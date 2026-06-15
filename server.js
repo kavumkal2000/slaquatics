@@ -130,7 +130,7 @@ const CRAFT_LABELS = {
   bundle2: '2 Yamaha Jet Skis + Boat',
   bundle3: '3 Yamaha Jet Skis + Boat',
   bundle4: '4 Yamaha Jet Skis + Boat',
-  partyboat: 'Party Boat (up to 17)'
+  partyboat: 'Boat Rental (up to 14)'
 };
 const LEGACY_CRAFT_MAP = {
   yamaha: 'jetski2',
