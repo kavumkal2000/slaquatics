@@ -4832,6 +4832,7 @@ function runSheetActions(b) {
   if (!bookingIsPaid(b) && !hideMoneyForRole()) btns.push(`<button class="rs-btn pay" onclick="confirmDeposit(${id})">💵 Collect</button>`);
   if (status === 'pending') btns.push(`<button class="rs-btn confirm" onclick="updateStatus(${id},'confirmed')">✓ Confirm</button>`);
   if (status === 'confirmed') btns.push(`<button class="rs-btn done" onclick="updateStatus(${id},'completed')">🏁 Done</button>`);
+  if (status === 'completed' && !hideMoneyForRole()) btns.push(`<button class="rs-btn" onclick="askForReview(${id})">⭐ Review</button>`);
   btns.push(`<button class="rs-btn" onclick="openBookingModal(${id})">✎ Edit</button>`);
   return btns.join('');
 }
@@ -7051,6 +7052,36 @@ function syncReviewQueueForCompletedBookings() {
   }).finally(() => {
     reviewQueueSyncPending = false;
   });
+}
+// Manually send a review request for one hand-picked booking (the "⭐ Review"
+// button). Unlike autoSendReviewForBooking, this ignores the auto-send toggle —
+// the owner is choosing to send — but still needs a review link + a usable channel.
+async function askForReview(bookingId) {
+  const booking = bookings.find((item) => Number(item.id) === Number(bookingId));
+  if (!booking) return;
+  if (!integrations.reviewLinksConfigured) {
+    showToast('⚠️ Add your Google review link in Reviews settings first');
+    showPage('reviews');
+    return;
+  }
+  let request = reviewRequests.find((item) => Number(item.bookingId) === Number(booking.id));
+  if (!request) {
+    const requestList = cloneReviewRequests(reviewRequests);
+    const prepared = ensureReviewRequestForBookingInList(booking, requestList);
+    request = prepared.request;
+    if (prepared.created) {
+      const saved = await saveStateSnapshot({ ...snapshotState(), reviewRequests: requestList }, { silent: true });
+      if (!saved) { showToast('⚠️ Could not save — try again'); return; }
+      reviewRequests = requestList;
+    }
+  }
+  if (!request) { showToast('⚠️ Could not prepare the review request'); return; }
+  const contact = resolveReviewRequestContact(request);
+  const canText = Boolean(integrations.smsConfigured && contact.phone);
+  const canEmail = Boolean(integrations.emailConfigured && contact.email);
+  const channel = canText ? 'text' : (canEmail ? 'email' : '');
+  if (!channel) { showToast('⚠️ No phone or email on file for this customer'); return; }
+  await sendReviewDrop(request.id, channel);
 }
 async function autoSendReviewForBooking(booking) {
   if (!backendAvailable || !integrations.reviewAutomationEnabled || !integrations.reviewLinksConfigured) return false;
