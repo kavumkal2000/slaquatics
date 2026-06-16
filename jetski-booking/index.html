@@ -350,9 +350,7 @@ h1 span { color: var(--gold); }
   border-color: rgba(245,166,35,0.45);
   transform: translateY(-1px);
 }
-.availability-spotlight-card,
-.first-timer-card,
-.waitlist-card {
+.first-timer-card {
   padding: 24px 26px;
 }
 .slot-grid {
@@ -426,18 +424,6 @@ h1 span { color: var(--gold); }
   color: var(--wave);
   text-decoration: none;
   font-weight: 700;
-}
-.waitlist-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-.waitlist-note {
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 0.84rem;
-  line-height: 1.6;
 }
 .sticky-mobile-bar {
   position: fixed;
@@ -1033,7 +1019,6 @@ h1 span { color: var(--gold); }
     align-items: flex-start;
   }
   .hero-spotlight,
-  .waitlist-grid,
   .first-time-grid {
     grid-template-columns: 1fr;
   }
@@ -1111,9 +1096,7 @@ h1 span { color: var(--gold); }
             Pick the day first, see live availability right away, and move into the contact, waiver, and $55 checkout step only after you know your rental time is open.
           </p>
           <div class="hero-badge-row">
-            <span class="trust-badge">Free cancellation up to 48 hrs</span>
             <span class="trust-badge wave">No license needed</span>
-            <span class="trust-badge">Life jackets included</span>
           </div>
           <div class="hero-action-row">
             <a class="btn btn-primary" href="#booking-form-card">Book Now</a>
@@ -1141,22 +1124,10 @@ h1 span { color: var(--gold); }
       </div>
     </div>
 
-    <div class="info-card availability-spotlight-card">
-      <div class="mini-kicker">Real-time availability</div>
-      <h2>Open start times before the contact step</h2>
-      <p class="section-copy" id="availability-spotlight-copy">Choose the day and package below to see live open slots and how many jet skis are still open.</p>
-      <div class="slot-grid" id="availability-slot-grid">
-        <div class="slot-card">
-          <strong>Loading live slots</strong>
-          <span>We’re warming up the live booking system for today’s availability.</span>
-        </div>
-      </div>
-    </div>
-
     <div class="info-card first-timer-card">
       <div class="mini-kicker">First time?</div>
       <h2>Here’s how it works</h2>
-      <p class="section-copy">This page is built to answer the nervous first-timer right away, before they bounce.</p>
+      <p class="section-copy">New to the water? No experience needed — here’s everything we take care of for you.</p>
       <div class="first-time-grid">
         <div class="first-time-item">
           <strong>No license needed</strong>
@@ -1304,37 +1275,6 @@ h1 span { color: var(--gold); }
       </div>
     </div>
 
-    <div class="info-card waitlist-card">
-      <div class="mini-kicker">Off-season remarketing</div>
-      <h2>Want first dibs next season?</h2>
-      <p class="section-copy">Join the Shoreline text or email list and we’ll save you as a seasonal lead in the CRM for launch-day offers next year.</p>
-      <form id="waitlist-form">
-        <div class="waitlist-grid">
-          <div class="field">
-            <label for="lead-first-name">First name</label>
-            <input id="lead-first-name" name="firstName" type="text" placeholder="Your first name" required>
-          </div>
-          <div class="field">
-            <label for="lead-phone">Phone number</label>
-            <input id="lead-phone" name="phone" type="tel" placeholder="(469) 555-1212">
-          </div>
-          <div class="field">
-            <label for="lead-email">Email</label>
-            <input id="lead-email" name="email" type="email" placeholder="you@example.com">
-          </div>
-        </div>
-        <div class="field" style="margin-top:12px;max-width:260px;">
-          <label for="lead-channel">Best way to reach you</label>
-          <select id="lead-channel" name="preferredChannel">
-            <option value="sms">Text me</option>
-            <option value="email">Email me</option>
-          </select>
-        </div>
-        <div class="status" id="waitlist-status"></div>
-        <button class="btn btn-primary" type="submit">Join the waitlist</button>
-        <div class="waitlist-note">No spam. This goes into Shoreline’s CRM so you can be re-marketed to next season.</div>
-      </form>
-    </div>
   </div>
 
   <div class="sticky-mobile-bar">
@@ -2092,48 +2032,6 @@ async function handleSubmit(event) {
   }
 }
 
-async function handleWaitlistSubmit(event) {
-  event.preventDefault();
-  const status = qs('waitlist-status');
-  const payload = {
-    firstName: qs('lead-first-name').value.trim(),
-    phone: qs('lead-phone').value.trim(),
-    email: qs('lead-email').value.trim(),
-    preferredChannel: qs('lead-channel').value
-  };
-
-  if (!payload.firstName || (!payload.phone && !payload.email)) {
-    status.textContent = 'Please add your first name and either a phone number or email.';
-    status.classList.remove('success');
-    return;
-  }
-
-  status.textContent = 'Saving your Shoreline waitlist spot...';
-  status.classList.remove('success');
-
-  try {
-    const response = await fetch(`${OPS_PUBLIC_API}/api/public/seasonal-lead`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(body.error || 'We could not save your waitlist info right now.');
-    }
-    status.textContent = `You’re in. Shoreline saved your ${body.preferredChannel === 'sms' ? 'text' : 'email'} lead for next season.`;
-    status.classList.add('success');
-    event.target.reset();
-    qs('lead-channel').value = payload.preferredChannel;
-  } catch (error) {
-    status.textContent = error.message || 'We could not save your waitlist info right now.';
-    status.classList.remove('success');
-  }
-}
-
 function initHeroVideo() {
   const heroVideo = qs('hero-video');
   const heroVideoWrap = qs('hero-video-wrap');
@@ -2218,7 +2116,6 @@ qs('date').addEventListener('change', (event) => {
   scheduleDraftSave();
 });
 qs('booking-form').addEventListener('submit', handleSubmit);
-qs('waitlist-form').addEventListener('submit', handleWaitlistSubmit);
 
 qs('date').value = todayLocalIso();
 qs('date').min = todayLocalIso();

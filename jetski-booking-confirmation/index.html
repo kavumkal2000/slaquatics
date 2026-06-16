@@ -114,7 +114,7 @@ h3{font-size:1.75rem}
   padding:.82rem .95rem;border-radius:14px;background:rgba(11,28,48,.04);
   border:1px solid rgba(11,28,48,.08);color:var(--ink-soft);font-size:.9rem;line-height:1.65
 }
-.content-grid{grid-template-columns:1fr;gap:24px}
+.content-grid{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:24px;align-items:start}
 .form-card h2,.summary-card h2,.match-card h2{font-size:1.95rem}
 .form-stack{gap:20px;margin-top:22px}
 .field-block,
@@ -355,6 +355,25 @@ h3{font-size:1.75rem}
           </div>
         </form>
       </div>
+
+      <aside class="summary-card">
+        <div class="block-label">Your Rental</div>
+        <div class="summary-total" id="summary-total">$300</div>
+        <div class="summary-title" id="summary-package">2 Yamaha Jet Skis</div>
+        <div class="summary-note" id="summary-note">Your rental is ready for the contact, waiver, and checkout step.</div>
+        <div class="summary-grid">
+          <div class="summary-row"><span>Date</span><strong id="summary-date">-</strong></div>
+          <div class="summary-row"><span>Start time</span><strong id="summary-time">-</strong></div>
+          <div class="summary-row"><span>Party size</span><strong id="summary-party">2</strong></div>
+          <div class="summary-row"><span>Meeting spot</span><strong id="summary-location">Lake Lewisville launch</strong></div>
+          <div class="summary-row"><span>Booking deposit</span><strong id="summary-deposit">$50</strong></div>
+          <div class="summary-row"><span>Payment</span><strong id="summary-payment-status">Not paid yet</strong></div>
+          <div class="summary-row"><span>Due today</span><strong>$55</strong></div>
+        </div>
+        <div class="payment-note" style="margin-top:18px">
+          <strong>$55 due today</strong> — a $50 booking deposit plus a $5 processing fee. The remaining rental balance is handled directly with Shoreline before launch.
+        </div>
+      </aside>
     </div>
   </div>
 
