@@ -1018,7 +1018,9 @@ function timeToMinutes(value = '') {
 
 function craftUsesBoat(craft = '') {
   const normalized = normalizeCraftKey(craft);
-  return normalized === 'boat' || normalized.startsWith('bundle');
+  // 'partyboat' is the same physical boat as 'boat' — it must consume boat inventory
+  // so it can't be double-booked against a boat/bundle rental.
+  return normalized === 'boat' || normalized === 'partyboat' || normalized.startsWith('bundle');
 }
 
 function craftJetSkiCount(craft = '') {
@@ -1917,9 +1919,21 @@ function mergeEmployeeState(currentState = {}, incomingState = {}) {
   // can't forge any of it. New bookings keep only their whitelisted fields.
   // Customers/invoices/all other collections stay exactly as the server has them.
   const currentBookingsById = new Map(next.bookings.map((booking) => [Number(booking.id), booking]));
+  let maxBookingId = next.bookings.reduce((max, booking) => Math.max(max, Number(booking.id) || 0), 0);
   next.bookings = incoming.bookings.map((booking) => {
     const existing = currentBookingsById.get(Number(booking.id));
-    if (!existing) return booking;
+    if (!existing) {
+      // New booking from an employee: keep ONLY whitelisted fields and stamp safe
+      // server defaults. They can't inject money, payment status, or a signature.
+      const created = pickFields(booking, EMPLOYEE_EDITABLE_BOOKING_FIELDS);
+      created.id = ++maxBookingId;
+      created.status = created.status || 'pending';
+      created.deposit = false;
+      created.paymentStatus = 'unpaid';
+      created.source = 'Employee Entry';
+      created.createdAt = new Date().toISOString();
+      return created;
+    }
     const merged = { ...existing };
     for (const field of EMPLOYEE_EDITABLE_BOOKING_FIELDS) {
       if (booking[field] !== undefined) merged[field] = booking[field];
@@ -2960,9 +2974,16 @@ function applyStripeSessionToBooking(state, session = {}, now = new Date().toISO
   booking.depositAmount = Number((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
   booking.processingFeeAmount = Number((Number(session?.metadata?.processingFeeAmount) || booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100).toFixed(2));
   booking.amountDueToday = Number(((session.amount_total || ((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS))) / 100).toFixed(2));
-  booking.paymentStatus = String(session.payment_status || booking.paymentStatus || 'pending');
-  booking.deposit = booking.paymentStatus === 'paid';
-  booking.paymentCompletedAt = booking.deposit ? now : String(booking.paymentCompletedAt || '');
+  // Payment state is monotonic: once a booking is paid, a later non-paid session
+  // event (a retry, or a public checkout-session retrieve that races the paid state)
+  // must not downgrade it back to unpaid.
+  const alreadyPaid = booking.deposit === true || normalizeBookingStatus(booking.paymentStatus) === 'paid';
+  const sessionPaid = session.payment_status === 'paid';
+  if (sessionPaid || !alreadyPaid) {
+    booking.paymentStatus = String(session.payment_status || booking.paymentStatus || 'pending');
+    booking.deposit = booking.paymentStatus === 'paid';
+    booking.paymentCompletedAt = booking.deposit ? now : String(booking.paymentCompletedAt || '');
+  }
   booking.updatedAt = now;
   ensureBookingInvoice(state, booking, now);
   return booking;
@@ -4097,7 +4118,9 @@ async function handleApi(request, response, pathname) {
         const state = await stateStore.read();
         const session = event.data.object;
         const booking = findBookingForStripeSession(state, session);
-        if (booking) {
+        // Never expire a booking that is already paid (out-of-order/stale expiry event).
+        const bookingPaid = booking && (booking.deposit === true || normalizeBookingStatus(booking.paymentStatus) === 'paid');
+        if (booking && !bookingPaid) {
           booking.paymentStatus = 'expired';
           booking.deposit = false;
           booking.updatedAt = new Date().toISOString();

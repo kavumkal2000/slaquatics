@@ -2026,6 +2026,8 @@ function applyQueryDefaults() {
     qs('date').value = date;
     const parsed = parseLocalIsoDate(date);
     if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+    const holiday = holidayForDate(date);
+    if (holiday && hours && holiday.durations[hours]) holidayDuration = hours;
   }
 
   const time = params.get('time');
@@ -2106,6 +2108,8 @@ function applyDraftBooking(booking) {
     qs('date').value = booking.date;
     const parsed = parseLocalIsoDate(booking.date);
     if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+    const holiday = holidayForDate(booking.date);
+    if (holiday && holiday.durations[Number(booking.duration)]) holidayDuration = Number(booking.duration);
   }
   if (booking.time) {
     qs('time').value = booking.time;
