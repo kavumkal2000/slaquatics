@@ -433,7 +433,6 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 .holiday-banner:hover { transform: translateY(-1px); border-color: var(--gold); box-shadow: 0 14px 34px rgba(0,0,0,0.34); }
-.holiday-banner-flag { font-size: 1.9rem; line-height: 1; }
 .holiday-banner-text { flex: 1; min-width: 220px; font-size: 0.94rem; line-height: 1.5; color: rgba(255,255,255,0.82); }
 .holiday-banner-text strong {
   display: block; font-family: 'Bebas Neue', cursive; letter-spacing: 0.04em;
@@ -1394,12 +1393,11 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   <div class="section-inner">
     <div class="section-tag">Our Fleet</div>
     <h2>Pick Your Ride First</h2>
-    <p class="section-sub">Choose the rental that fits your group, compare the options fast, and move straight into booking.</p>
+    <p class="section-sub">Pick what fits your group and head straight to booking.</p>
     <a class="holiday-banner" href="./jetski-booking/?type=jetski&craft=jetski2&date=2026-07-04">
-      <span class="holiday-banner-flag">🇺🇸</span>
       <span class="holiday-banner-text">
-        <strong>July 4th Special</strong>
-        2 jet skis only — 4 hours $900 or 8 hours $1,350. Tap to grab the date.
+        <strong>July 4th</strong>
+        2 jet skis only on the 4th — 4 hours $900 or 8 hours $1,350.
       </span>
       <span class="holiday-banner-cta">Book the 4th →</span>
     </a>
@@ -1443,7 +1441,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Luxury tritoon on Lake Lewisville seating up to 14 guests">
         </div>
         <div class="fleet-body">
-          <div class="fleet-badge">🛥️ Luxury Tritoon · Up to 14 Guests</div>
+          <div class="fleet-badge">Starcraft Tritoon · Seats Up to 14</div>
           <div class="fleet-title-row">
             <div class="fleet-title">Boat Rental</div>
             <div class="fleet-stat">
@@ -1451,7 +1449,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <div class="fleet-stat-value">$160/hr</div>
             </div>
           </div>
-          <p class="fleet-desc">Our premium <strong>Starcraft tritoon</strong> rides on three pontoons for a smoother, faster, more stable day on the water. Seats up to 14 with cushioned loungers, a Bluetooth sound system, and shade — perfect for birthdays, bachelor &amp; bachelorette parties, sandbar hangs, sunset cruises, and tubing with the whole crew.</p>
+          <p class="fleet-desc">It's a <strong>Starcraft tritoon</strong> — three pontoons instead of two, so it rides smoother and faster than a regular pontoon. Seats up to 14 with cushioned loungers, Bluetooth speakers, and a shade top. Good for birthdays, bachelor and bachelorette trips, sandbar days, sunset cruises, and tubing. Comes with a captain.</p>
           <div class="fleet-perks">
             <span class="fleet-perk">Triple-Pontoon Tritoon</span>
             <span class="fleet-perk">Bluetooth Sound</span>
@@ -1500,13 +1498,13 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="calc-wrap">
       <div class="calc-tabs">
         <button class="calc-tab-btn active" id="tab-jetski" onclick="switchCalcTab('jetski')">
-          <span class="calc-tab-icon">🏄</span> Jet Ski Rental
+          Jet Ski Rental
         </button>
         <button class="calc-tab-btn" id="tab-boat" onclick="switchCalcTab('boat')">
-          <span class="calc-tab-icon">⛵</span> Boat Rental
+          Boat Rental
         </button>
         <button class="calc-tab-btn" id="tab-bundle" onclick="switchCalcTab('bundle')">
-          <span class="calc-tab-icon">🌊</span> Bundle
+          Bundle
         </button>
       </div>
 
@@ -1711,7 +1709,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
             </div>
           </div>
           <a href="./jetski-booking/?type=bundle&craft=bundle2&hours=2&total=540" class="calc-book-btn" id="bd-book-btn">Continue to Calendar &amp; Contact + Waiver →</a>
-          <p class="price-match">💰 Found a lower price? <span>We'll match it.</span> $55 due today at checkout.</p>
+          <p class="price-match">Found a lower price? <span>We'll match it.</span> $55 due today at checkout.</p>
         </div>
       </div>
     </div>
@@ -1721,9 +1719,9 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 <!-- ADD-ONS -->
 <section id="addons">
   <div class="section-inner">
-    <div class="section-tag">Add-On Services</div>
-    <h2>Upgrade Your Experience</h2>
-    <p class="section-sub">Add aerial drone coverage if you want a polished highlight video from your day on the water.</p>
+    <div class="section-tag">Add-Ons</div>
+    <h2>Want a Video of Your Day?</h2>
+    <p class="section-sub">Add aerial drone footage and we'll send you a short highlight clip from your day on the water.</p>
     <div class="addons-grid">
       <div class="addon-card addon-card-feature">
         <div class="addon-media">
@@ -1733,8 +1731,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
           <div class="addon-topline">
             <span class="addon-tag">Optional add-on</span>
           </div>
-          <div class="addon-icon">🎬</div>
-          <div class="addon-name">Aerial Drone Coverage</div>
+          <div class="addon-name">Aerial Drone Video</div>
           <p class="addon-desc">Add one clean highlight edit from above the water so the group leaves with a polished clip from the day.</p>
           <div class="addon-points">
             <span class="addon-point">Launch + ride footage</span>
@@ -1759,7 +1756,6 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="how-shell">
       <div class="how-head">
         <div class="how-title-wrap">
-          <div class="how-icon">🧭</div>
           <div class="how-title">How It Works</div>
         </div>
         <div class="how-intro">Five quick steps from picking the rental to showing up ready for the water.</div>
@@ -1774,8 +1770,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
               <path d="M14 26l6-7 5 4 9-11"></path>
             </svg>
           </div>
-          <h3>Choose Your Experience</h3>
-          <p>Pick jet skis, the boat, or the full bundle for your crew.</p>
+          <h3>Pick Your Ride</h3>
+          <p>Jet skis, the boat, or both — whatever fits your group.</p>
           <div class="how-arrow">↓</div>
         </div>
         <div class="how-step">
@@ -1979,7 +1975,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
         <div class="summary-count">Based on Google & Facebook reviews · 550+ customers</div>
       </div>
       <div class="summary-divider"></div>
-      <div class="summary-badge">🏆 Top-Rated Rental on Lake Lewisville</div>
+      <div class="summary-badge">Lake Lewisville · Hickory Creek launch</div>
     </div>
     <div class="reviews-carousel">
       <div class="reviews-track" id="reviews-track">
@@ -2139,8 +2135,8 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 
 <!-- STICKY MOBILE BOOK/TEXT BAR -->
 <div id="mobile-cta-bar">
-  <a href="#booking" class="mcta-book">⚓ Book Now</a>
-  <a href="sms:+14696937164" class="mcta-text">💬 Text Us</a>
+  <a href="#booking" class="mcta-book">Book Now</a>
+  <a href="sms:+14696937164" class="mcta-text">Text Us</a>
 </div>
 
 <button id="btt" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>

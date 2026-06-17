@@ -1271,7 +1271,7 @@ h1 span { color: var(--gold); }
             </div>
 
             <div class="summary-card holiday-special" id="holiday-special" hidden>
-              <div class="summary-kicker" id="holiday-title">🇺🇸 July 4th Special</div>
+              <div class="summary-kicker" id="holiday-title">July 4th Special</div>
               <p class="holiday-note" id="holiday-note">Holiday special: we’re only running 2 jet skis on the 4th — pick a 4-hour or 8-hour block below.</p>
               <div class="holiday-options" id="holiday-options"></div>
             </div>
@@ -1385,7 +1385,6 @@ const CRAFT_LABELS = {
 const HOLIDAY_SPECIALS = {
   '2026-07-04': {
     label: 'July 4th Special',
-    emoji: '🇺🇸',
     note: 'Holiday special: we’re only running 2 jet skis on the 4th — pick a 4-hour or 8-hour block below.',
     craft: 'jetski2',
     craftLabel: '2 Yamaha Jet Skis',
@@ -1821,7 +1820,7 @@ function renderHolidayCard(holiday) {
   const title = qs('holiday-title');
   const note = qs('holiday-note');
   const opts = qs('holiday-options');
-  if (title) title.textContent = `${holiday.emoji} ${holiday.label}`;
+  if (title) title.textContent = holiday.label;
   if (note) note.textContent = holiday.note;
   if (!opts) return;
   opts.innerHTML = Object.keys(holiday.durations).map(Number).sort((a, b) => a - b).map((hours) => {
@@ -1867,7 +1866,7 @@ function updateSummary() {
   qs('summary-time').textContent = selectedTime;
 
   if (holiday) {
-    qs('summary-note').textContent = `${holiday.emoji} ${holiday.label}: ${durationLabel} on 2 Yamaha jet skis, life jackets, full tanks, and the safety briefing included.${addonsNote}`;
+    qs('summary-note').textContent = `${holiday.label}: ${durationLabel} on 2 Yamaha jet skis, life jackets, full tanks, and the safety briefing included.${addonsNote}`;
     qs('summary-rate-label').textContent = 'Holiday rate';
     qs('summary-rate').textContent = `$${baseTotal.toLocaleString()} flat`;
     qs('summary-value-label').textContent = 'Special';
