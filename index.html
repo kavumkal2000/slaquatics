@@ -422,6 +422,28 @@ h2 { font-family: 'Bebas Neue', cursive; font-size: clamp(2.4rem, 4vw, 3.2rem); 
 
 /* ── FLEET ── */
 .fleet-section { background: linear-gradient(180deg, rgba(12,27,48,0.88) 0%, rgba(8,17,31,1) 100%); }
+.holiday-banner {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin: 0 0 1.4rem; padding: 1rem 1.3rem; border-radius: 18px;
+  text-decoration: none; color: #fff;
+  border: 1px solid rgba(245,166,35,0.4);
+  background:
+    radial-gradient(circle at top right, rgba(245,166,35,0.2), transparent 45%),
+    linear-gradient(180deg, rgba(20,38,64,0.95), rgba(12,24,44,0.95));
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.holiday-banner:hover { transform: translateY(-1px); border-color: var(--gold); box-shadow: 0 14px 34px rgba(0,0,0,0.34); }
+.holiday-banner-flag { font-size: 1.9rem; line-height: 1; }
+.holiday-banner-text { flex: 1; min-width: 220px; font-size: 0.94rem; line-height: 1.5; color: rgba(255,255,255,0.82); }
+.holiday-banner-text strong {
+  display: block; font-family: 'Bebas Neue', cursive; letter-spacing: 0.04em;
+  font-size: 1.5rem; color: var(--gold); margin-bottom: 2px;
+}
+.holiday-banner-cta {
+  white-space: nowrap; font-weight: 700; font-size: 0.8rem; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 0.7rem 1.1rem; border-radius: 999px;
+  background: var(--gold); color: #08111f;
+}
 .fleet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.4rem; align-items: stretch; grid-auto-rows: 1fr; }
 .fleet-card {
   background: linear-gradient(180deg, rgba(12,27,48,0.98) 0%, rgba(9,21,39,0.98) 100%);
@@ -1373,6 +1395,14 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
     <div class="section-tag">Our Fleet</div>
     <h2>Pick Your Ride First</h2>
     <p class="section-sub">Choose the rental that fits your group, compare the options fast, and move straight into booking.</p>
+    <a class="holiday-banner" href="./jetski-booking/?type=jetski&craft=jetski2&date=2026-07-04">
+      <span class="holiday-banner-flag">🇺🇸</span>
+      <span class="holiday-banner-text">
+        <strong>July 4th Special</strong>
+        2 jet skis only — 4 hours $900 or 8 hours $1,350. Tap to grab the date.
+      </span>
+      <span class="holiday-banner-cta">Book the 4th →</span>
+    </a>
     <div class="fleet-grid">
       <div class="fleet-card" id="jetski">
         <div class="fleet-media fleet-slider">
