@@ -106,5 +106,31 @@ const missingAddon = ['DRONE_ADDON_CENTS', 'KARAOKE_ADDON_CENTS', 'TUBE_ADDON_CE
 if (missingAddon.length) fail('Missing add-on amount constant(s): ' + missingAddon.join(', '));
 else ok('Add-on amounts defined (drone, karaoke, tube)');
 
+// 6) Holiday specials: the server's flat holiday price (cents) must equal the
+//    booking flow's holiday price (dollars) ×100 — no quote-vs-charge gap on holidays.
+function parseHolidayPairs(file, varName) {
+  const src = fs.readFileSync(file, 'utf8');
+  const m = src.match(new RegExp(varName + '\\s*=\\s*\\{([\\s\\S]*?)\\n\\};'));
+  if (!m) return null;
+  const pairs = {};
+  for (const pm of m[1].matchAll(/(\d+)\s*:\s*(\d+)/g)) pairs[pm[1]] = Number(pm[2]);
+  return pairs;
+}
+const holidayCents = parseHolidayPairs('server.js', 'HOLIDAY_PRICING_CENTS');
+const holidayDollars = parseHolidayPairs('jetski-booking/index.html', 'HOLIDAY_SPECIALS');
+if (!holidayCents || !holidayDollars) {
+  ok('No holiday specials configured (holiday cross-check skipped)');
+} else {
+  const hm = [];
+  const durs = new Set([...Object.keys(holidayCents), ...Object.keys(holidayDollars)]);
+  for (const d of durs) {
+    if (holidayCents[d] === undefined) hm.push(`server missing holiday ${d}h`);
+    else if (holidayDollars[d] === undefined) hm.push(`booking flow missing holiday ${d}h`);
+    else if (holidayCents[d] !== holidayDollars[d] * 100) hm.push(`${d}h server=${holidayCents[d]}c vs site=$${holidayDollars[d]}`);
+  }
+  if (hm.length) hm.forEach((x) => fail('HOLIDAY price mismatch: ' + x));
+  else ok('Holiday special prices match (server vs booking flow)');
+}
+
 console.log('\n' + (failures === 0 ? '✅ Validation passed' : `❌ ${failures} validation failure(s)`));
 process.exit(failures === 0 ? 0 : 1);

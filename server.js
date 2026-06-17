@@ -122,6 +122,21 @@ const PRICING_CENTS = {
   bundle4: { 2: 88500, 3: 132500, 4: 168000, 6: 227000, 8: 290000 },
   partyboat: { 2: 32000, 3: 48000, 4: 64000, 6: 96000, 8: 128000 }
 };
+// Holiday specials. On a listed date the ONLY bookable options are the crafts and
+// durations defined here, charged at the flat price shown (in cents). Every other
+// craft/duration is rejected for that date. Add future dates as needed.
+const HOLIDAY_PRICING_CENTS = {
+  '2026-07-04': {
+    label: 'July 4th Special',
+    unavailableMessage: 'July 4th is a special day — we’re only running 2 jet skis, as a 4-hour ($900) or 8-hour ($1,350) rental. Please choose 2 jet skis at 4 or 8 hours, or pick another date.',
+    crafts: {
+      jetski2: { 4: 90000, 8: 135000 }
+    }
+  }
+};
+function holidayRuleForDate(date = '') {
+  return HOLIDAY_PRICING_CENTS[String(date || '').trim()] || null;
+}
 const CRAFT_LABELS = {
   jetski2: '2 Yamaha Jet Skis',
   jetski3: '3 Yamaha Jet Skis',
@@ -770,7 +785,7 @@ function durationLabel(hours) {
   return amount === 8 ? 'Full Day (8 hours)' : `${amount} ${amount === 1 ? 'hour' : 'hours'}`;
 }
 
-function priceForSelection(craft = '', duration = 0, addons = false) {
+function priceForSelection(craft = '', duration = 0, addons = false, date = '') {
   const normalizedCraft = normalizeCraftKey(craft);
   const normalizedDuration = Number(duration || 0);
   // Backward compatible: a boolean/string in the 3rd arg means drone only.
@@ -779,7 +794,17 @@ function priceForSelection(craft = '', duration = 0, addons = false) {
   const droneEnabled = isOn(opts.drone);
   const karaokeEnabled = isOn(opts.karaoke);
   const tubeEnabled = isOn(opts.tube);
-  const baseAmount = PRICING_CENTS[normalizedCraft]?.[normalizedDuration];
+  // Holiday specials override both pricing and availability for that date.
+  const holiday = holidayRuleForDate(date);
+  let baseAmount;
+  if (holiday) {
+    baseAmount = holiday.crafts[normalizedCraft]?.[normalizedDuration];
+    if (!baseAmount) {
+      throw new Error(holiday.unavailableMessage);
+    }
+  } else {
+    baseAmount = PRICING_CENTS[normalizedCraft]?.[normalizedDuration];
+  }
   if (!baseAmount) {
     throw new Error('Please choose a valid package and duration before continuing.');
   }
@@ -2621,7 +2646,7 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
   }
 
   const existingBooking = findBookingByPublicToken(state, payload.publicToken);
-  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube });
+  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube }, payload.date);
   assertPublicAvailability(state, {
     craft: pricing.craft,
     date: payload.date,
@@ -2682,7 +2707,7 @@ function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOStr
     throw new Error('A completed waiver is required before saving this booking request.');
   }
 
-  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube });
+  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube }, payload.date);
   const tokenBooking = findBookingByPublicToken(state, payload.publicToken);
   const matchedBooking = findMatchingBooking(state, {
     ...payload,

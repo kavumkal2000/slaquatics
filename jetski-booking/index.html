@@ -904,6 +904,63 @@ h1 span { color: var(--gold); }
 .bottom-summary .summary-total {
   font-size: 3.3rem;
 }
+.holiday-special {
+  border-color: rgba(245, 166, 35, 0.4);
+  background:
+    radial-gradient(circle at top right, rgba(245, 166, 35, 0.16), transparent 40%),
+    rgba(246, 250, 252, 0.82);
+}
+.holiday-special #holiday-title {
+  color: var(--gold);
+  font-weight: 700;
+}
+.holiday-note {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.holiday-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.holiday-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(11, 28, 48, 0.16);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+.holiday-opt:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 166, 35, 0.5);
+}
+.holiday-opt.active {
+  border-color: var(--gold);
+  background: rgba(245, 166, 35, 0.14);
+  box-shadow: 0 0 0 2px rgba(245, 166, 35, 0.28) inset;
+}
+.holiday-opt-dur {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, rgba(11, 28, 48, 0.66));
+}
+.holiday-opt-price {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.9rem;
+  letter-spacing: 0.03em;
+  color: var(--ink, #0b1c30);
+}
+.holiday-opt.active .holiday-opt-price {
+  color: var(--gold);
+}
 .waiver-box {
   border-radius: 18px;
   border: 1px solid rgba(245, 166, 35, 0.16);
@@ -1213,6 +1270,12 @@ h1 span { color: var(--gold); }
               </div>
             </div>
 
+            <div class="summary-card holiday-special" id="holiday-special" hidden>
+              <div class="summary-kicker" id="holiday-title">🇺🇸 July 4th Special</div>
+              <p class="holiday-note" id="holiday-note">Holiday special: we’re only running 2 jet skis on the 4th — pick a 4-hour or 8-hour block below.</p>
+              <div class="holiday-options" id="holiday-options"></div>
+            </div>
+
             <div class="summary-card bottom-summary">
               <div class="summary-kicker">Package summary</div>
               <h3>Review the booking before the next step</h3>
@@ -1317,6 +1380,22 @@ const CRAFT_LABELS = {
   partyboat: 'Boat Rental (up to 14)'
 };
 
+// Holiday specials — mirror of the server's HOLIDAY_PRICING_CENTS (dollars here).
+// On these dates only 2 jet skis are bookable, at the durations/flat prices shown.
+const HOLIDAY_SPECIALS = {
+  '2026-07-04': {
+    label: 'July 4th Special',
+    emoji: '🇺🇸',
+    note: 'Holiday special: we’re only running 2 jet skis on the 4th — pick a 4-hour or 8-hour block below.',
+    craft: 'jetski2',
+    craftLabel: '2 Yamaha Jet Skis',
+    durations: { 4: 900, 8: 1350 }
+  }
+};
+function holidayForDate(iso) {
+  return HOLIDAY_SPECIALS[String(iso || '').trim()] || null;
+}
+
 const TYPE_TO_CRAFTS = {
   jetski: ['jetski2', 'jetski3', 'jetski4'],
   boat: ['partyboat'],
@@ -1334,6 +1413,7 @@ const FALLBACK_GOOGLE_REVIEW_URL = 'https://www.google.com/search?q=Shoreline+Aq
 let currentType = 'jetski';
 let calendarMonthCursor = null;
 let selectedBookingDate = '';
+let holidayDuration = 4;
 let matchedCustomer = null;
 let lastLookupKey = '';
 let bookingTouched = false;
@@ -1456,13 +1536,15 @@ function getCraftLabelForType(type) {
 }
 
 function buildBookingPayloadBase() {
-  const craft = qs('craft').value;
-  const duration = Number(qs('duration').value || 0);
+  const holiday = holidayForDate(selectedBookingDate);
+  const craft = holiday ? holiday.craft : qs('craft').value;
+  const duration = holiday ? holidayDuration : Number(qs('duration').value || 0);
   const drone = qs('addon-drone')?.checked || false;
   const karaoke = qs('addon-karaoke')?.checked || false;
   const tube = qs('addon-tube')?.checked || false;
   const addonsTotal = (drone ? 50 : 0) + (karaoke ? 50 : 0) + (tube ? 50 : 0);
-  const total = (PRICING[craft]?.[duration] || 0) + addonsTotal;
+  const baseTotal = holiday ? (holiday.durations[duration] || 0) : (PRICING[craft]?.[duration] || 0);
+  const total = baseTotal + addonsTotal;
   return {
     type: currentType,
     craft,
@@ -1717,7 +1799,51 @@ function populateDurationOptions(selectedHours) {
   updateSummary();
 }
 
+function applyHolidayConstraints() {
+  const card = qs('holiday-special');
+  const holiday = holidayForDate(selectedBookingDate);
+  if (!holiday) {
+    if (card) card.hidden = true;
+    return;
+  }
+  const allowed = Object.keys(holiday.durations).map(Number);
+  if (!allowed.includes(holidayDuration)) {
+    const locked = Number(qs('duration').value || 0);
+    holidayDuration = allowed.includes(locked) ? locked : allowed[0];
+  }
+  if (card) {
+    card.hidden = false;
+    renderHolidayCard(holiday);
+  }
+}
+
+function renderHolidayCard(holiday) {
+  const title = qs('holiday-title');
+  const note = qs('holiday-note');
+  const opts = qs('holiday-options');
+  if (title) title.textContent = `${holiday.emoji} ${holiday.label}`;
+  if (note) note.textContent = holiday.note;
+  if (!opts) return;
+  opts.innerHTML = Object.keys(holiday.durations).map(Number).sort((a, b) => a - b).map((hours) => {
+    const price = holiday.durations[hours];
+    const active = hours === holidayDuration;
+    const label = hours === 8 ? 'Full Day · 8 hours' : `${hours} hours`;
+    return `<button type="button" class="holiday-opt${active ? ' active' : ''}" onclick="selectHolidayDuration(${hours})" aria-pressed="${active}">
+      <span class="holiday-opt-dur">${label}</span>
+      <span class="holiday-opt-price">$${price.toLocaleString()}</span>
+    </button>`;
+  }).join('');
+}
+
+function selectHolidayDuration(hours) {
+  holidayDuration = Number(hours) || 4;
+  bookingTouched = true;
+  updateSummary();
+  scheduleDraftSave();
+}
+
 function updateSummary() {
+  applyHolidayConstraints();
   const payload = buildBookingPayloadBase();
   const craft = payload.craft;
   const duration = payload.duration;
@@ -1729,7 +1855,8 @@ function updateSummary() {
     payload.tube ? 'towable tube' : ''
   ].filter(Boolean);
   const addonsNote = selectedAddons.length ? ` Add-ons: ${selectedAddons.join(', ')} (+$50 each).` : '';
-  const baseTotal = PRICING[craft]?.[duration] || 0;
+  const holiday = holidayForDate(selectedBookingDate);
+  const baseTotal = holiday ? (holiday.durations[duration] || 0) : (PRICING[craft]?.[duration] || 0);
   const selectedDateText = formatSelectedDate(selectedBookingDate);
   const selectedTime = formatTimeLabel(qs('time').value || '10:00');
 
@@ -1738,6 +1865,16 @@ function updateSummary() {
   qs('summary-duration').textContent = durationLabel;
   qs('summary-date').textContent = selectedDateText;
   qs('summary-time').textContent = selectedTime;
+
+  if (holiday) {
+    qs('summary-note').textContent = `${holiday.emoji} ${holiday.label}: ${durationLabel} on 2 Yamaha jet skis, life jackets, full tanks, and the safety briefing included.${addonsNote}`;
+    qs('summary-rate-label').textContent = 'Holiday rate';
+    qs('summary-rate').textContent = `$${baseTotal.toLocaleString()} flat`;
+    qs('summary-value-label').textContent = 'Special';
+    qs('summary-value').textContent = holiday.label;
+    return;
+  }
+
   qs('summary-rate').textContent = getHourlyRateLabel(craft, duration, baseTotal);
   qs('summary-value').textContent = getSavingsLabel(craft, duration, baseTotal);
 
@@ -1750,7 +1887,7 @@ function updateSummary() {
     qs('summary-rate-label').textContent = 'Bundle rate';
     qs('summary-value-label').textContent = 'Included';
   } else {
-    qs('summary-note').textContent = `${durationLabel} rental with ${payload.craftLabel.toLowerCase()}, life jackets, a full tank, and a safety briefing included.${addonsNote}`;
+    qs('summary-note').textContent = `${durationLabel} rental with ${(payload.craftLabel || 'your jet skis').toLowerCase()}, life jackets, a full tank, and a safety briefing included.${addonsNote}`;
     qs('summary-rate-label').textContent = 'Hourly rate';
     qs('summary-value-label').textContent = 'Savings';
   }
