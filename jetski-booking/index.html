@@ -2000,7 +2000,7 @@ function applyQueryDefaults() {
 
   if (type && TYPE_TO_CRAFTS[type]) {
     setType(type);
-  } else if (craft === 'boat') {
+  } else if (craft === 'boat' || craft === 'partyboat') {
     setType('boat');
   } else if (craft && craft.startsWith('bundle')) {
     setType('bundle');
@@ -2085,7 +2085,7 @@ function applyDraftBooking(booking) {
   if (tokenField) tokenField.value = booking.publicToken || '';
 
   if (booking.craftKey && Object.prototype.hasOwnProperty.call(CRAFT_LABELS, booking.craftKey)) {
-    if (booking.craftKey === 'boat') {
+    if (booking.craftKey === 'boat' || booking.craftKey === 'partyboat') {
       setType('boat');
     } else if (booking.craftKey.startsWith('bundle')) {
       setType('bundle');

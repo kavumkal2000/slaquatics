@@ -2593,19 +2593,29 @@ function craftKeyMatchesKind(craft, kind) {
   if (kind === 'jetski') return k.startsWith('jetski');
   return false;
 }
+// Resolve the rental type for an invoice: use the explicit craftKey if present,
+// otherwise infer it from the invoice name/line text (imported invoices have no
+// craftKey) so a "Boat Rental" invoice still counts toward boat revenue.
+function invoiceCraftKey(invoice = {}) {
+  const explicit = normalizeCraftKey(invoice.craftKey || invoice.craft || '');
+  if (explicit) return explicit;
+  return guessCraftFromText(invoice.invoiceName || invoice.name || invoiceLineSummary(invoice) || '');
+}
 // Revenue for one rental type, using the SAME source as revenueForMonth (collected
-// invoices, or paid bookings as a fallback) so the parts always sum to the total.
+// invoices, or paid bookings as a fallback). Types may not sum to the exact total
+// when an invoice/booking's rental type can't be determined.
 function revenueForMonthByKind(reference = new Date(), kind = 'boat') {
   const monthCollected = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice), reference));
   if (monthCollected.length) {
     return monthCollected
-      .filter((invoice) => craftKeyMatchesKind(invoice.craftKey || invoice.craft, kind))
+      .filter((invoice) => craftKeyMatchesKind(invoiceCraftKey(invoice), kind))
       .reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
   }
   return scheduledBookings().reduce((sum, booking) => {
     if (!isSameMonth(dateValue(booking.date), reference)) return sum;
     if (!bookingIsPaid(booking)) return sum;
-    if (!craftKeyMatchesKind(booking.craftKey || booking.craft, kind)) return sum;
+    const craft = booking.craftKey || booking.craft || guessCraftFromText(booking.craftLabel || booking.name || '');
+    if (!craftKeyMatchesKind(craft, kind)) return sum;
     return sum + bookingTotalValue(booking);
   }, 0);
 }
