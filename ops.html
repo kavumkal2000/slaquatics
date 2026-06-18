@@ -682,6 +682,15 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
     <div class="kpi-card"><div class="label">Expenses · this month</div><div class="value" style="color:var(--amber);" id="rep-expenses">$0</div><div class="delta" id="rep-expenses-delta">—</div></div>
     <div class="kpi-card"><div class="label">Net · this month</div><div class="value" id="rep-net">$0</div><div class="delta" id="rep-net-delta">—</div></div>
   </div>
+  <div class="chart-card money-hide" style="margin-top:1.6rem;">
+    <h3>Revenue by rental type · this month</h3>
+    <div class="mini-kpis">
+      <div class="mini-kpi"><strong id="rep-rev-jetski">$0</strong><span>Jet Skis</span></div>
+      <div class="mini-kpi"><strong id="rep-rev-boat" style="color:var(--gold);">$0</strong><span>Boat</span></div>
+      <div class="mini-kpi"><strong id="rep-rev-bundle">$0</strong><span>Bundles</span></div>
+    </div>
+    <div class="delta" id="rep-rev-boat-delta" style="margin-top:0.6rem;">—</div>
+  </div>
   <div class="chart-card" style="margin-top:1.6rem;">
     <h3>Revenue — last 6 months</h3>
     <div class="bar-chart" id="reports-revenue-bars"></div>
@@ -689,7 +698,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
   <div class="section-head" style="margin-top:1.6rem;"><h2>Monthly breakdown</h2><button class="btn btn-ghost btn-sm" onclick="exportReportsCsv()">⬇ Export CSV</button></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Month</th><th>Revenue</th><th>Bookings</th><th>Expenses</th><th>Net</th></tr></thead>
+      <thead><tr><th>Month</th><th>Revenue</th><th>Boat</th><th>Bookings</th><th>Expenses</th><th>Net</th></tr></thead>
       <tbody id="reports-table"></tbody>
     </table>
   </div>
@@ -2577,6 +2586,29 @@ function revenueForMonth(reference = new Date()) {
 function bookingsCountForMonth(reference = new Date()) {
   return scheduledBookings().filter((booking) => isSameMonth(dateValue(booking.date), reference)).length;
 }
+function craftKeyMatchesKind(craft, kind) {
+  const k = normalizeCraftKey(craft || '');
+  if (kind === 'boat') return k === 'boat' || k === 'partyboat';
+  if (kind === 'bundle') return k.startsWith('bundle');
+  if (kind === 'jetski') return k.startsWith('jetski');
+  return false;
+}
+// Revenue for one rental type, using the SAME source as revenueForMonth (collected
+// invoices, or paid bookings as a fallback) so the parts always sum to the total.
+function revenueForMonthByKind(reference = new Date(), kind = 'boat') {
+  const monthCollected = invoices.filter((invoice) => invoiceCollectedAmount(invoice) > 0 && isSameMonth(invoiceDateValue(invoice), reference));
+  if (monthCollected.length) {
+    return monthCollected
+      .filter((invoice) => craftKeyMatchesKind(invoice.craftKey || invoice.craft, kind))
+      .reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
+  }
+  return scheduledBookings().reduce((sum, booking) => {
+    if (!isSameMonth(dateValue(booking.date), reference)) return sum;
+    if (!bookingIsPaid(booking)) return sum;
+    if (!craftKeyMatchesKind(booking.craftKey || booking.craft, kind)) return sum;
+    return sum + bookingTotalValue(booking);
+  }, 0);
+}
 function setReportDelta(deltaId, current, previous, { money = false, inverse = false } = {}) {
   const el = document.getElementById(deltaId);
   if (!el) return;
@@ -2612,12 +2644,19 @@ function renderReports() {
   setReportDelta('rep-bookings-delta', bk, bkPrev, {});
   setReportDelta('rep-expenses-delta', exp, expPrev, { money: true, inverse: true });
   setReportDelta('rep-net-delta', net, netPrev, { money: true });
+  // Revenue split by rental type (boat is what the owner wants to track)
+  const boatRev = revenueForMonthByKind(now, 'boat'), boatRevPrev = revenueForMonthByKind(lastMonth, 'boat');
+  set('rep-rev-jetski', moneyLabel(revenueForMonthByKind(now, 'jetski')));
+  set('rep-rev-boat', moneyLabel(boatRev));
+  set('rep-rev-bundle', moneyLabel(revenueForMonthByKind(now, 'bundle')));
+  setReportDelta('rep-rev-boat-delta', boatRev, boatRevPrev, { money: true });
   const months = [];
   for (let i = 5; i >= 0; i--) {
     const ref = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({
       label: `${MONTH_LABELS[ref.getMonth()]} ${String(ref.getFullYear()).slice(2)}`,
       rev: revenueForMonth(ref),
+      boatRev: revenueForMonthByKind(ref, 'boat'),
       bk: bookingsCountForMonth(ref),
       exp: expensePeriodTotal('month', '', ref)
     });
@@ -2635,6 +2674,7 @@ function renderReports() {
     <tr>
       <td>${escapeHtml(m.label)}</td>
       <td data-label="Revenue" style="color:var(--green);font-weight:500;">${moneyLabel(m.rev)}</td>
+      <td data-label="Boat" style="color:var(--gold);">${moneyLabel(m.boatRev)}</td>
       <td data-label="Bookings">${m.bk}</td>
       <td data-label="Expenses" style="color:var(--amber);">${moneyLabel(m.exp)}</td>
       <td data-label="Net" style="font-weight:500;">${moneyLabel(m.rev - m.exp)}</td>
@@ -2642,14 +2682,16 @@ function renderReports() {
 }
 function exportReportsCsv() {
   const now = new Date();
-  const rows = [['Month', 'Revenue', 'Bookings', 'Expenses', 'Net']];
+  const rows = [['Month', 'Revenue', 'Boat Revenue', 'Bookings', 'Expenses', 'Net']];
   for (let i = 5; i >= 0; i--) {
     const ref = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const rev = revenueForMonth(ref);
+    const boatRev = revenueForMonthByKind(ref, 'boat');
     const exp = expensePeriodTotal('month', '', ref);
     rows.push([
       `${MONTH_LABELS[ref.getMonth()]} ${ref.getFullYear()}`,
       rev.toFixed(2),
+      boatRev.toFixed(2),
       bookingsCountForMonth(ref),
       exp.toFixed(2),
       (rev - exp).toFixed(2)
