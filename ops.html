@@ -1233,7 +1233,7 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="jetski2">2 Yamaha Jet Skis</option>
             <option value="jetski3">3 Yamaha Jet Skis</option>
             <option value="jetski4">4 Yamaha Jet Skis</option>
-            <option value="boat">Boat Rental</option>
+            <option value="partyboat">Boat Rental (up to 14)</option>
             <option value="bundle2">2 Jet Skis + Boat</option>
             <option value="bundle3">3 Jet Skis + Boat</option>
             <option value="bundle4">4 Jet Skis + Boat</option>
@@ -1325,7 +1325,7 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="jetski2">2 Yamaha Jet Skis</option>
             <option value="jetski3">3 Yamaha Jet Skis</option>
             <option value="jetski4">4 Yamaha Jet Skis</option>
-            <option value="boat">Boat Rental</option>
+            <option value="partyboat">Boat Rental (up to 14)</option>
             <option value="bundle2">2 Jet Skis + Boat</option>
             <option value="bundle3">3 Jet Skis + Boat</option>
             <option value="bundle4">4 Jet Skis + Boat</option>
@@ -4641,7 +4641,7 @@ function calcBookingPrice() {
 
 // ── BOOKING CONFLICT DETECTION (double-booking guard) ──
 function craftUsesJetski(c) { c = String(c || ''); return c.indexOf('jetski') === 0 || c.indexOf('bundle') === 0; }
-function craftUsesBoat(c) { c = String(c || ''); return c === 'boat' || c.indexOf('bundle') === 0; }
+function craftUsesBoat(c) { c = String(c || ''); return c === 'boat' || c === 'partyboat' || c.indexOf('bundle') === 0; }
 function craftsShareEquipment(a, b) {
   return (craftUsesJetski(a) && craftUsesJetski(b)) || (craftUsesBoat(a) && craftUsesBoat(b));
 }

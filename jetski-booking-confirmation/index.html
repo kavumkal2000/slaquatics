@@ -522,7 +522,7 @@ function populateSummary(booking) {
   const craftKey = booking.craftKey || booking.craft || '';
   setText("summary-total", formatCurrency(booking.total || 0));
   setText("summary-package", `${booking.craftLabel} · ${booking.durationLabel}`);
-  setText("summary-note", craftKey === 'boat'
+  setText("summary-note", (craftKey === 'boat' || craftKey === 'partyboat')
     ? 'Your boat rental with captain included is ready for the contact, waiver, and checkout step.'
     : craftKey.startsWith('bundle')
       ? 'Your lake-day bundle is ready for the contact, waiver, and checkout step.'

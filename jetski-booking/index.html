@@ -1484,7 +1484,7 @@ function isBundleType(craft) {
 }
 
 function craftUsesBoat(craft) {
-  return craft === 'boat' || isBundleType(craft);
+  return craft === 'boat' || craft === 'partyboat' || isBundleType(craft);
 }
 
 function craftNeedsAvailabilityCheck(craft) {
@@ -1516,7 +1516,7 @@ function getHourlyRateLabel(craft, duration, basePrice) {
 }
 
 function getSavingsLabel(craft, duration, basePrice) {
-  if (craft === 'boat') return 'Captain included';
+  if (craft === 'boat' || craft === 'partyboat') return 'Captain included';
   if (isBundleType(craft)) return 'Boat + captain built in';
   const jetSkiCount = getJetSkiCount(craft);
   if (!jetSkiCount || duration <= 2) return 'Base rate';
@@ -1874,7 +1874,7 @@ function updateSummary() {
   qs('summary-rate').textContent = getHourlyRateLabel(craft, duration, baseTotal);
   qs('summary-value').textContent = getSavingsLabel(craft, duration, baseTotal);
 
-  if (craft === 'boat') {
+  if (craft === 'boat' || craft === 'partyboat') {
     qs('summary-note').textContent = `Boat rental with captain included.${addonsNote || ' Life jackets and a full tank are included.'}`;
     qs('summary-rate-label').textContent = 'Hourly rate';
     qs('summary-value-label').textContent = 'Included';
