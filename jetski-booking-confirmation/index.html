@@ -397,6 +397,7 @@ let activeBooking = null;
 let stripeReady = false;
 let matchedCustomer = null;
 let lastLookupKey = '';
+let waiverAutoApplied = false;
 
 function qs(id) {
   return document.getElementById(id);
@@ -639,10 +640,21 @@ function applyCustomerPrefill(customer) {
     if (!qs('waiver-initials').value.trim()) qs('waiver-initials').value = customer.waiverInitials || '';
     if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
     if (!qs('signature-date').value) qs('signature-date').value = todayLocalIso();
+    waiverAutoApplied = true;
   }
 
   showMatchedCustomer(customer);
   updateContactLinks();
+}
+
+// If a returning-customer prefill auto-accepted the waiver, undo that the moment the
+// match goes away, so a different/unverified rider can't submit a pre-checked waiver.
+function clearAutoAppliedWaiver() {
+  if (!waiverAutoApplied) return;
+  qs('waiver-risk').checked = false;
+  qs('waiver-damage').checked = false;
+  qs('waiver-verify').checked = false;
+  waiverAutoApplied = false;
 }
 
 async function lookupReturningCustomer(force = false) {
@@ -650,6 +662,7 @@ async function lookupReturningCustomer(force = false) {
   const email = qs('email').value.trim();
   if (!phone && !email) {
     matchedCustomer = null;
+    clearAutoAppliedWaiver();
     hideMatchedCustomer();
     return;
   }
@@ -669,6 +682,7 @@ async function lookupReturningCustomer(force = false) {
       applyCustomerPrefill(payload.customer);
     } else {
       matchedCustomer = null;
+      clearAutoAppliedWaiver();
       hideMatchedCustomer();
     }
   } catch (error) {
@@ -706,6 +720,9 @@ function createPayload(requireBase = true) {
 function validatePayload(payload) {
   if (!payload?.date || !payload?.time || !payload?.craft) {
     return 'Please start on the calendar page and choose the rental date and package first.';
+  }
+  if (payload.date < todayLocalIso()) {
+    return 'That rental date has already passed. Please head back to the calendar and pick a new date.';
   }
   if (!payload.name || !payload.phone) {
     return 'Please fill in the rider name and phone number before paying the deposit.';

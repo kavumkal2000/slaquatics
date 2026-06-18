@@ -2942,7 +2942,7 @@ function upsertSeasonalLeadFromPayload(state, payload = {}, now = new Date().toI
     customerName: customer.name,
     channel: 'seasonal-lead',
     message: `Off-season ${preferredChannel.toUpperCase()} opt-in captured from the booking page.`,
-    timestamp: now
+    date: now
   });
 
   return { state, customer, existingCustomer, preferredChannel };
@@ -4386,13 +4386,29 @@ function scheduleOwnerWeeklyDigestCheck({ force = false } = {}) {
     });
 }
 
+// Serialize state-mutating requests so two concurrent read-modify-write cycles
+// can't clobber each other or hand out duplicate record ids (e.g. two bookings
+// submitted in the same instant). Read-only requests (GET/HEAD/OPTIONS) are not
+// serialized and run concurrently as before.
+let apiMutationChain = Promise.resolve();
+function runSerialized(task) {
+  const run = apiMutationChain.then(task, task);
+  apiMutationChain = run.then(() => {}, () => {});
+  return run;
+}
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
 const server = http.createServer(async (request, response) => {
   scheduleOwnerWeeklyDigestCheck();
   try {
     const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
     const pathname = url.pathname;
 
-    if (await handleApi(request, response, pathname)) return;
+    const isMutatingApi = pathname.startsWith('/api/') && MUTATING_METHODS.has(request.method);
+    const apiHandled = isMutatingApi
+      ? await runSerialized(() => handleApi(request, response, pathname))
+      : await handleApi(request, response, pathname);
+    if (apiHandled) return;
 
     if (pathname === '/ops') {
       sendRedirect(response, '/ops.html');
