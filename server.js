@@ -94,7 +94,7 @@ const PUBLIC_UNPAID_HOLD_MINUTES = Math.max(Number(process.env.PUBLIC_UNPAID_HOL
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
 const SHORELINE_PHONE_LINK = '4696937164';
 const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
-const SHORELINE_ADDRESS = '2000 Main St, Hickory Creek, TX 75065';
+const SHORELINE_ADDRESS = '965 Main St, Lake Dallas, TX 75065';
 const OPS_APP_URL = process.env.OPS_APP_URL || 'https://shoreline-aquatics-ops.onrender.com/ops.html';
 const ARRIVAL_INSTRUCTIONS = [
   'Proceed down Main Street until you pass the storage units on your left.',
@@ -2311,7 +2311,7 @@ function shorelineEmailShell({ eyebrow = 'Shoreline Aquatics', title = '', subti
               ${logoUrl ? `<img src="${htmlEscape(logoUrl)}" alt="Shoreline Aquatics logo" width="54" height="54" style="display:block;width:54px;height:54px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);padding:6px;object-fit:contain;">` : ''}
               <div>
                 <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f4b63f;font-weight:800;">${htmlEscape(eyebrow)}</div>
-                <div style="margin-top:4px;font-size:13px;color:#d5e0ee;letter-spacing:0.08em;text-transform:uppercase;">Lake Lewisville • Hickory Creek, Texas</div>
+                <div style="margin-top:4px;font-size:13px;color:#d5e0ee;letter-spacing:0.08em;text-transform:uppercase;">Lake Lewisville • Lake Dallas, Texas</div>
               </div>
             </div>
             <h1 style="margin:12px 0 0;font-size:34px;line-height:1.06;color:#ffffff;">${htmlEscape(title)}</h1>
@@ -2699,7 +2699,7 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
   booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
   booking.date = String(payload.date || '').trim();
   booking.time = String(payload.time || '').trim();
-  booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX').trim();
+  booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - 965 Main St, Lake Dallas, TX').trim();
   booking.contactMethod = String(payload.contactMethod || booking.contactMethod || 'text').trim();
   booking.partySize = String(payload.partySize || booking.partySize || '').trim();
   booking.notes = String(payload.notes || booking.notes || '').trim();

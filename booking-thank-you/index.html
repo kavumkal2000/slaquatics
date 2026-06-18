@@ -288,10 +288,10 @@ h3{font-size:1.7rem}
         <div class="card">
           <div class="block-label">Arrival Directions</div>
           <h2>Shoreline Aquatics launch</h2>
-          <div class="arrival-copy">The launch meeting spot is at <strong style="color:var(--ink)">2000 Main St, Hickory Creek, TX</strong>. Use the directions below once you arrive near the park entrance.</div>
+          <div class="arrival-copy">The launch meeting spot is at <strong style="color:var(--ink)">965 Main St, Lake Dallas, TX</strong>. Use the directions below once you arrive near the park entrance.</div>
           <div class="address-card">
             <strong style="display:block;color:var(--ink);margin-bottom:6px">Address</strong>
-            2000 Main St, Hickory Creek, TX
+            965 Main St, Lake Dallas, TX
           </div>
           <div class="arrival-list">
             <div class="arrival-item">1. Proceed down Main Street until you pass the storage units on your left.</div>
@@ -422,7 +422,7 @@ function showBooking(booking) {
   setText('summary-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('summary-date', formatDateLabel(booking.date));
   setText('summary-time', formatTimeLabel(booking.time));
-  setText('summary-location', booking.location || 'Shoreline Aquatics launch, 2000 Main St, Hickory Creek, TX');
+  setText('summary-location', booking.location || 'Shoreline Aquatics launch, 965 Main St, Lake Dallas, TX');
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
   setText('summary-deposit', formatCurrency(booking.depositAmount || 50));
   setText('summary-processing-fee', formatCurrency(booking.processingFeeAmount || 5));
