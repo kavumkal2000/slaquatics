@@ -2044,8 +2044,19 @@ function updateCustomerRollup(state, customer) {
   if (customer.bookings <= 1 && customer.tag === 'repeat') customer.tag = '';
 }
 
-function publicCustomerPayload(customer) {
-  return sanitizePublicCustomer(customer);
+function publicCustomerPayload(customer = {}) {
+  // SECURITY: this is the response of the UNAUTHENTICATED /api/public/customer-lookup
+  // endpoint (matched on a guessable phone or email). Return ONLY enough to recognize
+  // a returning customer — never phone, email, DOB, waiver signature, initials,
+  // emergency contacts, or lifetime spend, which would let anyone harvest PII by
+  // guessing a phone number. (sanitizePublicCustomer is still used internally.)
+  return {
+    id: Number(customer.id || 0),
+    name: String(customer.name || '').trim(),
+    bookings: Number(customer.bookings || 0),
+    lastBooking: String(customer.lastBooking || ''),
+    waiverOnFile: Boolean(customer.waiverSignedAt || customer.waiver?.signedAt || customer.waiverSignature)
+  };
 }
 
 function publicBookingPayload(booking = {}) {

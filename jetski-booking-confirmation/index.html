@@ -606,8 +606,8 @@ function showMatchedCustomer(customer) {
   const repeatLabel = Number(customer.bookings || 0) > 1 ? 'Repeat rider' : 'Returning guest';
   qs('match-title').textContent = `${customer.name || 'Rider'} recognized`;
   qs('match-copy').textContent = customer.waiverOnFile
-    ? 'Welcome back. A waiver is already on file, and you can update anything below if something changed.'
-    : 'Welcome back. We filled in the contact details we already had, and you can update anything below if needed.';
+    ? 'Welcome back! We have a waiver on file. Please confirm your details below to finish.'
+    : 'Welcome back! Finish your details below and you\'re set.';
 
   const chipValues = [
     repeatLabel,
