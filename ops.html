@@ -3838,6 +3838,7 @@ async function saveInvoice() {
     : null;
   const previousInvoices = JSON.parse(JSON.stringify(invoices));
   const previousCustomers = JSON.parse(JSON.stringify(customers));
+  const previousBookings = JSON.parse(JSON.stringify(bookings));
   const previousInvoiceSnapshot = existingInvoice ? JSON.parse(JSON.stringify(existingInvoice)) : null;
   const previousCustomer = previousInvoiceSnapshot ? linkedCustomerForInvoice(previousInvoiceSnapshot) : null;
   if (editingInvoiceId && !existingInvoice) {
@@ -4029,6 +4030,7 @@ async function saveInvoice() {
   if (!(await persistStateChange())) {
     invoices = previousInvoices;
     customers = previousCustomers;
+    bookings = previousBookings;
     return;
   }
   closeModal('invoice-modal');
@@ -5902,7 +5904,7 @@ async function deleteTracker(trackerId = null) {
 }
 
 async function updateStatus(id, status) {
-  const booking = bookings.find((item) => item.id === id);
+  const booking = bookings.find((item) => Number(item.id) === Number(id));
   if (!booking) return;
   const previousStatus = booking.status;
   const previousUpdatedAt = booking.updatedAt;
@@ -6088,12 +6090,15 @@ async function markInvoicePaid(invoiceId) {
   if (!confirm(`Mark this invoice fully paid? This records ${moneyLabel(outstanding)} collected.`)) return;
   const prevStatus = invoice.status;
   const prevPaid = invoice.paidAmount;
+  const prevBalance = invoice.balanceDue;
   invoice.paidAmount = Number(invoice.total || 0);
+  invoice.balanceDue = 0;
   invoice.status = 'paid';
   try {
     if (!(await persistStateChange())) {
       invoice.status = prevStatus;
       invoice.paidAmount = prevPaid;
+      invoice.balanceDue = prevBalance;
       showToast('⚠️ Could not save — try again');
       return;
     }
