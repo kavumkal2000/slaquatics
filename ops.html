@@ -799,8 +799,15 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
       <option value="all">All time</option>
       <option value="custom">Custom range</option>
     </select>
+    <select id="invoice-status-filter" onchange="updateInvoiceFilters()">
+      <option value="all" selected>All statuses</option>
+      <option value="open">Open balance</option>
+      <option value="overdue">Overdue</option>
+      <option value="paid">Paid</option>
+    </select>
     <input type="date" id="invoice-date-from" onchange="updateInvoiceFilters()">
     <input type="date" id="invoice-date-to" onchange="updateInvoiceFilters()">
+    <button class="btn btn-ghost btn-sm" onclick="exportInvoicesCsv()">⬇ Export CSV</button>
     <div class="filter-summary" id="invoice-filter-summary">Showing this month's booked days</div>
   </div>
   <input type="file" id="invoice-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleInvoiceImport(event)">
@@ -2140,6 +2147,7 @@ let selectedMassEmailCustomerIds = new Set();
 let invoiceSearchQuery = '';
 let invoiceDateBasis = 'booked';
 let invoicePeriodFilter = 'month';
+let invoiceStatusFilter = 'all';
 let invoiceDateFrom = '';
 let invoiceDateTo = '';
 let editingInvoiceId = null;
@@ -2454,10 +2462,24 @@ function invoiceMatchesPeriod(invoice) {
   }
   return true;
 }
+function invoiceIsOverdue(invoice) {
+  if (invoiceOutstandingAmount(invoice) <= 0) return false;
+  const due = invoice.dueDate ? parseIsoDate(invoice.dueDate) : null;
+  if (!due) return false;
+  return endOfDay(due) < startOfDay(new Date());
+}
+function invoiceMatchesStatusFilter(invoice) {
+  if (invoiceStatusFilter === 'all') return true;
+  if (invoiceStatusFilter === 'paid') return invoiceOutstandingAmount(invoice) <= 0;
+  if (invoiceStatusFilter === 'open') return invoiceOutstandingAmount(invoice) > 0;
+  if (invoiceStatusFilter === 'overdue') return invoiceIsOverdue(invoice);
+  return true;
+}
 function filteredInvoicesList() {
   return invoices.filter((invoice) => (
     (!invoiceSearchQuery || invoiceSearchText(invoice).includes(invoiceSearchQuery)) &&
-    invoiceMatchesPeriod(invoice)
+    invoiceMatchesPeriod(invoice) &&
+    invoiceMatchesStatusFilter(invoice)
   ));
 }
 function sortNewestFirst(list, getValue) {
@@ -3292,6 +3314,44 @@ function filterInvoices(input) {
   invoiceSearchQuery = String(input?.value || '').trim().toLowerCase();
   renderInvoices();
 }
+function exportInvoicesCsv() {
+  const list = sortNewestFirst(filteredInvoicesList(), (invoice) => invoiceDateValue(invoice));
+  if (!list.length) { if (typeof showToast === 'function') showToast('No invoices to export for this view'); return; }
+  const rows = [['Invoice', 'Customer', 'Phone', 'Email', 'Issued', 'Due', 'Items', 'Total', 'Collected', 'Remaining', 'Status']];
+  list.forEach((invoice) => {
+    const contact = invoiceDisplayContact(invoice);
+    const remaining = invoiceOutstandingAmount(invoice);
+    const status = invoiceIsOverdue(invoice) ? 'Overdue' : (remaining <= 0 ? 'Paid' : 'Open');
+    rows.push([
+      invoice.invoiceNumber || '',
+      contact.name || 'Unknown',
+      contact.phone || '',
+      contact.email || '',
+      invoice.issueDate || '',
+      invoice.dueDate || '',
+      invoiceLineSummary(invoice),
+      Number(invoice.total || 0).toFixed(2),
+      invoiceCollectedAmount(invoice).toFixed(2),
+      remaining.toFixed(2),
+      status
+    ]);
+  });
+  const csv = rows.map((row) => row.map((cell) => {
+    const text = String(cell);
+    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const stamp = new Date();
+  link.download = `shoreline-invoices-${stamp.getFullYear()}-${String(stamp.getMonth() + 1).padStart(2, '0')}-${String(stamp.getDate()).padStart(2, '0')}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  if (typeof showToast === 'function') showToast(`✅ Exported ${list.length} invoice${list.length === 1 ? '' : 's'}`);
+}
 function formatFilterDateText(value = '') {
   return value ? formatShortDate(value) : '—';
 }
@@ -3308,10 +3368,15 @@ function updateInvoiceFilters() {
   const summaryEl = document.getElementById('invoice-filter-summary');
   invoiceDateBasis = basisEl?.value || 'issue';
   invoicePeriodFilter = periodEl?.value || 'all';
+  invoiceStatusFilter = document.getElementById('invoice-status-filter')?.value || 'all';
   invoiceDateFrom = fromEl?.value || '';
   invoiceDateTo = toEl?.value || '';
   if (summaryEl) {
-    const label = invoicePeriodFilter === 'today'
+    const statusSuffix = invoiceStatusFilter === 'open' ? ' · open balance'
+      : invoiceStatusFilter === 'overdue' ? ' · overdue'
+      : invoiceStatusFilter === 'paid' ? ' · paid'
+      : '';
+    const label = (invoicePeriodFilter === 'today'
       ? `Showing today's ${invoiceDateBasisLabel()}`
       : invoicePeriodFilter === 'week'
       ? `Showing this week's ${invoiceDateBasisLabel()}`
@@ -3321,7 +3386,7 @@ function updateInvoiceFilters() {
           ? `Showing this year's ${invoiceDateBasisLabel()}`
           : invoicePeriodFilter === 'custom'
             ? `Showing ${formatFilterDateText(invoiceDateFrom)} to ${formatFilterDateText(invoiceDateTo)} by ${invoiceDateBasisLabel()}`
-            : `Showing all invoices by ${invoiceDateBasisLabel()}`;
+            : `Showing all invoices by ${invoiceDateBasisLabel()}`) + statusSuffix;
     summaryEl.textContent = label;
   }
   renderInvoices();
@@ -6145,6 +6210,9 @@ function renderInvoices() {
   if (!table) return;
   const emptyMsg = invoiceSearchQuery
     ? 'No invoices match your search.'
+    : invoiceStatusFilter === 'overdue' ? 'No overdue invoices — all caught up. 🎉'
+    : invoiceStatusFilter === 'open' ? 'No open balances in this view.'
+    : invoiceStatusFilter === 'paid' ? 'No paid invoices in this view.'
     : invoicePeriodFilter === 'today' ? 'No invoices for today yet.'
     : invoicePeriodFilter === 'week' ? 'No invoices this week.'
     : invoicePeriodFilter === 'month' ? 'No invoices this month.'
@@ -6168,7 +6236,7 @@ function renderInvoices() {
       <td data-label="Due">${escapeHtml(formatShortDate(invoice.dueDate))}</td>
       <td data-label="Items">${escapeHtml(invoiceLineSummary(invoice))}</td>
       <td data-label="Amount" style="font-weight:600;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;margin-top:0.2rem;">${invoiceOutstandingAmount(invoice) > 0 ? `<span style="color:var(--amber);">${moneyLabel(invoiceOutstandingAmount(invoice))} due</span>` : '<span style="color:var(--green);">Paid in full</span>'}</div></td>
-      <td data-label="Status">${invoiceStatusBadge(invoice.status)}</td>
+      <td data-label="Status">${invoiceIsOverdue(invoice) ? '<span class="badge badge-noshow">Overdue</span>' : invoiceStatusBadge(invoice.status)}</td>
       <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" onclick="markInvoicePaid(${Number(invoice.id)})">💵 Mark Paid</button>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
