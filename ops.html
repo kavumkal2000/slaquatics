@@ -792,10 +792,11 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
       <option value="due">Due date</option>
     </select>
     <select id="invoice-period-filter" onchange="updateInvoiceFilters()">
-      <option value="all">All time</option>
+      <option value="today">Today</option>
       <option value="week">This week</option>
       <option value="month" selected>This month</option>
       <option value="year">This year</option>
+      <option value="all">All time</option>
       <option value="custom">Custom range</option>
     </select>
     <input type="date" id="invoice-date-from" onchange="updateInvoiceFilters()">
@@ -2441,6 +2442,7 @@ function invoiceMatchesPeriod(invoice) {
   const targetDate = invoiceDateValue(invoice);
   const now = new Date();
   if (!targetDate) return invoicePeriodFilter === 'all';
+  if (invoicePeriodFilter === 'today') return inRange(targetDate, startOfDay(now), endOfDay(now));
   if (invoicePeriodFilter === 'week') return inRange(targetDate, startOfWeek(now), endOfWeek(now));
   if (invoicePeriodFilter === 'month') return inRange(targetDate, startOfMonth(now), endOfMonth(now));
   if (invoicePeriodFilter === 'year') return inRange(targetDate, startOfYear(now), endOfYear(now));
@@ -3309,7 +3311,9 @@ function updateInvoiceFilters() {
   invoiceDateFrom = fromEl?.value || '';
   invoiceDateTo = toEl?.value || '';
   if (summaryEl) {
-    const label = invoicePeriodFilter === 'week'
+    const label = invoicePeriodFilter === 'today'
+      ? `Showing today's ${invoiceDateBasisLabel()}`
+      : invoicePeriodFilter === 'week'
       ? `Showing this week's ${invoiceDateBasisLabel()}`
       : invoicePeriodFilter === 'month'
         ? `Showing this month's ${invoiceDateBasisLabel()}`
@@ -6139,6 +6143,14 @@ function renderInvoices() {
 
   const table = document.getElementById('invoice-table');
   if (!table) return;
+  const emptyMsg = invoiceSearchQuery
+    ? 'No invoices match your search.'
+    : invoicePeriodFilter === 'today' ? 'No invoices for today yet.'
+    : invoicePeriodFilter === 'week' ? 'No invoices this week.'
+    : invoicePeriodFilter === 'month' ? 'No invoices this month.'
+    : invoicePeriodFilter === 'year' ? 'No invoices this year.'
+    : invoicePeriodFilter === 'custom' ? 'No invoices in this date range.'
+    : 'No invoices yet.';
   table.innerHTML = filteredInvoices.length ? filteredInvoices.map((invoice) => `
     <tr class="${invoiceOutstandingAmount(invoice) > 0 ? 'inv-owing' : ''}">
       ${(() => {
@@ -6154,11 +6166,8 @@ function renderInvoices() {
       </td>
       <td data-label="Issued">${escapeHtml(formatShortDate(invoice.issueDate))}</td>
       <td data-label="Due">${escapeHtml(formatShortDate(invoice.dueDate))}</td>
-      <td data-label="Items">
-        <div>${escapeHtml(invoiceLineSummary(invoice))}</div>
-        <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(Array.isArray(invoice.lineItems) ? `${invoice.lineItems.length} item${invoice.lineItems.length === 1 ? '' : 's'}` : '0 items')}</div>
-      </td>
-      <td data-label="Amount" style="color:var(--wave);font-weight:500;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">Collected ${moneyLabel(invoiceCollectedAmount(invoice))} • Remaining ${moneyLabel(invoiceOutstandingAmount(invoice))}</div></td>
+      <td data-label="Items">${escapeHtml(invoiceLineSummary(invoice))}</td>
+      <td data-label="Amount" style="font-weight:600;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;margin-top:0.2rem;">${invoiceOutstandingAmount(invoice) > 0 ? `<span style="color:var(--amber);">${moneyLabel(invoiceOutstandingAmount(invoice))} due</span>` : '<span style="color:var(--green);">Paid in full</span>'}</div></td>
       <td data-label="Status">${invoiceStatusBadge(invoice.status)}</td>
       <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" onclick="markInvoicePaid(${Number(invoice.id)})">💵 Mark Paid</button>` : ''}
@@ -6168,7 +6177,7 @@ function renderInvoices() {
       `;
       })()}
     </tr>
-  `).join('') : '<tr><td colspan="8"><div class="empty"><div class="icon">🧾</div><p>No invoices match this search yet.</p></div></td></tr>';
+  `).join('') : `<tr><td colspan="8"><div class="empty"><div class="icon">🧾</div><p>${escapeHtml(emptyMsg)}</p></div></td></tr>`;
 }
 
 // ── CRM ──
