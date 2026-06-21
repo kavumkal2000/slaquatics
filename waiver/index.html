@@ -477,10 +477,8 @@ async function lookupExistingRider(force = false) {
     if (!qs('date-of-birth').value) qs('date-of-birth').value = customer.dateOfBirth || '';
     if (!qs('initials').value.trim()) qs('initials').value = customer.waiverInitials || '';
     if (!qs('signature').value.trim()) qs('signature').value = customer.waiverSignature || customer.name || '';
-    if (customer.waiverOnFile) {
-      qs('accepted-agreement').checked = true;
-      qs('verified').checked = Boolean(customer.waiverVerified);
-    }
+    // Never auto-accept the waiver from a returning-customer match — agreement and
+    // verification must be an affirmative act by the person signing right now.
   } catch (error) {
     console.warn('Waiver lookup skipped:', error);
   }
@@ -501,10 +499,23 @@ function buildPayload() {
   };
 }
 
+let waiverSubmitting = false;
 async function submitWaiver(event) {
   event.preventDefault();
+  // preventDefault() skips native validation, so enforce the required fields
+  // (including the agreement + verification checkboxes) before we POST anything.
+  const form = qs('waiver-form');
+  if (form && typeof form.checkValidity === 'function' && !form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
+  if (waiverSubmitting) return;
+  waiverSubmitting = true;
+  const submitBtn = event.submitter || (form && form.querySelector('[type="submit"]'));
+  if (submitBtn) submitBtn.disabled = true;
   const status = qs('waiver-status');
   const payload = buildPayload();
+  let succeeded = false;
 
   status.textContent = 'Saving your waiver...';
   status.classList.remove('success');
@@ -523,6 +534,7 @@ async function submitWaiver(event) {
       throw new Error(body.error || 'We could not save your waiver right now.');
     }
 
+    succeeded = true;
     status.textContent = 'Waiver saved successfully.';
     status.classList.add('success');
     qs('success-card').classList.add('show');
@@ -530,6 +542,9 @@ async function submitWaiver(event) {
   } catch (error) {
     status.textContent = error.message || 'We could not save your waiver right now.';
     status.classList.remove('success');
+  } finally {
+    waiverSubmitting = false;
+    if (submitBtn && !succeeded) submitBtn.disabled = false;
   }
 }
 

@@ -7222,6 +7222,10 @@ async function askForReview(bookingId) {
     }
   }
   if (!request) { showToast('⚠️ Could not prepare the review request'); return; }
+  if (String(request.status || '').toLowerCase() === 'reviewed') {
+    showToast('✓ This customer already left a review');
+    return;
+  }
   const contact = resolveReviewRequestContact(request);
   const canText = Boolean(integrations.smsConfigured && contact.phone);
   const canEmail = Boolean(integrations.emailConfigured && contact.email);

@@ -487,7 +487,9 @@ function normalizeOpsRole(role = '') {
   if (normalized === 'developer') return 'developer';
   if (normalized === 'crew') return 'crew';
   if (normalized === 'employee') return 'employee';
-  return 'owner';
+  if (normalized === 'owner') return 'owner';
+  // Unknown/garbage role -> least privilege (fail closed, never silently to owner).
+  return 'crew';
 }
 
 // Single source of truth for ops accounts (one row per role). Each resolves a
