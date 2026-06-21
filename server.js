@@ -1681,10 +1681,22 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
   const syncedProcessingFee = bookingProcessingFeeAmountValue(booking);
   const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
   const hasManualOverride = bookingInvoiceHasManualOverride(existingInvoice, booking);
-  const rentalTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : syncedRentalTotal;
-  const processingFee = hasManualOverride ? Number(existingInvoice?.taxAmount || 0) : syncedProcessingFee;
-  const total = hasManualOverride ? effectiveInvoiceTotalForBooking(existingInvoice, booking) : syncedTotal;
-  const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
+  let rentalTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : syncedRentalTotal;
+  let processingFee = hasManualOverride ? Number(existingInvoice?.taxAmount || 0) : syncedProcessingFee;
+  let total = hasManualOverride ? effectiveInvoiceTotalForBooking(existingInvoice, booking) : syncedTotal;
+  let collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
+  // No-show / cancelled: the rental didn't happen, so the invoice collapses to just
+  // the deposit the owner kept (default) — or $0 if it was refunded. This keeps the
+  // kept deposit counted as revenue and stops a phantom full-rental balance showing
+  // as still owed. (A manual invoice override is left untouched.)
+  const bookingStatusForInvoice = normalizeBookingStatus(booking.status);
+  if (!hasManualOverride && (bookingStatusForInvoice === 'noshow' || bookingStatusForInvoice === 'cancelled')) {
+    const keptDeposit = booking.depositRefunded ? 0 : bookingDepositAmountValue(booking);
+    rentalTotal = keptDeposit;
+    processingFee = 0;
+    total = keptDeposit;
+    collected = Math.min(collected, keptDeposit);
+  }
   const defaultInvoiceName = `${booking.craftLabel || CRAFT_LABELS[normalizeCraftKey(booking.craftKey || booking.craft)] || 'Rental'} booking`;
   const defaultLineItems = [
     {

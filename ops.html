@@ -1285,6 +1285,13 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
+        <div class="form-group money-hide">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-weight:400;font-size:0.86rem;">
+            <input type="checkbox" id="b-deposit-refunded" style="width:16px;height:16px;accent-color:var(--gold);">
+            Deposit refunded
+          </label>
+          <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem;">For no-shows/cancels: leave unchecked if you kept the $50, check if you refunded it.</div>
+        </div>
         <div class="form-group money-hide"><label>Amount</label><input type="number" id="b-amount" min="0" step="0.01" placeholder="0.00" oninput="handleBookingAmountInput()"></div>
         <hr class="form-divider money-hide">
         <div class="price-preview money-hide">
@@ -3707,8 +3714,21 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
   const syncedProcessingFee = bookingProcessingFeeValue(booking);
   const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
   const hasManualOverride = bookingInvoiceHasManualOverrideLocally(existingInvoice, booking);
-  const total = hasManualOverride ? effectiveInvoiceTotalForBookingLocally(existingInvoice, booking) : syncedTotal;
-  const collected = collectedAmountForLinkedBookingInvoice(existingInvoice, booking);
+  let total = hasManualOverride ? effectiveInvoiceTotalForBookingLocally(existingInvoice, booking) : syncedTotal;
+  let collected = collectedAmountForLinkedBookingInvoice(existingInvoice, booking);
+  // No-show / cancelled: collapse to just the deposit kept (or $0 if refunded) so a
+  // phantom full-rental balance doesn't show as still owed and the kept deposit
+  // stays counted. Mirrors the server's ensureBookingInvoice.
+  let effectiveRental = syncedRentalTotal;
+  let effectiveFee = syncedProcessingFee;
+  const bookingStatusForInvoice = normalizeBookingStatusValue(booking.status);
+  if (!hasManualOverride && (bookingStatusForInvoice === 'noshow' || bookingStatusForInvoice === 'cancelled')) {
+    const keptDeposit = booking.depositRefunded ? 0 : (Number(booking.depositAmount) || 50);
+    effectiveRental = keptDeposit;
+    effectiveFee = 0;
+    total = keptDeposit;
+    collected = Math.min(collected, keptDeposit);
+  }
   const defaultInvoiceName = `${bookingCraftLabel(booking)} booking`;
   const defaultLineItems = [{
     name: `${bookingCraftLabel(booking)} • ${bookingDurationLabel(booking) || 'Custom duration'}`,
@@ -3749,9 +3769,9 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
   invoice.customerEmail = String(booking.email || invoice.customerEmail || '').trim();
   invoice.issueDate = issueDate;
   invoice.dueDate = dueDate;
-  invoice.subTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : syncedRentalTotal;
+  invoice.subTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : effectiveRental;
   invoice.discountAmount = 0;
-  invoice.taxAmount = hasManualOverride ? Number(existingInvoice?.taxAmount || 0) : syncedProcessingFee;
+  invoice.taxAmount = hasManualOverride ? Number(existingInvoice?.taxAmount || 0) : effectiveFee;
   invoice.total = total;
   invoice.paidAmount = Number(collected.toFixed(2));
   invoice.balanceDue = Number(Math.max(total - collected, 0).toFixed(2));
@@ -4831,6 +4851,7 @@ async function saveBooking() {
   bookingRecord.date = document.getElementById('b-date').value || 'TBD';
   bookingRecord.time = document.getElementById('b-time').value || '10:00';
   bookingRecord.status = status;
+  bookingRecord.depositRefunded = Boolean(document.getElementById('b-deposit-refunded')?.checked);
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
   bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
   bookingRecord.karaoke = document.getElementById('b-karaoke')?.value === 'yes';
@@ -4983,9 +5004,14 @@ function renderTodayRunSheet() {
   if (!host) return;
   const list = todaysRunSheetBookings();
   const dateLabel = new Date().toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'});
-  const toCollect = list.filter((b) => !bookingIsPaid(b)).reduce((sum, b) => sum + bookingTotalValue(b), 0);
+  const todayInvoices = list.map((b) => linkedInvoiceForBookingRecord(b)).filter(Boolean);
+  const madeToday = todayInvoices.reduce((sum, inv) => sum + invoiceCollectedAmount(inv), 0);
+  const toCollect = todayInvoices.reduce((sum, inv) => sum + invoiceOutstandingAmount(inv), 0);
   const subParts = [`<strong>${list.length}</strong> ${list.length === 1 ? 'rental' : 'rentals'}`];
-  if (toCollect > 0 && !hideMoneyForRole()) subParts.push(`<strong>${moneyLabel(toCollect)}</strong> to collect`);
+  if (!hideMoneyForRole()) {
+    subParts.push(`<strong style="color:var(--green);">${moneyLabel(madeToday)}</strong> made today`);
+    if (toCollect > 0) subParts.push(`<strong>${moneyLabel(toCollect)}</strong> to collect`);
+  }
   host.innerHTML = `
     <div class="runsheet-head">
       <h2>Today · ${escapeHtml(dateLabel)}</h2>
@@ -5380,6 +5406,7 @@ function resetBookingForm(defaultDate = '') {
   document.getElementById('b-status').value = 'pending';
   document.getElementById('b-amount').value = '';
   document.getElementById('b-notes').value = '';
+  if (document.getElementById('b-deposit-refunded')) document.getElementById('b-deposit-refunded').checked = false;
   document.getElementById('booking-modal-title').textContent = 'New Booking';
   document.getElementById('booking-save-button').textContent = 'Confirm Booking';
   const hintEl = document.getElementById('booking-customer-hint');
@@ -5407,6 +5434,7 @@ function openBookingModal(bookingId = null, defaultDate = '') {
     if (document.getElementById('b-karaoke')) document.getElementById('b-karaoke').value = booking.karaoke ? 'yes' : 'no';
     if (document.getElementById('b-tube')) document.getElementById('b-tube').value = booking.tube ? 'yes' : 'no';
     document.getElementById('b-status').value = normalizeBookingStatusValue(booking.status) || 'pending';
+    if (document.getElementById('b-deposit-refunded')) document.getElementById('b-deposit-refunded').checked = Boolean(booking.depositRefunded);
     document.getElementById('b-amount').value = Number(booking.total || 0) > 0 ? Number(booking.total).toFixed(2) : '';
     document.getElementById('b-notes').value = booking.notes || '';
     document.getElementById('booking-modal-title').textContent = 'Edit Booking';
