@@ -5591,10 +5591,21 @@ function renderBookingCalendar() {
 
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
-  const visibleBookings = upcomingScheduledBookings().filter((booking) => bookingMatchesPeriod(booking));
+  // "All upcoming" stays future-only; a specific period (today/week/month/custom)
+  // shows the WHOLE period including bookings earlier in the day, so "Today" is the
+  // full day's schedule rather than just what's left of it.
+  const baseBookings = bookingPeriodFilter === 'all'
+    ? upcomingScheduledBookings()
+    : scheduledBookings().slice().sort((left, right) => bookingScheduleSortKey(left).localeCompare(bookingScheduleSortKey(right)));
+  const visibleBookings = baseBookings.filter((booking) => bookingMatchesPeriod(booking));
   const list = currentFilter==='all'
     ? visibleBookings
     : visibleBookings.filter((booking) => normalizeBookingStatusValue(booking.status) === normalizeBookingStatusValue(currentFilter));
+  const statusLabel = currentFilter === 'all'
+    ? 'upcoming'
+    : ({ confirmed: 'confirmed', pending: 'pending', completed: 'completed', noshow: 'no-show' }[normalizeBookingStatusValue(currentFilter)] || 'matching');
+  const periodLabel = { today: ' for today', week: ' this week', month: ' this month', custom: ' in this range' }[bookingPeriodFilter] || '';
+  const emptyMsg = `No ${statusLabel} bookings${periodLabel} yet.`;
   document.getElementById('bookings-table').innerHTML = list.length ? list.map((b) => {
     const paid = bookingIsPaid(b);
     const normalizedStatus = normalizeBookingStatusValue(b.status);
@@ -5618,7 +5629,7 @@ function renderBookings(filter) {
         ${!paid?`<button class="btn btn-ghost btn-sm" onclick="confirmDeposit(${b.id})">💰 Dep</button>`:''}
       </td>
     </tr>`;
-  }).join('') : '<tr><td colspan="9"><div class="empty"><div class="icon">📅</div><p>No paid bookings match this filter yet.</p></div></td></tr>';
+  }).join('') : `<tr><td colspan="9"><div class="empty"><div class="icon">📅</div><p>${escapeHtml(emptyMsg)}</p></div></td></tr>`;
   renderBookingCalendar();
 }
 
