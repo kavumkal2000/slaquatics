@@ -463,7 +463,7 @@ function authPermissionsForRole(role = 'owner') {
     canAccessBusinessData: role !== 'crew',
     canAccessBookingsOnly: role === 'employee',
     canAccessCrewOnly: role === 'crew',
-    canAccessSystem: role === 'developer',
+    canAccessSystem: role === 'developer' || role === 'owner',
     canAccessWebsiteDevelopment: role === 'developer',
     hideMoney: role === 'employee'
   };

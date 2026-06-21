@@ -1187,8 +1187,8 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
   </div>
   <div class="compose-grid">
     <div class="list-card">
-      <h3>Developer access</h3>
-      <p>This screen stays visible only to the developer login. Owner and employee logins keep business access without website-development controls.</p>
+      <h3>System access</h3>
+      <p>Visible to the owner and developer logins for server health and configuration. The employee login keeps business access without these controls.</p>
       <div class="list-stack" id="system-access-list" style="margin-top:1rem;"></div>
     </div>
     <div class="list-card">
@@ -7923,8 +7923,8 @@ function formatUptime(seconds) {
 async function loadSystemHealth() {
   const host = document.getElementById('system-security-list');
   if (!host) return;
-  if ((currentSession?.user?.role) !== 'developer') {
-    host.innerHTML = `<div class="list-row"><div class="list-row-main"><div class="sub">Available to the developer login only.</div></div></div>`;
+  if (!currentPermissions().canAccessSystem) {
+    host.innerHTML = `<div class="list-row"><div class="list-row-main"><div class="sub">Available to the owner and developer logins only.</div></div></div>`;
     return;
   }
   try {
