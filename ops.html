@@ -4956,12 +4956,13 @@ async function saveBooking() {
 // ── TODAY RUN-SHEET (mobile-first day-of workflow) ──
 function todaysRunSheetBookings() {
   const iso = today();
+  // Show EVERYTHING happening today — including unfinished (draft) and unpaid
+  // bookings — so a real booking can never be invisible just because the deposit
+  // or waiver wasn't completed. Only truly-dead statuses are hidden.
+  const hiddenStatuses = ['cancelled', 'canceled', 'deleted', 'void', 'expired', 'noshow', 'no-show'];
   return bookings
     .filter((b) => b && b.date === iso)
-    .filter((b) => {
-      const s = normalizeBookingStatusValue(b.status);
-      return !s.includes('cancel') && s !== 'deleted' && !bookingIsArchived(b);
-    })
+    .filter((b) => !hiddenStatuses.includes(normalizeBookingStatusValue(b.status)))
     .sort((a, b) => bookingTimeValue(a.time).localeCompare(bookingTimeValue(b.time)));
 }
 
@@ -5619,12 +5620,18 @@ function renderBookingCalendar() {
 
 function renderBookings(filter) {
   if(filter) currentFilter = filter;
-  // "All upcoming" stays future-only; a specific period (today/week/month/custom)
-  // shows the WHOLE period including bookings earlier in the day, so "Today" is the
-  // full day's schedule rather than just what's left of it.
+  // Show ALL real bookings — paid, unpaid, and unfinished (draft) — not just paid
+  // ones, so a booking can never be invisible because its deposit or waiver wasn't
+  // completed. Only dead statuses are hidden. This also makes the No-Shows tab work.
+  // "All upcoming" stays future-only; a specific period shows the whole period
+  // (including earlier today and past no-shows).
+  const deadStatuses = ['cancelled', 'canceled', 'deleted', 'void', 'expired'];
+  const allReal = bookings
+    .filter((b) => b && parseIsoDate(b.date) && !deadStatuses.includes(normalizeBookingStatusValue(b.status)))
+    .sort((left, right) => bookingScheduleSortKey(left).localeCompare(bookingScheduleSortKey(right)));
   const baseBookings = bookingPeriodFilter === 'all'
-    ? upcomingScheduledBookings()
-    : scheduledBookings().slice().sort((left, right) => bookingScheduleSortKey(left).localeCompare(bookingScheduleSortKey(right)));
+    ? allReal.filter((b) => { const st = bookingStartDateTime(b); return st && st >= new Date(); })
+    : allReal;
   const visibleBookings = baseBookings.filter((booking) => bookingMatchesPeriod(booking));
   const list = currentFilter==='all'
     ? visibleBookings
