@@ -529,9 +529,19 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000;   // failures are counted within this wi
 const LOGIN_LOCK_MS = 15 * 60 * 1000;     // lockout duration once the limit trips
 const loginAttempts = new Map();          // key -> { count, firstAt, lockedUntil }
 
+// When true, we sit behind a hosting proxy (Render) that appends the real client IP
+// as the RIGHTMOST X-Forwarded-For entry. A client can forge entries to the left of
+// it, but not that rightmost one. Defaults on in production; override with TRUST_PROXY.
+const TRUST_PROXY = process.env.TRUST_PROXY !== undefined
+  ? /^(true|1|yes)$/i.test(process.env.TRUST_PROXY)
+  : IS_PRODUCTION;
 function clientIpFor(request) {
-  const forwarded = String(request.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return forwarded || request.socket?.remoteAddress || 'unknown';
+  const chain = String(request.headers['x-forwarded-for'] || '')
+    .split(',').map((part) => part.trim()).filter(Boolean);
+  // Trust ONLY the proxy-appended rightmost entry (unspoofable). With no trusted
+  // proxy, use the socket address so a client-sent header can't poison the key.
+  if (TRUST_PROXY && chain.length) return chain[chain.length - 1];
+  return request.socket?.remoteAddress || 'unknown';
 }
 function loginRateKey(request, username = '') {
   return `${clientIpFor(request)}|${normalizeUsername(username)}`;

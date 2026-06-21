@@ -45,6 +45,8 @@ services:
         generateValue: true
       - key: REQUIRE_SERVER_STORE
         value: true
+      - key: TRUST_PROXY
+        value: true
       - key: PUBLIC_SITE_URL
         sync: false
       - key: STRIPE_SECRET_KEY
