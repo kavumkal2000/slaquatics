@@ -35,8 +35,8 @@
         {
           "@type": "OpeningHoursSpecification",
           "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-          "opens": "08:30",
-          "closes": "20:30"
+          "opens": "10:00",
+          "closes": "20:00"
         }
       ],
       "aggregateRating": {
@@ -1309,11 +1309,11 @@ h1 span { color: var(--gold); }
                 <input type="checkbox" id="addon-drone" style="width:18px;height:18px;accent-color:var(--gold);">
                 <span style="flex:1;">🚁 Aerial drone video</span><strong style="color:var(--gold);">+$50</strong>
               </label>
-              <label style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.08);">
+              <label id="addon-karaoke-row" style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.08);">
                 <input type="checkbox" id="addon-karaoke" style="width:18px;height:18px;accent-color:var(--gold);">
                 <span style="flex:1;">🎤 Karaoke setup</span><strong style="color:var(--gold);">+$50</strong>
               </label>
-              <label style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;">
+              <label id="addon-tube-row" style="display:flex;align-items:center;gap:0.7rem;padding:0.6rem 0;cursor:pointer;">
                 <input type="checkbox" id="addon-tube" style="width:18px;height:18px;accent-color:var(--gold);">
                 <span style="flex:1;">🛟 Towable tube</span><strong style="color:var(--gold);">+$50</strong>
               </label>
@@ -1838,8 +1838,25 @@ function selectHolidayDuration(hours) {
   scheduleDraftSave();
 }
 
+function updateAddonVisibility() {
+  // Karaoke and the towable tube are boat-only add-ons; the drone works on both.
+  // For a jet-ski-only booking, hide (and clear) the boat add-ons.
+  const holiday = holidayForDate(selectedBookingDate);
+  const craft = holiday ? holiday.craft : (qs('craft').value || '');
+  const showBoatAddons = craftUsesBoat(craft);
+  ['addon-karaoke-row', 'addon-tube-row'].forEach((rowId) => {
+    const row = qs(rowId);
+    if (row) row.style.display = showBoatAddons ? '' : 'none';
+  });
+  if (!showBoatAddons) {
+    if (qs('addon-karaoke')) qs('addon-karaoke').checked = false;
+    if (qs('addon-tube')) qs('addon-tube').checked = false;
+  }
+}
+
 function updateSummary() {
   applyHolidayConstraints();
+  updateAddonVisibility();
   const payload = buildBookingPayloadBase();
   const craft = payload.craft;
   const duration = payload.duration;

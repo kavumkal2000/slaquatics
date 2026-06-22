@@ -6309,6 +6309,7 @@ function renderInvoices() {
       <td data-label="Status">${invoiceIsOverdue(invoice) ? '<span class="badge badge-noshow">Overdue</span>' : invoiceStatusBadge(invoice.status)}</td>
       <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
         ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" onclick="markInvoicePaid(${Number(invoice.id)})">💵 Mark Paid</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="requestReviewForInvoice(${Number(invoice.id)})">⭐ Review</button>
         <button class="btn btn-ghost btn-sm" onclick="openInvoiceModal(${Number(invoice.id)})">Edit</button>
         <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${Number(invoice.id)})">Delete</button>
       </td>
@@ -7258,6 +7259,24 @@ function syncReviewQueueForCompletedBookings() {
     reviewQueueSyncPending = false;
   });
 }
+// "⭐ Review" button on an invoice row — text/email the customer a review request.
+// Routes to the invoice's linked booking (or that customer's most recent booking)
+// so it reuses the same review-send flow, gating, and channel selection.
+function requestReviewForInvoice(invoiceId) {
+  const invoice = invoices.find((item) => Number(item.id) === Number(invoiceId));
+  if (!invoice) { showToast('⚠️ Invoice not found'); return; }
+  const booking = linkedBookingForInvoiceRecord(invoice);
+  if (booking && Number(booking.id)) { askForReview(Number(booking.id)); return; }
+  const custId = Number(invoice.customerId || 0);
+  const fallback = custId
+    ? bookings
+        .filter((b) => Number(b.customerId) === custId)
+        .sort((a, b) => bookingScheduleSortKey(b).localeCompare(bookingScheduleSortKey(a)))[0]
+    : null;
+  if (fallback && Number(fallback.id)) { askForReview(Number(fallback.id)); return; }
+  showToast('⚠️ No booking linked to this invoice to text a review to');
+}
+
 // Manually send a review request for one hand-picked booking (the "⭐ Review"
 // button). Unlike autoSendReviewForBooking, this ignores the auto-send toggle —
 // the owner is choosing to send — but still needs a review link + a usable channel.
