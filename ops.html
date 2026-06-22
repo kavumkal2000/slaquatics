@@ -808,6 +808,7 @@ tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
     <input type="date" id="invoice-date-from" onchange="updateInvoiceFilters()">
     <input type="date" id="invoice-date-to" onchange="updateInvoiceFilters()">
     <button class="btn btn-ghost btn-sm" onclick="exportInvoicesCsv()">⬇ Export CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="recalcAllInvoices()">↻ Recalculate</button>
     <div class="filter-summary" id="invoice-filter-summary">Showing this month's booked days</div>
   </div>
   <input type="file" id="invoice-import-input" accept=".csv,text/csv" style="display:none;" onchange="handleInvoiceImport(event)">
@@ -3321,6 +3322,22 @@ function filterInvoices(input) {
   invoiceSearchQuery = String(input?.value || '').trim().toLowerCase();
   renderInvoices();
 }
+async function recalcAllInvoices() {
+  if (!confirm('Recalculate every invoice from its booking? This re-applies the latest rules to all existing records: a completed rental counts as paid in full, and no-shows collapse to the $50 kept (or $0 refunded).')) return;
+  const prevInvoices = JSON.parse(JSON.stringify(invoices));
+  let count = 0;
+  bookings.forEach((b) => {
+    if (!b || normalizeBookingStatusValue(b.status) === 'draft') return;
+    if (ensureLinkedInvoiceForBookingLocally(b)) count += 1;
+  });
+  if (!(await persistStateChange())) { invoices = prevInvoices; showToast('⚠️ Could not save — try again'); return; }
+  renderInvoices();
+  if (typeof renderDashboardMetrics === 'function') renderDashboardMetrics();
+  if (typeof renderTodayRunSheet === 'function') renderTodayRunSheet();
+  if (typeof renderUpcoming === 'function') renderUpcoming();
+  if (document.getElementById('page-bookings')?.classList.contains('active')) renderBookings(currentFilter);
+  showToast(`✅ Recalculated ${count} invoice${count === 1 ? '' : 's'}`);
+}
 function exportInvoicesCsv() {
   const list = sortNewestFirst(filteredInvoicesList(), (invoice) => invoiceDateValue(invoice));
   if (!list.length) { if (typeof showToast === 'function') showToast('No invoices to export for this view'); return; }
@@ -3728,6 +3745,9 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
     effectiveFee = 0;
     total = keptDeposit;
     collected = Math.min(collected, keptDeposit);
+  } else if (!hasManualOverride && bookingStatusForInvoice === 'completed') {
+    // A completed rental is paid in full — count the whole amount as collected.
+    collected = total;
   }
   const defaultInvoiceName = `${bookingCraftLabel(booking)} booking`;
   const defaultLineItems = [{

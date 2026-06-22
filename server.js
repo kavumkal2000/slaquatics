@@ -1696,6 +1696,10 @@ function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString(
     processingFee = 0;
     total = keptDeposit;
     collected = Math.min(collected, keptDeposit);
+  } else if (!hasManualOverride && bookingStatusForInvoice === 'completed') {
+    // A completed rental is paid in full — count the whole amount as collected so it
+    // shows in revenue/"made today" and not as still-owed.
+    collected = total;
   }
   const defaultInvoiceName = `${booking.craftLabel || CRAFT_LABELS[normalizeCraftKey(booking.craftKey || booking.craft)] || 'Rental'} booking`;
   const defaultLineItems = [
