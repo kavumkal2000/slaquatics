@@ -3714,7 +3714,7 @@ function linkedBookingInvoiceStatus(existingInvoice = null, booking = {}) {
   return 'Open';
 }
 function ensureLinkedInvoiceForBookingLocally(booking = {}) {
-  if (!booking || !Number(booking.id || 0) || normalizeBookingStatusValue(booking.status) === 'draft') return null;
+  if (!booking || !Number(booking.id || 0) || normalizeBookingStatusValue(booking.status) === 'draft' || booking.invoiceSuppressed) return null;
   const existingInvoice = linkedInvoiceForBookingRecord(booking);
   const nowIso = new Date().toISOString();
   const existingIssueDate = String(existingInvoice?.issueDate || '').trim();
@@ -4167,12 +4167,18 @@ async function deleteInvoice(invoiceId) {
   if (!confirmed) return;
   const previousInvoices = JSON.parse(JSON.stringify(invoices));
   const previousCustomers = JSON.parse(JSON.stringify(customers));
+  const previousBookings = JSON.parse(JSON.stringify(bookings));
   const shouldCloseEditor = editingInvoiceId && Number(editingInvoiceId) === Number(invoiceId);
   invoices = invoices.filter((item) => Number(item.id) !== Number(invoiceId));
+  // If this invoice was auto-generated from a booking, mark the booking so the
+  // server/app won't immediately recreate the invoice (which made delete "not stick").
+  const linkedBooking = linkedBookingForInvoiceRecord(invoice);
+  if (linkedBooking) linkedBooking.invoiceSuppressed = true;
   if (linkedCustomer) syncCustomerRollup(linkedCustomer);
   if (!(await persistStateChange())) {
     invoices = previousInvoices;
     customers = previousCustomers;
+    bookings = previousBookings;
     return;
   }
   if (shouldCloseEditor) {
@@ -4872,6 +4878,7 @@ async function saveBooking() {
   bookingRecord.time = document.getElementById('b-time').value || '10:00';
   bookingRecord.status = status;
   bookingRecord.depositRefunded = Boolean(document.getElementById('b-deposit-refunded')?.checked);
+  bookingRecord.invoiceSuppressed = false;
   bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
   bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
   bookingRecord.karaoke = document.getElementById('b-karaoke')?.value === 'yes';

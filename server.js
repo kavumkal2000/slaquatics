@@ -1667,7 +1667,9 @@ function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
 }
 
 function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString()) {
-  if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft') return null;
+  // invoiceSuppressed: the owner deleted this booking's invoice on purpose — don't
+  // auto-recreate it (re-saving the booking clears the flag and brings it back).
+  if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft' || booking.invoiceSuppressed) return null;
   const existingInvoice = findInvoiceForBooking(state, booking);
   const existingIssueDate = String(existingInvoice?.issueDate || '').trim();
   const issueDate = existingIssueDate || bookingInvoiceDate(booking, now);
