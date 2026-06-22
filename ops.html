@@ -3745,9 +3745,6 @@ function ensureLinkedInvoiceForBookingLocally(booking = {}) {
     effectiveFee = 0;
     total = keptDeposit;
     collected = Math.min(collected, keptDeposit);
-  } else if (!hasManualOverride && bookingStatusForInvoice === 'completed') {
-    // A completed rental is paid in full — count the whole amount as collected.
-    collected = total;
   }
   const defaultInvoiceName = `${bookingCraftLabel(booking)} booking`;
   const defaultLineItems = [{
