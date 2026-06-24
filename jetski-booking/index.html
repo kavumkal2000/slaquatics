@@ -920,10 +920,37 @@ h1 span { color: var(--gold); }
   line-height: 1.6;
 }
 .holiday-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+.holiday-durations {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
-  margin-top: 16px;
+}
+.holiday-crafts {
+  display: flex;
+  gap: 8px;
+}
+.holiday-craft {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(11, 28, 48, 0.16);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink, #0b1c30);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.holiday-craft:hover { border-color: rgba(245, 166, 35, 0.5); }
+.holiday-craft.active {
+  border-color: var(--gold);
+  background: rgba(245, 166, 35, 0.14);
+  color: var(--gold);
 }
 .holiday-opt {
   display: flex;
@@ -1382,14 +1409,31 @@ const CRAFT_LABELS = {
 const HOLIDAY_SPECIALS = {
   '2026-07-04': {
     label: 'July 4th Special',
-    note: 'Holiday special: we’re only running 2 jet skis on the 4th — pick a 4-hour or 8-hour block below.',
-    craft: 'jetski2',
-    craftLabel: '2 Yamaha Jet Skis',
-    durations: { 4: 900, 8: 1350 }
+    note: 'Holiday special: 2 jet skis or the boat only on the 4th — pick your ride and a 4 or 8 hour block.',
+    defaultCraft: 'jetski2',
+    crafts: {
+      jetski2:   { label: '2 Jet Skis', durations: { 4: 900, 8: 1350 } },
+      partyboat: { label: 'Boat',       durations: { 4: 1000, 8: 2000 } }
+    }
   }
 };
 function holidayForDate(iso) {
   return HOLIDAY_SPECIALS[String(iso || '').trim()] || null;
+}
+// Resolve which holiday craft is active: a previously chosen one, else the craft the
+// customer arrived with (if the holiday offers it), else the default.
+function resolveHolidayCraft(holiday) {
+  if (!holiday) return '';
+  const keys = Object.keys(holiday.crafts);
+  if (!keys.includes(holidayCraft)) {
+    const fromSelect = qs('craft')?.value;
+    holidayCraft = keys.includes(fromSelect) ? fromSelect : (holiday.defaultCraft || keys[0]);
+  }
+  return holidayCraft;
+}
+function holidayDurationsFor(holiday) {
+  const craft = resolveHolidayCraft(holiday);
+  return (holiday && holiday.crafts[craft]) ? holiday.crafts[craft].durations : {};
 }
 
 const TYPE_TO_CRAFTS = {
@@ -1410,6 +1454,7 @@ let currentType = 'jetski';
 let calendarMonthCursor = null;
 let selectedBookingDate = '';
 let holidayDuration = 4;
+let holidayCraft = '';
 let matchedCustomer = null;
 let lastLookupKey = '';
 let bookingTouched = false;
@@ -1533,13 +1578,13 @@ function getCraftLabelForType(type) {
 
 function buildBookingPayloadBase() {
   const holiday = holidayForDate(selectedBookingDate);
-  const craft = holiday ? holiday.craft : qs('craft').value;
+  const craft = holiday ? resolveHolidayCraft(holiday) : qs('craft').value;
   const duration = holiday ? holidayDuration : Number(qs('duration').value || 0);
   const drone = qs('addon-drone')?.checked || false;
   const karaoke = qs('addon-karaoke')?.checked || false;
   const tube = qs('addon-tube')?.checked || false;
   const addonsTotal = (drone ? 50 : 0) + (karaoke ? 50 : 0) + (tube ? 50 : 0);
-  const baseTotal = holiday ? (holiday.durations[duration] || 0) : (PRICING[craft]?.[duration] || 0);
+  const baseTotal = holiday ? Number(holidayDurationsFor(holiday)[duration] || 0) : (PRICING[craft]?.[duration] || 0);
   const total = baseTotal + addonsTotal;
   return {
     type: currentType,
@@ -1802,7 +1847,8 @@ function applyHolidayConstraints() {
     if (card) card.hidden = true;
     return;
   }
-  const allowed = Object.keys(holiday.durations).map(Number);
+  resolveHolidayCraft(holiday);
+  const allowed = Object.keys(holidayDurationsFor(holiday)).map(Number);
   if (!allowed.includes(holidayDuration)) {
     const locked = Number(qs('duration').value || 0);
     holidayDuration = allowed.includes(locked) ? locked : allowed[0];
@@ -1817,11 +1863,21 @@ function renderHolidayCard(holiday) {
   const title = qs('holiday-title');
   const note = qs('holiday-note');
   const opts = qs('holiday-options');
+  const activeCraft = resolveHolidayCraft(holiday);
   if (title) title.textContent = holiday.label;
   if (note) note.textContent = holiday.note;
   if (!opts) return;
-  opts.innerHTML = Object.keys(holiday.durations).map(Number).sort((a, b) => a - b).map((hours) => {
-    const price = holiday.durations[hours];
+  const craftKeys = Object.keys(holiday.crafts);
+  // Craft toggle (only when the holiday offers more than one option).
+  const craftToggle = craftKeys.length > 1
+    ? `<div class="holiday-crafts">${craftKeys.map((key) => {
+        const active = key === activeCraft;
+        return `<button type="button" class="holiday-craft${active ? ' active' : ''}" onclick="selectHolidayCraft('${key}')" aria-pressed="${active}">${holiday.crafts[key].label}</button>`;
+      }).join('')}</div>`
+    : '';
+  const durations = holiday.crafts[activeCraft].durations;
+  const durationBtns = Object.keys(durations).map(Number).sort((a, b) => a - b).map((hours) => {
+    const price = durations[hours];
     const active = hours === holidayDuration;
     const label = hours === 8 ? 'Full Day · 8 hours' : `${hours} hours`;
     return `<button type="button" class="holiday-opt${active ? ' active' : ''}" onclick="selectHolidayDuration(${hours})" aria-pressed="${active}">
@@ -1829,6 +1885,18 @@ function renderHolidayCard(holiday) {
       <span class="holiday-opt-price">$${price.toLocaleString()}</span>
     </button>`;
   }).join('');
+  opts.innerHTML = `${craftToggle}<div class="holiday-durations">${durationBtns}</div>`;
+}
+
+function selectHolidayCraft(craftKey) {
+  holidayCraft = craftKey;
+  // Snap the duration to one this craft offers (4 and 8 for both, but be safe).
+  const holiday = holidayForDate(selectedBookingDate);
+  const allowed = Object.keys(holidayDurationsFor(holiday)).map(Number);
+  if (!allowed.includes(holidayDuration)) holidayDuration = allowed[0];
+  bookingTouched = true;
+  updateSummary();
+  scheduleDraftSave();
 }
 
 function selectHolidayDuration(hours) {
@@ -1842,7 +1910,7 @@ function updateAddonVisibility() {
   // Karaoke and the towable tube are boat-only add-ons; the drone works on both.
   // For a jet-ski-only booking, hide (and clear) the boat add-ons.
   const holiday = holidayForDate(selectedBookingDate);
-  const craft = holiday ? holiday.craft : (qs('craft').value || '');
+  const craft = holiday ? resolveHolidayCraft(holiday) : (qs('craft').value || '');
   const showBoatAddons = craftUsesBoat(craft);
   ['addon-karaoke-row', 'addon-tube-row'].forEach((rowId) => {
     const row = qs(rowId);
@@ -1869,7 +1937,7 @@ function updateSummary() {
   ].filter(Boolean);
   const addonsNote = selectedAddons.length ? ` Add-ons: ${selectedAddons.join(', ')} (+$50 each).` : '';
   const holiday = holidayForDate(selectedBookingDate);
-  const baseTotal = holiday ? (holiday.durations[duration] || 0) : (PRICING[craft]?.[duration] || 0);
+  const baseTotal = holiday ? Number(holidayDurationsFor(holiday)[duration] || 0) : (PRICING[craft]?.[duration] || 0);
   const selectedDateText = formatSelectedDate(selectedBookingDate);
   const selectedTime = formatTimeLabel(qs('time').value || '10:00');
 
@@ -1880,7 +1948,11 @@ function updateSummary() {
   qs('summary-time').textContent = selectedTime;
 
   if (holiday) {
-    qs('summary-note').textContent = `${holiday.label}: ${durationLabel} on 2 Yamaha jet skis, life jackets, full tanks, and the safety briefing included.${addonsNote}`;
+    const holidayCraftIsBoat = craftUsesBoat(craft);
+    const includes = holidayCraftIsBoat
+      ? 'the boat with captain, life jackets, and a full tank'
+      : '2 Yamaha jet skis, life jackets, full tanks, and the safety briefing';
+    qs('summary-note').textContent = `${holiday.label}: ${durationLabel} on ${includes} included.${addonsNote}`;
     qs('summary-rate-label').textContent = 'Holiday rate';
     qs('summary-rate').textContent = `$${baseTotal.toLocaleString()} flat`;
     qs('summary-value-label').textContent = 'Special';
@@ -2040,7 +2112,12 @@ function applyQueryDefaults() {
     const parsed = parseLocalIsoDate(date);
     if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
     const holiday = holidayForDate(date);
-    if (holiday && hours && holiday.durations[hours]) holidayDuration = hours;
+    if (holiday) {
+      const wantCraft = craft === 'boat' ? 'partyboat' : craft;
+      if (wantCraft && holiday.crafts[wantCraft]) holidayCraft = wantCraft;
+      const durs = holidayDurationsFor(holiday);
+      if (hours && durs[hours]) holidayDuration = hours;
+    }
   }
 
   const time = params.get('time');
@@ -2122,7 +2199,11 @@ function applyDraftBooking(booking) {
     const parsed = parseLocalIsoDate(booking.date);
     if (parsed) calendarMonthCursor = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
     const holiday = holidayForDate(booking.date);
-    if (holiday && holiday.durations[Number(booking.duration)]) holidayDuration = Number(booking.duration);
+    if (holiday) {
+      const bookedCraft = booking.craftKey === 'boat' ? 'partyboat' : booking.craftKey;
+      if (bookedCraft && holiday.crafts[bookedCraft]) holidayCraft = bookedCraft;
+      if (holidayDurationsFor(holiday)[Number(booking.duration)]) holidayDuration = Number(booking.duration);
+    }
   }
   if (booking.time) {
     qs('time').value = booking.time;

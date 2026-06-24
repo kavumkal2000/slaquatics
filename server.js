@@ -128,9 +128,10 @@ const PRICING_CENTS = {
 const HOLIDAY_PRICING_CENTS = {
   '2026-07-04': {
     label: 'July 4th Special',
-    unavailableMessage: 'July 4th is a special day — we’re only running 2 jet skis, as a 4-hour ($900) or 8-hour ($1,350) rental. Please choose 2 jet skis at 4 or 8 hours, or pick another date.',
+    unavailableMessage: 'July 4th is a special day — we’re running 2 jet skis (4hr $900 / 8hr $1,350) or the boat (4hr $1,000 / 8hr $2,000) only. Please choose 2 jet skis or the boat at 4 or 8 hours, or pick another date.',
     crafts: {
-      jetski2: { 4: 90000, 8: 135000 }
+      jetski2: { 4: 90000, 8: 135000 },
+      partyboat: { 4: 100000, 8: 200000 }
     }
   }
 };
