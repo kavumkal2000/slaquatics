@@ -4374,6 +4374,58 @@ async function handleApi(request, response, pathname) {
     }
   }
 
+  if (pathname === '/api/ops/reviews/send-batch' && request.method === 'POST') {
+    try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send review requests.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const reviewSettings = reviewSettingsForState(state);
+      if (!reviewSettings.googleUrl && !reviewSettings.facebookUrl) {
+        throw new Error('Review links are not configured yet.');
+      }
+      const rawRecipients = Array.isArray(body.recipients) ? body.recipients : [];
+      // De-dupe by normalized phone, keep the first name seen for each.
+      const seen = new Map();
+      for (const entry of rawRecipients) {
+        const phone = normalizePhone(entry && entry.phone);
+        if (!phone) continue;
+        if (!seen.has(phone)) {
+          seen.set(phone, String((entry && entry.name) || '').trim());
+        }
+      }
+      const recipients = Array.from(seen.entries()).map(([phone, name]) => ({ phone, name }));
+      if (!recipients.length) {
+        throw new Error('Add at least one valid phone number.');
+      }
+      if (recipients.length > 50) {
+        throw new Error('Please send to 50 numbers or fewer at a time.');
+      }
+      const results = [];
+      for (const recipient of recipients) {
+        const text = [
+          `Hey ${firstName(recipient.name || 'there')}! Thanks again for riding with Shoreline Aquatics.`,
+          'If you had a great time, we would really appreciate a quick review:',
+          reviewLinksText(state)
+        ].filter(Boolean).join('\n\n');
+        try {
+          await sendTwilioSms({ to: recipient.phone, body: text });
+          results.push({ phone: recipient.phone, name: recipient.name, ok: true });
+        } catch (error) {
+          results.push({ phone: recipient.phone, name: recipient.name, ok: false, error: error.message || 'Send failed.' });
+        }
+      }
+      const sent = results.filter((r) => r.ok).length;
+      sendJson(response, 200, { ok: true, sent, failed: results.length - sent, total: results.length, results });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send review requests.' });
+      return true;
+    }
+  }
+
   if (pathname === '/api/ops/social/publish' && request.method === 'POST') {
     try {
       if (!canManageMessagingOps(session)) {

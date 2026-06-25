@@ -1106,6 +1106,19 @@ Reply to this email or call/text (469) 693-7164 if you want us to hold a Memoria
       <button class="btn btn-primary btn-sm" onclick="saveReviewSettings()">Save review settings</button>
     </div>
   </div>
+  <div class="list-card" style="margin-bottom:1.5rem;">
+    <h3>Send review link to people</h3>
+    <p>Paste any phone numbers (past customers, friends, walk-ins) — one per line. Add a name first if you want the text personalized, e.g. <code>Mike, 469-555-1234</code>. Each person gets a text with your Google review link.</p>
+    <div class="form-group" style="margin-top:1rem;">
+      <label>Recipients — one per line (<code>Name, phone</code> or just a phone)</label>
+      <textarea id="review-blast-list" rows="6" placeholder="Mike, 469-555-1234&#10;214-555-9876&#10;Sarah, (469) 555-0001"></textarea>
+    </div>
+    <div class="compose-actions" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" id="review-blast-btn" onclick="sendReviewBlast()">Send review link</button>
+      <span id="review-blast-status" style="font-size:.85rem;color:var(--muted);"></span>
+    </div>
+    <div class="list-stack" id="review-blast-results" style="margin-top:1rem;"></div>
+  </div>
   <div class="compose-grid">
     <div class="list-card">
       <h3>Review drop queue</h3>
@@ -7275,6 +7288,73 @@ function requestReviewForInvoice(invoiceId) {
     : null;
   if (fallback && Number(fallback.id)) { askForReview(Number(fallback.id)); return; }
   showToast('⚠️ No booking linked to this invoice to text a review to');
+}
+
+// Parse the "Send review link to people" textarea into [{name, phone}].
+// Each line is either "Name, phone" (split on the LAST comma so names with
+// commas still work) or just a phone number.
+function parseReviewBlastLines(raw) {
+  const out = [];
+  String(raw || '').split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    let name = '';
+    let phone = trimmed;
+    const comma = trimmed.lastIndexOf(',');
+    if (comma >= 0) {
+      name = trimmed.slice(0, comma).trim();
+      phone = trimmed.slice(comma + 1).trim();
+    }
+    const digits = phone.replace(/[^\d]/g, '');
+    out.push({ name, phone, valid: digits.length >= 10 });
+  });
+  return out;
+}
+
+// Blast the review link to a hand-typed list of phone numbers (no invoice needed).
+async function sendReviewBlast() {
+  const raw = document.getElementById('review-blast-list')?.value || '';
+  const statusEl = document.getElementById('review-blast-status');
+  const resultsEl = document.getElementById('review-blast-results');
+  const btn = document.getElementById('review-blast-btn');
+  if (resultsEl) resultsEl.innerHTML = '';
+  const parsed = parseReviewBlastLines(raw);
+  const valid = parsed.filter((r) => r.valid);
+  const invalid = parsed.filter((r) => !r.valid);
+  if (!parsed.length) { showToast('⚠️ Paste at least one phone number'); return; }
+  if (!integrations.reviewLinksConfigured) {
+    showToast('⚠️ Add your Google review link in Reviews settings first');
+    return;
+  }
+  if (!integrations.smsConfigured) {
+    showToast('⚠️ Texts can’t send yet — add your Twilio keys on Render first');
+    if (statusEl) statusEl.textContent = 'SMS is not connected yet (System page shows the status).';
+    return;
+  }
+  if (!valid.length) { showToast('⚠️ No valid phone numbers found (need 10+ digits)'); return; }
+  if (!confirm(`Text the review link to ${valid.length} ${valid.length === 1 ? 'person' : 'people'}?`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+  if (statusEl) statusEl.textContent = 'Sending…';
+  try {
+    const data = await requestJson('/api/ops/reviews/send-batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipients: valid.map((r) => ({ name: r.name, phone: r.phone })) })
+    });
+    const results = Array.isArray(data.results) ? data.results : [];
+    if (statusEl) statusEl.textContent = `Sent ${data.sent || 0} of ${data.total || results.length}${data.failed ? ` · ${data.failed} failed` : ''}.`;
+    if (resultsEl) {
+      const rows = results.map((r) => `<div class="list-row"><span>${escapeHtml(r.name || r.phone)}</span><span style="color:${r.ok ? 'var(--green)' : 'var(--red)'};">${r.ok ? '✓ Sent' : '⚠️ ' + escapeHtml(r.error || 'Failed')}</span></div>`);
+      if (invalid.length) rows.push(`<div class="list-row"><span style="color:var(--muted);">${invalid.length} skipped (not a valid number)</span><span></span></div>`);
+      resultsEl.innerHTML = rows.join('');
+    }
+    if (data.sent) showToast(`⭐ Review link sent to ${data.sent}`);
+  } catch (error) {
+    if (statusEl) statusEl.textContent = '';
+    showToast(`⚠️ ${error.message || 'Could not send'}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send review link'; }
+  }
 }
 
 // Manually send a review request for one hand-picked booking (the "⭐ Review"
