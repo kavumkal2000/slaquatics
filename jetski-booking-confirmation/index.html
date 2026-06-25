@@ -488,7 +488,7 @@ function buildMessage(booking) {
     `Aerial drone coverage: ${booking.drone ? "Yes" : "No"}`,
     `Karaoke setup: ${booking.karaoke ? "Yes" : "No"}`,
     `Towable tube: ${booking.tube ? "Yes" : "No"}`,
-    `Meeting spot: ${booking.location || "Shoreline Aquatics launch - 965 Main St, Lake Dallas, TX"}`,
+    `Meeting spot: ${booking.location || "Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX"}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
     `Booking payment: ${booking.paymentStatus === "paid" || booking.deposit ? "$55 paid ($50 deposit + $5 processing fee)" : "$55 due today ($50 deposit + $5 processing fee)"}`,
     `Notes: ${booking.notes || "None"}`
@@ -530,7 +530,7 @@ function populateSummary(booking) {
       : 'Your Yamaha jet ski rental is ready for the contact, waiver, and checkout step.');
   setText("summary-date", formatDateLabel(booking.date));
   setText("summary-time", formatTimeLabel(booking.time));
-  setText("summary-location", booking.location || 'Shoreline Aquatics launch - 965 Main St, Lake Dallas, TX');
+  setText("summary-location", booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX');
   setText("summary-party", booking.partySize || '2');
 }
 
@@ -698,7 +698,7 @@ function createPayload(requireBase = true) {
     name: qs('name').value.trim(),
     phone: qs('phone').value.trim(),
     email: qs('email').value.trim(),
-    location: base?.location || 'Shoreline Aquatics launch - 965 Main St, Lake Dallas, TX',
+    location: base?.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX',
     contactMethod: base?.contactMethod || matchedCustomer?.contactMethod || 'text',
     partySize: qs('party-size').value,
     notes: qs('notes').value.trim(),
