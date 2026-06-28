@@ -2,7 +2,7 @@
   "name": "Shoreline Ops",
   "short_name": "SLA Ops",
   "description": "Private Shoreline Aquatics operations app for bookings, customers, invoices, waivers, and fleet control.",
-  "start_url": "/ops-login.html",
+  "start_url": "/ops-login",
   "scope": "/",
   "display": "standalone",
   "background_color": "#08111f",

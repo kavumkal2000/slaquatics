@@ -49,8 +49,8 @@ function createOpsLoginController(signal: AbortSignal) {
   const submit = byId<HTMLButtonElement>('submit-btn');
   const username = byId<HTMLInputElement>('username');
   const password = byId<HTMLInputElement>('password');
-  const opsAppUrl = createOpsUrl('ops.html');
-  const opsLoginUrl = createOpsUrl('ops-login.html');
+  const opsAppUrl = createOpsUrl('ops');
+  const opsLoginUrl = createOpsUrl('ops-login');
 
   if (window.location.protocol === 'file:') {
     window.location.replace(opsLoginUrl);
@@ -91,7 +91,7 @@ function createOpsLoginController(signal: AbortSignal) {
         signal
       });
       if (!response.ok) {
-        setStatus('This sign-in page becomes active after the private ops service is available.', 'error');
+        setStatus('This sign-in page becomes active after the private Cloudflare ops service is available.', 'error');
         if (submit) submit.disabled = true;
         return;
       }
@@ -102,7 +102,7 @@ function createOpsLoginController(signal: AbortSignal) {
       }
       setStatus('Private service ready. Sign in with your Shoreline ops login.', 'success');
     } catch {
-      setStatus('Could not reach the private ops service yet. Verify the Cloudflare deployment and environment bindings.', 'error');
+      setStatus('Could not reach the private ops service yet. Verify the local dev server, Cloudflare preview, and required environment bindings.', 'error');
       if (submit) submit.disabled = true;
     }
   };

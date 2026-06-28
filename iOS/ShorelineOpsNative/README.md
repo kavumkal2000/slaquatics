@@ -25,7 +25,7 @@ Open:
 
 ## Default live endpoint
 
-- `https://slaquatics.com/ops-login.html`
+- `https://slaquatics.com/ops-login`
 
 ## Notes
 

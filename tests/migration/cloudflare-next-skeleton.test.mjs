@@ -69,23 +69,23 @@ test('root layout provides required html and body tags', () => {
   assert.match(layout, /\{children\}/);
 });
 
-test('legacy ops aliases redirect to html page routes', async () => {
+test('legacy ops html URLs redirect to clean page routes', async () => {
   const { default: nextConfig } = await import(pathToFileURL('next.config.mjs'));
 
   assert.equal(typeof nextConfig.redirects, 'function');
 
   const redirects = await nextConfig.redirects();
 
-  assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops' || redirect.source === '/ops-login'), [
+  assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops.html' || redirect.source === '/ops-login.html'), [
     {
-      source: '/ops',
-      destination: '/ops.html',
-      permanent: false
+      source: '/ops.html',
+      destination: '/ops',
+      permanent: true
     },
     {
-      source: '/ops-login',
-      destination: '/ops-login.html',
-      permanent: false
+      source: '/ops-login.html',
+      destination: '/ops-login',
+      permanent: true
     }
   ]);
 });
@@ -136,11 +136,11 @@ test('iOS native wrapper uses canonical HTTPS ops host only', () => {
   const wrapper = readText('iOS/ShorelineOpsNative/ShorelineOpsNative/OpsWebView.swift');
   const readme = readText('iOS/ShorelineOpsNative/README.md');
 
-  assert.match(wrapper, /https:\/\/slaquatics\.com\/ops-login\.html/);
+  assert.match(wrapper, /https:\/\/slaquatics\.com\/ops-login/);
   assert.match(wrapper, /if scheme == "https"/);
   assert.doesNotMatch(wrapper, /shoreline-aquatics-ops\.onrender\.com/);
   assert.doesNotMatch(wrapper, /scheme == "http"/);
-  assert.match(readme, /https:\/\/slaquatics\.com\/ops-login\.html/);
+  assert.match(readme, /https:\/\/slaquatics\.com\/ops-login/);
 });
 
 test('GitHub Actions does not own Cloudflare Worker deploys', () => {
@@ -181,8 +181,8 @@ test('public route inventory is represented in the new app router', () => {
     'src/app/jet-ski-rental-denton/page.tsx',
     'src/app/jet-ski-rental-frisco/page.tsx',
     'src/app/jet-ski-rental-lewisville/page.tsx',
-    'src/app/ops-login.html/page.tsx',
-    'src/app/ops.html/page.tsx'
+    'src/app/ops-login/page.tsx',
+    'src/app/ops/page.tsx'
   ].forEach((file) => assert.ok(existsSync(file), `${file} should exist`));
 });
 
@@ -1016,8 +1016,8 @@ test('all migrated routes are composed from feature components, not LegacyHtml',
     'jetski-booking-confirmation',
     'privacy-policy',
     'waiver',
-    'ops-login.html',
-    'ops.html'
+    'ops-login',
+    'ops'
   ];
 
   for (const route of routes) {

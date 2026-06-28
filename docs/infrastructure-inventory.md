@@ -110,7 +110,7 @@ This document records the current cloud/service dependencies and the remaining m
 
 - Location: `iOS/ShorelineOpsNative`
 - Current role: SwiftUI `WKWebView` shell for the private ops app.
-- Current hardcoded start URL: `https://slaquatics.com/ops-login.html`.
+- Current hardcoded start URL: `https://slaquatics.com/ops-login`.
 - Allowed hosts: `slaquatics.com` and `www.slaquatics.com`.
 
 ## Hardcoded Render Hostname Usage

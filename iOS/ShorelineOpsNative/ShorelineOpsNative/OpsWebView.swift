@@ -5,7 +5,7 @@ import WebKit
 
 @MainActor
 final class OpsWebViewStore: ObservableObject {
-    let startURL = URL(string: "https://slaquatics.com/ops-login.html")!
+    let startURL = URL(string: "https://slaquatics.com/ops-login")!
     let allowedHosts: Set<String> = [
         "slaquatics.com",
         "www.slaquatics.com"

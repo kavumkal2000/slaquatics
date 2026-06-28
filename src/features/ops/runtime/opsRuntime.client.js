@@ -36,27 +36,27 @@ function runOpsRuntime() {
     emailConfigured: false,
     reviewLinksConfigured: false,
     reviewAutomationEnabled: false,
-    reviewGoogleUrl: window.location.origin,
-    reviewFacebookUrl: window.location.origin,
+    reviewGoogleUrl: '',
+    reviewFacebookUrl: '',
     reviewChannel: 'sms',
     socialConfigured: false,
     socialAutomationConfigured: false,
     socialPlatforms: []
   };
   let reviewSettings = {
-    googleUrl: window.location.origin,
-    facebookUrl: window.location.origin,
+    googleUrl: '',
+    facebookUrl: '',
     autoSend: false,
     channel: 'sms'
   };
-  const PRIVATE_OPS_URL = '/ops-login.html';
+  const PRIVATE_OPS_URL = '/ops-login';
   if (window.location.protocol === 'file:') {
     window.location.replace(PRIVATE_OPS_URL);
   }
   let currentSession = {
     available: false,
     authenticated: false,
-    storage: window.location.origin,
+    storage: '',
     user: null
   };
   
@@ -190,7 +190,7 @@ function runOpsRuntime() {
     const arrived = Boolean(b.checkedIn);
     const meta = [b.craftLabel, b.location].filter(Boolean).map(escapeHtml).join(' · ');
     return `
-      <div class="crew-card${done ? ' is-done' : window.location.origin}">
+      <div class="crew-card${done ? ' is-done' : ''}">
         <div class="crew-time">${escapeHtml(crewFormatTime(b.time))}</div>
         <div class="crew-info">
           <div class="crew-name">${escapeHtml(b.name || 'Guest')}</div>
@@ -198,8 +198,8 @@ function runOpsRuntime() {
           <div class="crew-status">${done ? '🏁 Done' : (arrived ? '✅ Checked in' : '⏳ Not arrived yet')}</div>
         </div>
         <div class="crew-actions">
-        <button class="crew-btn arrive${arrived ? ' on' : window.location.origin}" data-crew-action="arrived" data-booking-id="${Number(b.id)}">${arrived ? 'Undo' : 'Arrived'}</button>
-        <button class="crew-btn done${done ? ' on' : window.location.origin}" data-crew-action="done" data-booking-id="${Number(b.id)}"${done ? ' disabled' : window.location.origin}>Done</button>
+        <button class="crew-btn arrive${arrived ? ' on' : ''}" data-crew-action="arrived" data-booking-id="${Number(b.id)}">${arrived ? 'Undo' : 'Arrived'}</button>
+        <button class="crew-btn done${done ? ' on' : ''}" data-crew-action="done" data-booking-id="${Number(b.id)}"${done ? ' disabled' : ''}>Done</button>
         </div>
       </div>`;
   }
@@ -265,7 +265,7 @@ function runOpsRuntime() {
     const employee = Boolean(permissions.canAccessBookingsOnly);
     document.body.classList.toggle('hide-money', Boolean(permissions.hideMoney));
     document.querySelectorAll('[data-role="developer"]').forEach((element) => {
-      element.style.display = permissions.canAccessSystem ? window.location.origin : 'none';
+      element.style.display = permissions.canAccessSystem ? '' : 'none';
     });
     if (employee) {
       // Employee: a flat list of just the allowed pages (no section headers), money hidden.
@@ -274,7 +274,7 @@ function runOpsRuntime() {
         if (element.dataset.role === 'developer') { element.style.display = 'none'; return; }
         const page = element.dataset.page || '';
         const allowed = EMPLOYEE_PAGES.includes(page);
-        element.style.display = allowed ? window.location.origin : 'none';
+        element.style.display = allowed ? '' : 'none';
       });
       const activePage = document.querySelector('.page.active')?.id?.replace('page-', '');
       if (!EMPLOYEE_PAGES.includes(activePage)) {
@@ -289,7 +289,7 @@ function runOpsRuntime() {
     });
     document.querySelectorAll('.sidebar .nav-section').forEach((element) => {
       if (element.dataset.role === 'developer') {
-        element.style.display = permissions.canAccessSystem ? window.location.origin : 'none';
+        element.style.display = permissions.canAccessSystem ? '' : 'none';
         return;
       }
       element.style.display = '';
@@ -347,7 +347,7 @@ function runOpsRuntime() {
       ?.slice(name.length + 1) || '';
   }
   function persistTrustedDevice(device) {
-    const secure = window.location.protocol === 'https:' ? '; Secure' : window.location.origin;
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
     const encoded = encodeURIComponent(device.token);
     try {
       window.localStorage.setItem(TRUSTED_DEVICE_STORAGE_KEY, JSON.stringify(device));
@@ -376,7 +376,7 @@ function runOpsRuntime() {
       const device = {
         token: cookieToken,
         label: buildTrustedDeviceLabel(),
-        createdAt: window.location.origin
+        createdAt: ''
       };
       persistTrustedDevice(device);
       return device;
@@ -409,7 +409,7 @@ function runOpsRuntime() {
       ? await response.json().catch(() => ({}))
       : await response.text().catch(() => '');
     if (!response.ok) {
-      const message = typeof payload === 'object' && payload ? payload.error : window.location.origin;
+      const message = typeof payload === 'object' && payload ? payload.error : '';
       const error = new Error(message || `Request failed (${response.status})`);
       error.status = response.status;
       throw error;
@@ -501,7 +501,7 @@ function runOpsRuntime() {
       throw new Error('Private Shoreline storage is unavailable right now.');
     }
     if (!session.authenticated) {
-      window.location.href = '/ops-login.html';
+      window.location.href = '/ops-login';
       return false;
     }
     backendAvailable = true;
@@ -542,7 +542,7 @@ function runOpsRuntime() {
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
-      window.location.href = '/ops-login.html';
+      window.location.href = '/ops-login';
     }
   }
   // ── DATA ──
@@ -656,7 +656,7 @@ function runOpsRuntime() {
   const DEFAULT_ASSET_OPTIONS = ['Jet Ski 1', 'Jet Ski 2', 'Boat', 'Trailer'];
   
   function escapeHtml(value) {
-    return String(value ?? window.location.origin).replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   }
   function node(tagName, options = {}, children = []) {
     const element = document.createElement(tagName);
@@ -790,7 +790,7 @@ function runOpsRuntime() {
     const direct = normalizeCraftKey(booking.craftKey || booking.craft);
     if (direct && PRICING[direct]) return direct;
     const guessed = guessCraftFromText(booking.craftLabel || booking.invoiceName || booking.notes || booking.name || '');
-    return guessed && PRICING[guessed] ? guessed : window.location.origin;
+    return guessed && PRICING[guessed] ? guessed : '';
   }
   function hideMoneyForRole() {
     return document.body.classList.contains('hide-money');
@@ -1095,9 +1095,9 @@ function runOpsRuntime() {
     }
     const pct = Math.round((diff / Math.abs(previous)) * 100);
     const good = inverse ? diff <= 0 : diff >= 0;
-    el.className = 'delta ' + (diff === 0 ? window.location.origin : good ? 'up' : 'down');
+    el.className = 'delta ' + (diff === 0 ? '' : good ? 'up' : 'down');
     const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '·';
-    el.textContent = `${arrow} ${money ? moneyLabel(Math.abs(diff)) : Math.abs(diff)} (${pct >= 0 ? '+' : window.location.origin}${pct}%) vs last month`;
+    el.textContent = `${arrow} ${money ? moneyLabel(Math.abs(diff)) : Math.abs(diff)} (${pct >= 0 ? '+' : ''}${pct}%) vs last month`;
   }
   function renderReports() {
     const now = new Date();
@@ -1412,7 +1412,7 @@ function runOpsRuntime() {
     const headers = nonEmptyRows.shift().map((header) => String(header || '').trim());
     return {
       headers,
-      rows: nonEmptyRows.map((row) => Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? window.location.origin).trim()])))
+      rows: nonEmptyRows.map((row) => Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? '').trim()])))
     };
   }
   function detectImportType(headers) {
@@ -1597,10 +1597,10 @@ function runOpsRuntime() {
         customerName: rowValue(row, ['customer name']) || 'Unknown',
         customerEmail: rowValue(row, ['customer email', 'email']),
         customerPhone: rowValue(row, ['customer phone no', 'customer phone', 'phone']),
-        issueDate: issueDate === 'N/A' ? window.location.origin : issueDate,
+        issueDate: issueDate === 'N/A' ? '' : issueDate,
         dueDate: (() => {
           const value = isoDate(rowValue(row, ['due date']));
-          return value === 'N/A' ? window.location.origin : value;
+          return value === 'N/A' ? '' : value;
         })(),
         subTotal: parseMoney(rowValue(row, ['invoice sub total', 'invoice subtotal', 'sub total'])),
         discountAmount: parseMoney(rowValue(row, ['invoice discount amount', 'discount amount'])),
@@ -1758,7 +1758,7 @@ function runOpsRuntime() {
     if (typeof renderTodayRunSheet === 'function') renderTodayRunSheet();
     if (typeof renderUpcoming === 'function') renderUpcoming();
     if (document.getElementById('page-bookings')?.classList.contains('active')) renderBookings(currentFilter);
-    showToast(`✅ Recalculated ${count} invoice${count === 1 ? window.location.origin : 's'}`);
+    showToast(`✅ Recalculated ${count} invoice${count === 1 ? '' : 's'}`);
   }
   function exportInvoicesCsv() {
     const list = sortNewestFirst(filteredInvoicesList(), (invoice) => invoiceDateValue(invoice));
@@ -1796,7 +1796,7 @@ function runOpsRuntime() {
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    if (typeof showToast === 'function') showToast(`✅ Exported ${list.length} invoice${list.length === 1 ? window.location.origin : 's'}`);
+    if (typeof showToast === 'function') showToast(`✅ Exported ${list.length} invoice${list.length === 1 ? '' : 's'}`);
   }
   function formatFilterDateText(value = '') {
     return value ? formatShortDate(value) : '—';
@@ -1821,7 +1821,7 @@ function runOpsRuntime() {
       const statusSuffix = invoiceStatusFilter === 'open' ? ' · open balance'
         : invoiceStatusFilter === 'overdue' ? ' · overdue'
         : invoiceStatusFilter === 'paid' ? ' · paid'
-        : window.location.origin;
+        : '';
       const label = (invoicePeriodFilter === 'today'
         ? `Showing today's ${invoiceDateBasisLabel()}`
         : invoicePeriodFilter === 'week'
@@ -1840,7 +1840,7 @@ function runOpsRuntime() {
   function invoiceDurationText(duration) {
     const hours = Number(duration || 0);
     if (!hours) return '';
-    return hours === 8 ? 'Full Day (8 hours)' : `${hours} hour${hours === 1 ? window.location.origin : 's'}`;
+    return hours === 8 ? 'Full Day (8 hours)' : `${hours} hour${hours === 1 ? '' : 's'}`;
   }
   function populateInvoiceDurationOptions(craftKey = '', selectedDuration = '') {
     const durationEl = document.getElementById('i-duration');
@@ -1854,7 +1854,7 @@ function runOpsRuntime() {
         `<option value="${duration}">${escapeHtml(invoiceDurationText(duration))}</option>`
       )))
       .join(''));
-    durationEl.value = availableDurations.includes(Number(selectedDuration)) ? String(Number(selectedDuration)) : window.location.origin;
+    durationEl.value = availableDurations.includes(Number(selectedDuration)) ? String(Number(selectedDuration)) : '';
   }
   function updateInvoiceRentalHelper(message = 'Pick a rental package and duration to auto-fill the title, line item, and amount. For a quick manual invoice, just enter the amount.') {
     const helper = document.getElementById('invoice-rental-helper');
@@ -1866,7 +1866,7 @@ function runOpsRuntime() {
     const customInput = document.getElementById('i-payment-method-custom');
     if (!select || !customWrap || !customInput) return;
     const showCustom = select.value === 'Other';
-    customWrap.style.display = showCustom ? window.location.origin : 'none';
+    customWrap.style.display = showCustom ? '' : 'none';
     if (!showCustom) customInput.value = '';
   }
   function setInvoicePaymentMethod(method = '') {
@@ -1899,7 +1899,7 @@ function runOpsRuntime() {
   }
   function buildInvoiceTitle(packageKey = '', durationHours = 0, lineItemName = '') {
     const craftLabel = CRAFT_NAMES[packageKey] || '';
-    const durationLabel = durationHours ? invoiceDurationText(durationHours) : window.location.origin;
+    const durationLabel = durationHours ? invoiceDurationText(durationHours) : '';
     if (craftLabel && durationLabel) return `${craftLabel} rental`;
     if (craftLabel) return `${craftLabel} invoice`;
     if (lineItemName) return lineItemName;
@@ -1907,7 +1907,7 @@ function runOpsRuntime() {
   }
   function buildInvoiceLineItem(packageKey = '', durationHours = 0, invoiceName = '') {
     const craftLabel = CRAFT_NAMES[packageKey] || '';
-    const durationLabel = durationHours ? invoiceDurationText(durationHours) : window.location.origin;
+    const durationLabel = durationHours ? invoiceDurationText(durationHours) : '';
     if (craftLabel && durationLabel) return `${craftLabel} • ${durationLabel}`;
     if (craftLabel) return craftLabel;
     if (invoiceName) return invoiceName;
@@ -1933,7 +1933,7 @@ function runOpsRuntime() {
     const remaining = Math.max(total - collected, 0);
     const balanceInput = document.getElementById('i-balance-due');
     if (balanceInput) balanceInput.value = remaining ? remaining.toFixed(2) : '0.00';
-    helper.textContent = `${message ? `${message} ` : window.location.origin}Collected ${moneyLabel(collected)} • Remaining ${moneyLabel(remaining)}. Mark the invoice paid when you collect the full balance.`;
+    helper.textContent = `${message ? `${message} ` : ''}Collected ${moneyLabel(collected)} • Remaining ${moneyLabel(remaining)}. Mark the invoice paid when you collect the full balance.`;
   }
   function suggestedInvoiceAmount(packageKey = '', duration = 0) {
     return Number(PRICING[packageKey]?.[Number(duration || 0)] || 0);
@@ -2239,8 +2239,8 @@ function runOpsRuntime() {
       amountDueToday: String(bookingDueTodayValue(booking).toFixed(2)),
       bookingDate: String(booking.date || ''),
       bookingTime: String(booking.time || ''),
-      manualBookingInvoiceOverride: hasManualOverride ? 'true' : window.location.origin,
-      manualTotalOverride: hasManualOverride ? String(total.toFixed(2)) : window.location.origin
+      manualBookingInvoiceOverride: hasManualOverride ? 'true' : '',
+      manualTotalOverride: hasManualOverride ? String(total.toFixed(2)) : ''
     });
     if (!existingInvoice) invoices.unshift(invoice);
     return invoice;
@@ -2333,13 +2333,13 @@ function runOpsRuntime() {
       document.getElementById('i-due-date').value = invoice.dueDate || invoice.issueDate || today();
       const inferredCraft = invoice.craftKey || invoice.rawFields?.rentalPackage || guessCraftFromText(invoice.invoiceName || invoiceLineSummary(invoice));
       const inferredDuration = Number(invoice.durationHours || invoice.rawFields?.rentalDurationHours || guessDurationFromText(invoice.invoiceName || invoiceLineSummary(invoice)) || 0);
-      document.getElementById('i-package').value = inferredCraft && inferredCraft !== 'imported' ? inferredCraft : window.location.origin;
+      document.getElementById('i-package').value = inferredCraft && inferredCraft !== 'imported' ? inferredCraft : '';
       populateInvoiceDurationOptions(document.getElementById('i-package').value, inferredDuration);
-      document.getElementById('i-line-item').value = Array.isArray(invoice.lineItems) && invoice.lineItems[0] ? (invoice.lineItems[0].name || invoice.lineItems[0].description || '') : window.location.origin;
+      document.getElementById('i-line-item').value = Array.isArray(invoice.lineItems) && invoice.lineItems[0] ? (invoice.lineItems[0].name || invoice.lineItems[0].description || '') : '';
       document.getElementById('i-total').value = String(Number(invoice.total || 0) || '');
       setInvoiceAmountManualStateFromCurrentForm();
       document.getElementById('i-status').value = invoiceStatusSelectValue(invoice.status);
-      document.getElementById('i-paid-amount').value = invoiceCollectedAmount(invoice) ? String(invoiceCollectedAmount(invoice)) : window.location.origin;
+      document.getElementById('i-paid-amount').value = invoiceCollectedAmount(invoice) ? String(invoiceCollectedAmount(invoice)) : '';
       document.getElementById('i-balance-due').value = invoiceOutstandingAmount(invoice).toFixed(2);
       setInvoicePaymentMethod(invoice.paymentMethod || invoice.rawFields?.paymentMethod || '');
       document.getElementById('i-notes').value = invoice.notes || '';
@@ -2443,7 +2443,7 @@ function runOpsRuntime() {
     invoice.notes = notes;
     invoice.craftKey = packageKey || '';
     invoice.durationHours = durationHours || 0;
-    invoice.durationLabel = durationHours ? invoiceDurationText(durationHours) : window.location.origin;
+    invoice.durationLabel = durationHours ? invoiceDurationText(durationHours) : '';
     invoice.lineItems = [{
       name: lineItemName,
       description: notes,
@@ -2455,14 +2455,14 @@ function runOpsRuntime() {
       source: 'manual invoice',
       notes,
       rentalPackage: packageKey,
-      rentalPackageLabel: packageKey ? (CRAFT_NAMES[packageKey] || '') : window.location.origin,
-      rentalDurationHours: durationHours ? String(durationHours) : window.location.origin,
-      rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : window.location.origin,
+      rentalPackageLabel: packageKey ? (CRAFT_NAMES[packageKey] || '') : '',
+      rentalDurationHours: durationHours ? String(durationHours) : '',
+      rentalDurationLabel: durationHours ? invoiceDurationText(durationHours) : '',
       balanceDue: String(invoice.balanceDue || 0),
       paymentMethod,
-      collectedAmount: paidAmount ? String(paidAmount) : window.location.origin,
-      manualBookingInvoiceOverride: keepManualBookingOverride ? 'true' : window.location.origin,
-      manualTotalOverride: keepManualBookingOverride ? String(total.toFixed(2)) : window.location.origin
+      collectedAmount: paidAmount ? String(paidAmount) : '',
+      manualBookingInvoiceOverride: keepManualBookingOverride ? 'true' : '',
+      manualTotalOverride: keepManualBookingOverride ? String(total.toFixed(2)) : ''
     });
   
     if (!existingInvoice) invoices.unshift(invoice);
@@ -2502,9 +2502,9 @@ function runOpsRuntime() {
           totalSpent: 0,
           lastBooking: 'N/A',
           source: 'Manual Invoice',
-          tag: window.location.origin,
-          company: window.location.origin,
-          crmTags: window.location.origin,
+          tag: '',
+          company: '',
+          crmTags: '',
           createdAt: issueDate,
           lastActivity: new Date().toISOString(),
           crmNotes: notes,
@@ -2520,7 +2520,7 @@ function runOpsRuntime() {
         customers.push(customer);
       }
     }
-    invoice.customerId = customer ? customer.id : window.location.origin;
+    invoice.customerId = customer ? customer.id : '';
     const linkedBooking = linkedBookingForInvoiceRecord(invoice);
     if (linkedBooking) {
       invoice.bookingId = Number(linkedBooking.id || 0);
@@ -2709,9 +2709,9 @@ function runOpsRuntime() {
         phone,
         email,
         craft,
-        craftLabel: craft === 'imported' ? (opportunityName || 'Imported booking') : window.location.origin,
+        craftLabel: craft === 'imported' ? (opportunityName || 'Imported booking') : '',
         duration,
-        durationLabel: duration ? window.location.origin : (rowValue(row, ['duration']) || 'Imported'),
+        durationLabel: duration ? '' : (rowValue(row, ['duration']) || 'Imported'),
         total,
         date: date === 'N/A' ? 'TBD' : date,
         time: formatTime(scheduleValue),
@@ -3026,7 +3026,7 @@ function runOpsRuntime() {
   
   function toggleExpenseSeasonFields() {
     const recurringType = document.getElementById('e-recurring-type')?.value || 'one-time';
-    const display = recurringType === 'seasonal' ? window.location.origin : 'none';
+    const display = recurringType === 'seasonal' ? '' : 'none';
     const startWrap = document.getElementById('e-season-start-wrap');
     const endWrap = document.getElementById('e-season-end-wrap');
     if (startWrap) startWrap.style.display = display;
@@ -3146,7 +3146,7 @@ function runOpsRuntime() {
     }
     const karaoke = document.getElementById('b-karaoke')?.value === 'yes';
     const tube = document.getElementById('b-tube')?.value === 'yes';
-    const summary = `${CRAFT_NAMES[craft]} · ${dur === 8 ? '8 hrs (full day)' : `${dur}hrs`}${drone ? ' + Drone ($50)' : window.location.origin}${karaoke ? ' + Karaoke ($50)' : window.location.origin}${tube ? ' + Tube ($50)' : window.location.origin}`;
+    const summary = `${CRAFT_NAMES[craft]} · ${dur === 8 ? '8 hrs (full day)' : `${dur}hrs`}${drone ? ' + Drone ($50)' : ''}${karaoke ? ' + Karaoke ($50)' : ''}${tube ? ' + Tube ($50)' : ''}`;
     if (bookingAmountManuallyEdited && hasEnteredAmount) {
       breakdownEl.textContent = `${summary} · custom total ${moneyLabel(enteredValue)}`;
       return;
@@ -3211,8 +3211,8 @@ function runOpsRuntime() {
     const lines = conflicts.slice(0, 3).map((b) =>
       `${escapeHtml(bookingDisplayName(b))} · ${escapeHtml(bookingCraftLabel(b))} @ ${escapeHtml(formatTimeLabel(b.time))}`
     ).join('<br>');
-    const more = conflicts.length > 3 ? `<br>+${conflicts.length - 3} more` : window.location.origin;
-    renderOpsMarkup(el, `⚠️ <strong>Possible double-booking</strong> — ${conflicts.length} active booking${conflicts.length > 1 ? 's' : window.location.origin} ${conflicts.length > 1 ? 'share' : 'shares'} equipment at this time:<br>${lines}${more}`);
+    const more = conflicts.length > 3 ? `<br>+${conflicts.length - 3} more` : '';
+    renderOpsMarkup(el, `⚠️ <strong>Possible double-booking</strong> — ${conflicts.length} active booking${conflicts.length > 1 ? 's' : ''} ${conflicts.length > 1 ? 'share' : 'shares'} equipment at this time:<br>${lines}${more}`);
     el.style.display = 'block';
   }
   
@@ -3237,7 +3237,7 @@ function runOpsRuntime() {
     if (match.email && !emailEl.value.trim()) emailEl.value = match.email;
     if (hintEl) {
       const priorCount = Number(match.bookings || 0);
-      const prior = priorCount > 0 ? ` · ${priorCount} prior booking${priorCount > 1 ? 's' : window.location.origin}` : window.location.origin;
+      const prior = priorCount > 0 ? ` · ${priorCount} prior booking${priorCount > 1 ? 's' : ''}` : '';
       renderOpsMarkup(hintEl, `↩ <strong>Returning customer</strong> — ${escapeHtml(match.name || 'on file')}${prior}. Details filled in.`);
       hintEl.style.display = 'block';
     }
@@ -3336,7 +3336,7 @@ function runOpsRuntime() {
           totalSpent: 0,
           lastBooking: 'N/A',
           source: 'Direct',
-          tag: window.location.origin,
+          tag: '',
           createdAt: today(),
           lastActivity: nowIso
         };
@@ -3344,7 +3344,7 @@ function runOpsRuntime() {
       }
     }
   
-    bookingRecord.customerId = customer ? customer.id : window.location.origin;
+    bookingRecord.customerId = customer ? customer.id : '';
     const linkedInvoice = linkedInvoiceForBookingRecord(bookingRecord);
     if (linkedInvoice && amountChangedFromPrevious) {
       const nextProcessingFee = bookingProcessingFeeValue(bookingRecord);
@@ -3356,9 +3356,9 @@ function runOpsRuntime() {
       linkedInvoice.paidAmount = preservedCollected;
       linkedInvoice.balanceDue = Number(Math.max(nextInvoiceTotal - preservedCollected, 0).toFixed(2));
       linkedInvoice.rawFields = mergeCrmFields(linkedInvoice.rawFields, {
-        manualBookingInvoiceOverride: window.location.origin,
-        manualTotalOverride: window.location.origin,
-        collectedAmount: preservedCollected ? String(preservedCollected) : window.location.origin
+        manualBookingInvoiceOverride: '',
+        manualTotalOverride: '',
+        collectedAmount: preservedCollected ? String(preservedCollected) : ''
       });
     }
     ensureLinkedInvoiceForBookingLocally(bookingRecord);
@@ -3438,7 +3438,7 @@ function runOpsRuntime() {
     return `<div class="rs-card ${statusClass}">
       <div class="rs-top"><span class="rs-time">🕐 ${escapeHtml(formatTimeLabel(b.time) || 'Time TBD')}</span>${statusBadge(b.status)}</div>
       <div class="rs-name">${escapeHtml(bookingDisplayName(b))}</div>
-      <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))}${hideMoneyForRole() ? window.location.origin : ` · ${bookingTotalLabel(b)}`}</div>
+      <div class="rs-sub">${escapeHtml(bookingCraftLabel(b))} · ${escapeHtml(bookingDurationLabel(b))}${hideMoneyForRole() ? '' : ` · ${bookingTotalLabel(b)}`}</div>
       ${hideMoneyForRole()
         ? `<div class="rs-pay ${(b.waiverSigned || b.waiverSignedAt) ? 'paid' : 'due'}">${(b.waiverSigned || b.waiverSignedAt) ? '✅ Waiver signed' : '⚠️ Waiver not signed'}</div>`
         : `<div class="rs-pay ${paid ? 'paid' : 'due'}">${payText}</div>`}
@@ -3496,7 +3496,7 @@ function runOpsRuntime() {
       renderOpsMarkup(host, `<div class="na-card na-clear"><span class="na-clear-icon">✅</span> All caught up — nothing needs attention right now.</div>`);
       return;
     }
-    const extra = all.length > items.length ? `<div class="na-more">+${all.length - items.length} more — see Bookings</div>` : window.location.origin;
+    const extra = all.length > items.length ? `<div class="na-more">+${all.length - items.length} more — see Bookings</div>` : '';
     renderOpsMarkup(host, `
       <div class="na-card">
         <div class="na-head"><h3>⚡ Needs attention</h3><span class="na-count">${all.length}</span></div>
@@ -3840,13 +3840,13 @@ function runOpsRuntime() {
       document.getElementById('b-date').value = booking.date && booking.date !== 'TBD' ? booking.date : today();
       document.getElementById('b-time').value = formatTime(booking.time);
       document.getElementById('b-craft').value = bookingEditorCraftValue(booking);
-      document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : window.location.origin;
+      document.getElementById('b-duration').value = booking.duration ? String(booking.duration) : '';
       document.getElementById('b-drone').value = booking.drone ? 'yes' : 'no';
       if (document.getElementById('b-karaoke')) document.getElementById('b-karaoke').value = booking.karaoke ? 'yes' : 'no';
       if (document.getElementById('b-tube')) document.getElementById('b-tube').value = booking.tube ? 'yes' : 'no';
       document.getElementById('b-status').value = normalizeBookingStatusValue(booking.status) || 'pending';
       if (document.getElementById('b-deposit-refunded')) document.getElementById('b-deposit-refunded').checked = Boolean(booking.depositRefunded);
-      document.getElementById('b-amount').value = Number(booking.total || 0) > 0 ? Number(booking.total).toFixed(2) : window.location.origin;
+      document.getElementById('b-amount').value = Number(booking.total || 0) > 0 ? Number(booking.total).toFixed(2) : '';
       document.getElementById('b-notes').value = booking.notes || '';
       document.getElementById('booking-modal-title').textContent = 'Edit Booking';
       document.getElementById('booking-save-button').textContent = 'Save Changes';
@@ -3954,7 +3954,7 @@ function runOpsRuntime() {
     const dayBookings = bookingsForDate(dateIso);
     agendaDateEl.textContent = formatAgendaDate(dateIso);
     agendaSubEl.textContent = dayBookings.length
-      ? `${dayBookings.length} booking${dayBookings.length === 1 ? window.location.origin : 's'} scheduled`
+      ? `${dayBookings.length} booking${dayBookings.length === 1 ? '' : 's'} scheduled`
       : 'No rentals scheduled yet';
   
     if (!dayBookings.length) {
@@ -3967,7 +3967,7 @@ function runOpsRuntime() {
         <div class="agenda-item-main">
           <strong>${escapeHtml(bookingDisplayName(booking))}</strong>
           <div class="agenda-item-meta">${escapeHtml(bookingCraftLabel(booking))} · ${escapeHtml(bookingDurationLabel(booking))} · ${escapeHtml(formatTimeLabel(booking.time))}</div>
-          <div class="agenda-item-meta">${booking.phone ? escapeHtml(booking.phone) : 'No phone on file'}${booking.drone ? ' · Drone coverage' : window.location.origin}</div>
+          <div class="agenda-item-meta">${booking.phone ? escapeHtml(booking.phone) : 'No phone on file'}${booking.drone ? ' · Drone coverage' : ''}</div>
         </div>
         <div class="agenda-item-right">
           <div style="color:var(--wave);font-weight:500;">${bookingTotalLabel(booking)}</div>
@@ -4010,15 +4010,15 @@ function runOpsRuntime() {
       if (unconfirmedCount) statusSummary.push(`${unconfirmedCount} unconfirmed`);
   
       cells.push(`
-        <button class="calendar-day${isOtherMonth ? ' other-month' : window.location.origin}${dayBookings.length ? ' has-bookings' : window.location.origin}${isToday ? ' today' : window.location.origin}${isSelected ? ' selected' : window.location.origin}" data-calendar-date="${escapeHtml(cellIso)}">
+        <button class="calendar-day${isOtherMonth ? ' other-month' : ''}${dayBookings.length ? ' has-bookings' : ''}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" data-calendar-date="${escapeHtml(cellIso)}">
           <div class="calendar-day-top">
             <span class="calendar-day-num">${cellDate.getDate()}</span>
-            ${dayBookings.length ? `<span class="calendar-day-count">${dayBookings.length}</span>` : window.location.origin}
+            ${dayBookings.length ? `<span class="calendar-day-count">${dayBookings.length}</span>` : ''}
           </div>
           <div class="calendar-day-meta">${dayBookings.length ? escapeHtml(statusSummary.join(' · ')) : '&nbsp;'}</div>
           <div class="calendar-day-list">
             ${previewItems.map((booking) => `<div class="calendar-pill ${escapeHtml(bookingCalendarStatusValue(booking))}"><span class="calendar-pill-dot"></span><span class="calendar-pill-status ${escapeHtml(bookingCalendarStatusValue(booking))}">${escapeHtml(bookingCalendarStatusLabel(booking))}</span><span>${escapeHtml(formatTimeLabel(booking.time))} · ${escapeHtml(firstName(bookingDisplayName(booking, 'Walk-up')))}</span></div>`).join('')}
-            ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : window.location.origin}
+            ${dayBookings.length > 2 ? `<div class="calendar-pill"><span class="calendar-pill-dot"></span><span>+${dayBookings.length - 2} more</span></div>` : ''}
           </div>
         </button>
       `);
@@ -4188,8 +4188,8 @@ function runOpsRuntime() {
       document.getElementById('t-status').value = tracker.status || 'active';
       document.getElementById('t-payment-plan').value = tracker.paymentPlan || '';
       document.getElementById('t-tracking-plan').value = tracker.trackingPlan || '';
-      document.getElementById('t-monthly-fee').value = tracker.monthlyFee ? String(Number(tracker.monthlyFee)) : window.location.origin;
-      document.getElementById('t-activation-fee').value = tracker.activationFee ? String(Number(tracker.activationFee)) : window.location.origin;
+      document.getElementById('t-monthly-fee').value = tracker.monthlyFee ? String(Number(tracker.monthlyFee)) : '';
+      document.getElementById('t-activation-fee').value = tracker.activationFee ? String(Number(tracker.activationFee)) : '';
       document.getElementById('t-transaction-id').value = tracker.transactionId || '';
       document.getElementById('t-auth-code').value = tracker.authorizationCode || '';
       document.getElementById('t-transaction-date').value = trackerDateTimeInputValue(tracker.transactionDate);
@@ -4249,14 +4249,14 @@ function runOpsRuntime() {
     const selectedTracker = getSelectedTracker();
   
     if (activeEl) activeEl.textContent = activeTrackers.length.toLocaleString();
-    if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live tracker${activeTrackers.length === 1 ? window.location.origin : 's'} currently reporting` : 'No active tracker plans on file';
+    if (activeMetaEl) activeMetaEl.textContent = activeTrackers.length ? `${activeTrackers.length} live tracker${activeTrackers.length === 1 ? '' : 's'} currently reporting` : 'No active tracker plans on file';
     if (monthlyEl) monthlyEl.textContent = moneyLabel(monthlyCost);
-    if (monthlyMetaEl) monthlyMetaEl.textContent = `${recurringPlans.length} recurring tracker plan${recurringPlans.length === 1 ? window.location.origin : 's'}`;
+    if (monthlyMetaEl) monthlyMetaEl.textContent = `${recurringPlans.length} recurring tracker plan${recurringPlans.length === 1 ? '' : 's'}`;
     if (assignedEl) assignedEl.textContent = assignedTrackers.length.toLocaleString();
-    if (assignedMetaEl) assignedMetaEl.textContent = assignedTrackers.length ? `${assignedTrackers.length} tracker${assignedTrackers.length === 1 ? window.location.origin : 's'} tied to the fleet` : 'No trackers assigned to the fleet yet';
+    if (assignedMetaEl) assignedMetaEl.textContent = assignedTrackers.length ? `${assignedTrackers.length} tracker${assignedTrackers.length === 1 ? '' : 's'} tied to the fleet` : 'No trackers assigned to the fleet yet';
     if (spareEl) spareEl.textContent = spareTrackers.length.toLocaleString();
-    if (spareMetaEl) spareMetaEl.textContent = spareTrackers.length ? `${spareTrackers.length} tracker${spareTrackers.length === 1 ? window.location.origin : 's'} ready for install or reassignment` : 'Every saved tracker is assigned';
-    if (summaryEl) summaryEl.textContent = trackers.length ? `${trackers.length} tracker${trackers.length === 1 ? window.location.origin : 's'} · ${moneyLabel(monthlyCost)}/mo` : 'No trackers added yet';
+    if (spareMetaEl) spareMetaEl.textContent = spareTrackers.length ? `${spareTrackers.length} tracker${spareTrackers.length === 1 ? '' : 's'} ready for install or reassignment` : 'Every saved tracker is assigned';
+    if (summaryEl) summaryEl.textContent = trackers.length ? `${trackers.length} tracker${trackers.length === 1 ? '' : 's'} · ${moneyLabel(monthlyCost)}/mo` : 'No trackers added yet';
     const selectedShareUrl = safeTrackerShareUrl(selectedTracker?.shareSpotUrl);
     if (selectedCardEl) {
       renderOpsMarkup(selectedCardEl, selectedTracker ? `
@@ -4279,7 +4279,7 @@ function runOpsRuntime() {
             <strong>Billing + account details</strong>
             <div class="sub">${escapeHtml(selectedTracker.paymentPlan || 'No payment plan')} · ${escapeHtml(selectedTracker.contactName || 'No contact name')} · ${escapeHtml(selectedTracker.contactEmail || 'No contact email')}</div>
             <div class="sub">Txn ${escapeHtml(selectedTracker.transactionId || '—')} · Auth ${escapeHtml(selectedTracker.authorizationCode || '—')} · Activated ${escapeHtml(trackerDateLabel(selectedTracker.transactionDate))}</div>
-            ${selectedTracker.notes ? `<div class="sub">${escapeHtml(selectedTracker.notes)}</div>` : window.location.origin}
+            ${selectedTracker.notes ? `<div class="sub">${escapeHtml(selectedTracker.notes)}</div>` : ''}
           </div>
         </div>
       ` : '<div class="empty"><div class="icon">📡</div><p>Save a tracker to start live monitoring.</p></div>');
@@ -4311,7 +4311,7 @@ function runOpsRuntime() {
       <tr>
         <td>
           <strong>${escapeHtml(tracker.name || 'Unnamed tracker')}</strong>
-          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.model || 'Unknown model')}${tracker.serialNumber ? ` · S/N ${escapeHtml(tracker.serialNumber)}` : window.location.origin}</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.model || 'Unknown model')}${tracker.serialNumber ? ` · S/N ${escapeHtml(tracker.serialNumber)}` : ''}</div>
         </td>
         <td data-label="Assigned">
           <strong>${escapeHtml(tracker.assignedAsset || 'Unassigned / spare')}</strong>
@@ -4319,7 +4319,7 @@ function runOpsRuntime() {
         </td>
         <td data-label="Provider">
           <div>${escapeHtml(tracker.provider || 'Unknown provider')}</div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.paymentPlan || 'No payment plan')}${tracker.trackingPlan ? ` · ${escapeHtml(tracker.trackingPlan)}` : window.location.origin}</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(tracker.paymentPlan || 'No payment plan')}${tracker.trackingPlan ? ` · ${escapeHtml(tracker.trackingPlan)}` : ''}</div>
         </td>
         <td data-label="Billing">
           <div style="color:var(--amber);font-weight:500;">${moneyLabel(tracker.monthlyFee || 0)}/mo</div>
@@ -4327,7 +4327,7 @@ function runOpsRuntime() {
         </td>
         <td data-label="Transaction">
           <div>${tracker.transactionId ? `Txn ${escapeHtml(tracker.transactionId)}` : 'No transaction saved'}</div>
-          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${tracker.authorizationCode ? `Auth ${escapeHtml(tracker.authorizationCode)} · ` : window.location.origin}${escapeHtml(trackerDateLabel(tracker.transactionDate))}</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${tracker.authorizationCode ? `Auth ${escapeHtml(tracker.authorizationCode)} · ` : ''}${escapeHtml(trackerDateLabel(tracker.transactionDate))}</div>
         </td>
         <td data-label="Status">
           <div style="display:flex;flex-direction:column;gap:0.5rem;align-items:flex-start;">
@@ -4554,10 +4554,10 @@ function runOpsRuntime() {
       invoice.paymentSessionId = '';
       invoice.paymentIntentId = '';
       invoice.rawFields = mergeCrmFields(invoice.rawFields, {
-        bookingId: window.location.origin,
-        bookingPublicToken: window.location.origin,
-        paymentSessionId: window.location.origin,
-        paymentIntentId: window.location.origin,
+        bookingId: '',
+        bookingPublicToken: '',
+        paymentSessionId: '',
+        paymentIntentId: '',
         bookingStatus: 'deleted'
       });
     });
@@ -4589,7 +4589,7 @@ function runOpsRuntime() {
   function filterTable(input, tableId) {
     const q = input.value.toLowerCase();
     document.querySelectorAll('#'+tableId+' tr').forEach(row => {
-      row.style.display = row.textContent.toLowerCase().includes(q) ? window.location.origin : 'none';
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
     });
   }
   
@@ -4697,7 +4697,7 @@ function runOpsRuntime() {
       : invoicePeriodFilter === 'custom' ? 'No invoices in this date range.'
       : 'No invoices yet.';
     renderOpsMarkup(table, filteredInvoices.length ? filteredInvoices.map((invoice) => `
-      <tr class="${invoiceOutstandingAmount(invoice) > 0 ? 'inv-owing' : window.location.origin}">
+      <tr class="${invoiceOutstandingAmount(invoice) > 0 ? 'inv-owing' : ''}">
         ${(() => {
           const contact = invoiceDisplayContact(invoice);
           return `
@@ -4715,7 +4715,7 @@ function runOpsRuntime() {
         <td data-label="Amount" style="font-weight:600;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;margin-top:0.2rem;">${invoiceOutstandingAmount(invoice) > 0 ? `<span style="color:var(--amber);">${moneyLabel(invoiceOutstandingAmount(invoice))} due</span>` : '<span style="color:var(--green);">Paid in full</span>'}</div></td>
         <td data-label="Status">${invoiceIsOverdue(invoice) ? '<span class="badge badge-noshow">Overdue</span>' : invoiceStatusBadge(invoice.status)}</td>
         <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-          ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" data-invoice-action="paid" data-invoice-id="${Number(invoice.id)}">💵 Mark Paid</button>` : window.location.origin}
+          ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" data-invoice-action="paid" data-invoice-id="${Number(invoice.id)}">💵 Mark Paid</button>` : ''}
           <button class="btn btn-ghost btn-sm" data-invoice-action="review" data-invoice-id="${Number(invoice.id)}">⭐ Review</button>
           <button class="btn btn-ghost btn-sm" data-invoice-action="edit" data-invoice-id="${Number(invoice.id)}">Edit</button>
           <button class="btn btn-danger btn-sm" data-invoice-action="delete" data-invoice-id="${Number(invoice.id)}">Delete</button>
@@ -4853,7 +4853,7 @@ function runOpsRuntime() {
     if (document.getElementById('waiver-kpi-leads-meta')) document.getElementById('waiver-kpi-leads-meta').textContent = waiverOnlyLeads ? `${waiverOnlyLeads} signed but not booked yet` : 'Every signed waiver has booking history';
     if (document.getElementById('waiver-kpi-emergency')) document.getElementById('waiver-kpi-emergency').textContent = missingEmergency.toLocaleString();
     if (document.getElementById('waiver-kpi-emergency-meta')) document.getElementById('waiver-kpi-emergency-meta').textContent = missingEmergency ? `${missingEmergency} records missing emergency details` : 'Emergency details look complete';
-    if (document.getElementById('waiver-summary-pill')) document.getElementById('waiver-summary-pill').textContent = totalSigned ? `${totalSigned} signed waiver${totalSigned === 1 ? window.location.origin : 's'} on file` : 'No signed waivers yet';
+    if (document.getElementById('waiver-summary-pill')) document.getElementById('waiver-summary-pill').textContent = totalSigned ? `${totalSigned} signed waiver${totalSigned === 1 ? '' : 's'} on file` : 'No signed waivers yet';
   
     const table = document.getElementById('waivers-table');
     if (!table) return;
@@ -4874,14 +4874,14 @@ function runOpsRuntime() {
           <td data-label="Waiver" style="color:var(--muted);">${customerWaiverDetailLabel(customer)}</td>
           <td data-label="Emergency">${emergencyLine.length ? emergencyLine.join('<br>') : '<span style="color:var(--muted);">No emergency info saved</span>'}</td>
           <td data-label="Bookings">
-            <div>${Number(customer.bookings) || 0} booking${Number(customer.bookings) === 1 ? window.location.origin : 's'}</div>
+            <div>${Number(customer.bookings) || 0} booking${Number(customer.bookings) === 1 ? '' : 's'}</div>
             <div style="font-size:0.72rem;color:var(--wave);margin-top:0.2rem;">${moneyLabel(customer.totalSpent)} total spent</div>
           </td>
           <td data-label="">
             <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
               <button class="btn btn-ghost btn-sm" data-customer-action="edit" data-customer-id="${Number(customer.id)}">Edit</button>
-              ${customer.phone ? `<a href="tel:${phoneHref(customer.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : window.location.origin}
-              ${customer.email ? `<a href="mailto:${encodeURIComponent(customer.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : window.location.origin}
+              ${customer.phone ? `<a href="tel:${phoneHref(customer.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
+              ${customer.email ? `<a href="mailto:${encodeURIComponent(customer.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : ''}
             </div>
           </td>
         </tr>
@@ -4941,14 +4941,14 @@ function runOpsRuntime() {
           : crmViewFilter === 'best'
             ? 'best customers to prioritize'
             : 'customers in the CRM';
-      summaryEl.textContent = `${orderedCustomers.length} ${filterLabel}${crmSearchQuery ? ` for “${crmSearchQuery}”` : window.location.origin}. Sort is set to ${crmSortMode === 'recent' ? 'recent activity' : crmSortMode === 'spend' ? 'highest spend' : crmSortMode === 'bookings' ? 'most bookings' : 'name A-Z'}.`;
+      summaryEl.textContent = `${orderedCustomers.length} ${filterLabel}${crmSearchQuery ? ` for “${crmSearchQuery}”` : ''}. Sort is set to ${crmSortMode === 'recent' ? 'recent activity' : crmSortMode === 'spend' ? 'highest spend' : crmSortMode === 'bookings' ? 'most bookings' : 'name A-Z'}.`;
     }
     renderOpsMarkup(document.getElementById('crm-grid'), orderedCustomers.map((c,i) => {
       const isExpanded = Number(expandedCustomerId) === Number(c.id);
       const statusFlags = `
         ${customerNeedsFollowUp(c) ? '<span class="customer-flag followup">Follow-up due</span>' : '<span class="customer-flag ready">Recently active</span>'}
         ${customerHasWaiver(c) ? '<span class="customer-flag ready">Waiver on file</span>' : '<span class="customer-flag waiver">Waiver needed</span>'}
-        ${customerIsBest(c) ? '<span class="customer-flag value">Best customer</span>' : window.location.origin}
+        ${customerIsBest(c) ? '<span class="customer-flag value">Best customer</span>' : ''}
       `;
       const detailPieces = [c.company, c.source, c.crmTags].filter(Boolean).map(escapeHtml).join(' · ');
       const contactLine = [c.phone, c.email].filter(Boolean).map(escapeHtml).join(' · ') || 'No contact info saved';
@@ -4973,11 +4973,11 @@ function runOpsRuntime() {
             <div class="customer-detail">
               <div class="customer-detail-block">
                 <div class="customer-detail-label">Booking summary</div>
-                <div class="customer-detail-value">${Number(c.bookings) || 0} booking${Number(c.bookings) === 1 ? window.location.origin : 's'} · ${moneyLabel(c.totalSpent || 0)} total spent · ${escapeHtml(customerLastTouchLabel(c))}</div>
+                <div class="customer-detail-value">${Number(c.bookings) || 0} booking${Number(c.bookings) === 1 ? '' : 's'} · ${moneyLabel(c.totalSpent || 0)} total spent · ${escapeHtml(customerLastTouchLabel(c))}</div>
               </div>
               <div class="customer-detail-block">
                 <div class="customer-detail-label">Profile</div>
-                <div class="customer-detail-value ${detailPieces ? window.location.origin : 'muted'}">${detailPieces || 'No extra profile details saved'}</div>
+                <div class="customer-detail-value ${detailPieces ? '' : 'muted'}">${detailPieces || 'No extra profile details saved'}</div>
               </div>
               <div class="customer-detail-block">
                 <div class="customer-detail-label">Last booking</div>
@@ -4989,15 +4989,15 @@ function runOpsRuntime() {
               </div>
               <div class="customer-detail-block">
                 <div class="customer-detail-label">Emergency contact</div>
-                <div class="customer-detail-value ${c.emergencyName || c.emergencyPhone ? window.location.origin : 'muted'}">${[c.emergencyName, c.emergencyPhone].filter(Boolean).map(escapeHtml).join(' · ') || 'No emergency contact saved'}</div>
+                <div class="customer-detail-value ${c.emergencyName || c.emergencyPhone ? '' : 'muted'}">${[c.emergencyName, c.emergencyPhone].filter(Boolean).map(escapeHtml).join(' · ') || 'No emergency contact saved'}</div>
               </div>
               <div class="customer-detail-block" style="grid-column:1/-1;">
                 <div class="customer-detail-label">Notes</div>
-                <div class="customer-detail-value ${c.crmNotes ? window.location.origin : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
+                <div class="customer-detail-value ${c.crmNotes ? '' : 'muted'}">${escapeHtml(c.crmNotes || 'No internal notes saved')}</div>
               </div>
               <div class="customer-detail-actions">
-                ${cleanPhone ? `<a class="btn btn-success btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;" href="tel:${cleanPhone}">📞 Call</a>` : window.location.origin}
-                ${cleanPhone ? `<a class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;" href="sms:${cleanPhone}">💬 Text</a>` : window.location.origin}
+                ${cleanPhone ? `<a class="btn btn-success btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;" href="tel:${cleanPhone}">📞 Call</a>` : ''}
+                ${cleanPhone ? `<a class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;" href="sms:${cleanPhone}">💬 Text</a>` : ''}
                 <button class="btn btn-primary btn-sm" data-customer-action="rebook" data-customer-id="${Number(c.id)}">🔁 Rebook</button>
                 <button class="btn btn-primary btn-sm" data-customer-action="payment" data-customer-id="${Number(c.id)}">Payment</button>
                 <button class="btn btn-ghost btn-sm" data-customer-action="invoice" data-customer-id="${Number(c.id)}">Invoice</button>
@@ -5005,7 +5005,7 @@ function runOpsRuntime() {
                 <button class="btn btn-danger btn-sm" data-customer-action="delete" data-customer-id="${Number(c.id)}">Delete</button>
               </div>
             </div>
-          ` : window.location.origin}
+          ` : ''}
         </div>`;
     }).join('') || '<div class="empty"><div class="icon">🔎</div><p>No customers match this search.</p></div>');
   }
@@ -5147,7 +5147,7 @@ function runOpsRuntime() {
       showToast('✅ No empty customer records to remove — your count is already clean');
       return;
     }
-    const plural = empties.length === 1 ? window.location.origin : 's';
+    const plural = empties.length === 1 ? '' : 's';
     const confirmed = window.confirm(`Remove ${empties.length} blank customer record${plural}?\n\nThese have no name, phone, email, bookings, spend, or waiver. Everyone with any real info is kept.`);
     if (!confirmed) return;
     const removeIds = new Set(empties.map((customer) => Number(customer.id)));
@@ -5174,7 +5174,7 @@ function runOpsRuntime() {
     const recurringAnnual = recurringExpenseYearlyTotal();
   
     document.getElementById('expense-kpi-month').textContent = `${Math.round(monthTotal).toLocaleString()}`;
-    document.getElementById('expense-kpi-month-meta').textContent = `${monthExpenses.length} expense line${monthExpenses.length === 1 ? window.location.origin : 's'} hitting this month`;
+    document.getElementById('expense-kpi-month-meta').textContent = `${monthExpenses.length} expense line${monthExpenses.length === 1 ? '' : 's'} hitting this month`;
     document.getElementById('expense-kpi-delivery').textContent = `${Math.round(recurringMonthly).toLocaleString()}`;
     document.getElementById('expense-kpi-delivery-meta').textContent = recurringMonthly ? 'Active recurring charges this month' : 'No recurring charges active this month';
     document.getElementById('expense-kpi-direct').textContent = `${Math.round(seasonalAnnual).toLocaleString()}`;
@@ -5402,16 +5402,16 @@ function runOpsRuntime() {
       renderOpsMarkup(list, visibleCustomers.length ? visibleCustomers.map((customer) => {
         const selected = selectedMassEmailCustomerIds.has(Number(customer.id));
         const tags = [
-          customerNeedsFollowUp(customer) ? 'Follow-up due' : window.location.origin,
-          customerHasWaiver(customer) ? 'Waiver on file' : window.location.origin,
-          customerIsBest(customer) ? 'Best customer' : window.location.origin
+          customerNeedsFollowUp(customer) ? 'Follow-up due' : '',
+          customerHasWaiver(customer) ? 'Waiver on file' : '',
+          customerIsBest(customer) ? 'Best customer' : ''
         ].filter(Boolean).join(' · ');
         return `
           <label class="list-row" style="align-items:flex-start;gap:0.75rem;cursor:pointer;">
-            <input type="checkbox" ${selected ? 'checked' : window.location.origin} onchange="toggleMassEmailRecipient(${Number(customer.id)}, this.checked)" style="margin-top:0.2rem;">
+            <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleMassEmailRecipient(${Number(customer.id)}, this.checked)" style="margin-top:0.2rem;">
             <div class="list-row-main">
               <strong>${escapeHtml(customer.name || 'Customer')}</strong>
-              <div class="sub">${escapeHtml(customer.email || '')}${customer.phone ? ` · ${escapeHtml(customer.phone)}` : window.location.origin}</div>
+              <div class="sub">${escapeHtml(customer.email || '')}${customer.phone ? ` · ${escapeHtml(customer.phone)}` : ''}</div>
               <div class="sub">${escapeHtml(tags || customerLastTouchLabel(customer))}</div>
             </div>
           </label>
@@ -5441,7 +5441,7 @@ function runOpsRuntime() {
     select.value = String(current.id);
     renderOpsMarkup(customerCard, `
       <h3>${escapeHtml(current.name)}</h3>
-      <p>${current.phone ? escapeHtml(current.phone) : 'No phone on file'}${current.email ? ` · ${escapeHtml(current.email)}` : window.location.origin}</p>
+      <p>${current.phone ? escapeHtml(current.phone) : 'No phone on file'}${current.email ? ` · ${escapeHtml(current.email)}` : ''}</p>
       <div class="mini-kpis">
         <div class="mini-kpi"><strong>${current.bookings}</strong><span>bookings</span></div>
         <div class="mini-kpi money-hide"><strong>${moneyLabel(current.totalSpent)}</strong><span>lifetime</span></div>
@@ -5642,7 +5642,7 @@ function runOpsRuntime() {
       customerName: booking.name,
       phone: booking.phone,
       email: booking.email,
-      sentAt: window.location.origin,
+      sentAt: '',
       status: 'pending'
     };
     requestList.unshift(request);
@@ -5784,7 +5784,7 @@ function runOpsRuntime() {
         body: JSON.stringify({ recipients: valid.map((r) => ({ name: r.name, phone: r.phone })) })
       });
       const results = Array.isArray(data.results) ? data.results : [];
-      if (statusEl) statusEl.textContent = `Sent ${data.sent || 0} of ${data.total || results.length}${data.failed ? ` · ${data.failed} failed` : window.location.origin}.`;
+      if (statusEl) statusEl.textContent = `Sent ${data.sent || 0} of ${data.total || results.length}${data.failed ? ` · ${data.failed} failed` : ''}.`;
       if (resultsEl) {
         const rows = results.map((r) => `<div class="list-row"><span>${escapeHtml(r.name || r.phone)}</span><span style="color:${r.ok ? 'var(--green)' : 'var(--red)'};">${r.ok ? '✓ Sent' : '⚠️ ' + escapeHtml(r.error || 'Failed')}</span></div>`);
         if (invalid.length) rows.push(`<div class="list-row"><span style="color:var(--muted);">${invalid.length} skipped (not a valid number)</span><span></span></div>`);
@@ -5829,7 +5829,7 @@ function runOpsRuntime() {
     const contact = resolveReviewRequestContact(request);
     const canText = Boolean(integrations.smsConfigured && contact.phone);
     const canEmail = Boolean(integrations.emailConfigured && contact.email);
-    const channel = canText ? 'text' : (canEmail ? 'email' : window.location.origin);
+    const channel = canText ? 'text' : (canEmail ? 'email' : '');
     if (!channel) { showToast('⚠️ No phone or email on file for this customer'); return; }
     await sendReviewDrop(request.id, channel);
   }
@@ -5860,8 +5860,8 @@ function runOpsRuntime() {
     const canEmail = Boolean(integrations.emailConfigured && resolvedContact.email);
     const preferred = integrations.reviewChannel === 'email' ? 'email' : 'text';
     const channel = preferred === 'email'
-      ? (canEmail ? 'email' : canText ? 'text' : window.location.origin)
-      : (canText ? 'text' : canEmail ? 'email' : window.location.origin);
+      ? (canEmail ? 'email' : canText ? 'text' : '')
+      : (canText ? 'text' : canEmail ? 'email' : '');
     if (!channel) return false;
     try {
       await sendReviewDrop(request.id, channel, { silent: true, preserveReviewHub: true });
@@ -6017,8 +6017,8 @@ function runOpsRuntime() {
             <div class="sub">${escapeHtml(request.sentAt ? `Last sent ${request.sentAt.slice(0, 10)}` : 'Ready to send now')}</div>
           </div>
           <div class="list-row-actions">
-            <button class="btn btn-primary btn-sm" ${canText ? window.location.origin : 'disabled style="opacity:0.45"'} data-review-action="send-text" data-review-request-id="${Number(request.id)}">Text request</button>
-            <button class="btn btn-ghost btn-sm" ${canEmail ? window.location.origin : 'disabled style="opacity:0.45"'} data-review-action="send-email" data-review-request-id="${Number(request.id)}">Email request</button>
+            <button class="btn btn-primary btn-sm" ${canText ? '' : 'disabled style="opacity:0.45"'} data-review-action="send-text" data-review-request-id="${Number(request.id)}">Text request</button>
+            <button class="btn btn-ghost btn-sm" ${canEmail ? '' : 'disabled style="opacity:0.45"'} data-review-action="send-email" data-review-request-id="${Number(request.id)}">Email request</button>
             <button class="btn btn-ghost btn-sm" data-review-action="complete" data-review-request-id="${Number(request.id)}">Log review</button>
           </div>
         </div>
@@ -6695,7 +6695,7 @@ function runOpsRuntime() {
       if (!select) return;
       const previous = select.value;
       renderOpsMarkup(select, [
-        includeBlank ? `<option value="">${escapeHtml(blankLabel)}</option>` : window.location.origin,
+        includeBlank ? `<option value="">${escapeHtml(blankLabel)}</option>` : '',
         ...options.map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`)
       ].join(''));
       if (previous && options.includes(previous)) {

@@ -15,28 +15,28 @@ const nextConfig = {
   async redirects() {
     return [
       {
-        source: '/ops',
-        destination: '/ops.html',
-        permanent: false
+        source: '/ops.html',
+        destination: '/ops',
+        permanent: true
       },
       {
-        source: '/ops-login',
-        destination: '/ops-login.html',
-        permanent: false
+        source: '/ops-login.html',
+        destination: '/ops-login',
+        permanent: true
       }
     ];
   },
   async headers() {
     return [
       {
-        source: '/ops.html',
+        source: '/ops',
         headers: [
           { key: 'Cache-Control', value: 'no-store' },
           { key: 'X-Robots-Tag', value: 'noindex' }
         ]
       },
       {
-        source: '/ops-login.html',
+        source: '/ops-login',
         headers: [
           { key: 'Cache-Control', value: 'no-store' },
           { key: 'X-Robots-Tag', value: 'noindex' }

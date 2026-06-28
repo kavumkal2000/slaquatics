@@ -1,7 +1,7 @@
-const CACHE_NAME = 'shoreline-ops-shell-v1';
+const CACHE_NAME = 'shoreline-ops-shell-v2';
 const APP_SHELL = [
-  '/ops-login.html',
-  '/ops.html',
+  '/ops-login',
+  '/ops',
   '/ops-app.webmanifest',
   '/assets/images/shoreline-ops-app-icon-180.png',
   '/assets/images/shoreline-ops-app-icon-512.png'
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() =>
-          caches.match(request).then((cached) => cached || caches.match('/ops-login.html'))
+          caches.match(request).then((cached) => cached || caches.match('/ops-login'))
         )
     );
     return;
