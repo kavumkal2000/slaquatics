@@ -6739,6 +6739,74 @@ function runOpsRuntime() {
     });
   }
   
+  function exposeRuntimeActions() {
+    Object.assign(window, {
+      applyMassEmailQuickSelect,
+      calcBookingPrice,
+      cleanupEmptyCustomers,
+      closeModal,
+      closeTrackerModal,
+      copySocialCaption,
+      deleteTracker,
+      exportInvoicesCsv,
+      exportReportsCsv,
+      filterByStatus,
+      filterCRM,
+      filterInvoices,
+      filterMassEmailRecipients,
+      filterTable,
+      filterWaivers,
+      handleBookingAmountInput,
+      handleCRMImport,
+      handleInvoiceAmountInput,
+      handleInvoiceDurationChange,
+      handleInvoiceImport,
+      handleInvoicePackageChange,
+      importCRMFromTextarea,
+      logCommunication,
+      logout,
+      maybeAutofillCustomer,
+      openBookingModal,
+      openCustomerModal,
+      openExpenseModal,
+      openInvoiceModal,
+      openMaintModal,
+      openModal,
+      openTrackerModal,
+      publishSocialNow,
+      recalcAllInvoices,
+      renderCommsPanel,
+      renderMassEmailDraft,
+      saveBooking,
+      saveCustomer,
+      saveExpense,
+      saveFuel,
+      saveInvoice,
+      saveMaint,
+      saveReviewSettings,
+      saveSocialDraft,
+      saveTracker,
+      sendDirectMessage,
+      sendMassEmail,
+      sendReviewBlast,
+      setCRMFilter,
+      setCRMSort,
+      setMassEmailAudienceMode,
+      shiftCalendarMonth,
+      showPage,
+      switchReminderTab,
+      toggleExpenseSeasonFields,
+      toggleInvoicePaymentMethodCustom,
+      toggleMassEmailRecipient,
+      toggleMobileNav,
+      triggerCRMImport,
+      triggerInvoiceImport,
+      updateBookingFilters,
+      updateInvoiceFilters,
+      updateInvoicePaymentHelper
+    });
+  }
+
   // ── INIT ──
   async function bootApp() {
     let ready = false;
@@ -6783,5 +6851,6 @@ function runOpsRuntime() {
       });
     });
   }
+  exposeRuntimeActions();
   bootApp();
 }
