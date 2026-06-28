@@ -10,7 +10,7 @@ export function OpsDashboardOverview() {
   return (
     <div className="page active" id="page-dashboard">
       <div className="alerts" id="dashboard-alerts" />
-      {/* TODAY RUN-SHEET (mobile-first day-of workflow) */}
+      {/* TODAY RUN-SHEET - (mobile-first day-of workflow) */}
       <div className="runsheet" id="today-runsheet" />
       <div className="kpi-grid">
         <div className="kpi-card"><div className="label">Pending deposits</div><div className="value" style={{color: 'var(--wave)'}} id="dashboard-kpi-pending">0</div><div className="delta warn" id="dashboard-kpi-pending-meta">Waiting on follow-up</div></div>
