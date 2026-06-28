@@ -2,7 +2,7 @@
 // Override targets: SITE_URL=... API_URL=... npm run smoke
 // Exits non-zero if anything is down — safe to run on a schedule / alert on failure.
 const SITE = process.env.SITE_URL || 'https://slaquatics.com';
-const API = process.env.API_URL || 'https://shoreline-aquatics-ops.onrender.com';
+const API = process.env.API_URL || SITE;
 const today = new Date().toISOString().slice(0, 10);
 
 const checks = [

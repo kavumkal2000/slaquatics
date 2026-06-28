@@ -1,136 +1,207 @@
 // Pre-deploy static validation. Run: npm run check
 // Exits non-zero on failure so it can gate a deploy.
 import fs from 'node:fs';
+import path from 'node:path';
 
 let failures = 0;
-const fail = (m) => { console.log('❌ ' + m); failures++; };
-const ok = (m) => console.log('✅ ' + m);
+const fail = (message) => {
+  console.log(`❌ ${message}`);
+  failures += 1;
+};
+const ok = (message) => console.log(`✅ ${message}`);
 
-// 1) JSON-LD must parse in the homepage + SEO landing pages (broken schema = lost rich results)
-const ldFiles = [
-  'index.html',
-  'jet-ski-rental-denton/index.html',
-  'jet-ski-rental-frisco/index.html',
-  'jet-ski-rental-lewisville/index.html',
+const read = (file) => fs.readFileSync(file, 'utf8');
+
+function walk(dir, files = []) {
+  if (!fs.existsSync(dir)) return files;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (['node_modules', '.next', '.open-next', 'legacy'].includes(entry.name)) continue;
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(file, files);
+    else files.push(file);
+  }
+  return files;
+}
+
+const activeSourceFiles = [
+  ...walk('src')
+].filter((file) => /\.(tsx?|jsx?|mjs|cjs)$/.test(file));
+
+// 1) Active source must not reintroduce raw browser HTML execution patterns.
+const approvedDangerousHtmlFile = 'src/features/JsonLdStructuredData.tsx';
+const unsafePatterns = [
+  {
+    label: 'dangerouslySetInnerHTML outside the audited JSON-LD helper',
+    pattern: /dangerouslySetInnerHTML/,
+    allow: (file) => file === approvedDangerousHtmlFile
+  },
+  {
+    label: 'innerHTML assignment in active feature code',
+    pattern: /\.innerHTML\s*=/,
+    allow: () => false
+  },
+  { label: 'inline onclick handler string', pattern: /<[^>]*\sonclick\s*=/, allow: () => false },
+  { label: 'inline onerror handler string', pattern: /<[^>]*\sonerror\s*=/, allow: () => false },
+  { label: 'inline onload handler string', pattern: /<[^>]*\sonload\s*=/, allow: () => false },
+  { label: 'document.write', pattern: /document\.write\s*\(/, allow: () => false },
+  { label: 'eval call', pattern: /\beval\s*\(/, allow: () => false },
+  { label: 'Function constructor', pattern: /\bnew\s+Function\s*\(/, allow: () => false },
+  { label: 'insertAdjacentHTML', pattern: /\.insertAdjacentHTML\s*\(/, allow: () => false },
+  { label: 'outerHTML assignment', pattern: /\.outerHTML\s*=/, allow: () => false },
+  { label: 'srcdoc assignment/attribute', pattern: /\bsrcdoc\b/i, allow: () => false }
 ];
-for (const f of ldFiles) {
-  if (!fs.existsSync(f)) { fail(`${f}: missing`); continue; }
-  const html = fs.readFileSync(f, 'utf8');
-  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
-  if (!blocks.length) { fail(`${f}: no JSON-LD found`); continue; }
-  let bad = false;
-  for (const b of blocks) {
-    try { JSON.parse(b[1]); } catch (e) { fail(`${f}: invalid JSON-LD — ${e.message}`); bad = true; }
-  }
-  if (!bad) ok(`${f}: JSON-LD valid (${blocks.length})`);
-}
 
-// 2) PRICING: every craft/duration shared by 2+ files must cost the same
-//    (a mismatch means customers get quoted vs charged different prices). Extra
-//    alias keys in one file (e.g. ops has yamaha/seadoo) are fine.
-function parsePricing(file) {
-  const html = fs.readFileSync(file, 'utf8');
-  const m = html.match(/PRICING\s*=\s*\{([\s\S]*?)\n\s*\};/);
-  if (!m) return null;
-  const obj = {};
-  for (const km of m[1].matchAll(/([a-z0-9]+)\s*:\s*\{([^}]*)\}/g)) {
-    obj[km[1]] = {};
-    for (const pm of km[2].matchAll(/(\d+)\s*:\s*(\d+)/g)) obj[km[1]][pm[1]] = Number(pm[2]);
+for (const file of activeSourceFiles) {
+  const source = read(file);
+  for (const rule of unsafePatterns) {
+    if (rule.allow(file)) continue;
+    if (rule.pattern.test(source)) fail(`${file}: ${rule.label}`);
   }
-  return obj;
 }
-const priceFiles = ['index.html', 'jetski-booking/index.html', 'ops.html'];
-const tables = priceFiles.map((f) => ({ file: f.split('/')[0], p: parsePricing(f) }));
-if (tables.some((t) => !t.p)) {
-  fail('PRICING table not found in one of: ' + priceFiles.join(', '));
+if (failures === 0) ok('Active source avoids raw HTML execution patterns');
+
+// 2) JSON-LD must be centralized through the audited helper.
+const structuredDataFiles = walk('src/features')
+  .filter((file) => file.endsWith('StructuredData.tsx'));
+if (!fs.existsSync(approvedDangerousHtmlFile)) {
+  fail(`${approvedDangerousHtmlFile}: missing audited JSON-LD helper`);
 } else {
-  const mismatches = [];
-  const crafts = new Set();
-  tables.forEach((t) => Object.keys(t.p).forEach((k) => crafts.add(k)));
-  for (const craft of crafts) {
-    const durs = new Set();
-    tables.forEach((t) => t.p[craft] && Object.keys(t.p[craft]).forEach((d) => durs.add(d)));
-    for (const dur of durs) {
-      const present = tables.filter((t) => t.p[craft] && t.p[craft][dur] !== undefined);
-      if (present.length < 2) continue; // only compare prices shared by 2+ files
-      if (new Set(present.map((t) => t.p[craft][dur])).size > 1) {
-        mismatches.push(`${craft}[${dur}] — ` + present.map((t) => `${t.file}=${t.p[craft][dur]}`).join(', '));
+  const helperSource = read(approvedDangerousHtmlFile);
+  if (!/type=["']application\/ld\+json["']/.test(helperSource)) fail(`${approvedDangerousHtmlFile}: helper must emit application/ld+json`);
+  if (!/JSON\.stringify/.test(helperSource)) fail(`${approvedDangerousHtmlFile}: helper must serialize data with JSON.stringify`);
+  if (!/dangerouslySetInnerHTML/.test(helperSource)) fail(`${approvedDangerousHtmlFile}: helper should be the only dangerous HTML boundary`);
+}
+for (const file of structuredDataFiles) {
+  const source = read(file);
+  if (!/JsonLdStructuredData/.test(source)) fail(`${file}: structured data should use the audited JsonLd helper`);
+}
+if (structuredDataFiles.length) ok(`Structured data files discovered (${structuredDataFiles.length})`);
+else fail('No active structured data files found');
+
+// 3) Public booking prices must match the server-side checkout calculator.
+function parsePricingLiteral(source, name) {
+  const marker = new RegExp(`${name}[^=]*=\\s*\\{`, 'm');
+  const match = marker.exec(source);
+  if (!match) return null;
+  let index = match.index + match[0].lastIndexOf('{');
+  let depth = 0;
+  let end = -1;
+  for (; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '{') depth += 1;
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        end = index + 1;
+        break;
       }
     }
   }
-  if (mismatches.length) mismatches.forEach((m) => fail('PRICING mismatch: ' + m));
-  else ok('PRICING consistent for all shared craft/duration prices');
+  if (end === -1) return null;
+  return source.slice(match.index + match[0].lastIndexOf('{'), end);
 }
 
-// 3) SERVER-vs-SITE: the server (PRICING_CENTS, in cents) must charge exactly what
-//    the booking flow (PRICING, in dollars) shows — no quote-vs-charge gap.
-function parseCentsTable(file, varName) {
-  const src = fs.readFileSync(file, 'utf8');
-  const m = src.match(new RegExp(varName + '\\s*=\\s*\\{([\\s\\S]*?)\\n\\s*\\};'));
-  if (!m) return null;
-  const obj = {};
-  for (const km of m[1].matchAll(/([a-z0-9]+)\s*:\s*\{([^}]*)\}/g)) {
-    obj[km[1]] = {};
-    for (const pm of km[2].matchAll(/(\d+)\s*:\s*(\d+)/g)) obj[km[1]][pm[1]] = Number(pm[2]);
-  }
-  return obj;
-}
-const serverCents = parseCentsTable('server.js', 'PRICING_CENTS');
-const bookingDollars = parsePricing('jetski-booking/index.html');
-if (!serverCents || !bookingDollars) {
-  fail('Could not parse server PRICING_CENTS or booking PRICING for the server/site cross-check');
-} else {
-  const mism = [];
-  for (const craft of Object.keys(bookingDollars)) {
-    for (const dur of Object.keys(bookingDollars[craft])) {
-      const cents = serverCents[craft] && serverCents[craft][dur];
-      const expected = bookingDollars[craft][dur] * 100;
-      if (cents === undefined) mism.push(`server missing ${craft}[${dur}]`);
-      else if (cents !== expected) mism.push(`${craft}[${dur}] server=${cents}c vs site=$${bookingDollars[craft][dur]}`);
+function parseCraftPrices(source, name) {
+  const literal = parsePricingLiteral(source, name);
+  if (!literal) return null;
+  const prices = {};
+  for (const craftMatch of literal.matchAll(/([a-z0-9]+)\s*:\s*\{([^}]*)\}/g)) {
+    const craft = craftMatch[1];
+    prices[craft] = {};
+    for (const priceMatch of craftMatch[2].matchAll(/(\d+)\s*:\s*(\d+)/g)) {
+      prices[craft][priceMatch[1]] = Number(priceMatch[2]);
     }
   }
-  if (mism.length) mism.forEach((m) => fail('SERVER/SITE charge mismatch: ' + m));
-  else ok('Server charge matches the booking-flow price for every craft/duration');
+  return prices;
 }
 
-// 4) Party boat must stay priced AND bookable (selectable in the booking flow).
-const bookingSrc = fs.readFileSync('jetski-booking/index.html', 'utf8');
-if (!bookingDollars || !bookingDollars.partyboat) fail('Party boat missing from the booking PRICING table');
-else if (!/TYPE_TO_CRAFTS[\s\S]*?boat:\s*\[[^\]]*partyboat/.test(bookingSrc)) fail('Party boat is priced but not selectable (missing from TYPE_TO_CRAFTS)');
-else ok('Party boat is priced and bookable');
+const publicApiSource = read('src/lib/ops/public-api.ts');
+const bookingSource = read('src/features/jetskiBooking/JetskiBookingClientBehavior.tsx');
+const homeSource = read('src/features/home/HomeClientBehavior.tsx');
+const opsSource = read('src/features/ops/runtime/opsRuntime.client.js');
+const publicApiPricing = parseCraftPrices(publicApiSource, 'PRICING');
+const bookingPricing = parseCraftPrices(bookingSource, 'PRICING');
+const homePricing = parseCraftPrices(homeSource, 'PRICING');
+const opsPricing = parseCraftPrices(opsSource, 'PRICING');
 
-// 5) Every add-on amount must be defined on the server (drone/karaoke/tube).
-const serverSrc = fs.readFileSync('server.js', 'utf8');
-const missingAddon = ['DRONE_ADDON_CENTS', 'KARAOKE_ADDON_CENTS', 'TUBE_ADDON_CENTS']
-  .filter((name) => !new RegExp('const ' + name + '\\s*=\\s*\\d+').test(serverSrc));
-if (missingAddon.length) fail('Missing add-on amount constant(s): ' + missingAddon.join(', '));
-else ok('Add-on amounts defined (drone, karaoke, tube)');
-
-// 6) Holiday specials: the server's flat holiday price (cents) must equal the
-//    booking flow's holiday price (dollars) ×100 — no quote-vs-charge gap on holidays.
-function parseHolidayPairs(file, varName) {
-  const src = fs.readFileSync(file, 'utf8');
-  const m = src.match(new RegExp(varName + '\\s*=\\s*\\{([\\s\\S]*?)\\n\\};'));
-  if (!m) return null;
-  const pairs = {};
-  for (const pm of m[1].matchAll(/(\d+)\s*:\s*(\d+)/g)) pairs[pm[1]] = Number(pm[2]);
-  return pairs;
-}
-const holidayCents = parseHolidayPairs('server.js', 'HOLIDAY_PRICING_CENTS');
-const holidayDollars = parseHolidayPairs('jetski-booking/index.html', 'HOLIDAY_SPECIALS');
-if (!holidayCents || !holidayDollars) {
-  ok('No holiday specials configured (holiday cross-check skipped)');
+const priceTables = [
+  ['src/lib/ops/public-api.ts', publicApiPricing],
+  ['src/features/jetskiBooking/JetskiBookingClientBehavior.tsx', bookingPricing],
+  ['src/features/home/HomeClientBehavior.tsx', homePricing],
+  ['src/features/ops/runtime/opsRuntime.client.js', opsPricing]
+];
+if (priceTables.some(([, table]) => !table)) {
+  priceTables.filter(([, table]) => !table).forEach(([file]) => fail(`${file}: PRICING table not found`));
 } else {
-  const hm = [];
-  const durs = new Set([...Object.keys(holidayCents), ...Object.keys(holidayDollars)]);
-  for (const d of durs) {
-    if (holidayCents[d] === undefined) hm.push(`server missing holiday ${d}h`);
-    else if (holidayDollars[d] === undefined) hm.push(`booking flow missing holiday ${d}h`);
-    else if (holidayCents[d] !== holidayDollars[d] * 100) hm.push(`${d}h server=${holidayCents[d]}c vs site=$${holidayDollars[d]}`);
+  const mismatches = [];
+  const crafts = new Set(priceTables.flatMap(([, table]) => Object.keys(table)));
+  for (const craft of crafts) {
+    const durations = new Set(priceTables.flatMap(([, table]) => Object.keys(table[craft] || {})));
+    for (const duration of durations) {
+      const present = priceTables.filter(([, table]) => table[craft]?.[duration] !== undefined);
+      if (present.length < 2) continue;
+      const values = new Set(present.map(([, table]) => table[craft][duration]));
+      if (values.size > 1) {
+        mismatches.push(`${craft}[${duration}] — ${present.map(([file, table]) => `${file}=${table[craft][duration]}`).join(', ')}`);
+      }
+    }
   }
-  if (hm.length) hm.forEach((x) => fail('HOLIDAY price mismatch: ' + x));
-  else ok('Holiday special prices match (server vs booking flow)');
+  if (mismatches.length) mismatches.forEach((message) => fail(`PRICING mismatch: ${message}`));
+  else ok('Active pricing tables agree for shared craft/duration prices');
 }
 
-console.log('\n' + (failures === 0 ? '✅ Validation passed' : `❌ ${failures} validation failure(s)`));
+if (!bookingPricing?.partyboat) fail('Party boat missing from active booking PRICING table');
+else if (!/boat:\s*\[[^\]]*partyboat/.test(bookingSource)) fail('Party boat is priced but not selectable in active booking TYPE_TO_CRAFTS');
+else ok('Party boat is priced and bookable in active booking flow');
+
+['drone', 'karaoke', 'tube'].forEach((addon) => {
+  if (!new RegExp(`${addon}\\s*\\?\\s*50\\s*:\\s*0`, 'i').test(publicApiSource)) {
+    fail(`src/lib/ops/public-api.ts: missing ${addon} add-on amount`);
+  }
+});
+ok('Add-on amount checks completed');
+
+// 4) Holiday specials must match between public checkout API and booking UI.
+function parseHolidayPrices(source, name) {
+  const literal = parsePricingLiteral(source, name);
+  if (!literal) return null;
+  const prices = {};
+  for (const dateMatch of literal.matchAll(/['"](\d{4}-\d{2}-\d{2})['"][\s\S]*?crafts\s*:\s*\{([\s\S]*?)\n\s*\}/g)) {
+    prices[dateMatch[1]] = {};
+    for (const craftMatch of dateMatch[2].matchAll(/([a-z0-9]+)\s*:\s*(?:\{[^}]*durations\s*:\s*)?\{([^}]*)\}/g)) {
+      prices[dateMatch[1]][craftMatch[1]] = {};
+      for (const priceMatch of craftMatch[2].matchAll(/(\d+)\s*:\s*(\d+)/g)) {
+        prices[dateMatch[1]][craftMatch[1]][priceMatch[1]] = Number(priceMatch[2]);
+      }
+    }
+  }
+  return prices;
+}
+
+const apiHolidayPrices = parseHolidayPrices(publicApiSource, 'HOLIDAY_PRICING');
+const bookingHolidayPrices = parseHolidayPrices(bookingSource, 'HOLIDAY_SPECIALS');
+if (!apiHolidayPrices || !bookingHolidayPrices) {
+  fail('Could not parse active holiday pricing tables');
+} else {
+  const mismatches = [];
+  const dates = new Set([...Object.keys(apiHolidayPrices), ...Object.keys(bookingHolidayPrices)]);
+  for (const date of dates) {
+    const crafts = new Set([...Object.keys(apiHolidayPrices[date] || {}), ...Object.keys(bookingHolidayPrices[date] || {})]);
+    for (const craft of crafts) {
+      const durations = new Set([
+        ...Object.keys(apiHolidayPrices[date]?.[craft] || {}),
+        ...Object.keys(bookingHolidayPrices[date]?.[craft] || {})
+      ]);
+      for (const duration of durations) {
+        const apiPrice = apiHolidayPrices[date]?.[craft]?.[duration];
+        const bookingPrice = bookingHolidayPrices[date]?.[craft]?.[duration];
+        if (apiPrice !== bookingPrice) mismatches.push(`${date} ${craft}[${duration}] api=${apiPrice} booking=${bookingPrice}`);
+      }
+    }
+  }
+  if (mismatches.length) mismatches.forEach((message) => fail(`HOLIDAY price mismatch: ${message}`));
+  else ok('Active holiday special prices match');
+}
+
+console.log(`\n${failures === 0 ? '✅ Validation passed' : `❌ ${failures} validation failure(s)`}`);
 process.exit(failures === 0 ? 0 : 1);

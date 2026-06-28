@@ -1,19 +1,15 @@
 name: Health
 
-# Three things:
-# - check: on every push/PR — syntax + JSON-LD + pricing consistency (blocks bad code)
-# - warm:  every 14 min — pings the node service so the FREE Render plan never hits
-#          its ~15-min idle spin-down (which causes slow/dead cold starts). Cheap;
-#          does not alert. The permanent fix is upgrading the service to Starter.
-# - smoke: daily + on-demand — full live health check; GitHub emails the owner on failure.
+# Two things:
+# - check: on every push/PR — static validation, migration tests, and Cloudflare build
+# - smoke: daily + on-demand — live health check for the configured site/API targets
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
   pull_request:
-    branches: [main]
+    branches: [main, development]
   schedule:
-    - cron: '*/14 * * * *'   # keep-warm (free tier spins down at ~15 min idle)
     - cron: '0 13 * * *'     # daily full health check
   workflow_dispatch: {}
 
@@ -27,13 +23,7 @@ jobs:
         with:
           node-version: 20
       - run: npm run check
-
-  warm:
-    if: github.event_name == 'schedule' && github.event.schedule == '*/14 * * * *'
-    runs-on: ubuntu-latest
-    steps:
-      # Single cheap request to wake/keep the node service warm. Never fails the run.
-      - run: curl -fsS --max-time 90 https://shoreline-aquatics-ops.onrender.com/api/health || true
+      - run: npm run cf:build
 
   smoke:
     if: (github.event_name == 'schedule' && github.event.schedule == '0 13 * * *') || github.event_name == 'workflow_dispatch'
