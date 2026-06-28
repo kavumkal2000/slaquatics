@@ -701,7 +701,7 @@ function runOpsRuntime() {
       return;
     }
     const range = document.createRange();
-    range.selectNode(element);
+    range.selectNodeContents(element);
     element.replaceChildren(range.createContextualFragment(source));
   }
   function textLine(className, text) {

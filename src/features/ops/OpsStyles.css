@@ -176,6 +176,28 @@ tbody tr:hover{background:rgba(125,217,255,0.06);}
 tbody tr.inv-owing{box-shadow:inset 3px 0 0 var(--amber);}
 .table-actions{display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;}
 .table-actions .btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;}
+#page-invoices table{min-width:1260px;table-layout:fixed;}
+#page-invoices th:nth-child(1),#page-invoices td:nth-child(1){width:17%;}
+#page-invoices th:nth-child(2),#page-invoices td:nth-child(2){width:15%;}
+#page-invoices th:nth-child(3),#page-invoices td:nth-child(3){width:8%;}
+#page-invoices th:nth-child(4),#page-invoices td:nth-child(4){width:8%;}
+#page-invoices th:nth-child(5),#page-invoices td:nth-child(5){width:19%;}
+#page-invoices th:nth-child(6),#page-invoices td:nth-child(6){width:8%;}
+#page-invoices th:nth-child(7),#page-invoices td:nth-child(7){width:10%;}
+#page-invoices th:nth-child(8),#page-invoices td:nth-child(8){width:15%;}
+#page-invoices td{vertical-align:middle;}
+#page-invoices .table-actions{display:grid;grid-template-columns:repeat(3,max-content);gap:0.55rem 0.6rem;align-items:center;}
+#page-invoices .table-actions .btn{min-height:34px;padding-inline:0.8rem;}
+#page-invoices .table-actions [data-invoice-action="delete"]{grid-column:1 / span 1;}
+#page-waivers table{min-width:1180px;table-layout:fixed;}
+#page-waivers th:nth-child(1),#page-waivers td:nth-child(1){width:18%;}
+#page-waivers th:nth-child(2),#page-waivers td:nth-child(2){width:16%;}
+#page-waivers th:nth-child(3),#page-waivers td:nth-child(3){width:12%;}
+#page-waivers th:nth-child(4),#page-waivers td:nth-child(4){width:18%;}
+#page-waivers th:nth-child(5),#page-waivers td:nth-child(5){width:16%;}
+#page-waivers th:nth-child(6),#page-waivers td:nth-child(6){width:10%;}
+#page-waivers th:nth-child(7),#page-waivers td:nth-child(7){width:10%;}
+#page-waivers td{vertical-align:middle;}
 
 /* BOOKING CALENDAR */
 .calendar-shell{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,0.85fr);gap:1rem;margin-bottom:1.3rem;}
