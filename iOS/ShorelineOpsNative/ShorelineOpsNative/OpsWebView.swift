@@ -5,9 +5,8 @@ import WebKit
 
 @MainActor
 final class OpsWebViewStore: ObservableObject {
-    let startURL = URL(string: "https://shoreline-aquatics-ops.onrender.com/ops-login.html")!
+    let startURL = URL(string: "https://slaquatics.com/ops-login")!
     let allowedHosts: Set<String> = [
-        "shoreline-aquatics-ops.onrender.com",
         "slaquatics.com",
         "www.slaquatics.com"
     ]
@@ -100,7 +99,7 @@ final class OpsWebViewStore: ObservableObject {
             return false
         }
 
-        if scheme == "https" || scheme == "http" {
+        if scheme == "https" {
             return allowedHosts.contains((url.host ?? "").lowercased())
         }
 
@@ -118,15 +117,13 @@ final class OpsWebViewStore: ObservableObject {
         if !cleanTitle.isEmpty {
             pageTitle = cleanTitle
         } else if let host = url?.host, !host.isEmpty {
-            pageTitle = host == "shoreline-aquatics-ops.onrender.com" ? "Shoreline Ops" : host
+            pageTitle = allowedHosts.contains(host.lowercased()) ? "Shoreline Ops" : host
         } else {
             pageTitle = "Shoreline Ops"
         }
 
         if let host = url?.host, !host.isEmpty {
-            if host == "shoreline-aquatics-ops.onrender.com" {
-                pageSubtitle = "Live private CRM"
-            } else if allowedHosts.contains(host.lowercased()) {
+            if allowedHosts.contains(host.lowercased()) {
                 pageSubtitle = "Shoreline secure view"
             } else {
                 pageSubtitle = host

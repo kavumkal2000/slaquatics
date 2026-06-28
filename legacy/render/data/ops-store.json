@@ -1,0 +1,42 @@
+{
+  "bookings": [],
+  "customers": [],
+  "expenses": [],
+  "fuelLog": [],
+  "maintLog": [],
+  "trackers": [],
+  "invoices": [],
+  "communicationsLog": [],
+  "reviewRequests": [],
+  "reviews": [],
+  "reviewSettings": {
+    "googleUrl": "",
+    "facebookUrl": "",
+    "autoSend": false,
+    "channel": "sms"
+  },
+  "socialPosts": [],
+  "ownerWeeklyDigest": {
+    "lastSentAt": "",
+    "lastMessageId": "",
+    "lastWeekKey": ""
+  },
+  "importMeta": {
+    "lastType": "",
+    "fileName": "",
+    "importedAt": "",
+    "added": 0,
+    "updated": 0,
+    "recordCount": 0,
+    "replacedSeed": false
+  },
+  "invoiceImportMeta": {
+    "lastType": "",
+    "fileName": "",
+    "importedAt": "",
+    "added": 0,
+    "updated": 0,
+    "recordCount": 0,
+    "replacedSeed": false
+  }
+}

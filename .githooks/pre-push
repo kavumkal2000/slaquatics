@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+blocked=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|main)
+      blocked=1
+      ;;
+  esac
+done
+
+if [ "$blocked" -eq 1 ]; then
+  printf '%s\n' 'Blocked: this repository must not be pushed directly to main.'
+  printf '%s\n' 'Use development or an explicit release process instead.'
+  exit 1
+fi
+
+exit 0
