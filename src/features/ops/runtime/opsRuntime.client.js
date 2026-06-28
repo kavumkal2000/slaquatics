@@ -797,11 +797,11 @@ function runOpsRuntime() {
   }
   function bookingTotalLabel(booking) {
     if (hideMoneyForRole()) return '—';
-    return `${bookingTotalValue(booking).toLocaleString()}`;
+    return `$${bookingTotalValue(booking).toLocaleString()}`;
   }
   function moneyLabel(value) {
     if (hideMoneyForRole()) return '—';
-    return `${Number(value || 0).toLocaleString(undefined, {
+    return `$${Number(value || 0).toLocaleString(undefined, {
       minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
       maximumFractionDigits: 2
     })}`;
@@ -4677,9 +4677,9 @@ function runOpsRuntime() {
     const unknownEl = document.getElementById('invoice-kpi-unknown');
     if (countEl) countEl.textContent = filteredInvoices.length.toLocaleString();
     if (updatedEl) updatedEl.textContent = invoiceImportMeta.importedAt ? `${invoiceImportMeta.recordCount} rows synced` : 'No invoice import yet';
-    if (paidEl) paidEl.textContent = `${paidTotal.toLocaleString()}`;
+    if (paidEl) paidEl.textContent = moneyLabel(paidTotal);
     if (paidCountEl) paidCountEl.textContent = `${paidInvoices.length} collected invoices`;
-    if (openEl) openEl.textContent = `${openTotal.toLocaleString()}`;
+    if (openEl) openEl.textContent = moneyLabel(openTotal);
     if (openCountEl) openCountEl.textContent = `${openInvoices.length} open invoices`;
     if (unknownEl) unknownEl.textContent = unknownInvoices.length.toLocaleString();
   
@@ -4701,7 +4701,7 @@ function runOpsRuntime() {
         ${(() => {
           const contact = invoiceDisplayContact(invoice);
           return `
-        <td>
+        <td data-label="Invoice">
           <strong>${escapeHtml(invoice.invoiceNumber || 'No number')}</strong>
           <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(invoice.invoiceName || 'Invoice')}</div>
         </td>
@@ -4714,11 +4714,13 @@ function runOpsRuntime() {
         <td data-label="Items">${escapeHtml(invoiceLineSummary(invoice))}</td>
         <td data-label="Amount" style="font-weight:600;">${moneyLabel(invoice.total || 0)}<div style="font-size:0.72rem;margin-top:0.2rem;">${invoiceOutstandingAmount(invoice) > 0 ? `<span style="color:var(--amber);">${moneyLabel(invoiceOutstandingAmount(invoice))} due</span>` : '<span style="color:var(--green);">Paid in full</span>'}</div></td>
         <td data-label="Status">${invoiceIsOverdue(invoice) ? '<span class="badge badge-noshow">Overdue</span>' : invoiceStatusBadge(invoice.status)}</td>
-        <td data-label="" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-          ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" data-invoice-action="paid" data-invoice-id="${Number(invoice.id)}">💵 Mark Paid</button>` : ''}
-          <button class="btn btn-ghost btn-sm" data-invoice-action="review" data-invoice-id="${Number(invoice.id)}">⭐ Review</button>
-          <button class="btn btn-ghost btn-sm" data-invoice-action="edit" data-invoice-id="${Number(invoice.id)}">Edit</button>
-          <button class="btn btn-danger btn-sm" data-invoice-action="delete" data-invoice-id="${Number(invoice.id)}">Delete</button>
+        <td data-label="Actions">
+          <div class="table-actions">
+            ${invoiceOutstandingAmount(invoice) > 0 ? `<button class="btn btn-success btn-sm" data-invoice-action="paid" data-invoice-id="${Number(invoice.id)}">Mark Paid</button>` : ''}
+            <button class="btn btn-ghost btn-sm" data-invoice-action="edit" data-invoice-id="${Number(invoice.id)}">Edit</button>
+            <button class="btn btn-danger btn-sm" data-invoice-action="delete" data-invoice-id="${Number(invoice.id)}">Delete</button>
+            <button class="btn btn-ghost btn-sm" data-invoice-action="review" data-invoice-id="${Number(invoice.id)}">Review</button>
+          </div>
         </td>
         `;
         })()}
@@ -4862,7 +4864,7 @@ function runOpsRuntime() {
       const emergencyLine = [customer.emergencyName, customer.emergencyPhone].filter(Boolean).map(escapeHtml);
       return `
         <tr>
-          <td>
+          <td data-label="Customer">
             <strong>${escapeHtml(customer.name || 'Unnamed customer')}</strong>
             <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">${escapeHtml(customer.source || 'Website waiver')}</div>
           </td>
@@ -4877,11 +4879,11 @@ function runOpsRuntime() {
             <div>${Number(customer.bookings) || 0} booking${Number(customer.bookings) === 1 ? '' : 's'}</div>
             <div style="font-size:0.72rem;color:var(--wave);margin-top:0.2rem;">${moneyLabel(customer.totalSpent)} total spent</div>
           </td>
-          <td data-label="">
-            <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
+          <td data-label="Actions">
+            <div class="table-actions">
               <button class="btn btn-ghost btn-sm" data-customer-action="edit" data-customer-id="${Number(customer.id)}">Edit</button>
-              ${customer.phone ? `<a href="tel:${phoneHref(customer.phone)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">📞 Call</a>` : ''}
-              ${customer.email ? `<a href="mailto:${encodeURIComponent(customer.email)}" class="btn btn-ghost btn-sm" style="text-decoration:none;display:inline-block;">✉️ Email</a>` : ''}
+              ${customer.phone ? `<a href="tel:${phoneHref(customer.phone)}" class="btn btn-ghost btn-sm">Call</a>` : ''}
+              ${customer.email ? `<a href="mailto:${encodeURIComponent(customer.email)}" class="btn btn-ghost btn-sm">Email</a>` : ''}
             </div>
           </td>
         </tr>
