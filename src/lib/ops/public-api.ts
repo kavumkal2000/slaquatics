@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { publicAvailabilityPayload } from '../booking/availability.ts';
+import { PUBLIC_BOOKING_START_TIMES, craftUsesBoat, publicAvailabilityPayload } from '../booking/availability.ts';
+import { LAUNCH_LOCATION_LABEL } from '../launch-info.ts';
 import type { OpsState } from './default-state.ts';
 
 function digits(value = '') {
@@ -96,6 +97,9 @@ export function priceForSelection(payload: Record<string, any>) {
   const drone = addonEnabled(payload.drone);
   const karaoke = addonEnabled(payload.karaoke);
   const tube = addonEnabled(payload.tube);
+  if ((karaoke || tube) && !craftUsesBoat(craft)) {
+    throw new Error('Karaoke and tube add-ons are only available for boat and bundle bookings.');
+  }
   const droneAmount = drone ? 50 : 0;
   const karaokeAmount = karaoke ? 50 : 0;
   const tubeAmount = tube ? 50 : 0;
@@ -117,6 +121,14 @@ export function priceForSelection(payload: Record<string, any>) {
     processingFeeAmount: 5,
     amountDueToday: 55
   };
+}
+
+function rentalStartMinutes(time = '') {
+  const [hourText = '', minuteText = '0'] = String(time).split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Number.NaN;
+  return (hour * 60) + minute;
 }
 
 export function findMatchingCustomer(state: OpsState, payload: Record<string, any>) {
@@ -227,6 +239,14 @@ export function assertPublicSlotAvailable(state: OpsState, payload: Record<strin
   if (!availability.requiresAvailabilityCheck) return;
 
   const requestedTime = String(payload.time || '').trim();
+  if (!PUBLIC_BOOKING_START_TIMES.includes(requestedTime as any)) {
+    throw new Error('Please choose one of the available Shoreline start times.');
+  }
+  const startMinutes = rentalStartMinutes(requestedTime);
+  const endMinutes = startMinutes + (pricing.duration * 60);
+  if (Number.isNaN(startMinutes) || endMinutes > (20 * 60)) {
+    throw new Error('Please choose a rental time that will end by 8:00 PM.');
+  }
   const slot = availability.slotDetails.find((entry) => entry.time === requestedTime);
   if (slot && !slot.canBook) {
     throw new Error('That start time is no longer available. Please choose another open time.');
@@ -269,7 +289,7 @@ export function upsertDraftBooking(state: OpsState, payload: Record<string, any>
     amountDueToday: pricing.amountDueToday,
     date: String(payload.date || booking.date || '').trim(),
     time: String(payload.time || booking.time || '').trim(),
-    location: String(payload.location || booking.location || 'Shoreline Aquatics launch, Point Vista Rd, Hickory Creek, TX').trim(),
+    location: String(payload.location || booking.location || LAUNCH_LOCATION_LABEL).trim(),
     contactMethod: String(payload.contactMethod || booking.contactMethod || 'text').trim(),
     partySize: String(payload.partySize || booking.partySize || '').trim(),
     notes: String(payload.notes || booking.notes || '').trim(),

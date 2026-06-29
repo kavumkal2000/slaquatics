@@ -9,7 +9,7 @@ const structuredData = [
         "@id": "https://slaquatics.com/#business",
         "name": "Shoreline Aquatics Jet Ski & Boat Rentals",
         "url": "https://slaquatics.com/",
-        "image": "https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png",
+        "image": "https://slaquatics.com/assets/images/shoreline-jetski-group-collage.webp",
         "telephone": "+14696937164",
         "priceRange": "$$",
         "description": "Jet ski and boat rentals on Lake Lewisville with live availability, life jackets included, and a full safety orientation.",
@@ -49,21 +49,7 @@ const structuredData = [
           "@type": "AggregateRating",
           "ratingValue": "5.0",
           "reviewCount": "550"
-        },
-        "review": [
-          {
-            "@type": "Review",
-            "author": {
-              "@type": "Person",
-              "name": "Taimoor J."
-            },
-            "reviewRating": {
-              "@type": "Rating",
-              "ratingValue": "5"
-            },
-            "reviewBody": "Best experience on the lake. They walked us through everything and the jet skis were in perfect condition."
-          }
-        ]
+        }
       },
       {
         "@type": "FAQPage",

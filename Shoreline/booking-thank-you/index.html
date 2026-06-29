@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Thanks for booking with Shoreline Aquatics. Review your arrival instructions and next steps here.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://slaquatics.com/booking-thank-you/">
+<title>Thanks For Booking | Shoreline Aquatics</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{
+  --gold:#f5a623;
+  --orange:#e8841a;
+  --ink:#0b1c30;
+  --panel:rgba(245,249,251,0.8);
+  --line:rgba(11,28,48,0.1);
+  --muted:rgba(11,28,48,0.66);
+  --shadow:rgba(13,37,61,0.14);
+}
+body{
+  margin:0;
+  font-family:'DM Sans',sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(circle at top right, rgba(245,166,35,0.18), transparent 24%),
+    radial-gradient(circle at top left, rgba(15,184,224,0.16), transparent 26%),
+    linear-gradient(180deg,#dbe9ef 0%,#e6f0f4 42%,#dfeaf0 100%);
+}
+a{color:inherit}
+.shell{max-width:1180px;margin:0 auto;padding:32px 24px 64px}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:28px
+}
+.brand{display:flex;align-items:center;text-decoration:none}
+.brand-logo img{height:68px;width:auto;display:block}
+.top-actions{display:flex;flex-wrap:wrap;gap:12px}
+.btn{
+  border:0;border-radius:999px;padding:.82rem 1.18rem;font-size:.82rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;text-decoration:none;cursor:pointer;
+  transition:transform .18s ease,background .18s ease,border-color .18s ease
+}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--gold);color:#08111f}
+.btn-primary:hover{background:var(--orange)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid rgba(11,28,48,.18)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.hero,
+.summary-grid,
+.content-grid,
+.step-list{display:grid}
+.hero{grid-template-columns:minmax(0,1.05fr) minmax(300px,.8fr);gap:24px;margin-bottom:24px}
+.card,.empty{
+  background:var(--panel);border:1px solid var(--line);border-radius:28px;
+  padding:28px;box-shadow:0 28px 80px var(--shadow);backdrop-filter:blur(18px)
+}
+.eyebrow,.block-label{
+  display:inline-flex;align-items:center;gap:10px;color:var(--gold);
+  font-size:.74rem;text-transform:uppercase;letter-spacing:.16em
+}
+.eyebrow::before,.block-label::before{content:"";width:24px;height:1px;background:currentColor}
+.block-label{margin-bottom:12px}
+h1,h2,h3{
+  margin:0;font-family:'Bebas Neue',cursive;letter-spacing:.04em;line-height:.96
+}
+h1{margin-top:16px;font-size:clamp(3rem,6vw,5rem)}
+h2{font-size:1.95rem}
+h3{font-size:1.7rem}
+.accent{color:var(--gold)}
+.hero-copy,.status,.card p,.arrival-copy{color:var(--muted);line-height:1.72}
+.hero-copy{margin-top:18px;font-size:1rem}
+.hero-copy strong{color:var(--ink)}
+.summary-total{
+  margin-top:10px;font-family:'Bebas Neue',cursive;font-size:4rem;color:var(--gold);letter-spacing:.04em;line-height:1
+}
+.summary-title{margin-top:8px;font-size:1rem;font-weight:700}
+.summary-grid{gap:12px;margin-top:22px}
+.summary-row{
+  display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid rgba(11,28,48,.08);font-size:.9rem
+}
+.summary-row:last-child{border-bottom:0;padding-bottom:0}
+.summary-row span{color:var(--muted)}
+.summary-row strong{text-align:right}
+.status{
+  margin-top:18px;padding:14px 16px;border-radius:16px;background:rgba(27,110,72,.12);
+  border:1px solid rgba(27,110,72,.2);color:#1f5f45;font-size:.92rem;font-weight:600
+}
+.content-grid{grid-template-columns:minmax(0,1fr) minmax(300px,.86fr);gap:24px}
+.media-card{
+  display:grid;
+  gap:14px;
+}
+.hero-photo{
+  position:relative;
+  overflow:hidden;
+  min-height:320px;
+  border-radius:24px;
+  border:1px solid rgba(11,28,48,.08);
+  background:rgba(255,255,255,.55);
+}
+.hero-photo img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.hero-photo-badge{
+  position:absolute;
+  left:18px;
+  bottom:18px;
+  padding:.7rem .95rem;
+  border-radius:16px;
+  background:rgba(8,17,31,.72);
+  color:#f7fbff;
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.12);
+}
+.hero-photo-badge strong{
+  display:block;
+  font-size:.82rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--gold);
+}
+.hero-photo-badge span{
+  display:block;
+  margin-top:4px;
+  font-size:.88rem;
+}
+.thumb-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.thumb{
+  overflow:hidden;
+  border-radius:18px;
+  min-height:132px;
+  border:1px solid rgba(11,28,48,.08);
+  background:rgba(255,255,255,.55);
+}
+.thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.confirm-note{
+  margin-top:18px;
+  padding:18px 20px;
+  border-radius:20px;
+  background:rgba(245,166,35,.08);
+  border:1px solid rgba(245,166,35,.18);
+}
+.confirm-note h3{
+  margin-bottom:10px;
+  color:var(--ink);
+}
+.confirm-note p{
+  margin:0;
+}
+.confirm-highlight{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  margin-top:14px;
+  padding:.65rem .9rem;
+  border-radius:999px;
+  background:rgba(255,255,255,.7);
+  border:1px solid rgba(11,28,48,.08);
+  color:var(--ink);
+  font-size:.82rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.arrival-list{margin-top:16px;display:grid;gap:10px}
+.arrival-item{
+  padding:.95rem 1rem;border-radius:16px;background:rgba(11,28,48,.04);border:1px solid rgba(11,28,48,.08);
+  color:rgba(11,28,48,.82);font-size:.92rem;line-height:1.7
+}
+.address-card{
+  margin-top:18px;border-radius:20px;padding:18px;background:rgba(245,166,35,.08);
+  border:1px solid rgba(245,166,35,.22)
+}
+.empty[hidden]{display:none}
+@media (max-width:980px){
+  .hero,.content-grid{grid-template-columns:1fr}
+  .shell{padding:22px 16px 48px}
+  .card,.empty{padding:24px;border-radius:22px}
+  .hero-photo{min-height:280px}
+}
+@media (max-width:720px){
+  .summary-row{flex-direction:column}
+  .summary-row strong{text-align:left}
+  .thumb-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <a class="brand" href="../">
+        <div class="brand-logo">
+          <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics">
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="btn btn-ghost" href="tel:4696937164">Call (469) 693-7164</a>
+        <a class="btn btn-primary" href="../">Back To Homepage</a>
+      </div>
+    </div>
+
+    <div class="empty" id="empty-state" hidden>
+      <div class="block-label">Booking Not Found</div>
+      <h2>We could not load your booking details.</h2>
+      <p>Head back to the booking flow and finish the deposit step again if you still need help.</p>
+      <div class="top-actions" style="margin-top:16px">
+        <a class="btn btn-primary" id="empty-booking-link" href="../jetski-booking/">Go To Booking Calendar</a>
+        <a class="btn btn-ghost" id="empty-confirmation-link" href="../jetski-booking-confirmation/">Back To Contact + Waiver</a>
+      </div>
+    </div>
+
+    <div id="thankyou-wrap" hidden>
+      <div class="hero">
+        <div class="card">
+          <div class="eyebrow">Thank You</div>
+          <h1>You're <span class="accent">Booked In</span></h1>
+          <div class="hero-copy">
+            Your $50 booking deposit and $5 processing fee are paid, and your Shoreline request is now on file. <strong>Watch for a confirmation text or email</strong> if Shoreline needs to send final timing details before your lake day.
+          </div>
+          <div class="status" id="payment-status">Payment received. Watch for your confirmation text or email.</div>
+        </div>
+
+        <div class="card media-card">
+          <div class="hero-photo">
+            <img src="../assets/images/shoreline-customer-group-wide.png" alt="Shoreline Aquatics riders on the water">
+            <div class="hero-photo-badge">
+              <strong>Lake day locked in</strong>
+              <span>Save this page for directions and arrival info.</span>
+            </div>
+          </div>
+          <div class="thumb-grid">
+            <div class="thumb"><img src="../assets/images/shoreline-customer-duo.png" alt="Customers smiling on a Shoreline jet ski"></div>
+            <div class="thumb"><img src="../assets/images/shoreline-customer-riders.png" alt="Shoreline riders out on the water"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        <div class="card">
+          <div class="block-label">Confirmation</div>
+          <h2>Watch for your text or email.</h2>
+          <p>Shoreline will use the contact details on your booking for any final timing updates, launch reminders, or day-of changes.</p>
+          <div class="confirm-note">
+            <h3>Keep your phone handy</h3>
+            <p>If anything changes with your party size or arrival time, reply to the confirmation message or call Shoreline directly before your rental window.</p>
+            <div class="confirm-highlight" id="confirm-contact-method">Text message follow-up</div>
+          </div>
+          <div class="block-label" style="margin-top:22px;">Quick Safety Briefing</div>
+          <div class="arrival-list">
+            <div class="arrival-item">1. Life jackets stay on for every rider from launch to return.</div>
+            <div class="arrival-item">2. The driver keeps the safety lanyard clipped in while operating the jet ski.</div>
+            <div class="arrival-item">3. No alcohol or drugs. If you are impaired, you do not ride.</div>
+            <div class="arrival-item">4. Idle out from the launch and stay slow near docks, swimmers, boats, and shoreline.</div>
+            <div class="arrival-item">5. If weather changes or anything feels wrong, slow down, stop safely, and call Shoreline.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="block-label">Booking Summary</div>
+          <h2>Saved rental details</h2>
+          <div class="summary-total" id="summary-total">$300</div>
+          <div class="summary-title" id="summary-package">2 Yamaha Jet Skis</div>
+          <div class="summary-grid">
+            <div class="summary-row"><span>Date</span><strong id="summary-date">-</strong></div>
+            <div class="summary-row"><span>Start time</span><strong id="summary-time">-</strong></div>
+            <div class="summary-row"><span>Meeting spot</span><strong id="summary-location">-</strong></div>
+            <div class="summary-row"><span>Customer</span><strong id="summary-customer">-</strong></div>
+            <div class="summary-row"><span>Deposit credit</span><strong id="summary-deposit">$50</strong></div>
+            <div class="summary-row"><span>Processing fee</span><strong id="summary-processing-fee">$5</strong></div>
+            <div class="summary-row"><span>Paid today</span><strong id="summary-paid-today">$55</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="content-grid" style="margin-top:24px;">
+        <div class="card">
+          <div class="block-label">Arrival Directions</div>
+          <h2>Shoreline Aquatics launch</h2>
+          <div class="arrival-copy">The launch meeting spot is at <strong style="color:var(--ink)">Point Vista Rd, Hickory Creek, TX</strong>. Use the directions below once you arrive near the park entrance.</div>
+          <div class="address-card">
+            <strong style="display:block;color:var(--ink);margin-bottom:6px">Address</strong>
+            Point Vista Rd, Hickory Creek, TX
+          </div>
+          <div class="arrival-list">
+            <div class="arrival-item">1. Head down Point Vista Road, passing Hickory Park on your right.</div>
+            <div class="arrival-item">2. Continue until you see the boat ramp on your right, then drive past it.</div>
+            <div class="arrival-item">3. Follow the winding road to the dead end, where you will find parking.</div>
+            <div class="arrival-item">4. Park your vehicle and walk down to the shoreline, where we will be waiting with your rental.</div>
+          </div>
+          <div class="top-actions" style="margin-top:18px">
+            <a class="btn btn-primary" href="tel:4696937164">Call Shoreline</a>
+            <a class="btn btn-ghost" id="sms-link" href="#">Text Shoreline</a>
+          </div>
+        </div>
+        <div class="card media-card">
+          <div class="hero-photo" style="min-height:260px;">
+            <img src="../assets/images/shoreline-customer-moments.png" alt="Shoreline Aquatics customer moments">
+          </div>
+          <p>Shoreline will meet you at the launch, walk you through the basics, and get your group on the water fast.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const CONTACT_PHONE = "4696937164";
+const OPS_PUBLIC_API = window.location.protocol === 'file:'
+  ? 'https://slaquatics.com'
+  : (
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === 'localhost'
+    )
+      ? window.location.origin
+      : 'https://slaquatics.com';
+
+function qs(id) {
+  return document.getElementById(id);
+}
+
+async function loadBookingByToken(token) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/booking?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not load your booking details.');
+  }
+  return payload.booking || null;
+}
+
+function formatCurrency(value) {
+  return `$${Number(value || 0).toLocaleString()}`;
+}
+
+function formatTimeLabel(value = '') {
+  const [hourText = '', minuteText = '00'] = String(value).split(':');
+  const hour = Number(hourText);
+  if (Number.isNaN(hour)) return value || '-';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = hour % 12 || 12;
+  return `${twelveHour}:${minuteText} ${suffix}`;
+}
+
+function formatDateLabel(value = '') {
+  if (!value) return '-';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const [, year, month, day] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function buildMessage(booking) {
+  return [
+    `Hi Shoreline Aquatics, I’m checking on this paid booking.`,
+    ``,
+    `Name: ${booking.name}`,
+    `Phone: ${booking.phone}`,
+    `Package: ${booking.craftLabel}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Time: ${formatTimeLabel(booking.time)}`
+  ].join("\n");
+}
+
+function setText(id, value) {
+  const element = qs(id);
+  if (element) element.textContent = value;
+}
+
+function updateRecoveryLinks(token = '') {
+  const confirmationLink = qs('empty-confirmation-link');
+  if (confirmationLink && token) {
+    confirmationLink.href = `../jetski-booking-confirmation/?booking=${encodeURIComponent(token)}`;
+  }
+}
+
+function mergeBooking(base, incoming = {}) {
+  return {
+    ...(base || {}),
+    ...(incoming || {}),
+    paymentStatus: incoming.paymentStatus || base?.paymentStatus || 'unpaid',
+    depositAmount: incoming.depositAmount || base?.depositAmount || 50,
+    processingFeeAmount: incoming.processingFeeAmount || base?.processingFeeAmount || 5,
+    amountDueToday: incoming.amountDueToday || base?.amountDueToday || 55,
+    deposit: typeof incoming.deposit === "boolean" ? incoming.deposit : Boolean(base?.deposit)
+  };
+}
+
+async function verifyCheckoutSession(sessionId) {
+  const response = await fetch(`${OPS_PUBLIC_API}/api/public/checkout-session?session_id=${encodeURIComponent(sessionId)}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json' }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'Could not verify the Stripe checkout session.');
+  }
+  return payload;
+}
+
+function showBooking(booking) {
+  setText('summary-total', formatCurrency(booking.total || 0));
+  setText('summary-package', `${booking.craftLabel} · ${booking.durationLabel}`);
+  setText('summary-date', formatDateLabel(booking.date));
+  setText('summary-time', formatTimeLabel(booking.time));
+  setText('summary-location', booking.location || 'Shoreline Aquatics launch, Point Vista Rd, Hickory Creek, TX');
+  setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
+  setText('summary-deposit', formatCurrency(booking.depositAmount || 50));
+  setText('summary-processing-fee', formatCurrency(booking.processingFeeAmount || 5));
+  setText('summary-paid-today', formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5))));
+  setText('payment-status', `Paid today: ${formatCurrency(booking.amountDueToday || ((booking.depositAmount || 50) + (booking.processingFeeAmount || 5)))}. Watch for your confirmation text or email.`);
+  setText('next-package', `${booking.craftLabel} · ${booking.durationLabel}`);
+  setText('next-date', formatDateLabel(booking.date));
+  setText('next-time', formatTimeLabel(booking.time));
+  qs('sms-link').href = `sms:${CONTACT_PHONE}?body=${encodeURIComponent(buildMessage(booking))}`;
+  qs('thankyou-wrap').hidden = false;
+  qs('empty-state').hidden = true;
+}
+
+(async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionId = params.get('session_id');
+  const bookingToken = params.get('booking');
+
+  updateRecoveryLinks(bookingToken || '');
+
+  if (!bookingToken && !sessionId) {
+    qs('empty-state').hidden = false;
+    return;
+  }
+
+  let booking = null;
+
+  if (sessionId) {
+    try {
+      const payload = await verifyCheckoutSession(sessionId);
+      booking = mergeBooking(booking, payload.booking || {});
+      booking.paymentStatus = payload.session?.paymentStatus || booking.paymentStatus;
+      booking.deposit = booking.paymentStatus === 'paid' || Boolean(booking.deposit);
+
+      if (booking.paymentStatus !== 'paid') {
+        qs('empty-state').hidden = false;
+        qs('empty-state').querySelector('p').textContent = 'The payment has not finished clearing yet. Head back to the contact, waiver, and checkout page if you need to try again.';
+        return;
+      }
+    } catch (error) {
+      qs('empty-state').hidden = false;
+      qs('empty-state').querySelector('p').textContent = error.message || 'We could not verify the booking payment right now.';
+      return;
+    }
+  }
+
+  if (!booking && bookingToken) {
+    try {
+      booking = await loadBookingByToken(bookingToken);
+      updateRecoveryLinks(booking.publicToken || bookingToken);
+    } catch (error) {
+      qs('empty-state').hidden = false;
+      qs('empty-state').querySelector('p').textContent = error.message || 'We could not load the booking details right now.';
+      return;
+    }
+  }
+
+  if (!booking || (booking.paymentStatus !== 'paid' && !booking.deposit)) {
+    qs('empty-state').hidden = false;
+    return;
+  }
+
+  updateRecoveryLinks(booking.publicToken || bookingToken || '');
+  showBooking(booking);
+})();
+</script>
+</body>
+</html>

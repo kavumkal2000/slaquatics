@@ -958,6 +958,37 @@ test('invoice runtime uses delegated data handlers instead of inline onclick', (
   assert.match(runtime, /closest\('\[data-invoice-action\]'\)/);
 });
 
+test('invoice delete uses a named confirmation modal and persists actual invoice removal', () => {
+  const runtime = readText('src/features/ops/runtime/opsRuntime.client.js');
+  const modal = readText('src/features/ops/components/OpsConfirmModal.tsx');
+  const actions = readText('src/features/ops/opsGlobalActions.ts');
+  const deleteSlice = runtime.slice(runtime.indexOf('function invoiceDeletionSummary'), runtime.indexOf('function triggerCRMImport'));
+
+  assert.match(modal, /id="ops-confirm-modal"/);
+  assert.match(modal, /id="ops-confirm-detail-title"/);
+  assert.match(actions, /resolveOpsConfirm/);
+  assert.match(actions, /cancelOpsConfirm/);
+  assert.match(deleteSlice, /requestOpsConfirm/);
+  assert.match(deleteSlice, /openInvoiceDeleteModal/);
+  assert.match(deleteSlice, /invoices = invoices\.filter/);
+  assert.match(deleteSlice, /linkedBooking\.invoiceSuppressed = true/);
+  assert.doesNotMatch(deleteSlice, /window\.confirm/);
+});
+
+test('ops confirmations use the shared modal instead of native browser confirms', () => {
+  const runtime = readText('src/features/ops/runtime/opsRuntime.client.js');
+  const page = readText('src/features/ops/OpsPage.tsx');
+  const modal = readText('src/features/ops/components/OpsConfirmModal.tsx');
+
+  assert.match(page, /<OpsConfirmModal \/>/);
+  assert.match(modal, /id="ops-confirm-modal"/);
+  assert.match(runtime, /function requestOpsConfirm/);
+  assert.match(runtime, /function resolveOpsConfirm/);
+  assert.match(runtime, /function cancelOpsConfirm/);
+  assert.doesNotMatch(runtime, /window\.confirm/);
+  assert.doesNotMatch(runtime, /(^|[^A-Za-z])confirm\(/);
+});
+
 test('CRM and waiver customer actions use delegated data handlers instead of inline onclick', () => {
   const runtime = readText('src/features/ops/runtime/opsRuntime.client.js');
   const customerSlice = runtime.slice(runtime.indexOf('function renderWaivers'), runtime.indexOf('async function saveCustomer'));
@@ -1150,6 +1181,16 @@ test('existing static image URLs are mirrored into the Next public asset tree', 
     'shoreline-pontoon-crop-final.png'
   ].forEach((file) => {
     assert.ok(existsSync(`assets/images/${file}`), `source asset ${file} should remain in place`);
+    assert.ok(existsSync(`public/assets/images/${file}`), `/assets/images/${file} should resolve in Next`);
+  });
+  [
+    'shoreline-jetski-close-group.webp',
+    'shoreline-jetski-duo-water.webp',
+    'shoreline-jetski-group-collage.webp',
+    'shoreline-jetski-shoreline-guests.webp',
+    'shoreline-jetski-solo-rider.webp',
+    'shoreline-jetski-two-riders.webp'
+  ].forEach((file) => {
     assert.ok(existsSync(`public/assets/images/${file}`), `/assets/images/${file} should resolve in Next`);
   });
   assert.ok(existsSync('legacy/render/ops-sw.js'), 'legacy source service worker should remain archived');

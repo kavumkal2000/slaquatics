@@ -1,11 +1,12 @@
 'use client';
 
+import { LAUNCH_ADDRESS, LAUNCH_HOURS } from '../../../lib/launch-info';
+
 export function HomeHero() {
   return (
     <div className="hero">
   <div className="hero-video-wrap" id="hero-video-wrap">
-    {/* Video from the existing site */}
-    <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg">
+    <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="./assets/images/shoreline-jetski-group-collage.webp">
       <source src="https://storage.googleapis.com/msgsndr/3PgAS2jkeJsHjqRMEuF6/media/68181c55efb1e5d49ba97e25.mp4" type="video/mp4" />
     </video>
     <button className="hero-video-play" id="hero-video-play" type="button">Tap To Play Video</button>
@@ -24,14 +25,14 @@ export function HomeHero() {
         <span className="hero-info-icon">📍</span>
         <div>
           <div className="hero-info-label">Location</div>
-          <div className="hero-info-value">Point Vista Rd, Hickory Creek, TX</div>
+          <div className="hero-info-value">{LAUNCH_ADDRESS}</div>
         </div>
       </div>
       <div className="hero-info-item">
         <span className="hero-info-icon">🕗</span>
         <div>
           <div className="hero-info-label">Hours</div>
-          <div className="hero-info-value">Mon–Sun · 10 AM – 8 PM</div>
+          <div className="hero-info-value">{LAUNCH_HOURS}</div>
         </div>
       </div>
       <div className="hero-info-item">

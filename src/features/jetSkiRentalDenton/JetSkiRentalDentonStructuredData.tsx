@@ -10,8 +10,24 @@ const structuredData = [
         "name": "Shoreline Aquatics Jet Ski & Boat Rentals",
         "url": "https://slaquatics.com/",
         "telephone": "+14696937164",
-        "image": "https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png",
+        "image": "https://slaquatics.com/assets/images/shoreline-jetski-group-collage.webp",
         "priceRange": "$$",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Point Vista Rd",
+          "addressLocality": "Hickory Creek",
+          "addressRegion": "TX",
+          "postalCode": "75065",
+          "addressCountry": "US"
+        },
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            "opens": "10:00",
+            "closes": "20:00"
+          }
+        ],
         "areaServed": [
           "Denton",
           "Lewisville",

@@ -1,9 +1,10 @@
 import { jsonResponse } from '../../../../../lib/cloudflare/http.ts';
 import { requireMessagingSession } from '../../../../../lib/ops/api-auth.ts';
+import { renderOpsMessageEmail } from '../../../../../lib/ops/email-templates.ts';
 import { sendResendEmail, sendResendMassEmail, sendTwilioSms } from '../../../../../lib/ops/outbound.ts';
 
 function outboundEmailHtml({ subject, body, audienceLabel }: any) {
-  return `<h1>${subject || 'Shoreline Aquatics'}</h1><p>${audienceLabel || 'Shoreline customer'}</p><p>${String(body || '').replace(/\n/g, '<br>')}</p>`;
+  return renderOpsMessageEmail({ subject, body, audienceLabel: audienceLabel || 'Shoreline customer' });
 }
 
 export async function POST(request: Request) {
