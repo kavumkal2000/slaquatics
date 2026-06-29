@@ -12,10 +12,10 @@ export function HomeInstagramSection() {
       </div>
     </div>
     <div className="ig-grid">
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-group-wide.png" alt="Shoreline group getting ready on jet skis" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-duo.png" alt="Two customers smiling on a Yamaha jet ski" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-riders.png" alt="Customers riding jet skis on Lake Lewisville" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg" alt="Jet ski rental" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-group-collage.webp" alt="Shoreline group with Yamaha jet skis on Lake Lewisville" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-shoreline-guests.webp" alt="Customers meeting Shoreline Aquatics at the shoreline" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-two-riders.webp" alt="Two riders on Yamaha jet skis" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-solo-rider.webp" alt="Customer riding a Yamaha jet ski" /></div>
       <div className="ig-tile"><img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Aerial drone coverage" /></div>
       <div className="ig-tile"><img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Drone" /></div>
     </div>

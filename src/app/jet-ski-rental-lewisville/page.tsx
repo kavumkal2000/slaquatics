@@ -3,7 +3,7 @@ import { JetSkiRentalLewisvillePage } from '../../features/jetSkiRentalLewisvill
 
 export const metadata: Metadata = {
   title: "Jet Ski Rental near Lewisville, TX | Shoreline Aquatics",
-  description: "Need a jet ski rental near Lewisville? Shoreline Aquatics offers live Lake Lewisville availability, a quick booking flow, and a first-timer-friendly launch experience.",
+  description: "Need a jet ski rental near Lewisville? Book Shoreline Aquatics at Point Vista Rd, Hickory Creek, TX 75065 on Lake Lewisville, open daily 10 AM-8 PM.",
   alternates: { canonical: "https://slaquatics.com/jet-ski-rental-lewisville/" }
 };
 

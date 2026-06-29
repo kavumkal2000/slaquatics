@@ -3,6 +3,7 @@
 type OpsGlobalActions = {
   applyMassEmailQuickSelect?: (mode: string) => void;
   calcBookingPrice?: () => void;
+  cancelOpsConfirm?: () => void;
   cleanupEmptyCustomers?: () => void;
   closeModal?: (id: string) => void;
   closeTrackerModal?: () => void;
@@ -62,6 +63,7 @@ type OpsGlobalActions = {
   publishSocialNow?: () => void;
   switchReminderTab?: (tab: string, button?: Element | null) => void;
   toggleMobileNav?: () => void;
+  resolveOpsConfirm?: () => void;
 };
 
 function opsActions() {
@@ -74,6 +76,10 @@ export function applyMassEmailQuickSelect(mode: string) {
 
 export function closeOpsModal(id: string) {
   opsActions().closeModal?.(id);
+}
+
+export function cancelOpsConfirm() {
+  opsActions().cancelOpsConfirm?.();
 }
 
 export function calculateBookingPrice() {
@@ -94,6 +100,10 @@ export function deleteTracker() {
 
 export function exportReportsCsv() {
   opsActions().exportReportsCsv?.();
+}
+
+export function resolveOpsConfirm() {
+  opsActions().resolveOpsConfirm?.();
 }
 
 export function exportInvoicesCsv() {

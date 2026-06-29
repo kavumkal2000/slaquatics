@@ -23,7 +23,7 @@ export function JetskiBookingHero() {
         </div>
         <div className="hero-video-panel">
           <div className="hero-video-shell" id="hero-video-wrap">
-            <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg">
+            <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="../assets/images/shoreline-jetski-group-collage.webp">
               <source src="https://storage.googleapis.com/msgsndr/3PgAS2jkeJsHjqRMEuF6/media/68181c55efb1e5d49ba97e25.mp4" type="video/mp4" />
             </video>
             <button className="hero-video-play" id="hero-video-play" type="button">Tap to play video</button>

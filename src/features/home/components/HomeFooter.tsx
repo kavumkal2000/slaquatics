@@ -1,5 +1,7 @@
 'use client';
 
+import { LAUNCH_ADDRESS, LAUNCH_HOURS } from '../../../lib/launch-info';
+
 export function HomeFooter() {
   return (
     <footer>
@@ -8,7 +10,7 @@ export function HomeFooter() {
       <div className="footer-logo">
         <img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics" />
       </div>
-      <p className="footer-about">Jet ski &amp; boat rentals at Lake Lewisville, TX. Meet us at the launch, get your walkthrough, and enjoy a cleaner rental flow from start to finish.</p>
+      <p className="footer-about">Jet ski &amp; boat rentals at Lake Lewisville, TX. Meet us at {LAUNCH_ADDRESS} during {LAUNCH_HOURS}.</p>
       <div className="footer-socials">
         <a href="https://www.instagram.com/shorelineaquatic/" className="footer-social" target="_blank">ig</a>
         <a href="https://www.facebook.com/slaquatic/" className="footer-social" target="_blank">fb</a>
@@ -44,7 +46,7 @@ export function HomeFooter() {
     </div>
   </div>
   <div className="footer-bottom">
-    <span>© 2026 Shoreline Aquatics LLC · Hickory Creek, TX · All rights reserved</span>
+    <span>© 2026 Shoreline Aquatics LLC · {LAUNCH_ADDRESS} · All rights reserved</span>
     <span><a href="./privacy-policy/">Privacy Policy</a></span>
   </div>
 </footer>

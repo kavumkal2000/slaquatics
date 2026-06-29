@@ -7,6 +7,7 @@
 - Before broad edits, inspect the actual owning files and keep changes narrowly scoped.
 - Do not begin major modernization or infrastructure migration work without an explicit implementation request.
 - Prefer read-only discovery for infrastructure questions until a concrete migration plan is approved.
+- Do not add placeholder or fake production content. Public pages, ops surfaces, emails, seed data, fixtures intended for runtime use, and checked-in operational data must not introduce fake customers, fake reviews, invented business claims, filler copy, fake media, or demo operational records. Use verified business facts, supplied real assets, existing system state, or neutral functional copy; omit unknown details instead of inventing them.
 
 ## Current Architecture Snapshot
 

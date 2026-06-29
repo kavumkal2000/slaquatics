@@ -18,9 +18,9 @@ export function HomeFleetSection() {
     <div className="fleet-grid">
       <div className="fleet-card" id="jetski">
         <div className="fleet-media fleet-slider">
-          <img className="slide active" loading="lazy" decoding="async" src="./assets/images/shoreline-customer-duo.png" alt="Two riders cheering on a Yamaha jet ski at Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-customer-riders.png" alt="Customers riding jet skis on Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-customer-group-wide.png" alt="Shoreline group getting ready on Yamaha jet skis" />
+          <img className="slide active" loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-close-group.webp" alt="Customers on Yamaha jet skis at Lake Lewisville" />
+          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-solo-rider.webp" alt="Customer riding a Yamaha jet ski on Lake Lewisville" />
+          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-group-collage.webp" alt="Shoreline Aquatics jet ski customers on the water" />
           <button className="slider-arrow prev" type="button" aria-label="Previous photo">‹</button>
           <button className="slider-arrow next" type="button" aria-label="Next photo">›</button>
           <div className="slider-dots" />
@@ -83,7 +83,7 @@ export function HomeFleetSection() {
           <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Pontoon boat on the water ready for a Shoreline group day" />
         </div>
         <div className="bundle-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-duo.png" alt="Shoreline riders enjoying a Yamaha jet ski on Lake Lewisville" />
+          <img loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-duo-water.webp" alt="Shoreline riders enjoying Yamaha jet skis on Lake Lewisville" />
         </div>
       </div>
       <div className="bundle-copy">

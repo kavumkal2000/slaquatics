@@ -254,23 +254,23 @@ export function OpsDashboardWorkspace() {
         </div>
         <div className="compose-card">
           <h3>Mass email</h3>
-          <p id="mass-provider-note">Draft one campaign and Shoreline Ops will send it automatically in batches of up to 50 recipients.</p>
+          <p id="mass-provider-note">Draft one campaign for every client with an email address. Shoreline Ops handles the provider batch limit automatically.</p>
           <div className="crm-toolbar" style={{marginTop: '1rem'}}>
             <label style={{display: 'flex', alignItems: 'center', gap: '0.55rem', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--muted)'}}>
               Audience
               <select id="mass-email-audience" onChange={(event) => setMassEmailAudienceMode(event.currentTarget.value)}>
-                <option value="all">Everyone with email</option>
+                <option value="all">Every client with email</option>
                 <option value="selected">Only selected customers</option>
               </select>
             </label>
           </div>
           <div style={{marginTop: '1rem'}}>
             <label htmlFor="mass-email-subject">Subject</label>
-            <input id="mass-email-subject" type="text" defaultValue="Memorial Day weekend bookings are open at Shoreline Aquatics" onInput={renderMassEmailDraft} />
+            <input id="mass-email-subject" type="text" placeholder="Enter the campaign subject" onInput={renderMassEmailDraft} />
           </div>
           <div style={{marginTop: '1rem'}}>
             <label htmlFor="mass-email-body">Email body</label>
-            <textarea id="mass-email-body" onInput={renderMassEmailDraft} defaultValue={"Memorial Day weekend is coming up fast, and Shoreline Aquatics is opening up holiday availability on Lake Lewisville.\n\nIf you want jet skis or the boat for your group, reply to this email and we’ll help you lock in the best open time before it fills up.\n\nWhat’s included:\n- Jet ski and boat rentals on Lake Lewisville\n- Life jackets, fuel, and cooler space\n- A launch walkthrough before you head out\n\nReply to this email or call/text (469) 693-7164 if you want us to hold a Memorial Day weekend spot for your group."} />
+            <textarea id="mass-email-body" onInput={renderMassEmailDraft} placeholder="Write the message that should be sent to the selected audience." />
           </div>
           <div className="list-card mass-email-picker" id="mass-email-recipient-panel" style={{marginTop: '1rem'}} hidden>
             <div className="crm-toolbar" style={{marginBottom: '0.75rem'}}>
@@ -291,7 +291,7 @@ export function OpsDashboardWorkspace() {
           <div className="compose-actions">
             <button className="btn btn-primary btn-sm" id="mass-email-link" onClick={sendMassEmail}>Send campaign</button>
           </div>
-          <p className="note-soft" id="mass-provider-detail" style={{marginTop: '0.75rem'}}>Shoreline Ops sends mass emails in batches of up to 50 recipients. Two-way texting and direct sends still need connected provider credentials.</p>
+          <p className="note-soft" id="mass-provider-detail" style={{marginTop: '0.75rem'}}>Choose every client with email to send to the full CRM list once. Shoreline Ops splits the provider requests behind the scenes.</p>
         </div>
       </div>
       <div className="table-wrap">

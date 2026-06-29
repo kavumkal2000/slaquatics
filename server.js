@@ -1,0 +1,4572 @@
+import http from 'node:http';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { promises as fs } from 'node:fs';
+import Stripe from 'stripe';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const APP_PACKAGE = JSON.parse(await fs.readFile(path.join(__dirname, 'package.json'), 'utf8'));
+const APP_VERSION = String(APP_PACKAGE?.version || '1.0.0').trim() || '1.0.0';
+
+const PORT = Number(process.env.PORT || 10000);
+const HOST = '0.0.0.0';
+const PUBLIC_DIR = __dirname;
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const STORE_FILE = path.join(DATA_DIR, 'ops-store.json');
+const COOKIE_NAME = 'sla_ops_session';
+const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+// Session signing key. SET THIS IN PRODUCTION — if unset it is random per
+// process, so every restart/deploy invalidates all sessions (logs everyone out).
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+
+// ── OPS ACCOUNTS ────────────────────────────────────────────────────────────
+// Three roles (developer / employee / owner). Each resolves a username + password
+// from env. Dev-only fallbacks make local work easy; in production set a distinct
+// password per role (owner via OPS_OWNER_PASSWORD_HASH, preferred).
+// LEGACY_OPS_PASSWORD is a single SHARED fallback kept only for backward-compat —
+// validateAuthConfig() warns at startup if any role still relies on it or on a
+// weak default. Credential resolution below is intentionally unchanged.
+const LEGACY_OPS_PASSWORD = process.env.OPS_PASSWORD || (IS_PRODUCTION ? '' : 'shoreline-admin');
+const OPS_DEV_USERNAME = String(process.env.OPS_DEV_USERNAME || 'developer').trim().toLowerCase();
+const OPS_DEV_PASSWORD = process.env.OPS_DEV_PASSWORD || LEGACY_OPS_PASSWORD || '';
+const OPS_EMPLOYEE_USERNAME = String(process.env.OPS_EMPLOYEE_USERNAME || 'hugoprado').trim().toLowerCase();
+const OPS_EMPLOYEE_PASSWORD = process.env.OPS_EMPLOYEE_PASSWORD || 'default';
+const OPS_OWNER_USERNAME = String(process.env.OPS_OWNER_USERNAME || 'owner').trim().toLowerCase();
+const OPS_OWNER_PASSWORD_HASH = process.env.OPS_OWNER_PASSWORD_HASH || '';
+const OPS_OWNER_PASSWORD = process.env.OPS_OWNER_PASSWORD || (OPS_OWNER_PASSWORD_HASH ? '' : LEGACY_OPS_PASSWORD) || '';
+// Crew = most-restricted login (e.g. dock staff). Sees name + time + craft +
+// location only, and may only mark a booking arrived/done. No weak default in
+// production: must set OPS_CREW_PASSWORD to enable the login on the live site.
+const OPS_CREW_USERNAME = String(process.env.OPS_CREW_USERNAME || 'crew').trim().toLowerCase();
+const OPS_CREW_PASSWORD = process.env.OPS_CREW_PASSWORD || (IS_PRODUCTION ? '' : 'crew');
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
+const TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER || '';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || '';
+const RESEND_FROM_NAME = process.env.RESEND_FROM_NAME || 'Shoreline Aquatics';
+const RESEND_REPLY_TO_EMAIL = process.env.RESEND_REPLY_TO_EMAIL || '';
+const BOOKING_ALERT_EMAILS = process.env.BOOKING_ALERT_EMAILS || process.env.BOOKING_ALERT_EMAIL || '';
+const OWNER_UPDATE_EMAILS = process.env.OWNER_UPDATE_EMAILS || BOOKING_ALERT_EMAILS;
+const OWNER_WEEKLY_DIGEST_ENABLED = !/^false$/i.test(process.env.OWNER_WEEKLY_DIGEST_ENABLED || 'true');
+const OWNER_WEEKLY_DIGEST_TIMEZONE = process.env.OWNER_WEEKLY_DIGEST_TIMEZONE || 'America/New_York';
+const OWNER_WEEKLY_DIGEST_WEEKDAY = Number(process.env.OWNER_WEEKLY_DIGEST_WEEKDAY || 1);
+const OWNER_WEEKLY_DIGEST_HOUR = Number(process.env.OWNER_WEEKLY_DIGEST_HOUR || 9);
+const OWNER_WEEKLY_DIGEST_MINUTE = Number(process.env.OWNER_WEEKLY_DIGEST_MINUTE || 0);
+const SEND_BOOKING_REQUEST_CUSTOMER_EMAILS = /^true$/i.test(process.env.SEND_BOOKING_REQUEST_CUSTOMER_EMAILS || 'false');
+const GOOGLE_REVIEW_URL = process.env.GOOGLE_REVIEW_URL || 'https://g.page/r/CdDZIE7inA8bEAE/review';
+const FACEBOOK_REVIEW_URL = process.env.FACEBOOK_REVIEW_URL || '';
+const AUTO_SEND_REVIEW_REQUESTS = /^true$/i.test(process.env.AUTO_SEND_REVIEW_REQUESTS || 'false');
+const REVIEW_REQUEST_CHANNEL = String(process.env.REVIEW_REQUEST_CHANNEL || 'sms').toLowerCase();
+const SOCIAL_AUTOMATION_WEBHOOK_URL = process.env.SOCIAL_AUTOMATION_WEBHOOK_URL || '';
+const SOCIAL_AUTOMATION_WEBHOOK_SECRET = process.env.SOCIAL_AUTOMATION_WEBHOOK_SECRET || '';
+const SOCIAL_FACEBOOK_WEBHOOK_URL = process.env.SOCIAL_FACEBOOK_WEBHOOK_URL || '';
+const SOCIAL_INSTAGRAM_WEBHOOK_URL = process.env.SOCIAL_INSTAGRAM_WEBHOOK_URL || '';
+const SOCIAL_X_WEBHOOK_URL = process.env.SOCIAL_X_WEBHOOK_URL || '';
+const SOCIAL_TIKTOK_WEBHOOK_URL = process.env.SOCIAL_TIKTOK_WEBHOOK_URL || '';
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const PUBLIC_SITE_URL = String(process.env.PUBLIC_SITE_URL || 'https://slaquatics.com').replace(/\/+$/, '');
+const REQUIRE_SERVER_STORE = /^true$/i.test(process.env.REQUIRE_SERVER_STORE || '') || process.env.NODE_ENV === 'production';
+const STRIPE_API_VERSION = '2026-02-25.clover';
+const BOOKING_DEPOSIT_CENTS = 5000;
+const PROCESSING_FEE_CENTS = 500;
+const DRONE_ADDON_CENTS = 5000;
+const KARAOKE_ADDON_CENTS = 5000;
+const TUBE_ADDON_CENTS = 5000;
+// Informational fleet size for the "X skis open" display. Configurable via env
+// (e.g. raise it to include partner skis). Booking is NEVER blocked on jet-ski
+// capacity — see JETSKI_NEVER_BLOCK below — so this only affects the open count.
+const TOTAL_PUBLIC_JET_SKIS = Number(process.env.PUBLIC_JET_SKIS) > 0 ? Number(process.env.PUBLIC_JET_SKIS) : 10;
+// When true (default), the public availability check never marks a time as taken —
+// every start time stays bookable, so customers can double-book and the owner sorts
+// overlaps manually. Set ALLOW_DOUBLE_BOOKING=false to re-enable fleet-based blocking.
+const ALLOW_DOUBLE_BOOKING = !/^(false|0|no)$/i.test(process.env.ALLOW_DOUBLE_BOOKING || 'true');
+// Jet skis never block public booking, regardless of ALLOW_DOUBLE_BOOKING — the
+// owner sources partner skis for overflow, so a customer is never turned away.
+// Set JETSKI_NEVER_BLOCK=false to re-enable hard fleet-capacity blocking for skis.
+const JETSKI_NEVER_BLOCK = !/^(false|0|no)$/i.test(process.env.JETSKI_NEVER_BLOCK || 'true');
+const PUBLIC_BOOKING_START_TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+const PUBLIC_UNPAID_HOLD_MINUTES = Math.max(Number(process.env.PUBLIC_UNPAID_HOLD_MINUTES || 30), 1);
+const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
+const SHORELINE_PHONE_LINK = '4696937164';
+const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
+const SHORELINE_ADDRESS = 'Point Vista Rd, Hickory Creek, TX 75065';
+const OPS_APP_URL = process.env.OPS_APP_URL || 'https://shoreline-aquatics-ops.onrender.com/ops.html';
+const ARRIVAL_INSTRUCTIONS = [
+  'Proceed down Main Street until you pass the storage units on your left.',
+  'Continue straight ahead and enter the park.',
+  'Upon entering, make an immediate left.',
+  'Follow the road straight to the boat ramp.',
+  'The cabanas will be on your left — Shoreline Aquatics and the jet skis will be located in this area.'
+];
+const SAFETY_BRIEFING_POINTS = [
+  'Life jackets stay on for every rider from launch to return.',
+  'The driver keeps the safety lanyard clipped in while operating the jet ski.',
+  'No alcohol or drugs. If you are impaired, you do not ride.',
+  'Idle out from the launch and stay slow near docks, swimmers, boats, and shoreline.',
+  'If weather changes or anything feels wrong, slow down, stop safely, and call Shoreline.'
+];
+// Rates include the 5% demand surcharge baked in (rounded up to the nearest $5).
+// The party boat is a flat $160/hr (already its demand rate — no extra surcharge).
+const PRICING_CENTS = {
+  jetski2: { 2: 31500, 3: 47500, 4: 59000, 6: 76000, 8: 94500 },
+  jetski3: { 2: 47500, 3: 71000, 4: 88500, 6: 113500, 8: 142000 },
+  jetski4: { 2: 63000, 3: 94500, 4: 118000, 6: 151500, 8: 189000 },
+  boat: { 1: 13000, 2: 25500, 3: 38000, 4: 50500, 6: 76000, 8: 101000 },
+  bundle2: { 2: 57000, 3: 85500, 4: 109500, 6: 151500, 8: 195500 },
+  bundle3: { 2: 72500, 3: 109000, 4: 139000, 6: 189000, 8: 243000 },
+  bundle4: { 2: 88500, 3: 132500, 4: 168000, 6: 227000, 8: 290000 },
+  partyboat: { 2: 32000, 3: 48000, 4: 64000, 6: 96000, 8: 128000 }
+};
+// Holiday specials. On a listed date the ONLY bookable options are the crafts and
+// durations defined here, charged at the flat price shown (in cents). Every other
+// craft/duration is rejected for that date. Add future dates as needed.
+const HOLIDAY_PRICING_CENTS = {
+  '2026-07-04': {
+    label: 'July 4th Special',
+    unavailableMessage: 'July 4th is a special day — we’re running 2 jet skis (4hr $900 / 8hr $1,350) or the boat (4hr $1,000 / 8hr $2,000) only. Please choose 2 jet skis or the boat at 4 or 8 hours, or pick another date.',
+    crafts: {
+      jetski2: { 4: 90000, 8: 135000 },
+      partyboat: { 4: 100000, 8: 200000 }
+    }
+  }
+};
+function holidayRuleForDate(date = '') {
+  return HOLIDAY_PRICING_CENTS[String(date || '').trim()] || null;
+}
+const CRAFT_LABELS = {
+  jetski2: '2 Yamaha Jet Skis',
+  jetski3: '3 Yamaha Jet Skis',
+  jetski4: '4 Yamaha Jet Skis',
+  boat: 'Boat Rental',
+  bundle2: '2 Yamaha Jet Skis + Boat',
+  bundle3: '3 Yamaha Jet Skis + Boat',
+  bundle4: '4 Yamaha Jet Skis + Boat',
+  partyboat: 'Boat Rental (up to 14)'
+};
+const LEGACY_CRAFT_MAP = {
+  yamaha: 'jetski2',
+  seadoo2: 'jetski2',
+  seadoo4: 'jetski4'
+};
+const stripe = STRIPE_SECRET_KEY
+  ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: STRIPE_API_VERSION })
+  : null;
+
+const DEFAULT_STATE = {
+  bookings: [],
+  customers: [],
+  expenses: [],
+  fuelLog: [],
+  maintLog: [],
+  trackers: [],
+  invoices: [],
+  communicationsLog: [],
+  reviewRequests: [],
+  reviews: [],
+  reviewSettings: { googleUrl: '', facebookUrl: '', autoSend: false, channel: 'sms' },
+  socialPosts: [],
+  ownerWeeklyDigest: { lastSentAt: '', lastMessageId: '', lastWeekKey: '' },
+  importMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false},
+  invoiceImportMeta: {lastType:'',fileName:'',importedAt:'',added:0,updated:0,recordCount:0,replacedSeed:false}
+};
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeArray(value, fallback) {
+  return Array.isArray(value) ? value : clone(fallback);
+}
+
+function normalizeImportMeta(value) {
+  return value && typeof value === 'object'
+    ? {
+        lastType: String(value.lastType || ''),
+        fileName: String(value.fileName || ''),
+        importedAt: String(value.importedAt || ''),
+        added: Number(value.added || 0),
+        updated: Number(value.updated || 0),
+        recordCount: Number(value.recordCount || 0),
+        replacedSeed: Boolean(value.replacedSeed)
+      }
+    : clone(DEFAULT_STATE.importMeta);
+}
+
+function normalizeReviewSettings(value) {
+  const payload = value && typeof value === 'object' ? value : {};
+  const channel = String(payload.channel || '').trim().toLowerCase() === 'email' ? 'email' : 'sms';
+  return {
+    googleUrl: String(payload.googleUrl || '').trim(),
+    facebookUrl: String(payload.facebookUrl || '').trim(),
+    autoSend: Boolean(payload.autoSend),
+    channel
+  };
+}
+
+function normalizeOwnerWeeklyDigest(value) {
+  return value && typeof value === 'object'
+    ? {
+        lastSentAt: String(value.lastSentAt || ''),
+        lastMessageId: String(value.lastMessageId || ''),
+        lastWeekKey: String(value.lastWeekKey || '')
+      }
+    : clone(DEFAULT_STATE.ownerWeeklyDigest);
+}
+
+function ownerWeeklyDigestTimestamp(value) {
+  const parsed = Date.parse(String(value?.lastSentAt || ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function mergeOwnerWeeklyDigestState(currentValue, incomingValue) {
+  const current = normalizeOwnerWeeklyDigest(currentValue);
+  const incoming = normalizeOwnerWeeklyDigest(incomingValue);
+  const currentTimestamp = ownerWeeklyDigestTimestamp(current);
+  const incomingTimestamp = ownerWeeklyDigestTimestamp(incoming);
+  if (!current.lastWeekKey && !currentTimestamp) return incoming;
+  if (!incoming.lastWeekKey && !incomingTimestamp) return current;
+  if (current.lastWeekKey && incoming.lastWeekKey && current.lastWeekKey > incoming.lastWeekKey) {
+    return current;
+  }
+  if (currentTimestamp > incomingTimestamp) return current;
+  return incoming;
+}
+
+function communicationEntryKey(entry = {}) {
+  return [
+    String(entry.channel || '').trim(),
+    String(entry.date || '').trim(),
+    String(entry.message || '').trim()
+  ].join('|');
+}
+
+function mergeServerOwnedCommunications(currentLog = [], incomingLog = []) {
+  const merged = normalizeArray(incomingLog, DEFAULT_STATE.communicationsLog);
+  const seen = new Set(merged.map((entry) => communicationEntryKey(entry)));
+  normalizeArray(currentLog, DEFAULT_STATE.communicationsLog).forEach((entry) => {
+    if (String(entry?.channel || '').trim() !== 'owner-weekly-digest-email') return;
+    const key = communicationEntryKey(entry);
+    if (seen.has(key)) return;
+    merged.push(clone(entry));
+    seen.add(key);
+  });
+  merged.sort((left, right) => {
+    const leftTime = Date.parse(String(left?.date || ''));
+    const rightTime = Date.parse(String(right?.date || ''));
+    const normalizedLeft = Number.isFinite(leftTime) ? leftTime : 0;
+    const normalizedRight = Number.isFinite(rightTime) ? rightTime : 0;
+    if (normalizedRight !== normalizedLeft) return normalizedRight - normalizedLeft;
+    return Number(right?.id || 0) - Number(left?.id || 0);
+  });
+  return merged;
+}
+
+const STATE_TOP_LEVEL_KEYS = [
+  'bookings',
+  'customers',
+  'expenses',
+  'fuelLog',
+  'maintLog',
+  'trackers',
+  'invoices',
+  'communicationsLog',
+  'reviewRequests',
+  'reviews',
+  'reviewSettings',
+  'socialPosts',
+  'ownerWeeklyDigest',
+  'importMeta',
+  'invoiceImportMeta'
+];
+
+function unwrapStatePayload(value = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const rootHasStateKeys = STATE_TOP_LEVEL_KEYS.some((key) => Object.prototype.hasOwnProperty.call(value, key));
+  if (!rootHasStateKeys && value.state && typeof value.state === 'object' && !Array.isArray(value.state)) {
+    return value.state;
+  }
+  return value;
+}
+
+function isLikelyStatePayload(value = {}) {
+  const payload = unwrapStatePayload(value);
+  return Boolean(
+    payload &&
+    typeof payload === 'object' &&
+    !Array.isArray(payload) &&
+    STATE_TOP_LEVEL_KEYS.some((key) => Object.prototype.hasOwnProperty.call(payload, key))
+  );
+}
+
+function sanitizeState(value = {}) {
+  const payload = unwrapStatePayload(value);
+  return {
+    bookings: normalizeArray(payload.bookings, DEFAULT_STATE.bookings),
+    customers: normalizeArray(payload.customers, DEFAULT_STATE.customers),
+    expenses: normalizeArray(payload.expenses, DEFAULT_STATE.expenses),
+    fuelLog: normalizeArray(payload.fuelLog, DEFAULT_STATE.fuelLog),
+    maintLog: normalizeArray(payload.maintLog, DEFAULT_STATE.maintLog),
+    trackers: normalizeArray(payload.trackers, DEFAULT_STATE.trackers),
+    invoices: normalizeArray(payload.invoices, DEFAULT_STATE.invoices),
+    communicationsLog: normalizeArray(payload.communicationsLog, DEFAULT_STATE.communicationsLog),
+    reviewRequests: normalizeArray(payload.reviewRequests, DEFAULT_STATE.reviewRequests),
+    reviews: normalizeArray(payload.reviews, DEFAULT_STATE.reviews),
+    reviewSettings: normalizeReviewSettings(payload.reviewSettings),
+    socialPosts: normalizeArray(payload.socialPosts, DEFAULT_STATE.socialPosts),
+    ownerWeeklyDigest: normalizeOwnerWeeklyDigest(payload.ownerWeeklyDigest),
+    importMeta: normalizeImportMeta(payload.importMeta),
+    invoiceImportMeta: normalizeImportMeta(payload.invoiceImportMeta)
+  };
+}
+
+function reviewSettingsForState(state = null) {
+  const stored = normalizeReviewSettings(state?.reviewSettings);
+  const googleUrl = stored.googleUrl || String(GOOGLE_REVIEW_URL || '').trim();
+  const facebookUrl = stored.facebookUrl || String(FACEBOOK_REVIEW_URL || '').trim();
+  const autoSend = typeof state?.reviewSettings?.autoSend === 'boolean'
+    ? Boolean(state.reviewSettings.autoSend)
+    : AUTO_SEND_REVIEW_REQUESTS;
+  const channel = ['email', 'sms'].includes(String(stored.channel || '').trim().toLowerCase())
+    ? String(stored.channel).trim().toLowerCase()
+    : REVIEW_REQUEST_CHANNEL;
+  return {
+    googleUrl,
+    facebookUrl,
+    autoSend,
+    channel: channel === 'email' ? 'email' : 'sms'
+  };
+}
+
+async function createFileJsonStore(filePath, defaultValue, sanitizeValue) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  return {
+    kind: 'file',
+    async read() {
+      try {
+        const raw = await fs.readFile(filePath, 'utf8');
+        return sanitizeValue(JSON.parse(raw));
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+        const seed = sanitizeValue(defaultValue);
+        await this.write(seed);
+        return seed;
+      }
+    },
+    async write(value) {
+      const next = sanitizeValue(value);
+      const tempPath = `${filePath}.tmp`;
+      await fs.writeFile(tempPath, JSON.stringify(next, null, 2));
+      await fs.rename(tempPath, filePath);
+      return next;
+    }
+  };
+}
+
+async function createPostgresJsonStore(connectionString, tableName, defaultValue, sanitizeValue) {
+  const { Client } = await import('pg');
+  const client = new Client({ connectionString });
+  await client.connect();
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS ${tableName} (
+      id INTEGER PRIMARY KEY,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  return {
+    kind: 'postgres',
+    async read() {
+      const result = await client.query(`SELECT payload FROM ${tableName} WHERE id = 1`);
+      if (!result.rows.length) {
+        const seed = sanitizeValue(defaultValue);
+        await this.write(seed);
+        return seed;
+      }
+      return sanitizeValue(result.rows[0].payload);
+    },
+    async write(value) {
+      const next = sanitizeValue(value);
+      await client.query(
+        `
+          INSERT INTO ${tableName} (id, payload, updated_at)
+          VALUES (1, $1::jsonb, NOW())
+          ON CONFLICT (id)
+          DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+        `,
+        [JSON.stringify(next)]
+      );
+      return next;
+    }
+  };
+}
+
+async function createStateStore() {
+  if (process.env.DATABASE_URL) {
+    try {
+      return await createPostgresJsonStore(process.env.DATABASE_URL, 'ops_state', DEFAULT_STATE, sanitizeState);
+    } catch (error) {
+      if (REQUIRE_SERVER_STORE) {
+        throw new Error(`Postgres store unavailable and file fallback is disabled: ${error.message}`);
+      }
+      console.error('Postgres store unavailable, falling back to file store.', error);
+    }
+  }
+  if (REQUIRE_SERVER_STORE) {
+    throw new Error('DATABASE_URL is required because server-side file fallback is disabled.');
+  }
+  return createFileJsonStore(STORE_FILE, DEFAULT_STATE, sanitizeState);
+}
+
+const stateStore = await createStateStore();
+
+function parseCookies(cookieHeader = '') {
+  return Object.fromEntries(
+    cookieHeader
+      .split(';')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const separator = part.indexOf('=');
+        if (separator === -1) return [part, ''];
+        return [part.slice(0, separator), decodeURIComponent(part.slice(separator + 1))];
+      })
+  );
+}
+
+function signToken(payload) {
+  return crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('base64url');
+}
+
+function normalizeUsername(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function safeSecretEquals(left, right) {
+  const leftHash = crypto.createHash('sha256').update(String(left || '')).digest();
+  const rightHash = crypto.createHash('sha256').update(String(right || '')).digest();
+  return crypto.timingSafeEqual(leftHash, rightHash);
+}
+
+function verifyPasswordHash(password, encoded = '') {
+  const [salt = '', expected = ''] = String(encoded || '').split(':');
+  if (!salt || !expected) return false;
+  const derived = crypto.scryptSync(String(password || ''), salt, 64).toString('hex');
+  return safeSecretEquals(derived, expected);
+}
+
+function authPermissionsForRole(role = 'owner') {
+  return {
+    canAccessBusinessData: role !== 'crew',
+    canAccessBookingsOnly: role === 'employee',
+    canAccessCrewOnly: role === 'crew',
+    canAccessSystem: role === 'developer' || role === 'owner',
+    canAccessWebsiteDevelopment: role === 'developer',
+    hideMoney: role === 'employee'
+  };
+}
+
+function canManageFullOps(session = null) {
+  const role = normalizeOpsRole(session?.role);
+  return role === 'owner' || role === 'developer';
+}
+
+function canManageBookingOps(session = null) {
+  return canManageFullOps(session) || normalizeOpsRole(session?.role) === 'employee';
+}
+
+function canManageMessagingOps(session = null) {
+  return canManageFullOps(session);
+}
+
+function normalizeOpsRole(role = '') {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (normalized === 'developer') return 'developer';
+  if (normalized === 'crew') return 'crew';
+  if (normalized === 'employee') return 'employee';
+  if (normalized === 'owner') return 'owner';
+  // Unknown/garbage role -> least privilege (fail closed, never silently to owner).
+  return 'crew';
+}
+
+// Single source of truth for ops accounts (one row per role). Each resolves a
+// username + password (or password hash) from the env config above. This
+// replaces three near-identical hand-written objects; behavior is unchanged.
+const OPS_ACCOUNTS = [
+  { role: 'developer', username: OPS_DEV_USERNAME, displayName: 'Developer', password: OPS_DEV_PASSWORD, passwordHash: '' },
+  { role: 'employee', username: OPS_EMPLOYEE_USERNAME, displayName: 'Hugo Prado', password: OPS_EMPLOYEE_PASSWORD, passwordHash: '' },
+  { role: 'crew', username: OPS_CREW_USERNAME, displayName: 'Crew', password: OPS_CREW_PASSWORD, passwordHash: '' },
+  { role: 'owner', username: OPS_OWNER_USERNAME, displayName: 'Owner', password: OPS_OWNER_PASSWORD, passwordHash: OPS_OWNER_PASSWORD_HASH }
+];
+
+function listOpsUsers() {
+  return OPS_ACCOUNTS.map((account) => ({
+    username: normalizeUsername(account.username),
+    role: account.role,
+    displayName: account.displayName,
+    // Constant-time compare for a configured plaintext password; otherwise fall
+    // back to scrypt hash verification. Empty password + empty hash => no login.
+    matches(password = '') {
+      if (account.password) return safeSecretEquals(password, account.password);
+      if (account.passwordHash) return verifyPasswordHash(password, account.passwordHash);
+      return false;
+    }
+  }));
+}
+
+function findOpsUser(username = '', password = '') {
+  const normalized = normalizeUsername(username);
+  if (!normalized) return null;
+  return listOpsUsers().find((user) => user.username === normalized && user.matches(password)) || null;
+}
+
+// ── LOGIN RATE LIMITING (brute-force protection) ──
+const LOGIN_MAX_ATTEMPTS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;   // failures are counted within this window
+const LOGIN_LOCK_MS = 15 * 60 * 1000;     // lockout duration once the limit trips
+const loginAttempts = new Map();          // key -> { count, firstAt, lockedUntil }
+
+// When true, we sit behind a hosting proxy (Render) that appends the real client IP
+// as the RIGHTMOST X-Forwarded-For entry. A client can forge entries to the left of
+// it, but not that rightmost one. Defaults on in production; override with TRUST_PROXY.
+const TRUST_PROXY = process.env.TRUST_PROXY !== undefined
+  ? /^(true|1|yes)$/i.test(process.env.TRUST_PROXY)
+  : IS_PRODUCTION;
+function clientIpFor(request) {
+  const chain = String(request.headers['x-forwarded-for'] || '')
+    .split(',').map((part) => part.trim()).filter(Boolean);
+  // Trust ONLY the proxy-appended rightmost entry (unspoofable). With no trusted
+  // proxy, use the socket address so a client-sent header can't poison the key.
+  if (TRUST_PROXY && chain.length) return chain[chain.length - 1];
+  return request.socket?.remoteAddress || 'unknown';
+}
+function loginRateKey(request, username = '') {
+  return `${clientIpFor(request)}|${normalizeUsername(username)}`;
+}
+function loginLockRemainingMs(key) {
+  const record = loginAttempts.get(key);
+  if (record && record.lockedUntil > Date.now()) return record.lockedUntil - Date.now();
+  return 0;
+}
+function registerLoginFailure(key) {
+  const now = Date.now();
+  if (loginAttempts.size > 5000) { // opportunistic cleanup so the map can't grow unbounded
+    for (const [existingKey, record] of loginAttempts) {
+      if (record.lockedUntil < now && (now - record.firstAt) > LOGIN_WINDOW_MS) loginAttempts.delete(existingKey);
+    }
+  }
+  let record = loginAttempts.get(key);
+  if (!record || (now - record.firstAt) > LOGIN_WINDOW_MS) record = { count: 0, firstAt: now, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= LOGIN_MAX_ATTEMPTS) record.lockedUntil = now + LOGIN_LOCK_MS;
+  loginAttempts.set(key, record);
+}
+function clearLoginFailures(key) {
+  loginAttempts.delete(key);
+}
+
+// ── CONFIG VALIDATION (warn on insecure defaults; never crashes login) ──
+// Pure check: returns warning strings without logging, so it can also back the
+// developer System-health endpoint.
+function collectAuthConfigWarnings() {
+  const warnings = [];
+  if (!process.env.SESSION_SECRET) {
+    warnings.push('SESSION_SECRET is not set — sessions reset on every restart/deploy (everyone gets logged out). Set a fixed random SESSION_SECRET.');
+  }
+  if (IS_PRODUCTION) {
+    if (!process.env.OPS_OWNER_PASSWORD && !OPS_OWNER_PASSWORD_HASH) {
+      warnings.push('No owner password configured — set OPS_OWNER_PASSWORD_HASH (preferred) or OPS_OWNER_PASSWORD.');
+    }
+    if (OPS_EMPLOYEE_PASSWORD === 'default') {
+      warnings.push("Employee password is the weak default 'default' — set OPS_EMPLOYEE_PASSWORD.");
+    }
+    if (LEGACY_OPS_PASSWORD && (OPS_DEV_PASSWORD === LEGACY_OPS_PASSWORD || OPS_OWNER_PASSWORD === LEGACY_OPS_PASSWORD)) {
+      warnings.push('A role is using the shared OPS_PASSWORD fallback — give each role its own password so one leak does not expose all accounts.');
+    }
+  }
+  return warnings;
+}
+
+function validateAuthConfig() {
+  const warnings = collectAuthConfigWarnings();
+  if (warnings.length) {
+    console.warn('\n⚠️  Shoreline Ops — auth configuration warnings:');
+    warnings.forEach((w) => console.warn(`   • ${w}`));
+    console.warn('');
+  }
+  return warnings;
+}
+
+function createSessionToken(user = {}, deviceIdHash = '') {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const payload = Buffer.from(JSON.stringify({
+    nonce,
+    expiresAt: Date.now() + SESSION_TTL_MS,
+    username: normalizeUsername(user.username || ''),
+    role: normalizeOpsRole(user.role),
+    deviceIdHash: String(deviceIdHash || '')
+  })).toString('base64url');
+  return `${payload}.${signToken(payload)}`;
+}
+
+function verifySessionToken(token = '') {
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [payload, signature] = parts;
+  if (!payload || !signature) return null;
+  const expected = signToken(payload);
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+  } catch {
+    return null;
+  }
+  try {
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    if (!decoded || Number(decoded.expiresAt || 0) < Date.now()) return null;
+    const role = normalizeOpsRole(decoded.role);
+    return {
+      username: normalizeUsername(decoded.username || ''),
+      role,
+      deviceIdHash: String(decoded.deviceIdHash || ''),
+      expiresAt: Number(decoded.expiresAt || 0),
+      permissions: authPermissionsForRole(role)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getSession(request) {
+  const cookies = parseCookies(request.headers.cookie || '');
+  const session = verifySessionToken(cookies[COOKIE_NAME] || '');
+  if (!session) return null;
+  return session;
+}
+
+function sessionUserPayload(session) {
+  if (!session) return null;
+  const matchedUser = listOpsUsers().find((user) => user.username === session.username);
+  return {
+    username: session.username,
+    role: session.role,
+    displayName: matchedUser?.displayName || (session.role === 'developer' ? 'Developer' : session.role === 'employee' ? 'Hugo Prado' : 'Owner'),
+    permissions: session.permissions || authPermissionsForRole(session.role)
+  };
+}
+
+function isAuthenticated(request) {
+  return Boolean(getSession(request));
+}
+
+function sessionCookieAttributes() {
+  const attributes = [
+    `Path=/`,
+    `HttpOnly`,
+    `SameSite=Lax`
+  ];
+  if (process.env.NODE_ENV === 'production') {
+    attributes.push('Secure');
+  }
+  return attributes.join('; ');
+}
+
+function setSessionCookie(response, user, deviceIdHash = '') {
+  const token = createSessionToken(user, deviceIdHash);
+  response.setHeader('Set-Cookie', `${COOKIE_NAME}=${encodeURIComponent(token)}; ${sessionCookieAttributes()}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`);
+}
+
+function clearSessionCookie(response) {
+  response.setHeader('Set-Cookie', `${COOKIE_NAME}=; ${sessionCookieAttributes()}; Max-Age=0`);
+}
+
+function setCommonHeaders(response, overrides = {}) {
+  response.setHeader('X-Content-Type-Options', 'nosniff');
+  response.setHeader('Referrer-Policy', 'same-origin');
+  response.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  Object.entries(overrides).forEach(([key, value]) => response.setHeader(key, value));
+}
+
+function sendJson(response, statusCode, payload, headers = {}) {
+  setCommonHeaders(response, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    ...headers
+  });
+  response.writeHead(statusCode);
+  response.end(JSON.stringify(payload));
+}
+
+function publicCorsHeaders(request) {
+  const origin = request?.headers?.origin;
+  return {
+    'Access-Control-Allow-Origin': origin && origin !== 'null' ? origin : '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Accept',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin'
+  };
+}
+
+function sendPublicJson(response, request, statusCode, payload) {
+  sendJson(response, statusCode, payload, publicCorsHeaders(request));
+}
+
+function sendPublicNoContent(response, request) {
+  setCommonHeaders(response, publicCorsHeaders(request));
+  response.writeHead(204);
+  response.end();
+}
+
+function sendRedirect(response, location) {
+  setCommonHeaders(response, { Location: location, 'Cache-Control': 'no-store' });
+  response.writeHead(302);
+  response.end();
+}
+
+async function readRequestBody(request) {
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of request) {
+    total += chunk.length;
+    if (total > 5 * 1024 * 1024) {
+      throw new Error('Request body too large');
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+function normalizePhone(value = '') {
+  const digits = String(value).replace(/[^\d+]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('+')) return digits;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeName(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function normalizeEmailList(value = '') {
+  return Array.from(new Set(String(value || '')
+    .split(/[,\n;]+/)
+    .map((entry) => normalizeEmail(entry))
+    .filter(Boolean)));
+}
+
+function formattedResendFromAddress() {
+  const fromAddress = String(RESEND_FROM_EMAIL || '').trim();
+  if (!fromAddress) return '';
+  if (/[<>]/.test(fromAddress)) return fromAddress;
+  const displayName = String(RESEND_FROM_NAME || '').trim();
+  return displayName ? `${displayName} <${fromAddress}>` : fromAddress;
+}
+
+function resendReplyToAddress() {
+  const explicitReplyTo = normalizeEmail(RESEND_REPLY_TO_EMAIL);
+  if (explicitReplyTo) return explicitReplyTo;
+  const alertReplyTo = normalizeEmailList(BOOKING_ALERT_EMAILS)[0];
+  if (alertReplyTo) return alertReplyTo;
+  return '';
+}
+
+function normalizeCraftKey(value = '') {
+  return LEGACY_CRAFT_MAP[String(value || '').trim()] || String(value || '').trim();
+}
+
+function bookingTypeForCraft(craft = '') {
+  if (craft === 'boat' || craft === 'partyboat') return 'boat';
+  if (craft.startsWith('bundle')) return 'bundle';
+  return 'jetski';
+}
+
+function durationLabel(hours) {
+  const amount = Number(hours || 0);
+  return amount === 8 ? 'Full Day (8 hours)' : `${amount} ${amount === 1 ? 'hour' : 'hours'}`;
+}
+
+function priceForSelection(craft = '', duration = 0, addons = false, date = '') {
+  const normalizedCraft = normalizeCraftKey(craft);
+  const normalizedDuration = Number(duration || 0);
+  // Backward compatible: a boolean/string in the 3rd arg means drone only.
+  const opts = (addons && typeof addons === 'object') ? addons : { drone: addons };
+  const isOn = (v) => v === true || v === 'true' || v === 'yes' || v === 1 || v === '1';
+  const droneEnabled = isOn(opts.drone);
+  const karaokeEnabled = isOn(opts.karaoke);
+  const tubeEnabled = isOn(opts.tube);
+  // Holiday specials override both pricing and availability for that date.
+  const holiday = holidayRuleForDate(date);
+  let baseAmount;
+  if (holiday) {
+    baseAmount = holiday.crafts[normalizedCraft]?.[normalizedDuration];
+    if (!baseAmount) {
+      throw new Error(holiday.unavailableMessage);
+    }
+  } else {
+    baseAmount = PRICING_CENTS[normalizedCraft]?.[normalizedDuration];
+  }
+  if (!baseAmount) {
+    throw new Error('Please choose a valid package and duration before continuing.');
+  }
+  const droneAmount = droneEnabled ? DRONE_ADDON_CENTS : 0;
+  const karaokeAmount = karaokeEnabled ? KARAOKE_ADDON_CENTS : 0;
+  const tubeAmount = tubeEnabled ? TUBE_ADDON_CENTS : 0;
+  const addonsAmount = droneAmount + karaokeAmount + tubeAmount;
+  return {
+    craft: normalizedCraft,
+    type: bookingTypeForCraft(normalizedCraft),
+    craftLabel: CRAFT_LABELS[normalizedCraft] || normalizedCraft,
+    duration: normalizedDuration,
+    durationLabel: durationLabel(normalizedDuration),
+    drone: droneEnabled,
+    karaoke: karaokeEnabled,
+    tube: tubeEnabled,
+    baseAmount,
+    droneAmount,
+    karaokeAmount,
+    tubeAmount,
+    addonsAmount,
+    totalAmount: baseAmount + addonsAmount,
+    bookingDepositAmount: BOOKING_DEPOSIT_CENTS
+  };
+}
+
+function phoneDigits(value = '') {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function mergeTagList(existing = '', additions = []) {
+  const base = String(existing || '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const merged = new Set(base);
+  additions.forEach((tag) => {
+    const normalized = String(tag || '').trim();
+    if (normalized) merged.add(normalized);
+  });
+  return [...merged].join(', ');
+}
+
+function mergeCrmFields(existing = {}, additions = {}) {
+  const base = (existing && typeof existing === 'object' && !Array.isArray(existing)) ? { ...existing } : {};
+  Object.entries(additions || {}).forEach(([key, value]) => {
+    const fieldKey = String(key || '').trim();
+    if (!fieldKey) return;
+    const fieldValue = String(value == null ? '' : value).trim();
+    if (fieldValue) base[fieldKey] = fieldValue;
+  });
+  return base;
+}
+
+function htmlEscape(value = '') {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function firstName(value = '') {
+  return String(value || '').trim().split(/\s+/)[0] || 'there';
+}
+
+function formatCurrency(value = 0) {
+  return `$${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: Number(value || 0) % 1 ? 2 : 0,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function formatDateLabel(value = '') {
+  const parsed = parseIsoDate(value);
+  if (!parsed) return value || '-';
+  return parsed.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+function parseBookingTimeParts(value = '') {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(\d{1,2})(?::(\d{2}))?(?:\s*([AP]M))?$/i);
+  if (!match) return null;
+  let [, hourText = '0', minuteText = '00', meridiem = ''] = match;
+  let hour = Number(hourText);
+  const minute = Number(minuteText || '00');
+  if (Number.isNaN(hour) || Number.isNaN(minute) || minute < 0 || minute > 59) return null;
+  if (meridiem) {
+    const upper = meridiem.toUpperCase();
+    if (hour < 1 || hour > 12) return null;
+    if (upper === 'PM' && hour < 12) hour += 12;
+    if (upper === 'AM' && hour === 12) hour = 0;
+  } else if (hour < 0 || hour > 23) {
+    return null;
+  }
+  return { hour, minute };
+}
+
+function formatTimeLabel(value = '') {
+  const parsed = parseBookingTimeParts(value);
+  if (!parsed) return value || '-';
+  const suffix = parsed.hour >= 12 ? 'PM' : 'AM';
+  const twelveHour = parsed.hour % 12 || 12;
+  return `${twelveHour}:${String(parsed.minute).padStart(2, '0')} ${suffix}`;
+}
+
+function formatDateTimeInTimeZone(value = new Date(), timeZone = OWNER_WEEKLY_DIGEST_TIMEZONE) {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(value);
+}
+
+function zonedDateParts(value = new Date(), timeZone = OWNER_WEEKLY_DIGEST_TIMEZONE) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  });
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(value)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  );
+  return {
+    weekday: String(parts.weekday || 'Mon'),
+    year: Number(parts.year || 0),
+    month: Number(parts.month || 0),
+    day: Number(parts.day || 0),
+    hour: Number(parts.hour || 0),
+    minute: Number(parts.minute || 0)
+  };
+}
+
+function weekdayIndex(label = '') {
+  const normalized = String(label || '').trim().slice(0, 3).toLowerCase();
+  return {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6
+  }[normalized] ?? 0;
+}
+
+function isoDateKeyFromParts(parts = {}) {
+  const year = Number(parts.year || 0);
+  const month = String(Number(parts.month || 0)).padStart(2, '0');
+  const day = String(Number(parts.day || 0)).padStart(2, '0');
+  return year ? `${year}-${month}-${day}` : '';
+}
+
+function addDaysToIsoDateKey(value = '', days = 0) {
+  const [yearText = '', monthText = '', dayText = ''] = String(value || '').split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) return '';
+  const next = new Date(Date.UTC(year, month - 1, day));
+  next.setUTCDate(next.getUTCDate() + Number(days || 0));
+  return next.toISOString().slice(0, 10);
+}
+
+function ownerWeeklyDigestRecipients() {
+  return normalizeEmailList(OWNER_UPDATE_EMAILS || BOOKING_ALERT_EMAILS);
+}
+
+function ownerWeeklyDigestSchedule(now = new Date()) {
+  const parts = zonedDateParts(now, OWNER_WEEKLY_DIGEST_TIMEZONE);
+  const todayKey = isoDateKeyFromParts(parts);
+  const weekday = weekdayIndex(parts.weekday);
+  const pastSchedule = weekday > OWNER_WEEKLY_DIGEST_WEEKDAY
+    || (weekday === OWNER_WEEKLY_DIGEST_WEEKDAY
+      && (parts.hour > OWNER_WEEKLY_DIGEST_HOUR
+        || (parts.hour === OWNER_WEEKLY_DIGEST_HOUR && parts.minute >= OWNER_WEEKLY_DIGEST_MINUTE)));
+  const weekStart = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((weekday - OWNER_WEEKLY_DIGEST_WEEKDAY + 7) % 7));
+  return {
+    now,
+    parts,
+    todayKey,
+    horizonKey: addDaysToIsoDateKey(todayKey, 6),
+    weekKey: weekStart.toISOString().slice(0, 10),
+    pastSchedule
+  };
+}
+
+function timeToMinutes(value = '') {
+  const parsed = parseBookingTimeParts(value);
+  if (!parsed) return NaN;
+  return (parsed.hour * 60) + parsed.minute;
+}
+
+function craftUsesBoat(craft = '') {
+  const normalized = normalizeCraftKey(craft);
+  // 'partyboat' is the same physical boat as 'boat' — it must consume boat inventory
+  // so it can't be double-booked against a boat/bundle rental.
+  return normalized === 'boat' || normalized === 'partyboat' || normalized.startsWith('bundle');
+}
+
+function craftJetSkiCount(craft = '') {
+  const normalized = normalizeCraftKey(craft);
+  if (normalized.startsWith('jetski')) return Number.parseInt(normalized.replace('jetski', ''), 10) || 0;
+  if (normalized.startsWith('bundle')) return Number.parseInt(normalized.replace('bundle', ''), 10) || 0;
+  return 0;
+}
+
+function craftAvailabilityType(craft = '') {
+  const usesBoat = craftUsesBoat(craft);
+  const jetSkiCount = craftJetSkiCount(craft);
+  if (usesBoat && jetSkiCount) return 'bundle';
+  if (usesBoat) return 'boat';
+  if (jetSkiCount) return 'jetski';
+  return 'none';
+}
+
+function websiteBookingHoldIsActive(booking = {}, status = '') {
+  if (['confirmed', 'completed'].includes(status)) return true;
+
+  const source = String(booking.source || '').trim().toLowerCase();
+  if (!source.includes('website')) return true;
+
+  const paymentStatus = String(booking.paymentStatus || '').trim().toLowerCase();
+  if (booking.deposit || paymentStatus === 'paid') return true;
+  if (paymentStatus === 'expired') return false;
+
+  const anchor = Date.parse(String(booking.updatedAt || booking.createdAt || ''));
+  if (Number.isNaN(anchor)) return false;
+
+  return (Date.now() - anchor) < (PUBLIC_UNPAID_HOLD_MINUTES * 60 * 1000);
+}
+
+function bookingBlocksAvailability(booking = {}) {
+  if (ALLOW_DOUBLE_BOOKING) return false; // double-booking allowed — no booking blocks public availability
+  const status = String(booking.status || '').trim().toLowerCase();
+  return Boolean(
+    booking.date &&
+    booking.time &&
+    Number(booking.duration || 0) > 0 &&
+    !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status) &&
+    websiteBookingHoldIsActive(booking, status)
+  );
+}
+
+function intervalsOverlap(startMinutesA, durationHoursA, startMinutesB, durationHoursB) {
+  const endMinutesA = startMinutesA + (Number(durationHoursA || 0) * 60);
+  const endMinutesB = startMinutesB + (Number(durationHoursB || 0) * 60);
+  return startMinutesA < endMinutesB && startMinutesB < endMinutesA;
+}
+
+function findOverlappingBookings(state, options = {}) {
+  const requestedDate = String(options.date || '').trim();
+  const requestedTime = String(options.time || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  const requestedStart = timeToMinutes(requestedTime);
+  const ignoredId = Number(options.bookingId || 0);
+  const ignoredToken = String(options.publicToken || '').trim();
+
+  if (!requestedDate || !requestedTime || !requestedDuration || Number.isNaN(requestedStart)) {
+    return [];
+  }
+
+  return state.bookings.filter((booking) => {
+    if (!bookingBlocksAvailability(booking)) return false;
+    if (String(booking.date || '').trim() !== requestedDate) return false;
+    if (ignoredId && Number(booking.id || 0) === ignoredId) return false;
+    if (ignoredToken && String(booking.publicToken || '').trim() === ignoredToken) return false;
+
+    const bookingStart = timeToMinutes(booking.time);
+    const bookingDuration = Number(booking.duration || 0);
+    if (Number.isNaN(bookingStart) || !bookingDuration) return false;
+
+    return intervalsOverlap(requestedStart, requestedDuration, bookingStart, bookingDuration);
+  });
+}
+
+function findBoatConflicts(state, options = {}) {
+  return findOverlappingBookings(state, options).filter((booking) => (
+    craftUsesBoat(String(booking.craftKey || booking.craft || ''))
+  ));
+}
+
+function findJetSkiConflicts(state, options = {}) {
+  return findOverlappingBookings(state, options).filter((booking) => (
+    craftJetSkiCount(String(booking.craftKey || booking.craft || '')) > 0
+  ));
+}
+
+function jetSkiUnitsBooked(state, options = {}) {
+  return findJetSkiConflicts(state, options).reduce((sum, booking) => (
+    sum + craftJetSkiCount(String(booking.craftKey || booking.craft || ''))
+  ), 0);
+}
+
+function peakJetSkiUnitsBooked(state, options = {}) {
+  const requestedTime = String(options.time || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  const requestedStart = timeToMinutes(requestedTime);
+  if (!requestedTime || !requestedDuration || Number.isNaN(requestedStart)) return 0;
+
+  const requestedEnd = requestedStart + (requestedDuration * 60);
+  const events = [];
+
+  findJetSkiConflicts(state, options).forEach((booking) => {
+    const bookingStart = timeToMinutes(booking.time);
+    const bookingDuration = Number(booking.duration || 0);
+    const bookingUnits = craftJetSkiCount(String(booking.craftKey || booking.craft || ''));
+    if (Number.isNaN(bookingStart) || !bookingDuration || !bookingUnits) return;
+
+    const overlapStart = Math.max(requestedStart, bookingStart);
+    const overlapEnd = Math.min(requestedEnd, bookingStart + (bookingDuration * 60));
+    if (overlapEnd <= overlapStart) return;
+
+    events.push({ minute: overlapStart, delta: bookingUnits });
+    events.push({ minute: overlapEnd, delta: -bookingUnits });
+  });
+
+  events.sort((left, right) => {
+    if (left.minute !== right.minute) return left.minute - right.minute;
+    return left.delta - right.delta;
+  });
+
+  let current = 0;
+  let peak = 0;
+  events.forEach((event) => {
+    current += event.delta;
+    if (current > peak) peak = current;
+  });
+
+  return peak;
+}
+
+function hasInventoryConflict(state, options = {}) {
+  const craft = String(options.craft || '').trim();
+  const requiresBoat = craftUsesBoat(craft);
+  const requestedJetSkis = craftJetSkiCount(craft);
+  if (!requiresBoat && !requestedJetSkis) return false;
+  if (requiresBoat && findBoatConflicts(state, options).length) return true;
+  if (requestedJetSkis > 0) {
+    // Never turn a jet-ski customer away — partner skis cover overflow.
+    if (JETSKI_NEVER_BLOCK) return false;
+    return (peakJetSkiUnitsBooked(state, options) + requestedJetSkis) > TOTAL_PUBLIC_JET_SKIS;
+  }
+  return false;
+}
+
+function blockedStartTimesForCraft(state, options = {}) {
+  const requestedDate = String(options.date || '').trim();
+  const requestedDuration = Number(options.duration || 0);
+  const requestedCraft = String(options.craft || '').trim();
+  if (!requestedDate || !requestedDuration) return [];
+
+  return PUBLIC_BOOKING_START_TIMES.filter((time) => (
+    hasInventoryConflict(state, {
+      ...options,
+      craft: requestedCraft,
+      date: requestedDate,
+      time,
+      duration: requestedDuration
+    })
+  ));
+}
+
+function availabilitySnapshotForStartTime(state, options = {}) {
+  const craft = String(options.craft || '').trim();
+  const requiresBoat = craftUsesBoat(craft);
+  const requestedJetSkis = craftJetSkiCount(craft);
+  const boatAvailable = requiresBoat ? findBoatConflicts(state, options).length === 0 : true;
+  const openJetSkis = requestedJetSkis > 0
+    ? Math.max(0, TOTAL_PUBLIC_JET_SKIS - peakJetSkiUnitsBooked(state, options))
+    : TOTAL_PUBLIC_JET_SKIS;
+  // Jet-ski times are always bookable (partner-ski overflow); only a boat conflict
+  // can block. canBook stays tied to capacity only if JETSKI_NEVER_BLOCK is off.
+  const jetSkiBookable = JETSKI_NEVER_BLOCK || requestedJetSkis <= 0 || openJetSkis >= requestedJetSkis;
+  const canBook = boatAvailable && jetSkiBookable;
+  return {
+    time: String(options.time || '').trim(),
+    label: formatTimeLabel(options.time),
+    boatAvailable,
+    requestedJetSkis,
+    openJetSkis,
+    canBook
+  };
+}
+
+function assertPublicAvailability(state, options = {}) {
+  const availabilityType = craftAvailabilityType(options.craft);
+  if (availabilityType === 'none') return;
+  if (hasInventoryConflict(state, options)) {
+    if (availabilityType === 'boat') {
+      throw new Error('That boat time is already booked. Please choose a different start time.');
+    }
+    throw new Error('That rental time is no longer available. Please choose a different start time.');
+  }
+}
+
+function nextId(items = []) {
+  return items.reduce((max, item) => Math.max(max, Number(item?.id || 0)), 0) + 1;
+}
+
+function createPublicToken() {
+  return crypto.randomBytes(18).toString('base64url');
+}
+
+function parseIsoDate(value) {
+  if (!value) return null;
+  const parsed = new Date(`${String(value)}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function latestDateValue(first, second) {
+  if (!second) return first || '';
+  if (!first) return second;
+  const firstDate = parseIsoDate(first);
+  const secondDate = parseIsoDate(second);
+  if (!firstDate) return second;
+  if (!secondDate) return first;
+  return secondDate > firstDate ? second : first;
+}
+
+function isTruthyWaiver(value) {
+  return Boolean(value?.acceptedRisk && value?.acceptedDamage && value?.signature);
+}
+
+function sanitizePublicCustomer(customer = {}) {
+  return {
+    id: Number(customer.id || 0),
+    name: String(customer.name || '').trim(),
+    phone: String(customer.phone || '').trim(),
+    email: String(customer.email || '').trim(),
+    bookings: Number(customer.bookings || 0),
+    totalSpent: Number(customer.totalSpent || 0),
+    lastBooking: String(customer.lastBooking || ''),
+    waiverOnFile: Boolean(customer.waiverSignedAt || customer.waiver?.signedAt || customer.waiverSignature),
+    waiverSignedAt: String(customer.waiverSignedAt || customer.waiver?.signedAt || ''),
+    waiverSignature: String(customer.waiverSignature || customer.waiver?.signature || ''),
+    dateOfBirth: String(customer.dateOfBirth || customer.waiver?.dateOfBirth || ''),
+    waiverInitials: String(customer.waiverInitials || customer.waiver?.initials || ''),
+    waiverVerified: Boolean(customer.waiverVerified || customer.waiver?.verified),
+    emergencyName: String(customer.emergencyName || customer.waiver?.emergencyName || ''),
+    emergencyPhone: String(customer.emergencyPhone || customer.waiver?.emergencyPhone || '')
+  };
+}
+
+function applyWaiverToCustomer(customer, waiver = {}, fallbackDate = '', now = new Date().toISOString()) {
+  customer.dateOfBirth = String(waiver.dateOfBirth || customer.dateOfBirth || '').trim();
+  customer.waiverSignedAt = String(waiver.signatureDate || fallbackDate || customer.waiverSignedAt || now.split('T')[0]).trim();
+  customer.waiverSignature = String(waiver.signature || customer.waiverSignature || '').trim();
+  customer.waiverInitials = String(waiver.initials || customer.waiverInitials || '').trim();
+  customer.waiverVerified = Boolean(waiver.verified || customer.waiverVerified);
+  customer.emergencyName = String(waiver.emergencyName || customer.emergencyName || '').trim();
+  customer.emergencyPhone = String(waiver.emergencyPhone || customer.emergencyPhone || '').trim();
+  customer.waiver = {
+    acceptedRisk: Boolean(waiver.acceptedRisk),
+    acceptedDamage: Boolean(waiver.acceptedDamage),
+    signature: customer.waiverSignature,
+    signedAt: customer.waiverSignedAt,
+    dateOfBirth: customer.dateOfBirth,
+    initials: customer.waiverInitials,
+    verified: customer.waiverVerified,
+    emergencyName: customer.emergencyName,
+    emergencyPhone: customer.emergencyPhone
+  };
+}
+
+function findMatchingCustomer(state, payload = {}) {
+  const phoneKey = phoneDigits(payload.phone);
+  const emailKey = normalizeEmail(payload.email);
+  const directMatch = state.customers.find((customer) => (
+    (phoneKey && phoneDigits(customer.phone) === phoneKey) ||
+    (emailKey && normalizeEmail(customer.email) === emailKey)
+  ));
+  if (directMatch) return directMatch;
+  const nameKey = normalizeName(
+    payload.name || [payload.firstName, payload.lastName].filter(Boolean).join(' ')
+  );
+  if (!nameKey) return null;
+  const nameMatches = state.customers.filter((customer) => normalizeName(customer.name) === nameKey);
+  return nameMatches.length === 1 ? nameMatches[0] : null;
+}
+
+function findMatchingBooking(state, payload = {}) {
+  const phoneKey = phoneDigits(payload.phone);
+  const emailKey = normalizeEmail(payload.email);
+  const craftKey = normalizeCraftKey(payload.craftKey || payload.craft || '');
+  const craftLabel = String(payload.craftLabel || '').trim();
+  return state.bookings.find((booking) => (
+    booking.date === payload.date &&
+    booking.time === payload.time &&
+    Number(booking.duration || 0) === Number(payload.duration || 0) &&
+    (
+      (craftKey && normalizeCraftKey(booking.craftKey || booking.craft) === craftKey) ||
+      (craftLabel && String(booking.craftLabel || '').trim() === craftLabel)
+    ) &&
+    (
+      (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
+      (emailKey && normalizeEmail(booking.email) === emailKey)
+    )
+  )) || null;
+}
+
+function findBookingByPublicToken(state, token = '') {
+  const normalized = String(token || '').trim();
+  if (!normalized) return null;
+  return state.bookings.find((booking) => String(booking.publicToken || '').trim() === normalized) || null;
+}
+
+function ensureBookingPublicToken(booking) {
+  if (!booking.publicToken) booking.publicToken = createPublicToken();
+  return booking.publicToken;
+}
+
+function syncCustomersFromBookings(state, now = new Date().toISOString()) {
+  let changed = false;
+  (state.bookings || []).forEach((booking) => {
+    if (!booking || typeof booking !== 'object') return;
+    const bookingHasCustomerInfo = Boolean(
+      String(booking.name || '').trim() ||
+      String(booking.phone || '').trim() ||
+      String(booking.email || '').trim()
+    );
+    if (!bookingHasCustomerInfo) {
+      if (Number(booking.customerId || 0)) {
+        booking.customerId = 0;
+        changed = true;
+      }
+      return;
+    }
+    const directCustomer = Number(booking.customerId || 0)
+      ? (state.customers || []).find((customer) => Number(customer.id || 0) === Number(booking.customerId || 0))
+      : null;
+    const matchedCustomer = directCustomer || findMatchingCustomer(state, {
+      name: booking.name,
+      phone: booking.phone,
+      email: booking.email
+    });
+    const customer = matchedCustomer || {
+      id: nextId(state.customers),
+      name: String(booking.name || '').trim(),
+      phone: String(booking.phone || '').trim(),
+      email: String(booking.email || '').trim(),
+      bookings: 0,
+      totalSpent: 0,
+      lastBooking: '',
+      source: String(booking.source || 'Ops Booking').trim() || 'Ops Booking',
+      tag: '',
+      company: '',
+      crmTags: '',
+      crmNotes: '',
+      createdAt: now.split('T')[0],
+      lastActivity: String(booking.updatedAt || booking.createdAt || now),
+      importSource: 'ops'
+    };
+
+    if (!matchedCustomer) {
+      state.customers.push(customer);
+      changed = true;
+    }
+
+    const previousCustomerId = Number(booking.customerId || 0);
+    if (String(booking.name || '').trim()) customer.name = String(booking.name || '').trim();
+    if (String(booking.phone || '').trim()) customer.phone = String(booking.phone || '').trim();
+    if (String(booking.email || '').trim()) customer.email = String(booking.email || '').trim();
+    customer.source = String(customer.source || booking.source || 'Ops Booking').trim() || 'Ops Booking';
+    customer.importSource = customer.importSource || 'ops';
+    customer.lastActivity = String(booking.updatedAt || booking.createdAt || now);
+
+    if (booking.waiverSignedAt || booking.waiverSignature || booking.dateOfBirth || booking.waiverInitials || booking.waiverVerified || booking.emergencyName || booking.emergencyPhone || booking.waiver) {
+      applyWaiverToCustomer(customer, booking.waiver || {
+        signatureDate: booking.waiverSignedAt,
+        signature: booking.waiverSignature,
+        dateOfBirth: booking.dateOfBirth,
+        initials: booking.waiverInitials,
+        verified: booking.waiverVerified,
+        emergencyName: booking.emergencyName,
+        emergencyPhone: booking.emergencyPhone
+      }, booking.date, now);
+    }
+
+    booking.customerId = customer.id;
+    if (previousCustomerId !== Number(customer.id || 0)) {
+      changed = true;
+    }
+  });
+
+  (state.customers || []).forEach((customer) => updateCustomerRollup(state, customer));
+  return changed;
+}
+
+function invoiceMatchesCustomer(customer = {}, invoice = {}) {
+  if (Number(customer.id || 0) > 0 && Number(invoice.customerId || 0) === Number(customer.id || 0)) return true;
+  const customerPhone = phoneDigits(customer.phone);
+  const invoicePhone = phoneDigits(invoice.customerPhone);
+  if (customerPhone && invoicePhone && customerPhone === invoicePhone) return true;
+  const customerEmail = normalizeEmail(customer.email);
+  const invoiceEmail = normalizeEmail(invoice.customerEmail);
+  if (customerEmail && invoiceEmail && customerEmail === invoiceEmail) return true;
+  const customerName = normalizeName(customer.name);
+  const invoiceName = normalizeName(invoice.customerName);
+  return Boolean(customerName && invoiceName && customerName === invoiceName);
+}
+
+function normalizeInvoiceStatus(status = '') {
+  const normalized = String(status || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (normalized === 'paid in full') return 'paid';
+  if (normalized === 'fully paid' || normalized === 'full paid') return 'paid';
+  if (normalized === 'partial' || normalized === 'partial paid' || normalized === 'partiallypaid') return 'partially paid';
+  if (normalized === 'over due') return 'overdue';
+  if (normalized === 'canceled') return 'cancelled';
+  return normalized;
+}
+
+function invoiceCollectedAmount(invoice = {}) {
+  const explicitPaid = Number(invoice.paidAmount);
+  if (Number.isFinite(explicitPaid) && explicitPaid > 0) {
+    const total = Number(invoice.total || 0);
+    return total > 0 ? Math.min(explicitPaid, total) : explicitPaid;
+  }
+  const rawCollected = Math.max(
+    Number(invoice.rawFields?.collectedAmount || 0),
+    Number(invoice.rawFields?.paidAmount || 0),
+    0
+  );
+  if (rawCollected > 0) {
+    const total = Number(invoice.total || 0);
+    return total > 0 ? Math.min(rawCollected, total) : rawCollected;
+  }
+  return normalizeInvoiceStatus(invoice.status) === 'paid' ? Number(invoice.total || 0) : 0;
+}
+
+function invoiceDurationText(duration = 0) {
+  const hours = Number(duration || 0);
+  if (!hours) return '';
+  return hours === 8 ? 'Full Day (8 hours)' : `${hours} hour${hours === 1 ? '' : 's'}`;
+}
+
+function bookingInvoiceDate(booking = {}, fallback = new Date().toISOString()) {
+  const source = String(
+    booking.paymentCompletedAt ||
+    booking.updatedAt ||
+    booking.createdAt ||
+    fallback ||
+    ''
+  ).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(source)) return source;
+  if (source.includes('T')) return source.slice(0, 10);
+  return fallback.slice(0, 10);
+}
+
+function createWebsiteInvoiceNumber(booking = {}, fallback = new Date().toISOString()) {
+  const datePart = bookingInvoiceDate(booking, fallback).replace(/-/g, '') || '00000000';
+  const bookingPart = String(Number(booking.id || 0)).padStart(3, '0');
+  return `SLA-WEB-${datePart}-${bookingPart}`;
+}
+
+function findInvoiceForBooking(state, booking = {}) {
+  const bookingId = Number(booking.id || 0);
+  const bookingToken = String(booking.publicToken || '').trim();
+  const paymentSessionId = String(booking.paymentSessionId || '').trim();
+  const paymentIntentId = String(booking.paymentIntentId || '').trim();
+  return (state.invoices || []).find((invoice) => (
+    (bookingId > 0 && Number(invoice.bookingId || 0) === bookingId) ||
+    (bookingId > 0 && String(invoice.rawFields?.bookingId || '').trim() === String(bookingId)) ||
+    (bookingToken && (
+      String(invoice.bookingPublicToken || '').trim() === bookingToken ||
+      String(invoice.rawFields?.bookingPublicToken || '').trim() === bookingToken
+    )) ||
+    (paymentSessionId && (
+      String(invoice.paymentSessionId || '').trim() === paymentSessionId ||
+      String(invoice.rawFields?.paymentSessionId || '').trim() === paymentSessionId
+    )) ||
+    (paymentIntentId && (
+      String(invoice.paymentIntentId || '').trim() === paymentIntentId ||
+      String(invoice.rawFields?.paymentIntentId || '').trim() === paymentIntentId
+    ))
+  )) || null;
+}
+
+function linkedBookingIdForInvoice(state, invoice = {}) {
+  const directId = Number(invoice.bookingId || invoice.rawFields?.bookingId || 0);
+  if (directId > 0) return directId;
+  const bookingToken = String(invoice.bookingPublicToken || invoice.rawFields?.bookingPublicToken || '').trim();
+  const paymentSessionId = String(invoice.paymentSessionId || invoice.rawFields?.paymentSessionId || '').trim();
+  const paymentIntentId = String(invoice.paymentIntentId || invoice.rawFields?.paymentIntentId || '').trim();
+  const booking = (state.bookings || []).find((item) => (
+    (bookingToken && String(item.publicToken || '').trim() === bookingToken) ||
+    (paymentSessionId && String(item.paymentSessionId || '').trim() === paymentSessionId) ||
+    (paymentIntentId && String(item.paymentIntentId || '').trim() === paymentIntentId)
+  ));
+  return Number(booking?.id || 0);
+}
+
+function bookingInvoiceTotal(booking = {}) {
+  return Number((Number(booking.total || 0) + bookingProcessingFeeAmountValue(booking)).toFixed(2));
+}
+
+function bookingUsesCheckoutDepositFlow(booking = {}) {
+  const source = String(booking.source || '').trim().toLowerCase();
+  const amountDueToday = Number(booking.amountDueToday || 0);
+  const rentalTotal = Number(booking.total || 0);
+  const explicitProcessingFee = Number(booking.processingFeeAmount);
+  const total = Number((
+    rentalTotal + (
+      Number.isFinite(explicitProcessingFee) && explicitProcessingFee >= 0
+        ? explicitProcessingFee
+        : 0
+    )
+  ).toFixed(2));
+  return Boolean(
+    String(booking.publicToken || '').trim() ||
+    String(booking.paymentSessionId || '').trim() ||
+    source.includes('website') ||
+    source.includes('stripe') ||
+    source.includes('public') ||
+    (amountDueToday > 0 && total > 0 && amountDueToday < total)
+  );
+}
+
+function bookingDepositAmountValue(booking = {}, { useCheckoutFallback = true } = {}) {
+  const explicit = Number(booking.depositAmount);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return useCheckoutFallback && bookingUsesCheckoutDepositFlow(booking)
+    ? (BOOKING_DEPOSIT_CENTS / 100)
+    : 0;
+}
+
+function bookingProcessingFeeAmountValue(booking = {}, { useCheckoutFallback = true } = {}) {
+  const explicit = Number(booking.processingFeeAmount);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return useCheckoutFallback && bookingUsesCheckoutDepositFlow(booking)
+    ? (PROCESSING_FEE_CENTS / 100)
+    : 0;
+}
+
+function bookingAmountDueTodayValue(booking = {}, { useCheckoutFallback = true } = {}) {
+  const explicit = Number(booking.amountDueToday);
+  if (Number.isFinite(explicit) && explicit >= 0) return explicit;
+  return Number((
+    bookingDepositAmountValue(booking, { useCheckoutFallback }) +
+    bookingProcessingFeeAmountValue(booking, { useCheckoutFallback })
+  ).toFixed(2));
+}
+
+function bookingCollectedAmountForInvoice(booking = {}) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  const total = bookingInvoiceTotal(booking);
+  if (paymentStatus !== 'paid') return 0;
+  if (bookingUsesCheckoutDepositFlow(booking)) {
+    const dueToday = bookingAmountDueTodayValue(booking);
+    if (dueToday > 0) {
+      return Number(Math.min(dueToday, total).toFixed(2));
+    }
+  }
+  return total > 0 ? total : 0;
+}
+
+function bookingInvoiceHasManualOverride(existingInvoice = null, booking = {}) {
+  if (!existingInvoice) return false;
+  const rawFields = existingInvoice.rawFields || {};
+  const explicitFlag = String(rawFields.manualBookingInvoiceOverride || '').trim().toLowerCase();
+  if (explicitFlag === 'true') return true;
+  const manualTotal = Number(rawFields.manualTotalOverride || 0);
+  const syncedTotal = bookingInvoiceTotal(booking);
+  if (manualTotal > 0 && Math.abs(manualTotal - syncedTotal) > 0.009) return true;
+  const savedTotal = Number(existingInvoice.total || 0);
+  return savedTotal > 0 && Math.abs(savedTotal - syncedTotal) > 0.009;
+}
+
+function effectiveInvoiceTotalForBooking(existingInvoice = null, booking = {}) {
+  if (bookingInvoiceHasManualOverride(existingInvoice, booking)) {
+    const manualTotal = Number(existingInvoice?.rawFields?.manualTotalOverride || existingInvoice?.total || 0);
+    if (manualTotal > 0) {
+      return Number(manualTotal.toFixed(2));
+    }
+  }
+  return bookingInvoiceTotal(booking);
+}
+
+function bookingCollectedAmountForInvoiceTotal(booking = {}, targetTotal = 0, existingInvoice = null) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  const total = Number(targetTotal || 0);
+  if (paymentStatus !== 'paid') return 0;
+  if (bookingUsesCheckoutDepositFlow(booking)) {
+    const dueToday = bookingAmountDueTodayValue(booking);
+    if (dueToday > 0) {
+      return Number(Math.min(dueToday, total).toFixed(2));
+    }
+  }
+  const existingPaidAmount = Number(existingInvoice?.paidAmount || 0);
+  if (existingPaidAmount > 0) {
+    return Number(Math.min(existingPaidAmount, total || existingPaidAmount).toFixed(2));
+  }
+  return total > 0 ? total : 0;
+}
+
+function bookingCheckoutSessionIsActive(booking = {}) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  return paymentStatus === 'pending' || (Boolean(String(booking.paymentSessionId || '').trim()) && !['expired', 'failed', 'canceled', 'cancelled', 'void', 'paid'].includes(paymentStatus));
+}
+
+function invoiceStatusForBooking(booking = {}) {
+  const bookingStatus = normalizeBookingStatus(booking.status);
+  if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
+  const total = bookingInvoiceTotal(booking);
+  const collected = bookingCollectedAmountForInvoice(booking);
+  if (collected >= total && total > 0) return 'paid';
+  if (collected > 0) return 'partially paid';
+  if (bookingStatus === 'draft') return 'draft';
+  if (bookingCheckoutSessionIsActive(booking)) return 'sent';
+  return 'open';
+}
+
+function mergedCollectedAmountForBookingInvoice(existingInvoice = null, booking = {}) {
+  const total = effectiveInvoiceTotalForBooking(existingInvoice, booking);
+  const bookingCollected = bookingCollectedAmountForInvoiceTotal(booking, total, existingInvoice);
+  const invoiceCollected = Math.min(Number(existingInvoice?.paidAmount || 0), total || Number(existingInvoice?.paidAmount || 0));
+  return Number(Math.max(bookingCollected, invoiceCollected, 0).toFixed(2));
+}
+
+function mergedInvoiceStatusForBooking(existingInvoice = null, booking = {}) {
+  const bookingStatus = normalizeBookingStatus(booking.status);
+  if (['cancelled', 'canceled', 'void'].includes(bookingStatus)) return 'cancelled';
+  const total = effectiveInvoiceTotalForBooking(existingInvoice, booking);
+  const collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
+  if (collected >= total && total > 0) return 'paid';
+  if (collected > 0) return 'partially paid';
+  if (bookingStatus === 'draft') return 'draft';
+  if (bookingCheckoutSessionIsActive(booking)) return 'sent';
+  return 'open';
+}
+
+function ensureBookingInvoice(state, booking = {}, now = new Date().toISOString()) {
+  // invoiceSuppressed: the owner deleted this booking's invoice on purpose — don't
+  // auto-recreate it (re-saving the booking clears the flag and brings it back).
+  if (!booking || !Number(booking.id || 0) || normalizeBookingStatus(booking.status) === 'draft' || booking.invoiceSuppressed) return null;
+  const existingInvoice = findInvoiceForBooking(state, booking);
+  const existingIssueDate = String(existingInvoice?.issueDate || '').trim();
+  const issueDate = existingIssueDate || bookingInvoiceDate(booking, now);
+  const previousBookingDate = String(existingInvoice?.rawFields?.bookingDate || '').trim();
+  const existingDueDate = String(existingInvoice?.dueDate || '').trim();
+  const nextAutoDueDate = String(booking.date || issueDate).trim() || issueDate;
+  const dueDate = existingDueDate && ![previousBookingDate, existingIssueDate].includes(existingDueDate)
+    ? existingDueDate
+    : nextAutoDueDate;
+  const syncedRentalTotal = Number(booking.total || 0);
+  const syncedProcessingFee = bookingProcessingFeeAmountValue(booking);
+  const syncedTotal = Number((syncedRentalTotal + syncedProcessingFee).toFixed(2));
+  const hasManualOverride = bookingInvoiceHasManualOverride(existingInvoice, booking);
+  let rentalTotal = hasManualOverride ? Number(existingInvoice?.subTotal || syncedRentalTotal || 0) : syncedRentalTotal;
+  let processingFee = hasManualOverride ? Number(existingInvoice?.taxAmount || 0) : syncedProcessingFee;
+  let total = hasManualOverride ? effectiveInvoiceTotalForBooking(existingInvoice, booking) : syncedTotal;
+  let collected = mergedCollectedAmountForBookingInvoice(existingInvoice, booking);
+  // No-show / cancelled: the rental didn't happen, so the invoice collapses to just
+  // the deposit the owner kept (default) — or $0 if it was refunded. This keeps the
+  // kept deposit counted as revenue and stops a phantom full-rental balance showing
+  // as still owed. (A manual invoice override is left untouched.)
+  const bookingStatusForInvoice = normalizeBookingStatus(booking.status);
+  if (!hasManualOverride && (bookingStatusForInvoice === 'noshow' || bookingStatusForInvoice === 'cancelled')) {
+    const keptDeposit = booking.depositRefunded ? 0 : bookingDepositAmountValue(booking);
+    rentalTotal = keptDeposit;
+    processingFee = 0;
+    total = keptDeposit;
+    collected = Math.min(collected, keptDeposit);
+  }
+  const defaultInvoiceName = `${booking.craftLabel || CRAFT_LABELS[normalizeCraftKey(booking.craftKey || booking.craft)] || 'Rental'} booking`;
+  const defaultLineItems = [
+    {
+      name: `${booking.craftLabel || 'Rental'} • ${invoiceDurationText(booking.duration) || 'Custom duration'}`,
+      description: `Booking for ${booking.date || 'TBD'} at ${formatTimeLabel(booking.time)}`,
+      amount: syncedRentalTotal,
+      quantity: 1,
+      currency: 'USD'
+    },
+    ...(syncedProcessingFee > 0 ? [{
+      name: 'Processing Fee',
+      description: 'Secure checkout and card processing fee',
+      amount: syncedProcessingFee,
+      quantity: 1,
+      currency: 'USD'
+    }] : [])
+  ];
+  const invoice = existingInvoice || {
+    id: nextId(state.invoices),
+    invoiceNumber: createWebsiteInvoiceNumber(booking, now),
+    recurring: false,
+    lineItems: [],
+    rawFields: {},
+    importSource: 'website',
+    liveMode: 'Website Booking',
+    createdAt: now
+  };
+
+  invoice.bookingId = Number(booking.id || 0);
+  invoice.bookingPublicToken = String(booking.publicToken || '').trim();
+  invoice.paymentSessionId = String(booking.paymentSessionId || '').trim();
+  invoice.paymentIntentId = String(booking.paymentIntentId || '').trim();
+  invoice.invoiceName = hasManualOverride
+    ? String(existingInvoice?.invoiceName || defaultInvoiceName).trim() || defaultInvoiceName
+    : defaultInvoiceName;
+  invoice.customerId = Number(booking.customerId || 0) || invoice.customerId || 0;
+  invoice.customerName = String(booking.name || invoice.customerName || '').trim() || 'Walk-up booking';
+  invoice.customerPhone = String(booking.phone || invoice.customerPhone || '').trim();
+  invoice.customerEmail = String(booking.email || invoice.customerEmail || '').trim();
+  invoice.issueDate = issueDate;
+  invoice.dueDate = dueDate;
+  invoice.subTotal = rentalTotal;
+  invoice.discountAmount = 0;
+  invoice.taxAmount = processingFee;
+  invoice.total = total;
+  invoice.paidAmount = Number(collected.toFixed(2));
+  invoice.balanceDue = Number(Math.max(total - collected, 0).toFixed(2));
+  invoice.status = mergedInvoiceStatusForBooking(existingInvoice, booking);
+  invoice.notes = String(booking.notes || invoice.notes || '').trim();
+  invoice.craftKey = String(booking.craftKey || normalizeCraftKey(booking.craft || '') || '').trim();
+  invoice.durationHours = Number(booking.duration || 0);
+  invoice.durationLabel = invoiceDurationText(booking.duration);
+  invoice.lineItems = hasManualOverride && Array.isArray(existingInvoice?.lineItems) && existingInvoice.lineItems.length
+    ? existingInvoice.lineItems
+    : defaultLineItems;
+  invoice.rawFields = {
+    ...(invoice.rawFields || {}),
+    source: 'website booking',
+    bookingId: String(booking.id || ''),
+    bookingPublicToken: String(booking.publicToken || ''),
+    paymentSessionId: String(booking.paymentSessionId || ''),
+    paymentStatus: String(booking.paymentStatus || ''),
+    bookingStatus: String(booking.status || ''),
+    rentalPackage: String(booking.craftKey || ''),
+    rentalPackageLabel: String(booking.craftLabel || ''),
+    rentalDurationHours: String(booking.duration || ''),
+    rentalDurationLabel: invoiceDurationText(booking.duration),
+    depositAmount: String(bookingDepositAmountValue(booking).toFixed(2)),
+    processingFeeAmount: String(bookingProcessingFeeAmountValue(booking).toFixed(2)),
+    amountDueToday: String(bookingAmountDueTodayValue(booking).toFixed(2)),
+    bookingDate: String(booking.date || ''),
+    bookingTime: String(booking.time || ''),
+    paymentIntentId: String(booking.paymentIntentId || ''),
+    manualBookingInvoiceOverride: hasManualOverride ? 'true' : '',
+    manualTotalOverride: hasManualOverride ? String(total.toFixed(2)) : ''
+  };
+
+  if (!existingInvoice) {
+    state.invoices.push(invoice);
+  }
+  return invoice;
+}
+
+function syncWebsiteBookingInvoices(state, now = new Date().toISOString()) {
+  let changed = false;
+  (state.bookings || []).forEach((booking) => {
+    if (!booking || normalizeBookingStatus(booking.status) === 'draft') return;
+    const existingInvoice = findInvoiceForBooking(state, booking);
+    const beforeCount = (state.invoices || []).length;
+    const beforeSnapshot = existingInvoice ? JSON.stringify(existingInvoice) : '';
+    const invoice = ensureBookingInvoice(state, booking, now);
+    if (!invoice) return;
+    if (!existingInvoice || beforeCount !== (state.invoices || []).length || JSON.stringify(invoice) !== beforeSnapshot) {
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function syncBookingsFromInvoices(state, now = new Date().toISOString()) {
+  let changed = false;
+  (state.bookings || []).forEach((booking) => {
+    if (!booking || !Number(booking.id || 0)) return;
+    const bookingStatus = normalizeBookingStatus(booking.status);
+    if (['cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(bookingStatus)) return;
+    const invoice = findInvoiceForBooking(state, booking);
+    if (!invoice) return;
+    const invoiceStatus = normalizeInvoiceStatus(invoice.status);
+    const invoiceTotal = Number(invoice.total || 0);
+    const collected = Number(invoiceCollectedAmount(invoice) || 0);
+    const processingFee = Number(bookingProcessingFeeAmountValue(booking) || 0);
+    const syncedRentalTotal = Number(Math.max(invoiceTotal - processingFee, 0).toFixed(2));
+    if (Math.abs(Number(booking.total || 0) - syncedRentalTotal) > 0.009) {
+      booking.total = syncedRentalTotal;
+      changed = true;
+    }
+    const existingAddonsAmount = Number(booking.droneAmount || (booking.drone ? DRONE_ADDON_CENTS / 100 : 0) || 0)
+      + Number(booking.karaokeAmount || (booking.karaoke ? KARAOKE_ADDON_CENTS / 100 : 0) || 0)
+      + Number(booking.tubeAmount || (booking.tube ? TUBE_ADDON_CENTS / 100 : 0) || 0);
+    const nextBaseTotal = Number(Math.max(syncedRentalTotal - existingAddonsAmount, 0).toFixed(2));
+    if (Math.abs(Number(booking.baseTotal || 0) - nextBaseTotal) > 0.009) {
+      booking.baseTotal = nextBaseTotal;
+      changed = true;
+    }
+    const dueToday = bookingAmountDueTodayValue(booking);
+    const checkoutDepositSatisfied = bookingUsesCheckoutDepositFlow(booking) && dueToday > 0 && collected >= (dueToday - 0.009);
+    const fullyPaid = invoiceStatus === 'paid' || (invoiceTotal > 0 && collected >= (invoiceTotal - 0.009));
+    const partialPayment = collected > 0 && !fullyPaid && !checkoutDepositSatisfied;
+    const nextPaymentStatus = (fullyPaid || checkoutDepositSatisfied)
+      ? 'paid'
+      : (partialPayment ? 'partial' : 'unpaid');
+    const currentPaymentStatus = String(booking.paymentStatus || '').trim().toLowerCase();
+    if (currentPaymentStatus !== nextPaymentStatus) {
+      booking.paymentStatus = nextPaymentStatus;
+      changed = true;
+    }
+    const shouldMarkDepositPaid = fullyPaid || checkoutDepositSatisfied;
+    if (Boolean(booking.deposit) !== shouldMarkDepositPaid) {
+      booking.deposit = shouldMarkDepositPaid;
+      changed = true;
+    }
+    const nextCompletedAt = shouldMarkDepositPaid
+      ? String(booking.paymentCompletedAt || now)
+      : '';
+    if (String(booking.paymentCompletedAt || '') !== nextCompletedAt) {
+      booking.paymentCompletedAt = nextCompletedAt;
+      changed = true;
+    }
+    if (shouldMarkDepositPaid && ['pending', 'draft'].includes(bookingStatus)) {
+      booking.status = 'confirmed';
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+// The employee role (dock staff) may SEE only a guest's name, the schedule, and
+// whether they signed the waiver. Phone, email, notes, money, and signature
+// details are dropped server-side so they never reach the employee browser.
+const EMPLOYEE_VISIBLE_BOOKING_FIELDS = ['id', 'name', 'craft', 'craftKey', 'craftLabel', 'date', 'time', 'status', 'duration', 'durationLabel', 'location', 'checkedIn', 'waiverSignedAt', 'source', 'createdAt', 'updatedAt'];
+const EMPLOYEE_VISIBLE_CUSTOMER_FIELDS = ['id', 'name', 'waiverSignedAt', 'bookings', 'lastBooking', 'createdAt'];
+// Fields the employee may EDIT. Anything not listed (phone/email/notes/money) is
+// preserved from the server record on save, so a save never wipes hidden data.
+const EMPLOYEE_EDITABLE_BOOKING_FIELDS = ['name', 'craft', 'craftKey', 'craftLabel', 'date', 'time', 'status', 'duration', 'durationLabel', 'location', 'checkedIn', 'updatedAt'];
+// Still referenced by the frontend money-hide; kept for documentation.
+const EMPLOYEE_HIDDEN_MONEY_FIELDS = ['total', 'baseTotal', 'depositAmount', 'processingFeeAmount', 'amountDueToday', 'droneAmount', 'karaokeAmount', 'tubeAmount'];
+function pickFields(obj = {}, fields = []) {
+  const out = {};
+  for (const field of fields) if (obj[field] !== undefined) out[field] = obj[field];
+  return out;
+}
+function waiverSignedFlag(record = {}) {
+  return Boolean(record.waiverOnFile || record.waiverSignedAt || (record.waiver && record.waiver.signedAt) || record.waiverSignature || record.waiverSigned);
+}
+function employeeVisibleState(state = {}) {
+  return {
+    bookings: (Array.isArray(state.bookings) ? state.bookings : []).map((booking) => {
+      const out = pickFields(booking, EMPLOYEE_VISIBLE_BOOKING_FIELDS);
+      out.waiverSigned = waiverSignedFlag(booking);
+      return out;
+    }),
+    customers: (Array.isArray(state.customers) ? state.customers : []).map((customer) => {
+      const out = pickFields(customer, EMPLOYEE_VISIBLE_CUSTOMER_FIELDS);
+      out.waiverOnFile = waiverSignedFlag(customer);
+      out.waiverSigned = out.waiverOnFile;
+      return out;
+    }),
+    expenses: [],
+    fuelLog: [],
+    maintLog: [],
+    trackers: [],
+    invoices: [],
+    communicationsLog: [],
+    reviewRequests: [],
+    reviews: [],
+    reviewSettings: clone(DEFAULT_STATE.reviewSettings),
+    socialPosts: [],
+    ownerWeeklyDigest: clone(DEFAULT_STATE.ownerWeeklyDigest),
+    importMeta: clone(DEFAULT_STATE.importMeta),
+    invoiceImportMeta: clone(DEFAULT_STATE.invoiceImportMeta)
+  };
+}
+
+// Crew sees ONLY what a dock hand needs: who, when, which craft, where. Every
+// other field (phone, email, totals, deposits, notes, customer records) is
+// dropped server-side, so it never reaches the crew browser at all.
+function crewVisibleState(state = {}) {
+  const bookings = (Array.isArray(state.bookings) ? state.bookings : [])
+    .map((b) => ({
+      id: b.id,
+      name: String(b.name || '').trim(),
+      date: String(b.date || '').trim(),
+      time: String(b.time || '').trim(),
+      craftLabel: String(b.craftLabel || b.craft || '').trim(),
+      location: String(b.location || '').trim(),
+      status: String(b.status || '').trim(),
+      checkedIn: Boolean(b.checkedIn)
+    }));
+  return {
+    bookings,
+    customers: [], expenses: [], fuelLog: [], maintLog: [], trackers: [],
+    invoices: [], communicationsLog: [], reviewRequests: [], reviews: [],
+    reviewSettings: clone(DEFAULT_STATE.reviewSettings),
+    socialPosts: [],
+    ownerWeeklyDigest: clone(DEFAULT_STATE.ownerWeeklyDigest),
+    importMeta: clone(DEFAULT_STATE.importMeta),
+    invoiceImportMeta: clone(DEFAULT_STATE.invoiceImportMeta)
+  };
+}
+
+function statePayloadForSession(state = {}, session = null) {
+  const role = normalizeOpsRole(session?.role);
+  if (role === 'crew') return crewVisibleState(state);
+  if (role === 'employee') return employeeVisibleState(state);
+  return state;
+}
+
+function mergeEmployeeState(currentState = {}, incomingState = {}) {
+  const next = sanitizeState(currentState);
+  const incoming = sanitizeState(incomingState);
+  // The employee only sees name + schedule + waiver, so on save we keep the FULL
+  // server record and overlay just the fields they may edit. Everything they can't
+  // see — phone, email, notes, money, signature — is preserved untouched, and they
+  // can't forge any of it. New bookings keep only their whitelisted fields.
+  // Customers/invoices/all other collections stay exactly as the server has them.
+  const currentBookingsById = new Map(next.bookings.map((booking) => [Number(booking.id), booking]));
+  let maxBookingId = next.bookings.reduce((max, booking) => Math.max(max, Number(booking.id) || 0), 0);
+  next.bookings = incoming.bookings.map((booking) => {
+    const existing = currentBookingsById.get(Number(booking.id));
+    if (!existing) {
+      // New booking from an employee: keep ONLY whitelisted fields and stamp safe
+      // server defaults. They can't inject money, payment status, or a signature.
+      const created = pickFields(booking, EMPLOYEE_EDITABLE_BOOKING_FIELDS);
+      created.id = ++maxBookingId;
+      created.status = created.status || 'pending';
+      created.deposit = false;
+      created.paymentStatus = 'unpaid';
+      created.source = 'Employee Entry';
+      created.createdAt = new Date().toISOString();
+      return created;
+    }
+    const merged = { ...existing };
+    for (const field of EMPLOYEE_EDITABLE_BOOKING_FIELDS) {
+      if (booking[field] !== undefined) merged[field] = booking[field];
+    }
+    return merged;
+  });
+  return next;
+}
+
+// Crew may ONLY flip check-in and mark a booking completed on EXISTING bookings.
+// Everything else in the incoming payload is ignored — no field edits, no new
+// bookings, no deletes, no touching other collections.
+function mergeCrewState(currentState = {}, incomingState = {}) {
+  const next = sanitizeState(currentState);
+  const updates = new Map(
+    (Array.isArray(incomingState.bookings) ? incomingState.bookings : [])
+      .map((b) => [Number(b.id), b])
+  );
+  next.bookings = next.bookings.map((booking) => {
+    const update = updates.get(Number(booking.id));
+    if (!update) return booking;
+    const out = { ...booking };
+    if (typeof update.checkedIn === 'boolean') out.checkedIn = update.checkedIn;
+    if (String(update.status || '').toLowerCase() === 'completed') out.status = 'completed';
+    return out;
+  });
+  return next;
+}
+
+function normalizeBookingStatus(status = '') {
+  const normalized = String(status || '').trim().toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+  if (normalized === 'no show') return 'noshow';
+  if (normalized === 'canceled') return 'cancelled';
+  return normalized;
+}
+
+function bookingStartDateTimeValue(booking = {}) {
+  const bookingDate = parseIsoDate(booking.date);
+  const parsedTime = parseBookingTimeParts(booking.time);
+  if (!bookingDate || !parsedTime) return null;
+  return new Date(
+    bookingDate.getFullYear(),
+    bookingDate.getMonth(),
+    bookingDate.getDate(),
+    parsedTime.hour,
+    parsedTime.minute,
+    0,
+    0
+  );
+}
+
+function bookingPaymentTone(booking = {}) {
+  const paymentStatus = normalizeBookingStatus(booking.paymentStatus);
+  if (booking.deposit || paymentStatus === 'paid') return 'success';
+  if (['expired', 'failed', 'canceled', 'cancelled', 'void'].includes(paymentStatus)) return 'danger';
+  if (['pending', 'sent'].includes(paymentStatus)) return 'accent';
+  return 'warning';
+}
+
+function updateCustomerRollup(state, customer) {
+  const phoneKey = phoneDigits(customer.phone);
+  const emailKey = normalizeEmail(customer.email);
+  const relatedBookings = state.bookings.filter((booking) => {
+    const status = normalizeBookingStatus(booking.status);
+    if (['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status)) return false;
+    if (Number(customer.id || 0) > 0 && Number(booking.customerId || 0) === Number(customer.id || 0)) return true;
+    return (
+      (phoneKey && phoneDigits(booking.phone) === phoneKey) ||
+      (emailKey && normalizeEmail(booking.email) === emailKey)
+    );
+  });
+  const relatedInvoices = (state.invoices || []).filter((invoice) => invoiceMatchesCustomer(customer, invoice));
+  const relatedInvoiceBookingIds = new Set();
+  const linkedInvoiceCollectedTotals = new Map();
+  let standaloneInvoiceCollected = 0;
+
+  relatedInvoices.forEach((invoice) => {
+    const collected = invoiceCollectedAmount(invoice);
+    const linkedBookingId = linkedBookingIdForInvoice(state, invoice);
+    if (linkedBookingId > 0) {
+      relatedInvoiceBookingIds.add(linkedBookingId);
+      linkedInvoiceCollectedTotals.set(
+        linkedBookingId,
+        Number(((linkedInvoiceCollectedTotals.get(linkedBookingId) || 0) + collected).toFixed(2))
+      );
+      return;
+    }
+    standaloneInvoiceCollected += collected;
+  });
+
+  const bookingSpend = relatedBookings.reduce((sum, booking) => {
+    const bookingTotal = Number(booking.total || 0);
+    const linkedCollected = Number(linkedInvoiceCollectedTotals.get(Number(booking.id || 0)) || 0);
+    return sum + Math.max(bookingTotal, linkedCollected);
+  }, 0);
+
+  const orphanLinkedInvoiceCollected = Array.from(linkedInvoiceCollectedTotals.entries()).reduce((sum, [bookingId, collected]) => {
+    const hasBooking = relatedBookings.some((booking) => Number(booking.id || 0) === Number(bookingId));
+    return hasBooking ? sum : sum + collected;
+  }, 0);
+
+  customer.bookings = relatedBookings.length;
+  customer.totalSpent = Number((bookingSpend + standaloneInvoiceCollected + orphanLinkedInvoiceCollected).toFixed(2));
+  customer.lastBooking = relatedBookings.length
+    ? relatedBookings.reduce((latest, booking) => latestDateValue(latest, booking.date), '')
+    : 'N/A';
+  if (customer.bookings > 1 && customer.tag !== 'vip') customer.tag = 'repeat';
+  if (customer.bookings <= 1 && customer.tag === 'repeat') customer.tag = '';
+}
+
+function publicCustomerPayload(customer = {}) {
+  // SECURITY: this is the response of the UNAUTHENTICATED /api/public/customer-lookup
+  // endpoint (matched on a guessable phone or email). Return ONLY enough to recognize
+  // a returning customer — never phone, email, DOB, waiver signature, initials,
+  // emergency contacts, or lifetime spend, which would let anyone harvest PII by
+  // guessing a phone number. (sanitizePublicCustomer is still used internally.)
+  return {
+    id: Number(customer.id || 0),
+    name: String(customer.name || '').trim(),
+    bookings: Number(customer.bookings || 0),
+    lastBooking: String(customer.lastBooking || ''),
+    waiverOnFile: Boolean(customer.waiverSignedAt || customer.waiver?.signedAt || customer.waiverSignature)
+  };
+}
+
+function publicBookingPayload(booking = {}) {
+  return {
+    id: Number(booking.id || 0),
+    publicToken: String(booking.publicToken || ''),
+    name: String(booking.name || '').trim(),
+    phone: String(booking.phone || '').trim(),
+    email: String(booking.email || '').trim(),
+    craft: String(booking.craft || '').trim(),
+    craftKey: String(booking.craftKey || '').trim(),
+    craftLabel: String(booking.craftLabel || '').trim(),
+    duration: Number(booking.duration || 0),
+    durationLabel: String(booking.durationLabel || '').trim(),
+    total: Number(booking.total || 0),
+    baseTotal: Number(booking.baseTotal || 0),
+    drone: Boolean(booking.drone),
+    droneAmount: Number(booking.droneAmount || 0),
+    karaoke: Boolean(booking.karaoke),
+    karaokeAmount: Number(booking.karaokeAmount || 0),
+    tube: Boolean(booking.tube),
+    tubeAmount: Number(booking.tubeAmount || 0),
+    date: String(booking.date || '').trim(),
+    time: String(booking.time || '').trim(),
+    location: String(booking.location || '').trim(),
+    contactMethod: String(booking.contactMethod || 'text').trim(),
+    partySize: String(booking.partySize || '').trim(),
+    notes: String(booking.notes || '').trim(),
+    status: String(booking.status || 'pending').trim(),
+    source: String(booking.source || '').trim(),
+    customerId: Number(booking.customerId || 0),
+    waiverAccepted: Boolean(booking.waiverAccepted),
+    waiver: booking.waiver && typeof booking.waiver === 'object'
+      ? {
+          acceptedRisk: Boolean(booking.waiver.acceptedRisk),
+          acceptedDamage: Boolean(booking.waiver.acceptedDamage),
+          verified: Boolean(booking.waiver.verified),
+          dateOfBirth: String(booking.waiver.dateOfBirth || '').trim(),
+          initials: String(booking.waiver.initials || '').trim(),
+          signature: String(booking.waiver.signature || '').trim(),
+          signatureDate: String(booking.waiver.signedAt || booking.waiver.signatureDate || '').trim(),
+          emergencyName: String(booking.waiver.emergencyName || '').trim(),
+          emergencyPhone: String(booking.waiver.emergencyPhone || '').trim()
+        }
+      : null,
+    ...bookingPaymentSummary(booking)
+  };
+}
+
+function publicCraftKey(type = '', craft = '') {
+  const normalizedCraft = normalizeCraftKey(craft);
+  if (normalizedCraft) return normalizedCraft;
+  if (type === 'boat') return 'partyboat';
+  if (type === 'bundle') return 'bundle2';
+  return 'jetski2';
+}
+
+function stripTrailingSlash(value = '') {
+  return String(value || '').replace(/\/+$/, '');
+}
+
+function isSafeHttpOrigin(value = '') {
+  return /^https?:\/\/[^/]+$/i.test(stripTrailingSlash(value));
+}
+
+function deriveSiteOrigin(request, override = '') {
+  const preferred = stripTrailingSlash(override);
+  if (isSafeHttpOrigin(preferred)) return preferred;
+
+  const origin = stripTrailingSlash(request?.headers?.origin || '');
+  if (isSafeHttpOrigin(origin) && !/shoreline-aquatics-ops/i.test(origin)) {
+    return origin;
+  }
+
+  return PUBLIC_SITE_URL;
+}
+
+function stripeConfigured() {
+  return Boolean(stripe && STRIPE_SECRET_KEY);
+}
+
+function stripeWebhookConfigured() {
+  return Boolean(stripeConfigured() && STRIPE_WEBHOOK_SECRET);
+}
+
+function bookingPaymentSummary(booking = {}) {
+  const depositAmount = bookingDepositAmountValue(booking);
+  const processingFeeAmount = bookingProcessingFeeAmountValue(booking);
+  return {
+    depositAmount,
+    processingFeeAmount,
+    amountDueToday: bookingAmountDueTodayValue(booking),
+    paymentStatus: String(booking.paymentStatus || (booking.deposit ? 'paid' : 'unpaid')),
+    paymentSessionId: String(booking.paymentSessionId || ''),
+    paymentCompletedAt: String(booking.paymentCompletedAt || ''),
+    paymentIntentId: String(booking.paymentIntentId || '')
+  };
+}
+
+function bookingEmailLocation(booking = {}) {
+  return String(booking.location || `${SHORELINE_LOCATION_NAME} - ${SHORELINE_ADDRESS}`).trim();
+}
+
+function bookingRemainingBalance(booking = {}) {
+  return Math.max(Number(booking.total || 0) - bookingDepositAmountValue(booking), 0);
+}
+
+function shorelineMapsUrl(address = SHORELINE_ADDRESS) {
+  const query = String(address || SHORELINE_ADDRESS).trim();
+  return query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : '';
+}
+
+function shorelineAssetUrl(path = '') {
+  const cleanPath = String(path || '').trim().replace(/^\/+/, '');
+  if (!cleanPath) return '';
+  return `${PUBLIC_SITE_URL}/${cleanPath}`;
+}
+
+function shorelineEmailLogoUrl() {
+  return shorelineAssetUrl('assets/images/shoreline-ops-app-icon-180.png');
+}
+
+function shorelineEmailHeroUrl() {
+  return shorelineAssetUrl('assets/images/shoreline-customer-group-wide.png');
+}
+
+function emailPill(label = '', tone = 'neutral') {
+  const palette = {
+    neutral: { background: '#e7eef6', color: '#32455f' },
+    accent: { background: '#fff1cf', color: '#8a5a00' },
+    success: { background: '#d9f7e7', color: '#0f7a45' },
+    warning: { background: '#ffe4bf', color: '#965300' },
+    danger: { background: '#ffe1e1', color: '#a42828' },
+    dark: { background: '#10213a', color: '#f5f8fc' }
+  };
+  const colors = palette[tone] || palette.neutral;
+  return `<span style="display:inline-block;padding:6px 11px;border-radius:999px;background:${colors.background};color:${colors.color};font-size:12px;font-weight:700;letter-spacing:0.02em;">${htmlEscape(label)}</span>`;
+}
+
+function emailActionButton(label = '', href = '', variant = 'primary') {
+  if (!href) return '';
+  const styles = {
+    primary: {
+      background: '#f4b63f',
+      color: '#08111f',
+      border: '1px solid #f4b63f'
+    },
+    secondary: {
+      background: '#ffffff',
+      color: '#10213a',
+      border: '1px solid #d8e1ee'
+    }
+  };
+  const style = styles[variant] || styles.primary;
+  return `<a href="${htmlEscape(href)}" style="display:inline-block;padding:13px 18px;border-radius:12px;background:${style.background};color:${style.color};border:${style.border};font-weight:700;text-decoration:none;font-size:14px;">${htmlEscape(label)}</a>`;
+}
+
+function emailMetricCard(label = '', value = '', tone = 'default') {
+  const highlight = tone === 'accent'
+    ? 'background:linear-gradient(180deg,#fff6dc 0%,#fffdf5 100%);border:1px solid #f4d07c;'
+    : tone === 'success'
+      ? 'background:linear-gradient(180deg,#e6faf0 0%,#f8fffb 100%);border:1px solid #b7ebcb;'
+      : 'background:#f7fafd;border:1px solid #e3ebf3;';
+  return `
+    <div style="width:calc(50% - 8px);min-width:220px;display:inline-block;vertical-align:top;margin:0 8px 12px 0;padding:16px 18px;border-radius:16px;${highlight}">
+      <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#667a96;font-weight:700;">${htmlEscape(label)}</div>
+      <div style="margin-top:8px;font-size:20px;line-height:1.2;color:#10213a;font-weight:800;">${htmlEscape(value)}</div>
+    </div>
+  `;
+}
+
+function emailDetailRows(rows = []) {
+  return `
+    <table style="width:100%;border-collapse:collapse;font-size:15px;">
+      ${rows.map((row) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #edf2f7;color:#60748e;">${htmlEscape(row.label || '')}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #edf2f7;text-align:right;font-weight:700;color:${htmlEscape(row.valueColor || '#10213a')};">${htmlEscape(row.value || '-')}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
+function emailCardSection(title = '', bodyHtml = '', options = {}) {
+  const background = options.background || '#f7fafd';
+  const border = options.border || '#e3ebf3';
+  return `
+    <div style="margin-top:18px;padding:18px 20px;border-radius:18px;background:${background};border:1px solid ${border};">
+      <h2 style="margin:0 0 10px;font-size:18px;line-height:1.2;color:#10213a;">${htmlEscape(title)}</h2>
+      ${bodyHtml}
+    </div>
+  `;
+}
+
+function emailRichTextBodyHtml(text = '') {
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const blocks = [];
+  let listItems = [];
+
+  const flushList = () => {
+    if (!listItems.length) return;
+    blocks.push(`
+      <ul style="margin:0 0 16px;padding-left:22px;color:#40546c;font-size:15px;line-height:1.8;">
+        ${listItems.map((item) => `<li style="margin:0 0 8px;">${htmlEscape(item)}</li>`).join('')}
+      </ul>
+    `);
+    listItems = [];
+  };
+
+  lines.forEach((rawLine) => {
+    const line = String(rawLine || '').trim();
+    if (!line) {
+      flushList();
+      return;
+    }
+    if (/^[-*•]\s+/.test(line)) {
+      listItems.push(line.replace(/^[-*•]\s+/, ''));
+      return;
+    }
+    flushList();
+    blocks.push(`<p style="margin:0 0 16px;color:#40546c;font-size:15px;line-height:1.8;">${htmlEscape(line)}</p>`);
+  });
+  flushList();
+  return blocks.join('') || '<p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">Shoreline Aquatics</p>';
+}
+
+function opsOutboundEmailHtml({ subject = '', body = '', audienceLabel = 'Shoreline customer' } = {}) {
+  return shorelineEmailShell({
+    title: subject || 'Shoreline Aquatics update',
+    subtitle: `A message from Shoreline Aquatics for ${audienceLabel}.`,
+    pills: [
+      emailPill('Lake Lewisville', 'accent'),
+      emailPill('Shoreline update', 'dark')
+    ],
+    actionHtml: [
+      emailActionButton('Book with Shoreline', `${PUBLIC_SITE_URL}/jetski-booking/`),
+      emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`, 'secondary')
+    ].join('&nbsp;'),
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics riders on Lake Lewisville',
+    bodyHtml: `
+      ${emailCardSection('Message from Shoreline', emailRichTextBodyHtml(body), { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Quick contact', `
+        <p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">
+          Reply to this email, call/text <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>,
+          or visit <a href="${htmlEscape(PUBLIC_SITE_URL)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(PUBLIC_SITE_URL)}</a>.
+        </p>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+    `
+  });
+}
+
+function shorelineEmailShell({ eyebrow = 'Shoreline Aquatics', title = '', subtitle = '', pills = [], actionHtml = '', bodyHtml = '', footerHtml = '', heroImageUrl = '', heroImageAlt = 'Shoreline Aquatics', logoImageUrl = '' } = {}) {
+  const pillHtml = pills.filter(Boolean).join('');
+  const logoUrl = logoImageUrl || shorelineEmailLogoUrl();
+  return `
+    <div style="margin:0;padding:0;background:#eef4f9;font-family:Arial,sans-serif;color:#10213a;">
+      <div style="max-width:720px;margin:0 auto;padding:28px 16px;">
+        <div style="background:#08111f;border-radius:26px;overflow:hidden;box-shadow:0 24px 64px rgba(8,17,31,0.18);">
+          <div style="padding:28px 28px 22px;background:linear-gradient(180deg,#0b1730 0%,#08111f 100%);">
+            <div style="display:flex;align-items:center;gap:14px;">
+              ${logoUrl ? `<img src="${htmlEscape(logoUrl)}" alt="Shoreline Aquatics logo" width="54" height="54" style="display:block;width:54px;height:54px;border-radius:16px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);padding:6px;object-fit:contain;">` : ''}
+              <div>
+                <div style="font-size:12px;letter-spacing:0.18em;text-transform:uppercase;color:#f4b63f;font-weight:800;">${htmlEscape(eyebrow)}</div>
+                <div style="margin-top:4px;font-size:13px;color:#d5e0ee;letter-spacing:0.08em;text-transform:uppercase;">Lake Lewisville • Hickory Creek, Texas</div>
+              </div>
+            </div>
+            <h1 style="margin:12px 0 0;font-size:34px;line-height:1.06;color:#ffffff;">${htmlEscape(title)}</h1>
+            <p style="margin:14px 0 0;font-size:16px;line-height:1.65;color:#d5e0ee;">${htmlEscape(subtitle)}</p>
+            ${(pillHtml || actionHtml) ? `<div style="margin-top:18px;">${pillHtml}${actionHtml ? `<div style="margin-top:${pillHtml ? '14px' : '0'};">${actionHtml}</div>` : ''}</div>` : ''}
+            ${heroImageUrl ? `
+              <div style="margin-top:22px;border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background:#10213a;">
+                <img src="${htmlEscape(heroImageUrl)}" alt="${htmlEscape(heroImageAlt)}" style="display:block;width:100%;height:auto;max-height:280px;object-fit:cover;">
+              </div>
+            ` : ''}
+          </div>
+          <div style="background:#ffffff;padding:24px 28px 26px;">
+            ${bodyHtml}
+            <div style="margin-top:24px;padding-top:18px;border-top:1px solid #e8eef5;font-size:13px;line-height:1.7;color:#6b7f98;">
+              ${footerHtml || `Questions or schedule changes? Reply to this email or call/text <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>.`}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function bookingConfirmationText(booking = {}) {
+  const arrivalLines = ARRIVAL_INSTRUCTIONS.map((line, index) => `${index + 1}. ${line}`).join('\n');
+  const safetyLines = SAFETY_BRIEFING_POINTS.map((line, index) => `${index + 1}. ${line}`).join('\n');
+  const remainingBalance = bookingRemainingBalance(booking);
+  const depositAmount = bookingDepositAmountValue(booking);
+  const processingFeeAmount = bookingProcessingFeeAmountValue(booking);
+  const amountDueToday = bookingAmountDueTodayValue(booking);
+  return [
+    `Hi ${firstName(booking.name)},`,
+    '',
+    `Your Shoreline Aquatics booking payment is confirmed and your rental date is reserved.`,
+    '',
+    'Booking details',
+    `Package: ${booking.craftLabel || 'Rental package'}`,
+    `Duration: ${booking.durationLabel || '-'}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Start time: ${formatTimeLabel(booking.time)}`,
+    `Meeting spot: ${bookingEmailLocation(booking)}`,
+    `Party size: ${booking.partySize || 'Not provided'}`,
+    `Aerial drone coverage: ${booking.drone ? 'Included' : 'Not included'}`,
+    `Karaoke setup: ${booking.karaoke ? 'Included' : 'Not included'}`,
+    `Towable tube: ${booking.tube ? 'Included' : 'Not included'}`,
+    `Quoted total: ${formatCurrency(booking.total || 0)}`,
+    `Deposit received: ${formatCurrency(depositAmount)}`,
+    `Processing fee: ${formatCurrency(processingFeeAmount)}`,
+    `Paid today: ${formatCurrency(amountDueToday)}`,
+    `Remaining balance: ${formatCurrency(remainingBalance)}`,
+    '',
+    'Launch notes',
+    '- Arrive about 15 minutes early so Shoreline can finish the walkthrough and get everyone fitted with life jackets.',
+    '- Shoreline provides life jackets, fuel, cooler space, and the safety briefing before launch.',
+    '- The remaining balance is handled directly with Shoreline before you head out on the water.',
+    '',
+    'Quick safety briefing',
+    safetyLines,
+    '',
+    'Arrival instructions',
+    arrivalLines,
+    '',
+    `Address: ${SHORELINE_ADDRESS}`,
+    `Call or text Shoreline: ${SHORELINE_PHONE_DISPLAY}`,
+    '',
+    'If anything changes with your party size or timing, reply to this email or call/text Shoreline before your rental window.',
+    '',
+    'See you on the water,',
+    'Shoreline Aquatics'
+  ].join('\n');
+}
+
+function bookingConfirmationHtml(booking = {}) {
+  const remainingBalance = bookingRemainingBalance(booking);
+  const depositAmount = bookingDepositAmountValue(booking);
+  const processingFeeAmount = bookingProcessingFeeAmountValue(booking);
+  const amountDueToday = bookingAmountDueTodayValue(booking);
+  const arrivalList = ARRIVAL_INSTRUCTIONS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
+  const safetyList = SAFETY_BRIEFING_POINTS.map((line) => `<li>${htmlEscape(line)}</li>`).join('');
+  const actionHtml = [
+    emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`),
+    emailActionButton('Open launch location', shorelineMapsUrl(), 'secondary')
+  ].join('&nbsp;');
+  const summaryCards = [
+    emailMetricCard('Rental date', formatDateLabel(booking.date)),
+    emailMetricCard('Start time', formatTimeLabel(booking.time)),
+    emailMetricCard('Paid today', formatCurrency(amountDueToday), 'success'),
+    emailMetricCard('Balance due at launch', formatCurrency(remainingBalance), 'accent')
+  ].join('');
+  const detailRows = emailDetailRows([
+    { label: 'Package', value: booking.craftLabel || 'Rental package' },
+    { label: 'Duration', value: booking.durationLabel || '-' },
+    { label: 'Meeting spot', value: bookingEmailLocation(booking) },
+    { label: 'Party size', value: booking.partySize || 'Not provided' },
+    { label: 'Drone coverage', value: booking.drone ? 'Included' : 'Not included' },
+    { label: 'Karaoke setup', value: booking.karaoke ? 'Included' : 'Not included' },
+    { label: 'Towable tube', value: booking.tube ? 'Included' : 'Not included' },
+    { label: 'Quoted total', value: formatCurrency(booking.total || 0) },
+    { label: 'Deposit received', value: formatCurrency(depositAmount), valueColor: '#0f8b53' },
+    { label: 'Processing fee', value: formatCurrency(processingFeeAmount) }
+  ]);
+  return shorelineEmailShell({
+    title: 'Your booking is confirmed',
+    subtitle: `${firstName(booking.name)}, your rental date is locked in and Shoreline is ready for your launch day.`,
+    pills: [
+      emailPill('Payment confirmed', 'success'),
+      emailPill('Lake Lewisville', 'accent')
+    ],
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics riders enjoying a lake day',
+    actionHtml,
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${summaryCards}</div>
+      ${emailCardSection('Booking details', detailRows, { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Launch notes', `
+        <ul style="margin:0;padding-left:18px;color:#40546c;">
+          <li>Arrive about 15 minutes early so Shoreline can finish the walkthrough and fit everyone with life jackets.</li>
+          <li>Life jackets, fuel, cooler space, and the pre-launch safety briefing are included.</li>
+          <li>The remaining balance is handled directly with Shoreline before you head out on the water.</li>
+        </ul>
+      `)}
+      ${emailCardSection('Quick safety briefing', `
+        <ul style="margin:0;padding-left:18px;color:#40546c;">
+          ${safetyList}
+        </ul>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+      ${emailCardSection('Arrival instructions', `
+        <ol style="margin:0;padding-left:20px;color:#40546c;">
+          ${arrivalList}
+        </ol>
+        <p style="margin:14px 0 0;color:#40546c;"><strong>Address:</strong> ${htmlEscape(SHORELINE_ADDRESS)}<br><strong>Call or text:</strong> <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a></p>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+    `
+  });
+}
+
+function bookingConfirmationSubject(booking = {}) {
+  return `Booking confirmed for ${formatDateLabel(booking.date)} • Shoreline Aquatics`;
+}
+
+function bookingRequestSubject(booking = {}) {
+  return `Booking request received for ${formatDateLabel(booking.date)} • Shoreline Aquatics`;
+}
+
+function bookingRequestText(booking = {}) {
+  return [
+    `Hi ${firstName(booking.name)},`,
+    '',
+    'We received your Shoreline Aquatics booking details.',
+    '',
+    'Request details',
+    `Package: ${booking.craftLabel || 'Rental package'}`,
+    `Duration: ${booking.durationLabel || '-'}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Start time: ${formatTimeLabel(booking.time)}`,
+    `Meeting spot: ${bookingEmailLocation(booking)}`,
+    `Party size: ${booking.partySize || 'Not provided'}`,
+    `Quoted total: ${formatCurrency(booking.total || 0)}`,
+    '',
+    'What to expect',
+    '- If you already completed checkout, Shoreline will follow up with your full confirmation by text or email.',
+    '- If checkout was not completed yet, finish the deposit to lock in the reservation.',
+    `- If anything needs to change, call or text Shoreline at ${SHORELINE_PHONE_DISPLAY}.`,
+    '',
+    'See you soon,',
+    'Shoreline Aquatics'
+  ].join('\n');
+}
+
+function bookingRequestHtml(booking = {}) {
+  const summaryCards = [
+    emailMetricCard('Rental date', formatDateLabel(booking.date)),
+    emailMetricCard('Start time', formatTimeLabel(booking.time)),
+    emailMetricCard('Package', booking.craftLabel || 'Rental package'),
+    emailMetricCard('Quoted total', formatCurrency(booking.total || 0), 'accent')
+  ].join('');
+  const detailRows = emailDetailRows([
+    { label: 'Duration', value: booking.durationLabel || '-' },
+    { label: 'Meeting spot', value: bookingEmailLocation(booking) },
+    { label: 'Party size', value: booking.partySize || 'Not provided' },
+    { label: 'Phone', value: booking.phone || 'Not provided' },
+    { label: 'Email', value: booking.email || 'Not provided' }
+  ]);
+  return shorelineEmailShell({
+    title: 'Your booking request is in',
+    subtitle: `${firstName(booking.name)}, Shoreline received your rental details and is holding the request for review.`,
+    pills: [
+      emailPill('Request received', 'accent'),
+      emailPill('Awaiting deposit if unpaid', 'neutral')
+    ],
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics rental customers',
+    actionHtml: [
+      emailActionButton('Call or text Shoreline', `tel:${SHORELINE_PHONE_LINK}`),
+      emailActionButton('View the booking site', `${PUBLIC_SITE_URL}/jetski-booking/`, 'secondary')
+    ].join('&nbsp;'),
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${summaryCards}</div>
+      ${emailCardSection('Request details', detailRows, { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('What happens next', `
+        <ul style="margin:0;padding-left:18px;color:#40546c;">
+          <li>If checkout is already complete, Shoreline will follow up with the full confirmation by text or email.</li>
+          <li>If checkout was not completed yet, finish the deposit to lock in the reservation.</li>
+          <li>If anything changes, call or text Shoreline at <a href="tel:${htmlEscape(SHORELINE_PHONE_LINK)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(SHORELINE_PHONE_DISPLAY)}</a>.</li>
+        </ul>
+      `)}
+    `
+  });
+}
+
+function ownerBookingAlertSubject(booking = {}) {
+  return `New booking request • ${booking.name || booking.email || 'Customer'} • ${formatDateLabel(booking.date)}`;
+}
+
+function ownerBookingAlertText(booking = {}) {
+  const amountDueToday = bookingAmountDueTodayValue(booking);
+  return [
+    'A new Shoreline booking request was submitted.',
+    '',
+    `Name: ${booking.name || 'Unknown'}`,
+    `Email: ${booking.email || 'Not provided'}`,
+    `Phone: ${booking.phone || 'Not provided'}`,
+    `Package: ${booking.craftLabel || 'Rental package'}`,
+    `Duration: ${booking.durationLabel || '-'}`,
+    `Date: ${formatDateLabel(booking.date)}`,
+    `Start time: ${formatTimeLabel(booking.time)}`,
+    `Party size: ${booking.partySize || 'Not provided'}`,
+    `Quoted total: ${formatCurrency(booking.total || 0)}`,
+    `Amount due today: ${formatCurrency(amountDueToday)}`,
+    `Payment status: ${booking.paymentStatus || 'unpaid'}`,
+    `Booking status: ${booking.status || 'pending'}`,
+    `Meeting spot: ${bookingEmailLocation(booking)}`,
+    `Notes: ${booking.notes || 'None'}`,
+    '',
+    'Open the Shoreline ops CRM to review or update the booking.'
+  ].join('\n');
+}
+
+function ownerBookingAlertHtml(booking = {}) {
+  const actionHtml = emailActionButton('Open Shoreline Ops', OPS_APP_URL);
+  const amountDueToday = bookingAmountDueTodayValue(booking);
+  const summaryCards = [
+    emailMetricCard('Rental date', formatDateLabel(booking.date)),
+    emailMetricCard('Start time', formatTimeLabel(booking.time)),
+    emailMetricCard('Amount due today', formatCurrency(amountDueToday), 'accent'),
+    emailMetricCard('Quoted total', formatCurrency(booking.total || 0))
+  ].join('');
+  const detailRows = emailDetailRows([
+    { label: 'Customer', value: booking.name || 'Unknown' },
+    { label: 'Email', value: booking.email || 'Not provided' },
+    { label: 'Phone', value: booking.phone || 'Not provided' },
+    { label: 'Package', value: booking.craftLabel || 'Rental package' },
+    { label: 'Duration', value: booking.durationLabel || '-' },
+    { label: 'Party size', value: booking.partySize || 'Not provided' },
+    { label: 'Meeting spot', value: bookingEmailLocation(booking) },
+    { label: 'Notes', value: booking.notes || 'None' }
+  ]);
+  return shorelineEmailShell({
+    eyebrow: 'Shoreline Ops Alert',
+    title: 'New booking request',
+    subtitle: `${booking.name || booking.email || 'A customer'} submitted a new booking request and is ready for review.`,
+    pills: [
+      emailPill(`Payment: ${String(booking.paymentStatus || 'unpaid')}`, bookingPaymentTone(booking)),
+      emailPill(`Status: ${String(booking.status || 'pending')}`, 'dark')
+    ],
+    actionHtml,
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${summaryCards}</div>
+      ${emailCardSection('Booking details', detailRows, { background: '#ffffff', border: '#e3ebf3' })}
+    `,
+    footerHtml: `Open <a href="${htmlEscape(OPS_APP_URL)}" style="color:#0a5ad1;text-decoration:none;">Shoreline Ops</a> to review, edit, or follow up with this booking.`
+  });
+}
+
+async function sendBookingRequestCustomerEmail(state, booking, now = new Date().toISOString()) {
+  if (!SEND_BOOKING_REQUEST_CUSTOMER_EMAILS) {
+    return { sent: false, reason: 'disabled' };
+  }
+  if (!booking || booking.requestConfirmationEmailSentAt) {
+    return { sent: false, reason: 'already-sent-or-missing-booking' };
+  }
+  if (!booking.email) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+  const bookingKey = String(booking.publicToken || booking.paymentSessionId || booking.createdAt || booking.id || '').trim();
+  const result = await sendResendEmail({
+    to: booking.email,
+    subject: bookingRequestSubject(booking),
+    text: bookingRequestText(booking),
+    html: bookingRequestHtml(booking),
+    idempotencyKey: `shoreline-booking-request-customer-${bookingKey}`
+  });
+  booking.requestConfirmationEmailSentAt = now;
+  booking.requestConfirmationEmailId = String(result?.id || '');
+  booking.updatedAt = now;
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    date: now,
+    customerId: booking.customerId || 0,
+    customerName: booking.name || booking.email,
+    channel: 'booking-request-email',
+    message: `Booking request confirmation sent to ${booking.email} for ${booking.craftLabel} on ${booking.date} at ${booking.time}.`
+  });
+  return { sent: true, result };
+}
+
+async function sendNewBookingOwnerAlert(state, booking, now = new Date().toISOString()) {
+  if (!booking || booking.ownerAlertEmailSentAt) {
+    return { sent: false, reason: 'already-sent-or-missing-booking' };
+  }
+  const recipients = normalizeEmailList(BOOKING_ALERT_EMAILS);
+  if (!recipients.length) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+  const bookingKey = String(booking.publicToken || booking.paymentSessionId || booking.createdAt || booking.id || '').trim();
+  const result = await sendResendEmail({
+    to: recipients,
+    subject: ownerBookingAlertSubject(booking),
+    text: ownerBookingAlertText(booking),
+    html: ownerBookingAlertHtml(booking),
+    idempotencyKey: `shoreline-booking-alert-owner-${bookingKey}`
+  });
+  booking.ownerAlertEmailSentAt = now;
+  booking.ownerAlertEmailId = String(result?.id || '');
+  booking.updatedAt = now;
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    date: now,
+    customerId: booking.customerId || 0,
+    customerName: booking.name || booking.email,
+    channel: 'new-booking-owner-alert',
+    message: `New booking alert sent to ${recipients.join(', ')} for ${booking.name || booking.email}.`
+  });
+  return { sent: true, result };
+}
+
+function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  if (!payload?.date || !payload?.time) {
+    throw new Error('A rental date and start time are required.');
+  }
+
+  const existingBooking = findBookingByPublicToken(state, payload.publicToken);
+  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube }, payload.date);
+  assertPublicAvailability(state, {
+    craft: pricing.craft,
+    date: payload.date,
+    time: payload.time,
+    duration: pricing.duration,
+    publicToken: existingBooking?.publicToken || payload.publicToken,
+    bookingId: existingBooking?.id
+  });
+  const booking = existingBooking || {
+    id: nextId(state.bookings),
+    status: 'draft',
+    deposit: false,
+    paymentStatus: 'unpaid',
+    createdAt: now,
+    source: 'Website Draft'
+  };
+
+  booking.name = String(payload.name || booking.name || '').trim();
+  booking.phone = String(payload.phone || booking.phone || '').trim();
+  booking.email = String(payload.email || booking.email || '').trim();
+  booking.craft = publicCraftKey(pricing.type, pricing.craft);
+  booking.craftKey = pricing.craft;
+  booking.craftLabel = pricing.craftLabel;
+  booking.duration = pricing.duration;
+  booking.durationLabel = pricing.durationLabel;
+  booking.total = Number((pricing.totalAmount / 100).toFixed(2));
+  booking.baseTotal = Number((pricing.baseAmount / 100).toFixed(2));
+  booking.drone = pricing.drone;
+  booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
+  booking.karaoke = pricing.karaoke;
+  booking.karaokeAmount = Number((pricing.karaokeAmount / 100).toFixed(2));
+  booking.tube = pricing.tube;
+  booking.tubeAmount = Number((pricing.tubeAmount / 100).toFixed(2));
+  booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
+  booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
+  booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
+  booking.date = String(payload.date || '').trim();
+  booking.time = String(payload.time || '').trim();
+  booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX').trim();
+  booking.contactMethod = String(payload.contactMethod || booking.contactMethod || 'text').trim();
+  booking.partySize = String(payload.partySize || booking.partySize || '').trim();
+  booking.notes = String(payload.notes || booking.notes || '').trim();
+  booking.updatedAt = now;
+  ensureBookingPublicToken(booking);
+
+  if (!existingBooking) {
+    state.bookings.push(booking);
+  }
+
+  return { state, booking, existingBooking, pricing };
+}
+
+function upsertBookingFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  if (!payload?.name || !payload?.phone || !payload?.date || !payload?.time) {
+    throw new Error('Customer name, phone number, requested date, and start time are required.');
+  }
+  if (!isTruthyWaiver(payload.waiver)) {
+    throw new Error('A completed waiver is required before saving this booking request.');
+  }
+
+  const pricing = priceForSelection(payload.craft, payload.duration, { drone: payload.drone, karaoke: payload.karaoke, tube: payload.tube }, payload.date);
+  const tokenBooking = findBookingByPublicToken(state, payload.publicToken);
+  const matchedBooking = findMatchingBooking(state, {
+    ...payload,
+    craftLabel: pricing.craftLabel,
+    duration: pricing.duration
+  });
+  const existingBooking = tokenBooking || matchedBooking;
+  assertPublicAvailability(state, {
+    craft: pricing.craft,
+    date: payload.date,
+    time: payload.time,
+    duration: pricing.duration,
+    publicToken: existingBooking?.publicToken || payload.publicToken,
+    bookingId: existingBooking?.id
+  });
+  const existingCustomer = findMatchingCustomer(state, payload);
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: String(payload.name || '').trim(),
+    phone: String(payload.phone || '').trim(),
+    email: String(payload.email || '').trim(),
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Website Booking',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = String(payload.name || customer.name || '').trim();
+  customer.phone = String(payload.phone || customer.phone || '').trim();
+  customer.email = String(payload.email || customer.email || '').trim();
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Website Booking';
+  customer.importSource = customer.importSource || 'website';
+  applyWaiverToCustomer(customer, payload.waiver, payload.date, now);
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  const booking = existingBooking || {
+    id: nextId(state.bookings),
+    status: 'pending',
+    deposit: false
+  };
+  const existingStatus = String(booking.status || '').trim().toLowerCase();
+
+  booking.name = customer.name;
+  booking.phone = customer.phone;
+  booking.email = customer.email;
+  booking.craft = publicCraftKey(pricing.type, pricing.craft);
+  booking.craftKey = pricing.craft;
+  booking.craftLabel = pricing.craftLabel;
+  booking.duration = pricing.duration;
+  booking.durationLabel = pricing.durationLabel;
+  booking.total = Number((pricing.totalAmount / 100).toFixed(2));
+  booking.baseTotal = Number((pricing.baseAmount / 100).toFixed(2));
+  booking.drone = pricing.drone;
+  booking.droneAmount = Number((pricing.droneAmount / 100).toFixed(2));
+  booking.karaoke = pricing.karaoke;
+  booking.karaokeAmount = Number((pricing.karaokeAmount / 100).toFixed(2));
+  booking.tube = pricing.tube;
+  booking.tubeAmount = Number((pricing.tubeAmount / 100).toFixed(2));
+  booking.depositAmount = Number((pricing.bookingDepositAmount / 100).toFixed(2));
+  booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
+  booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
+  booking.date = String(payload.date || '').trim();
+  booking.time = String(payload.time || '').trim();
+  booking.location = String(payload.location || '').trim();
+  booking.contactMethod = String(payload.contactMethod || 'text').trim();
+  booking.partySize = String(payload.partySize || '').trim();
+  booking.notes = String(payload.notes || '').trim();
+  booking.customerId = customer.id;
+  booking.source = 'Website Booking';
+  booking.status = ['confirmed', 'completed'].includes(existingStatus) ? booking.status : 'pending';
+  booking.updatedAt = now;
+  booking.waiverSignedAt = customer.waiverSignedAt;
+  booking.waiverSignature = customer.waiverSignature;
+  booking.emergencyName = customer.emergencyName;
+  booking.emergencyPhone = customer.emergencyPhone;
+  booking.waiverAccepted = true;
+  booking.paymentStatus = booking.deposit ? 'paid' : String(booking.paymentStatus || 'unpaid');
+  booking.waiver = {
+    ...(customer.waiver || {}),
+    signatureDate: customer.waiverSignedAt
+  };
+  ensureBookingPublicToken(booking);
+
+  if (!existingBooking) {
+    booking.createdAt = now;
+    state.bookings.push(booking);
+  }
+
+  ensureBookingInvoice(state, booking, now);
+  updateCustomerRollup(state, customer);
+  return { state, customer, booking, existingCustomer, existingBooking, pricing };
+}
+
+function upsertWaiverOnlyFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  const firstName = String(payload.firstName || '').trim();
+  const lastName = String(payload.lastName || '').trim();
+  const phone = String(payload.phone || '').trim();
+  const email = String(payload.email || '').trim();
+  const signature = String(payload.signature || '').trim();
+  const dateOfBirth = String(payload.dateOfBirth || '').trim();
+  const initials = String(payload.initials || '').trim();
+
+  if (!firstName || !lastName || !phone || !email || !dateOfBirth || !signature || !initials) {
+    throw new Error('First name, last name, phone, email, date of birth, initials, and signature are required.');
+  }
+  if (!payload.acceptedAgreement || !payload.verified) {
+    throw new Error('Agreement and verification are both required.');
+  }
+
+  const existingCustomer = findMatchingCustomer(state, { phone, email });
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: `${firstName} ${lastName}`.trim(),
+    phone,
+    email,
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Website Waiver',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = `${firstName} ${lastName}`.trim();
+  customer.phone = phone;
+  customer.email = email;
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Website Waiver';
+  customer.importSource = customer.importSource || 'website';
+  applyWaiverToCustomer(customer, {
+    acceptedRisk: true,
+    acceptedDamage: true,
+    dateOfBirth,
+    initials,
+    verified: true,
+    signature,
+    signatureDate: String(payload.signatureDate || now.split('T')[0]).trim()
+  }, String(payload.signatureDate || now.split('T')[0]).trim(), now);
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  updateCustomerRollup(state, customer);
+  return { state, customer, existingCustomer };
+}
+
+function upsertSeasonalLeadFromPayload(state, payload = {}, now = new Date().toISOString()) {
+  const firstName = String(payload.firstName || payload.name || '').trim();
+  const phone = String(payload.phone || '').trim();
+  const email = String(payload.email || '').trim();
+  const preferredChannel = String(payload.preferredChannel || (phone ? 'sms' : 'email')).trim().toLowerCase() === 'sms'
+    ? 'sms'
+    : 'email';
+
+  if (!firstName || (!phone && !email)) {
+    throw new Error('First name and either a phone number or email are required.');
+  }
+
+  const existingCustomer = findMatchingCustomer(state, { name: firstName, phone, email });
+  const customer = existingCustomer || {
+    id: nextId(state.customers),
+    name: firstName,
+    phone,
+    email,
+    bookings: 0,
+    totalSpent: 0,
+    lastBooking: '',
+    source: 'Seasonal Waitlist',
+    tag: '',
+    company: '',
+    crmTags: '',
+    crmNotes: '',
+    createdAt: now.split('T')[0],
+    lastActivity: now,
+    importSource: 'website'
+  };
+
+  customer.name = firstName || customer.name || 'Seasonal lead';
+  if (phone) customer.phone = phone;
+  if (email) customer.email = email;
+  customer.lastActivity = now;
+  customer.source = customer.source || 'Seasonal Waitlist';
+  customer.importSource = customer.importSource || 'website';
+  customer.crmTags = mergeTagList(customer.crmTags, [
+    'Seasonal lead',
+    preferredChannel === 'sms' ? 'SMS lead' : 'Email lead'
+  ]);
+  customer.crmFields = mergeCrmFields(customer.crmFields, {
+    seasonalLead: 'true',
+    seasonalLeadChannel: preferredChannel,
+    seasonalLeadCapturedAt: now
+  });
+
+  if (!existingCustomer) {
+    state.customers.push(customer);
+  }
+
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    customerId: customer.id,
+    customerName: customer.name,
+    channel: 'seasonal-lead',
+    message: `Off-season ${preferredChannel.toUpperCase()} opt-in captured from the booking page.`,
+    date: now
+  });
+
+  return { state, customer, existingCustomer, preferredChannel };
+}
+
+function findBookingForStripeSession(state, session = {}) {
+  const bookingId = Number(session?.metadata?.bookingId || session?.client_reference_id || 0);
+  if (bookingId) {
+    const byId = state.bookings.find((booking) => Number(booking.id || 0) === bookingId);
+    if (byId) return byId;
+  }
+  const sessionId = String(session?.id || '');
+  if (sessionId) {
+    const bySession = state.bookings.find((booking) => String(booking.paymentSessionId || '') === sessionId);
+    if (bySession) return bySession;
+  }
+  return null;
+}
+
+function applyStripeSessionToBooking(state, session = {}, now = new Date().toISOString()) {
+  const booking = findBookingForStripeSession(state, session);
+  if (!booking) return null;
+
+  if (session?.metadata?.bookingToken && !booking.publicToken) {
+    booking.publicToken = String(session.metadata.bookingToken);
+  }
+  booking.paymentSessionId = String(session.id || booking.paymentSessionId || '');
+  booking.paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : String(booking.paymentIntentId || '');
+  booking.depositAmount = Number((booking.depositAmount || BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
+  booking.processingFeeAmount = Number((Number(session?.metadata?.processingFeeAmount) || booking.processingFeeAmount || PROCESSING_FEE_CENTS / 100).toFixed(2));
+  booking.amountDueToday = Number(((session.amount_total || ((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS))) / 100).toFixed(2));
+  // Payment state is monotonic: once a booking is paid, a later non-paid session
+  // event (a retry, or a public checkout-session retrieve that races the paid state)
+  // must not downgrade it back to unpaid.
+  const alreadyPaid = booking.deposit === true || normalizeBookingStatus(booking.paymentStatus) === 'paid';
+  const sessionPaid = session.payment_status === 'paid';
+  if (sessionPaid || !alreadyPaid) {
+    booking.paymentStatus = String(session.payment_status || booking.paymentStatus || 'pending');
+    booking.deposit = booking.paymentStatus === 'paid';
+    booking.paymentCompletedAt = booking.deposit ? now : String(booking.paymentCompletedAt || '');
+  }
+  booking.updatedAt = now;
+  ensureBookingInvoice(state, booking, now);
+  return booking;
+}
+
+function integrationStatus(state = null) {
+  const reviewSettings = reviewSettingsForState(state);
+  const socialPlatforms = [
+    SOCIAL_FACEBOOK_WEBHOOK_URL ? 'facebook' : '',
+    SOCIAL_INSTAGRAM_WEBHOOK_URL ? 'instagram' : '',
+    SOCIAL_X_WEBHOOK_URL ? 'x' : '',
+    SOCIAL_TIKTOK_WEBHOOK_URL ? 'tiktok' : ''
+  ].filter(Boolean);
+  return {
+    smsConfigured: Boolean(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER),
+    emailConfigured: Boolean(RESEND_API_KEY && RESEND_FROM_EMAIL),
+    bookingAlertsConfigured: Boolean(normalizeEmailList(BOOKING_ALERT_EMAILS).length),
+    ownerUpdateConfigured: Boolean(ownerWeeklyDigestRecipients().length),
+    ownerWeeklyDigestEnabled: OWNER_WEEKLY_DIGEST_ENABLED,
+    reviewLinksConfigured: Boolean(reviewSettings.googleUrl || reviewSettings.facebookUrl),
+    reviewAutomationEnabled: reviewSettings.autoSend,
+    reviewChannel: reviewSettings.channel,
+    reviewGoogleUrl: reviewSettings.googleUrl,
+    reviewFacebookUrl: reviewSettings.facebookUrl,
+    stripeConfigured: stripeConfigured(),
+    stripeWebhookConfigured: stripeWebhookConfigured(),
+    socialConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL || socialPlatforms.length),
+    socialAutomationConfigured: Boolean(SOCIAL_AUTOMATION_WEBHOOK_URL),
+    socialPlatforms,
+    appVersion: APP_VERSION
+  };
+}
+
+function reviewLinksText(state = null) {
+  const reviewSettings = reviewSettingsForState(state);
+  const links = [];
+  if (reviewSettings.googleUrl) links.push(`Google: ${reviewSettings.googleUrl}`);
+  if (reviewSettings.facebookUrl) links.push(`Facebook: ${reviewSettings.facebookUrl}`);
+  return links.join('\n');
+}
+
+function reviewLinksHtml(state = null) {
+  const reviewSettings = reviewSettingsForState(state);
+  const links = [];
+  if (reviewSettings.googleUrl) links.push(`<a href="${htmlEscape(reviewSettings.googleUrl)}">Leave a Google review</a>`);
+  if (reviewSettings.facebookUrl) links.push(`<a href="${htmlEscape(reviewSettings.facebookUrl)}">Leave a Facebook review</a>`);
+  return links.join('<br>');
+}
+
+function reviewRequestEmailHtml(state = null, customerName = 'there') {
+  const reviewSettings = reviewSettingsForState(state);
+  const reviewActions = [
+    reviewSettings.googleUrl ? emailActionButton('Leave a Google review', reviewSettings.googleUrl) : '',
+    reviewSettings.facebookUrl ? emailActionButton('Leave a Facebook review', reviewSettings.facebookUrl, 'secondary') : ''
+  ].filter(Boolean).join('&nbsp;');
+  return shorelineEmailShell({
+    title: 'Thanks for riding with Shoreline',
+    subtitle: `${firstName(customerName)}, thanks again for choosing Shoreline Aquatics on Lake Lewisville.`,
+    pills: [
+      emailPill('Customer follow-up', 'accent'),
+      emailPill('Quick review request', 'dark')
+    ],
+    heroImageUrl: shorelineEmailHeroUrl(),
+    heroImageAlt: 'Shoreline Aquatics customers on the lake',
+    actionHtml: reviewActions,
+    bodyHtml: `
+      ${emailCardSection('We’d love your feedback', `
+        <p style="margin:0 0 14px;color:#40546c;font-size:15px;line-height:1.8;">
+          If you had a great time, a quick review helps Shoreline Aquatics reach more lake families and riders.
+        </p>
+        <p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">
+          ${reviewLinksHtml(state)}
+        </p>
+      `, { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Need anything else?', `
+        <p style="margin:0;color:#40546c;font-size:15px;line-height:1.8;">
+          Reply to this email if you want to book another ride, ask a question, or plan your next Lake Lewisville outing.
+        </p>
+      `, { background: '#f9fbfe', border: '#dfe8f1' })}
+    `
+  });
+}
+
+async function sendTwilioSms({ to, body }) {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
+    throw new Error('Twilio SMS is not configured yet.');
+  }
+  const destination = normalizePhone(to);
+  if (!destination) {
+    throw new Error('A valid destination phone number is required.');
+  }
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+  const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+  const payload = new URLSearchParams({
+    To: destination,
+    From: TWILIO_FROM_NUMBER,
+    Body: String(body || '')
+  });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: payload
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(json.message || 'Twilio rejected the message request.');
+  }
+  return json;
+}
+
+async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyKey = '' }) {
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    throw new Error('Resend email is not configured yet.');
+  }
+  const recipients = Array.from(new Set(
+    (Array.isArray(to) ? to.map(normalizeEmail).filter(Boolean) : [normalizeEmail(to)].filter(Boolean))
+  ));
+  const recipientSet = new Set(recipients);
+  const bccRecipients = Array.from(new Set(
+    (Array.isArray(bcc) ? bcc.map(normalizeEmail).filter(Boolean) : [normalizeEmail(bcc)].filter(Boolean))
+      .filter((email) => !recipientSet.has(email))
+  ));
+  const replyTo = resendReplyToAddress();
+  if (!recipients.length) {
+    throw new Error('At least one valid recipient email is required.');
+  }
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
+    },
+    body: JSON.stringify({
+      from: formattedResendFromAddress(),
+      reply_to: replyTo || undefined,
+      to: recipients,
+      bcc: bccRecipients.length ? bccRecipients : undefined,
+      subject: subject || 'Shoreline Aquatics',
+      text: text || '',
+      html: html || `<p>${htmlEscape(text || '')}</p>`
+    })
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = json?.message || json?.error?.message || 'Resend rejected the email request.';
+    throw new Error(message);
+  }
+  return json;
+}
+
+function chunkList(items = [], size = 50) {
+  const normalizedSize = Math.max(1, Number(size) || 50);
+  const chunks = [];
+  for (let index = 0; index < items.length; index += normalizedSize) {
+    chunks.push(items.slice(index, index + normalizedSize));
+  }
+  return chunks;
+}
+
+async function sendResendMassEmail({ to, subject, text, html, bcc = [] }) {
+  const normalizedBcc = Array.from(new Set(
+    (Array.isArray(bcc) ? bcc : [bcc]).map(normalizeEmail).filter(Boolean)
+  ));
+  if (!normalizedBcc.length) {
+    throw new Error('At least one valid mass email recipient is required.');
+  }
+  const batches = chunkList(normalizedBcc, 50);
+  const results = [];
+  for (let index = 0; index < batches.length; index += 1) {
+    const batchRecipients = batches[index];
+    const result = await sendResendEmail({
+      to,
+      bcc: batchRecipients,
+      subject,
+      text,
+      html,
+      idempotencyKey: `mass-email-${Date.now()}-${index}-${batchRecipients.length}`
+    });
+    results.push(result);
+  }
+  return {
+    batches: batches.length,
+    recipientCount: normalizedBcc.length,
+    results
+  };
+}
+
+async function sendBookingConfirmationEmail(state, booking, session = {}, now = new Date().toISOString()) {
+  if (!booking || booking.paymentStatus !== 'paid' || !booking.deposit) {
+    return { sent: false, reason: 'booking-not-paid' };
+  }
+  if (booking.confirmationEmailSentAt) {
+    return { sent: false, reason: 'already-sent' };
+  }
+  if (!booking.email) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+
+  const subject = bookingConfirmationSubject(booking);
+  const text = bookingConfirmationText(booking);
+  const html = bookingConfirmationHtml(booking);
+  const idempotencyKey = `shoreline-booking-confirmation-${booking.id}-${session?.id || booking.paymentSessionId || 'paid'}`;
+  const result = await sendResendEmail({
+    to: booking.email,
+    subject,
+    text,
+    html,
+    idempotencyKey
+  });
+
+  booking.confirmationEmailSentAt = now;
+  booking.confirmationEmailId = String(result?.id || '');
+  booking.updatedAt = now;
+  state.communicationsLog.unshift({
+    id: nextId(state.communicationsLog),
+    date: now,
+    customerId: booking.customerId || 0,
+    customerName: booking.name || booking.email,
+    channel: 'booking-confirmation-email',
+    message: `Paid booking confirmation sent to ${booking.email} for ${booking.craftLabel} on ${booking.date} at ${booking.time}.`
+  });
+  return { sent: true, result };
+}
+
+function bookingQualifiesForUpcomingDigest(booking = {}, schedule = ownerWeeklyDigestSchedule()) {
+  const status = normalizeBookingStatus(booking.status);
+  const date = String(booking.date || '').trim();
+  if (!date || !schedule?.todayKey || !schedule?.horizonKey) return false;
+  if (date < schedule.todayKey || date > schedule.horizonKey) return false;
+  const bookingStart = bookingStartDateTimeValue(booking);
+  if (bookingStart && bookingStart < schedule.now) return false;
+  return !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status);
+}
+
+function buildOwnerWeeklyDigestReport(state, schedule = ownerWeeklyDigestSchedule()) {
+  const integrations = integrationStatus(state);
+  const activeBookings = (state.bookings || []).filter((booking) => {
+    const status = normalizeBookingStatus(booking.status);
+    return !['draft', 'cancelled', 'canceled', 'noshow', 'no-show', 'void', 'expired'].includes(status);
+  });
+  const paidInvoices = (state.invoices || []).filter((invoice) => invoiceCollectedAmount(invoice) > 0);
+  const openInvoices = (state.invoices || []).filter((invoice) => ['draft', 'sent', 'open', 'partially paid', 'unpaid', 'overdue'].includes(normalizeInvoiceStatus(invoice.status)));
+  const paidInvoiceRevenue = paidInvoices.reduce((sum, invoice) => sum + invoiceCollectedAmount(invoice), 0);
+  const paidDepositsCollected = activeBookings
+    .filter((booking) => bookingUsesCheckoutDepositFlow(booking) && (booking.deposit || String(booking.paymentStatus || '').toLowerCase() === 'paid'))
+    .reduce((sum, booking) => sum + bookingAmountDueTodayValue(booking), 0);
+  const upcomingBookings = activeBookings
+    .filter((booking) => bookingQualifiesForUpcomingDigest(booking, schedule))
+    .sort((left, right) => {
+      const leftStart = bookingStartDateTimeValue(left);
+      const rightStart = bookingStartDateTimeValue(right);
+      if (leftStart && rightStart && leftStart.getTime() !== rightStart.getTime()) {
+        return leftStart.getTime() - rightStart.getTime();
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''));
+    });
+  const recentCommunications = (state.communicationsLog || []).filter((item) => {
+    const sentAt = Date.parse(item?.date || '');
+    return Number.isFinite(sentAt) && sentAt >= (schedule.now.getTime() - (7 * 24 * 60 * 60 * 1000));
+  });
+  const pendingReviews = (state.reviewRequests || []).filter((request) => String(request.status || '').trim().toLowerCase() !== 'reviewed');
+  return {
+    version: APP_VERSION,
+    generatedAt: formatDateTimeInTimeZone(schedule.now, OWNER_WEEKLY_DIGEST_TIMEZONE),
+    websiteUrl: PUBLIC_SITE_URL,
+    opsUrl: OPS_APP_URL,
+    counts: {
+      customers: (state.customers || []).length,
+      bookings: activeBookings.length,
+      invoices: (state.invoices || []).length,
+      trackers: (state.trackers || []).length,
+      upcomingBookings: upcomingBookings.length,
+      openInvoices: openInvoices.length,
+      pendingReviews: pendingReviews.length,
+      communicationsLast7Days: recentCommunications.length
+    },
+    revenue: {
+      paidInvoiceRevenue,
+      paidDepositsCollected
+    },
+    integrations,
+    upcomingBookings: upcomingBookings.slice(0, 5).map((booking) => ({
+      name: String(booking.name || booking.email || 'Customer').trim(),
+      date: formatDateLabel(booking.date),
+      time: formatTimeLabel(booking.time),
+      craftLabel: String(booking.craftLabel || CRAFT_LABELS[booking.craftKey] || booking.craft || 'Rental').trim(),
+      paymentStatus: String(booking.paymentStatus || 'unpaid').trim(),
+      status: String(booking.status || 'pending').trim()
+    }))
+  };
+}
+
+function ownerWeeklyDigestSubject(report) {
+  return `Weekly Shoreline website + ops update • v${report.version}`;
+}
+
+function ownerWeeklyDigestLogForWeek(state = {}, weekKey = '') {
+  if (!weekKey) return null;
+  return normalizeArray(state.communicationsLog, DEFAULT_STATE.communicationsLog)
+    .filter((entry) => String(entry?.channel || '').trim() === 'owner-weekly-digest-email')
+    .map((entry) => {
+      const sentAt = Date.parse(String(entry?.date || ''));
+      if (!Number.isFinite(sentAt)) return null;
+      return {
+        entry,
+        sentAt,
+        weekKey: ownerWeeklyDigestSchedule(new Date(sentAt)).weekKey
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.sentAt - left.sentAt)
+    .find((item) => item.weekKey === weekKey)?.entry || null;
+}
+
+function ownerWeeklyDigestText(report) {
+  const upcomingLines = report.upcomingBookings.length
+    ? report.upcomingBookings.map((booking) => (
+        `- ${booking.date} • ${booking.time} • ${booking.name} • ${booking.craftLabel} • ${booking.paymentStatus}/${booking.status}`
+      )).join('\n')
+    : 'No upcoming bookings in the next 7 days.';
+  return [
+    'Shoreline Aquatics weekly owner update',
+    '',
+    `Version: v${report.version}`,
+    `Generated: ${report.generatedAt}`,
+    `Website: ${report.websiteUrl}`,
+    `Ops: ${report.opsUrl}`,
+    '',
+    'Business snapshot',
+    `Customers: ${report.counts.customers}`,
+    `Bookings: ${report.counts.bookings}`,
+    `Upcoming next 7 days: ${report.counts.upcomingBookings}`,
+    `Invoices: ${report.counts.invoices}`,
+    `Open invoices: ${report.counts.openInvoices}`,
+    `Trackers: ${report.counts.trackers}`,
+    `Pending review requests: ${report.counts.pendingReviews}`,
+    `Communications sent in last 7 days: ${report.counts.communicationsLast7Days}`,
+    `Paid invoice revenue: ${formatCurrency(report.revenue.paidInvoiceRevenue)}`,
+    `Paid deposits collected: ${formatCurrency(report.revenue.paidDepositsCollected)}`,
+    '',
+    'Integrations',
+    `Email: ${report.integrations.emailConfigured ? 'configured' : 'not configured'}`,
+    `Owner booking alerts: ${report.integrations.bookingAlertsConfigured ? 'configured' : 'not configured'}`,
+    `Weekly owner digest: ${report.integrations.ownerWeeklyDigestEnabled ? 'enabled' : 'disabled'}`,
+    `Stripe: ${report.integrations.stripeConfigured ? 'configured' : 'not configured'}`,
+    `Stripe webhook: ${report.integrations.stripeWebhookConfigured ? 'configured' : 'not configured'}`,
+    `SMS: ${report.integrations.smsConfigured ? 'configured' : 'not configured'}`,
+    `Review links: ${report.integrations.reviewLinksConfigured ? 'configured' : 'not configured'}`,
+    `Social automation: ${report.integrations.socialConfigured ? 'configured' : 'not configured'}`,
+    '',
+    'Upcoming bookings',
+    upcomingLines
+  ].join('\n');
+}
+
+function ownerWeeklyDigestHtml(report) {
+  const badge = (value) => value ? emailPill('Configured', 'success') : emailPill('Needs setup', 'danger');
+  const upcomingRows = report.upcomingBookings.length
+    ? report.upcomingBookings.map((booking) => `
+        <tr>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.date)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.time)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.name)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(booking.craftLabel)}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #e6edf6;">${htmlEscape(`${booking.paymentStatus}/${booking.status}`)}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="5" style="padding:12px 0;color:#5a6b85;">No upcoming bookings in the next 7 days.</td></tr>';
+  const overviewCards = [
+    emailMetricCard('Customers', report.counts.customers.toLocaleString()),
+    emailMetricCard('Bookings', report.counts.bookings.toLocaleString()),
+    emailMetricCard('Upcoming 7 days', report.counts.upcomingBookings.toLocaleString(), 'accent'),
+    emailMetricCard('Open invoices', report.counts.openInvoices.toLocaleString()),
+    emailMetricCard('Paid invoice revenue', formatCurrency(report.revenue.paidInvoiceRevenue), 'success'),
+    emailMetricCard('Paid deposits', formatCurrency(report.revenue.paidDepositsCollected))
+  ].join('');
+  return shorelineEmailShell({
+    eyebrow: 'Weekly owner update',
+    title: 'Shoreline website + ops',
+    subtitle: `Version v${report.version} • ${report.generatedAt}`,
+    pills: [
+      emailPill(`Website live`, 'success'),
+      emailPill(`Ops live`, 'dark')
+    ],
+    actionHtml: [
+      emailActionButton('Open website', report.websiteUrl),
+      emailActionButton('Open ops', report.opsUrl, 'secondary')
+    ].join('&nbsp;'),
+    bodyHtml: `
+      <div style="font-size:0;line-height:0;">${overviewCards}</div>
+      ${emailCardSection('Business snapshot', emailDetailRows([
+        { label: 'Customers', value: report.counts.customers.toLocaleString() },
+        { label: 'Bookings', value: report.counts.bookings.toLocaleString() },
+        { label: 'Invoices', value: report.counts.invoices.toLocaleString() },
+        { label: 'Trackers', value: report.counts.trackers.toLocaleString() },
+        { label: 'Pending review requests', value: report.counts.pendingReviews.toLocaleString() },
+        { label: 'Communications last 7 days', value: report.counts.communicationsLast7Days.toLocaleString() }
+      ]), { background: '#ffffff', border: '#e3ebf3' })}
+      ${emailCardSection('Integrations', `
+        <table style="width:100%;border-collapse:collapse;">
+          <tr><td style="padding:8px 0;color:#5a6b85;">Email</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.emailConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Owner booking alerts</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.bookingAlertsConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Weekly owner digest</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.ownerWeeklyDigestEnabled)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Stripe</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Stripe webhook</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.stripeWebhookConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">SMS</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.smsConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Review links</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.reviewLinksConfigured)}</td></tr>
+          <tr><td style="padding:8px 0;color:#5a6b85;">Social automation</td><td style="padding:8px 0;text-align:right;">${badge(report.integrations.socialConfigured)}</td></tr>
+        </table>
+      `)}
+      ${emailCardSection('Upcoming bookings', `
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Date</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Time</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Customer</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Package</th>
+              <th style="text-align:left;padding:10px 0;border-bottom:1px solid #dbe5f0;color:#5a6b85;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;">Status</th>
+            </tr>
+          </thead>
+          <tbody>${upcomingRows}</tbody>
+        </table>
+      `, { background: '#ffffff', border: '#e3ebf3' })}
+    `,
+    footerHtml: `This digest was generated automatically from the live Shoreline CRM and website systems. Review the full ops dashboard at <a href="${htmlEscape(report.opsUrl)}" style="color:#0a5ad1;text-decoration:none;">${htmlEscape(report.opsUrl)}</a>.`
+  });
+}
+
+async function maybeSendOwnerWeeklyDigest({ force = false } = {}) {
+  if (!OWNER_WEEKLY_DIGEST_ENABLED) {
+    return { sent: false, reason: 'disabled' };
+  }
+  const recipients = ownerWeeklyDigestRecipients();
+  if (!recipients.length) {
+    return { sent: false, reason: 'missing-recipient' };
+  }
+  if (!RESEND_API_KEY || !RESEND_FROM_EMAIL) {
+    return { sent: false, reason: 'email-not-configured' };
+  }
+
+  const schedule = ownerWeeklyDigestSchedule(new Date());
+  const state = await stateStore.read();
+  if (syncWebsiteBookingInvoices(state, schedule.now.toISOString())) {
+    await stateStore.write(state);
+  }
+  const lastWeekKey = String(state.ownerWeeklyDigest?.lastWeekKey || '');
+  const existingDigestLog = ownerWeeklyDigestLogForWeek(state, schedule.weekKey);
+  if (!force) {
+    if (!schedule.pastSchedule) return { sent: false, reason: 'not-scheduled-yet', weekKey: schedule.weekKey };
+    if (lastWeekKey === schedule.weekKey) return { sent: false, reason: 'already-sent', weekKey: schedule.weekKey };
+    if (existingDigestLog) {
+      const latestState = await stateStore.read();
+      latestState.ownerWeeklyDigest = {
+        lastSentAt: String(existingDigestLog.date || latestState.ownerWeeklyDigest?.lastSentAt || ''),
+        lastMessageId: String(latestState.ownerWeeklyDigest?.lastMessageId || ''),
+        lastWeekKey: schedule.weekKey
+      };
+      await stateStore.write(latestState);
+      return { sent: false, reason: 'already-logged-this-week', weekKey: schedule.weekKey };
+    }
+  }
+
+  const report = buildOwnerWeeklyDigestReport(state, schedule);
+  const result = await sendResendEmail({
+    to: recipients,
+    subject: ownerWeeklyDigestSubject(report),
+    text: ownerWeeklyDigestText(report),
+    html: ownerWeeklyDigestHtml(report),
+    idempotencyKey: force
+      ? `shoreline-owner-weekly-digest-${schedule.weekKey}-manual-${Date.now()}`
+      : `shoreline-owner-weekly-digest-${schedule.weekKey}`
+  });
+
+  const latestState = await stateStore.read();
+  latestState.ownerWeeklyDigest = {
+    lastSentAt: new Date().toISOString(),
+    lastMessageId: String(result?.id || ''),
+    lastWeekKey: schedule.weekKey
+  };
+  latestState.communicationsLog.unshift({
+    id: nextId(latestState.communicationsLog),
+    date: new Date().toISOString(),
+    customerId: 0,
+    customerName: 'Owner Update',
+    channel: 'owner-weekly-digest-email',
+    message: `Weekly owner update sent to ${recipients.join(', ')} for release v${APP_VERSION}.`
+  });
+  await stateStore.write(latestState);
+  return { sent: true, result, weekKey: schedule.weekKey };
+}
+
+async function postWebhook(url, payload, extraHeaders = {}) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...extraHeaders
+    },
+    body: JSON.stringify(payload)
+  });
+  const text = await response.text().catch(() => '');
+  if (!response.ok) {
+    throw new Error(text || `Webhook request failed (${response.status})`);
+  }
+  return { status: response.status, body: text };
+}
+
+async function dispatchSocialPost(payload) {
+  const selected = Array.isArray(payload.platforms) ? payload.platforms : [];
+  const platformMap = {
+    facebook: SOCIAL_FACEBOOK_WEBHOOK_URL,
+    instagram: SOCIAL_INSTAGRAM_WEBHOOK_URL,
+    x: SOCIAL_X_WEBHOOK_URL,
+    tiktok: SOCIAL_TIKTOK_WEBHOOK_URL
+  };
+  const secretHeaders = SOCIAL_AUTOMATION_WEBHOOK_SECRET
+    ? { 'X-Shoreline-Webhook-Secret': SOCIAL_AUTOMATION_WEBHOOK_SECRET }
+    : {};
+
+  const results = [];
+  const unmatched = [];
+
+  for (const platform of selected) {
+    const targetUrl = platformMap[platform];
+    if (!targetUrl) {
+      unmatched.push(platform);
+      continue;
+    }
+    const response = await postWebhook(targetUrl, { ...payload, platform }, secretHeaders);
+    results.push({ platform, ...response });
+  }
+
+  if (SOCIAL_AUTOMATION_WEBHOOK_URL) {
+    const response = await postWebhook(SOCIAL_AUTOMATION_WEBHOOK_URL, payload, secretHeaders);
+    results.push({ platform: 'automation', ...response });
+  } else if (unmatched.length) {
+    throw new Error(`No social webhook configured for: ${unmatched.join(', ')}`);
+  }
+
+  if (!results.length) {
+    throw new Error('No social webhook is configured yet.');
+  }
+  return results;
+}
+
+function contentTypeFor(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+  return {
+    '.html': 'text/html; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.webmanifest': 'application/manifest+json; charset=utf-8',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.ico': 'image/x-icon',
+    '.txt': 'text/plain; charset=utf-8',
+    '.zip': 'application/zip'
+  }[extension] || 'application/octet-stream';
+}
+
+async function resolveStaticFile(pathname) {
+  let relativePath = decodeURIComponent(pathname);
+  if (relativePath === '/') relativePath = '/index.html';
+  const withoutLeadingSlash = relativePath.replace(/^\/+/, '');
+  let filePath = path.resolve(PUBLIC_DIR, withoutLeadingSlash);
+  if (!filePath.startsWith(PUBLIC_DIR)) return null;
+  try {
+    const stat = await fs.stat(filePath);
+    if (stat.isDirectory()) {
+      filePath = path.join(filePath, 'index.html');
+    }
+  } catch {
+    if (!path.extname(filePath)) {
+      filePath = path.resolve(PUBLIC_DIR, withoutLeadingSlash, 'index.html');
+    }
+  }
+  if (!filePath.startsWith(PUBLIC_DIR)) return null;
+  return filePath;
+}
+
+async function serveFile(response, filePath, headers = {}) {
+  try {
+    const data = await fs.readFile(filePath);
+    setCommonHeaders(response, {
+      'Content-Type': contentTypeFor(filePath),
+      'Cache-Control': filePath.endsWith('.html') ? 'no-cache' : 'public, max-age=3600',
+      ...headers
+    });
+    response.writeHead(200);
+    response.end(data);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      sendJson(response, 404, { error: 'Not found' });
+      return;
+    }
+    console.error('Static file error:', error);
+    sendJson(response, 500, { error: 'Failed to load file' });
+  }
+}
+
+async function handleApi(request, response, pathname) {
+  const requestUrl = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+
+  if (pathname === '/api/health' && request.method === 'GET') {
+    sendJson(response, 200, { ok: true, storage: stateStore.kind });
+    return true;
+  }
+
+  if (pathname === '/api/auth/session' && request.method === 'GET') {
+    const session = getSession(request);
+    sendJson(response, 200, {
+      authenticated: Boolean(session),
+      storage: stateStore.kind,
+      user: sessionUserPayload(session)
+    });
+    return true;
+  }
+
+  if (pathname === '/api/auth/login' && request.method === 'POST') {
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const username = String(body.username || '');
+      const password = String(body.password || '');
+      const rateKey = loginRateKey(request, username);
+      const lockMs = loginLockRemainingMs(rateKey);
+      if (lockMs > 0) {
+        sendJson(response, 429, { error: `Too many attempts. Try again in ${Math.ceil(lockMs / 60000)} minute(s).` });
+        return true;
+      }
+      const user = findOpsUser(username, password);
+      if (!user) {
+        registerLoginFailure(rateKey);
+        sendJson(response, 401, { error: 'Incorrect username or password.' });
+        return true;
+      }
+      clearLoginFailures(rateKey);
+      setSessionCookie(response, user);
+      sendJson(response, 200, {
+        ok: true,
+        user: {
+          username: user.username,
+          role: user.role,
+          displayName: user.displayName,
+          permissions: authPermissionsForRole(user.role)
+        }
+      });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: 'Invalid login payload.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/auth/logout' && request.method === 'POST') {
+    clearSessionCookie(response);
+    sendJson(response, 200, { ok: true });
+    return true;
+  }
+
+  if (pathname.startsWith('/api/public/') && request.method === 'OPTIONS') {
+    sendPublicNoContent(response, request);
+    return true;
+  }
+
+  if (pathname === '/api/public/customer-lookup' && request.method === 'GET') {
+    const state = await stateStore.read();
+    const customer = findMatchingCustomer(state, {
+      phone: requestUrl.searchParams.get('phone') || '',
+      email: requestUrl.searchParams.get('email') || ''
+    });
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      found: Boolean(customer),
+      customer: customer ? publicCustomerPayload(customer) : null
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/integrations/status' && request.method === 'GET') {
+    const state = await stateStore.read();
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      integrations: integrationStatus(state)
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/booking' && request.method === 'GET') {
+    const token = String(requestUrl.searchParams.get('token') || '').trim();
+    if (!token) {
+      sendPublicJson(response, request, 400, { error: 'A booking token is required.' });
+      return true;
+    }
+
+    const state = await stateStore.read();
+    const booking = findBookingByPublicToken(state, token);
+    if (!booking) {
+      sendPublicJson(response, request, 404, { error: 'Booking not found.' });
+      return true;
+    }
+
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      booking: publicBookingPayload(booking)
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/availability' && request.method === 'GET') {
+    const date = String(requestUrl.searchParams.get('date') || '').trim();
+    const craft = normalizeCraftKey(requestUrl.searchParams.get('craft') || '');
+    const duration = Number(requestUrl.searchParams.get('duration') || 0);
+    const publicToken = String(
+      requestUrl.searchParams.get('booking') ||
+      requestUrl.searchParams.get('token') ||
+      ''
+    ).trim();
+
+    if (!date || !duration) {
+      sendPublicJson(response, request, 400, {
+        error: 'A rental date and duration are required to check availability.'
+      });
+      return true;
+    }
+
+    const availabilityType = craftAvailabilityType(craft);
+    if (availabilityType === 'none') {
+      const slotDetails = PUBLIC_BOOKING_START_TIMES.map((time) => ({
+        time,
+        label: formatTimeLabel(time),
+        boatAvailable: true,
+        requestedJetSkis: 0,
+        openJetSkis: TOTAL_PUBLIC_JET_SKIS,
+        canBook: true
+      }));
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        availabilityType,
+        requiresAvailabilityCheck: false,
+        blockedTimes: [],
+        availableTimes: [...PUBLIC_BOOKING_START_TIMES],
+        nextOpenTime: PUBLIC_BOOKING_START_TIMES[0] || '',
+        slotDetails
+      });
+      return true;
+    }
+
+    const state = await stateStore.read();
+    const availabilityOptions = {
+      date,
+      duration,
+      craft,
+      publicToken
+    };
+    const slotDetails = PUBLIC_BOOKING_START_TIMES.map((time) => (
+      availabilitySnapshotForStartTime(state, {
+        ...availabilityOptions,
+        time
+      })
+    ));
+    const blockedTimes = slotDetails.filter((slot) => !slot.canBook).map((slot) => slot.time);
+    const availableTimes = slotDetails.filter((slot) => slot.canBook).map((slot) => slot.time);
+
+    sendPublicJson(response, request, 200, {
+      ok: true,
+      availabilityType,
+      requiresAvailabilityCheck: true,
+      blockedTimes,
+      availableTimes,
+      nextOpenTime: availableTimes[0] || '',
+      slotDetails
+    });
+    return true;
+  }
+
+  if (pathname === '/api/public/seasonal-lead' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { customer, preferredChannel } = upsertSeasonalLeadFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        preferredChannel,
+        customer: publicCustomerPayload(customer)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the seasonal lead.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/booking-draft' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { booking } = upsertDraftBookingFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        booking: publicBookingPayload(booking)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the booking draft.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/booking-request' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { customer, booking, existingCustomer } = upsertBookingFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      let customerEmailStatus = { sent: false, reason: 'not-attempted' };
+      let ownerAlertStatus = { sent: false, reason: 'not-attempted' };
+      try {
+        customerEmailStatus = await sendBookingRequestCustomerEmail(state, booking, now);
+      } catch (error) {
+        console.error('Booking request customer email failed:', error);
+        customerEmailStatus = { sent: false, reason: error.message || 'send-failed' };
+      }
+      try {
+        ownerAlertStatus = await sendNewBookingOwnerAlert(state, booking, now);
+      } catch (error) {
+        console.error('New booking owner alert failed:', error);
+        ownerAlertStatus = { sent: false, reason: error.message || 'send-failed' };
+      }
+      if (customerEmailStatus.sent || ownerAlertStatus.sent) {
+        await stateStore.write(state);
+      }
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        bookingId: booking.id,
+        bookingToken: booking.publicToken,
+        matchedExistingCustomer: Boolean(existingCustomer),
+        waiverStored: true,
+        notifications: {
+          customerEmail: customerEmailStatus,
+          ownerAlert: ownerAlertStatus
+        },
+        customer: publicCustomerPayload(customer),
+        booking: publicBookingPayload(booking)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the booking request.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/waiver' && request.method === 'POST') {
+    try {
+      const payload = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { customer, existingCustomer } = upsertWaiverOnlyFromPayload(state, payload, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        matchedExistingCustomer: Boolean(existingCustomer),
+        customer: publicCustomerPayload(customer)
+      });
+      return true;
+    } catch (error) {
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not save the waiver.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/create-checkout-session' && request.method === 'POST') {
+    if (!stripeConfigured()) {
+      sendPublicJson(response, request, 503, {
+        error: 'Stripe is not configured yet for Shoreline checkout.'
+      });
+      return true;
+    }
+
+    try {
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const payload = body?.booking || body || {};
+      const siteOrigin = deriveSiteOrigin(request, body?.siteOrigin || payload?.siteOrigin || '');
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const { booking, pricing } = upsertBookingFromPayload(state, payload, now);
+
+      if (booking.deposit || booking.paymentStatus === 'paid') {
+        ensureBookingInvoice(state, booking, now);
+        await stateStore.write(state);
+        sendPublicJson(response, request, 200, {
+          ok: true,
+          alreadyPaid: true,
+          bookingId: booking.id,
+          booking: {
+            id: booking.id,
+            craftLabel: booking.craftLabel,
+            durationLabel: booking.durationLabel,
+            total: booking.total,
+            ...bookingPaymentSummary(booking)
+          }
+        });
+        return true;
+      }
+
+      const descriptionParts = [
+        `${booking.craftLabel}`,
+        booking.durationLabel,
+        booking.date,
+        booking.time
+      ].filter(Boolean);
+      const description = descriptionParts.join(' · ');
+      const bookingToken = ensureBookingPublicToken(booking);
+
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        success_url: `${siteOrigin}/booking-thank-you/?session_id={CHECKOUT_SESSION_ID}&booking=${encodeURIComponent(bookingToken)}`,
+        cancel_url: `${siteOrigin}/jetski-booking-confirmation/?payment=cancelled&booking=${encodeURIComponent(bookingToken)}`,
+        customer_email: booking.email || undefined,
+        billing_address_collection: 'auto',
+        phone_number_collection: { enabled: true },
+        invoice_creation: { enabled: true },
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: 'usd',
+              unit_amount: BOOKING_DEPOSIT_CENTS,
+              product_data: {
+                name: 'Shoreline Aquatics Booking Deposit',
+                description,
+                metadata: {
+                  craft: pricing.craft,
+                  bookingId: String(booking.id)
+                }
+              }
+            }
+          },
+          {
+            quantity: 1,
+            price_data: {
+              currency: 'usd',
+              unit_amount: PROCESSING_FEE_CENTS,
+              product_data: {
+                name: 'Processing Fee',
+                description: 'Secure checkout and card processing fee',
+                metadata: {
+                  bookingId: String(booking.id)
+                }
+              }
+            }
+          }
+        ],
+        payment_intent_data: {
+          metadata: {
+            bookingId: String(booking.id),
+            customerId: String(booking.customerId || ''),
+            craft: pricing.craft,
+            craftLabel: booking.craftLabel,
+            duration: String(booking.duration),
+            date: booking.date,
+            time: booking.time
+          }
+        },
+        metadata: {
+          bookingId: String(booking.id),
+          bookingToken,
+          customerId: String(booking.customerId || ''),
+          craft: pricing.craft,
+          craftLabel: booking.craftLabel,
+          duration: String(booking.duration),
+          date: booking.date,
+          time: booking.time,
+          totalQuote: String(booking.total),
+          depositAmount: String((BOOKING_DEPOSIT_CENTS / 100).toFixed(2)),
+          processingFeeAmount: String((PROCESSING_FEE_CENTS / 100).toFixed(2)),
+          amountDueToday: String(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2))
+        },
+        client_reference_id: String(booking.id),
+        custom_text: {
+          submit: {
+            message: 'Today you are paying the $50 booking deposit plus a $5 processing fee. The remaining rental balance is handled with Shoreline before launch.'
+          }
+        }
+      });
+
+      booking.paymentStatus = 'pending';
+      booking.paymentSessionId = String(session.id || '');
+      booking.depositAmount = Number((BOOKING_DEPOSIT_CENTS / 100).toFixed(2));
+      booking.processingFeeAmount = Number((PROCESSING_FEE_CENTS / 100).toFixed(2));
+      booking.amountDueToday = Number(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2));
+      booking.updatedAt = now;
+      ensureBookingInvoice(state, booking, now);
+      await stateStore.write(state);
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        checkoutUrl: session.url,
+        sessionId: session.id,
+        bookingId: booking.id,
+        bookingToken,
+        amountDue: Number(((BOOKING_DEPOSIT_CENTS + PROCESSING_FEE_CENTS) / 100).toFixed(2))
+      });
+      return true;
+    } catch (error) {
+      console.error('Stripe checkout session failed:', error);
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not start Stripe checkout.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/public/checkout-session' && request.method === 'GET') {
+    if (!stripeConfigured()) {
+      sendPublicJson(response, request, 503, {
+        error: 'Stripe is not configured yet for Shoreline checkout.'
+      });
+      return true;
+    }
+
+    const sessionId = String(requestUrl.searchParams.get('session_id') || '').trim();
+    if (!sessionId) {
+      sendPublicJson(response, request, 400, { error: 'A Stripe session id is required.' });
+      return true;
+    }
+
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const state = await stateStore.read();
+      const now = new Date().toISOString();
+      const booking = applyStripeSessionToBooking(state, session, now);
+      if (booking?.paymentStatus === 'paid' && booking.deposit) {
+        try {
+          await sendBookingConfirmationEmail(state, booking, session, now);
+        } catch (error) {
+          console.error('Booking confirmation email failed during checkout verification:', error);
+        }
+      }
+      if (booking) {
+        await stateStore.write(state);
+      }
+
+      sendPublicJson(response, request, 200, {
+        ok: true,
+        session: {
+          id: session.id,
+          status: session.status,
+          paymentStatus: session.payment_status,
+          amountTotal: Number(((session.amount_total || 0) / 100).toFixed(2)),
+          customerEmail: session.customer_details?.email || session.customer_email || '',
+          customerName: session.customer_details?.name || '',
+          bookingId: session.metadata?.bookingId || session.client_reference_id || '',
+          bookingToken: session.metadata?.bookingToken || ''
+        },
+        booking: booking ? publicBookingPayload(booking) : null
+      });
+      return true;
+    } catch (error) {
+      console.error('Stripe checkout session lookup failed:', error);
+      sendPublicJson(response, request, 400, {
+        error: error.message || 'Could not verify the Stripe checkout session.'
+      });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/webhooks/stripe' && request.method === 'POST') {
+    if (!stripeWebhookConfigured()) {
+      sendJson(response, 503, { error: 'Stripe webhook handling is not configured yet.' });
+      return true;
+    }
+
+    try {
+      const signature = request.headers['stripe-signature'];
+      if (!signature) {
+        throw new Error('Missing Stripe signature header.');
+      }
+      const rawBody = await readRequestBody(request);
+      const event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET);
+
+      if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+        const state = await stateStore.read();
+        const session = event.data.object;
+        const now = new Date().toISOString();
+        const booking = applyStripeSessionToBooking(state, session, now);
+        if (!booking) {
+          console.error(`Stripe ${event.type} (${event.id}) matched no booking — possible orphaned payment for session ${session.id}.`);
+        }
+        // Stripe delivers webhooks at-least-once and retries on any non-2xx, so
+        // guard the confirmation email with a per-booking flag to avoid sending it
+        // again on a retry. (applyStripeSessionToBooking is itself idempotent.)
+        if (booking?.paymentStatus === 'paid' && booking.deposit && !booking.confirmationEmailSent) {
+          await sendBookingConfirmationEmail(state, booking, session, now);
+          booking.confirmationEmailSent = true;
+        }
+        if (booking) {
+          await stateStore.write(state);
+        }
+      }
+
+      if (event.type === 'checkout.session.expired') {
+        const state = await stateStore.read();
+        const session = event.data.object;
+        const booking = findBookingForStripeSession(state, session);
+        // Never expire a booking that is already paid (out-of-order/stale expiry event).
+        const bookingPaid = booking && (booking.deposit === true || normalizeBookingStatus(booking.paymentStatus) === 'paid');
+        if (booking && !bookingPaid) {
+          booking.paymentStatus = 'expired';
+          booking.deposit = false;
+          booking.updatedAt = new Date().toISOString();
+          ensureBookingInvoice(state, booking, booking.updatedAt);
+          await stateStore.write(state);
+        }
+      }
+
+      setCommonHeaders(response, { 'Content-Type': 'application/json; charset=utf-8' });
+      response.writeHead(200);
+      response.end(JSON.stringify({ received: true }));
+      return true;
+    } catch (error) {
+      console.error('Stripe webhook error:', error);
+      sendJson(response, 400, { error: error.message || 'Could not process Stripe webhook.' });
+      return true;
+    }
+  }
+
+  if (!pathname.startsWith('/api/ops/')) return false;
+  const session = getSession(request);
+  if (!session) {
+    sendJson(response, 401, { error: 'Authentication required.' });
+    return true;
+  }
+
+  if (pathname === '/api/ops/integrations/status' && request.method === 'GET') {
+    const state = await stateStore.read();
+    sendJson(response, 200, { ok: true, integrations: integrationStatus(state) });
+    return true;
+  }
+
+  // Developer-only system health: surfaces auth/config warnings + runtime info
+  // so the developer can verify production config from the System page instead
+  // of digging through server logs.
+  if (pathname === '/api/ops/system/health' && request.method === 'GET') {
+    if (!authPermissionsForRole(session.role).canAccessSystem) {
+      sendJson(response, 403, { error: 'Developer access required.' });
+      return true;
+    }
+    const state = await stateStore.read();
+    const warnings = collectAuthConfigWarnings();
+    sendJson(response, 200, {
+      ok: true,
+      runtime: {
+        node: process.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        production: IS_PRODUCTION,
+        storage: stateStore.kind,
+        sessionSecretSet: Boolean(process.env.SESSION_SECRET)
+      },
+      auth: {
+        ok: warnings.length === 0,
+        warnings
+      },
+      integrations: integrationStatus(state)
+    });
+    return true;
+  }
+
+  if (pathname === '/api/ops/state' && request.method === 'GET') {
+    const state = await stateStore.read();
+    const invoiceToBookingChanged = syncBookingsFromInvoices(state);
+    const customerChanged = syncCustomersFromBookings(state);
+    const bookingToInvoiceChanged = syncWebsiteBookingInvoices(state);
+    if (invoiceToBookingChanged || customerChanged || bookingToInvoiceChanged) {
+      await stateStore.write(state);
+    }
+    sendJson(response, 200, { state: statePayloadForSession(state, session), storage: stateStore.kind });
+    return true;
+  }
+
+  if (pathname === '/api/ops/state' && (request.method === 'PUT' || request.method === 'POST')) {
+    try {
+      const writeRole = normalizeOpsRole(session.role);
+      if (!canManageBookingOps(session) && writeRole !== 'crew') {
+        sendJson(response, 403, { error: 'This login cannot edit operations data.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      if (!isLikelyStatePayload(body)) {
+        throw new Error('Malformed state payload.');
+      }
+      const currentState = await stateStore.read();
+      const nextState = writeRole === 'crew'
+        ? mergeCrewState(currentState, body)
+        : writeRole === 'employee'
+          ? mergeEmployeeState(currentState, body)
+          : sanitizeState(body);
+      nextState.ownerWeeklyDigest = mergeOwnerWeeklyDigestState(
+        currentState.ownerWeeklyDigest,
+        nextState.ownerWeeklyDigest
+      );
+      nextState.communicationsLog = mergeServerOwnedCommunications(
+        currentState.communicationsLog,
+        nextState.communicationsLog
+      );
+      syncBookingsFromInvoices(nextState);
+      syncCustomersFromBookings(nextState);
+      syncWebsiteBookingInvoices(nextState);
+      const state = await stateStore.write(nextState);
+      sendJson(response, 200, { ok: true, state: statePayloadForSession(state, session) });
+      return true;
+    } catch (error) {
+      console.error('State write failed:', error);
+      sendJson(response, 400, { error: 'Could not save operations state.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/messages/send' && request.method === 'POST') {
+    try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send CRM messages.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const channel = String(body.channel || '').toLowerCase();
+      if (channel === 'sms') {
+        const result = await sendTwilioSms({ to: body.to, body: body.body });
+        sendJson(response, 200, { ok: true, channel, result });
+        return true;
+      }
+      if (channel === 'email') {
+        const html = body.html || opsOutboundEmailHtml({
+          subject: body.subject,
+          body: body.body,
+          audienceLabel: body.to || 'Shoreline customer'
+        });
+        const result = await sendResendEmail({
+          to: body.to,
+          subject: body.subject,
+          text: body.body,
+          html
+        });
+        sendJson(response, 200, { ok: true, channel, result });
+        return true;
+      }
+      if (channel === 'mass-email') {
+        const toRecipients = Array.isArray(body.to) && body.to.length ? body.to : [RESEND_FROM_EMAIL];
+        const html = body.html || opsOutboundEmailHtml({
+          subject: body.subject,
+          body: body.body,
+          audienceLabel: 'Shoreline guests'
+        });
+        const result = await sendResendMassEmail({
+          to: toRecipients,
+          bcc: body.bcc || [],
+          subject: body.subject,
+          text: body.body,
+          html
+        });
+        sendJson(response, 200, { ok: true, channel, result });
+        return true;
+      }
+      sendJson(response, 400, { error: 'Unsupported messaging channel.' });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send message.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/owner-weekly-update/send' && request.method === 'POST') {
+    try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send owner updates.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const result = await maybeSendOwnerWeeklyDigest({ force: Boolean(body.force) });
+      sendJson(response, 200, { ok: true, result });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send the owner weekly update.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/reviews/send' && request.method === 'POST') {
+    try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send review requests.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const reviewSettings = reviewSettingsForState(state);
+      if (!reviewSettings.googleUrl && !reviewSettings.facebookUrl) {
+        throw new Error('Review links are not configured yet.');
+      }
+      const channel = String(body.channel || reviewSettings.channel || 'sms').toLowerCase();
+      const customerName = body.customerName || 'there';
+      const subject = 'Thanks for riding with Shoreline Aquatics';
+      const text = [
+        `Hey ${firstName(customerName)}! Thanks again for riding with Shoreline Aquatics.`,
+        'If you had a great time, we would really appreciate a quick review:',
+        reviewLinksText(state)
+      ].filter(Boolean).join('\n\n');
+      const html = reviewRequestEmailHtml(state, customerName);
+
+      let result;
+      if (channel === 'email') {
+        result = await sendResendEmail({ to: body.email, subject, text, html });
+      } else {
+        result = await sendTwilioSms({ to: body.phone, body: text });
+      }
+      sendJson(response, 200, { ok: true, channel, result });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send review request.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/reviews/send-batch' && request.method === 'POST') {
+    try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot send review requests.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const state = await stateStore.read();
+      const reviewSettings = reviewSettingsForState(state);
+      if (!reviewSettings.googleUrl && !reviewSettings.facebookUrl) {
+        throw new Error('Review links are not configured yet.');
+      }
+      const rawRecipients = Array.isArray(body.recipients) ? body.recipients : [];
+      // De-dupe by normalized phone, keep the first name seen for each.
+      const seen = new Map();
+      for (const entry of rawRecipients) {
+        const phone = normalizePhone(entry && entry.phone);
+        if (!phone) continue;
+        if (!seen.has(phone)) {
+          seen.set(phone, String((entry && entry.name) || '').trim());
+        }
+      }
+      const recipients = Array.from(seen.entries()).map(([phone, name]) => ({ phone, name }));
+      if (!recipients.length) {
+        throw new Error('Add at least one valid phone number.');
+      }
+      if (recipients.length > 50) {
+        throw new Error('Please send to 50 numbers or fewer at a time.');
+      }
+      const results = [];
+      for (const recipient of recipients) {
+        const text = [
+          `Hey ${firstName(recipient.name || 'there')}! Thanks again for riding with Shoreline Aquatics.`,
+          'If you had a great time, we would really appreciate a quick review:',
+          reviewLinksText(state)
+        ].filter(Boolean).join('\n\n');
+        try {
+          await sendTwilioSms({ to: recipient.phone, body: text });
+          results.push({ phone: recipient.phone, name: recipient.name, ok: true });
+        } catch (error) {
+          results.push({ phone: recipient.phone, name: recipient.name, ok: false, error: error.message || 'Send failed.' });
+        }
+      }
+      const sent = results.filter((r) => r.ok).length;
+      sendJson(response, 200, { ok: true, sent, failed: results.length - sent, total: results.length, results });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not send review requests.' });
+      return true;
+    }
+  }
+
+  if (pathname === '/api/ops/social/publish' && request.method === 'POST') {
+    try {
+      if (!canManageMessagingOps(session)) {
+        sendJson(response, 403, { error: 'This login cannot publish social posts.' });
+        return true;
+      }
+      const body = JSON.parse(await readRequestBody(request) || '{}');
+      const caption = String(body.caption || '').trim();
+      if (!caption) {
+        throw new Error('A caption is required before publishing.');
+      }
+      const payload = {
+        source: 'shoreline-ops',
+        caption,
+        link: String(body.link || '').trim(),
+        platforms: Array.isArray(body.platforms) ? body.platforms : [],
+        createdAt: new Date().toISOString()
+      };
+      const result = await dispatchSocialPost(payload);
+      sendJson(response, 200, { ok: true, result });
+      return true;
+    } catch (error) {
+      sendJson(response, 400, { error: error.message || 'Could not dispatch the social post.' });
+      return true;
+    }
+  }
+
+  sendJson(response, 404, { error: 'Unknown API route.' });
+  return true;
+}
+
+let ownerWeeklyDigestCheckInFlight = null;
+let ownerWeeklyDigestLastCheckedAt = 0;
+
+function scheduleOwnerWeeklyDigestCheck({ force = false } = {}) {
+  const now = Date.now();
+  if (!force && (now - ownerWeeklyDigestLastCheckedAt) < (5 * 60 * 1000)) {
+    return;
+  }
+  if (ownerWeeklyDigestCheckInFlight) return;
+  ownerWeeklyDigestLastCheckedAt = now;
+  ownerWeeklyDigestCheckInFlight = maybeSendOwnerWeeklyDigest({ force })
+    .catch((error) => {
+      console.error('Owner weekly digest check failed:', error);
+    })
+    .finally(() => {
+      ownerWeeklyDigestCheckInFlight = null;
+    });
+}
+
+// Serialize state-mutating requests so two concurrent read-modify-write cycles
+// can't clobber each other or hand out duplicate record ids (e.g. two bookings
+// submitted in the same instant). Read-only requests (GET/HEAD/OPTIONS) are not
+// serialized and run concurrently as before.
+let apiMutationChain = Promise.resolve();
+function runSerialized(task) {
+  const run = apiMutationChain.then(task, task);
+  apiMutationChain = run.then(() => {}, () => {});
+  return run;
+}
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+const server = http.createServer(async (request, response) => {
+  scheduleOwnerWeeklyDigestCheck();
+  try {
+    const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+    const pathname = url.pathname;
+
+    const isMutatingApi = pathname.startsWith('/api/') && MUTATING_METHODS.has(request.method);
+    const apiHandled = isMutatingApi
+      ? await runSerialized(() => handleApi(request, response, pathname))
+      : await handleApi(request, response, pathname);
+    if (apiHandled) return;
+
+    if (pathname === '/ops') {
+      sendRedirect(response, '/ops.html');
+      return;
+    }
+
+    if (pathname === '/ops-login') {
+      sendRedirect(response, '/ops-login.html');
+      return;
+    }
+
+    if (pathname === '/ops.html') {
+      if (!isAuthenticated(request)) {
+        sendRedirect(response, '/ops-login.html');
+        return;
+      }
+      await serveFile(response, path.join(PUBLIC_DIR, 'ops.html'), {
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex'
+      });
+      return;
+    }
+
+    if (pathname === '/ops-login.html') {
+      if (isAuthenticated(request)) {
+        sendRedirect(response, '/ops.html');
+        return;
+      }
+      await serveFile(response, path.join(PUBLIC_DIR, 'ops-login.html'), {
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex'
+      });
+      return;
+    }
+
+    const filePath = await resolveStaticFile(pathname);
+    if (!filePath) {
+      sendJson(response, 404, { error: 'Not found' });
+      return;
+    }
+    await serveFile(response, filePath);
+  } catch (error) {
+    console.error('Unhandled request error:', error);
+    // Only respond if we have not already started sending a response — otherwise
+    // sendJson would throw "headers already sent" and leave the socket hanging.
+    if (!response.headersSent) {
+      sendJson(response, 500, { error: 'Internal server error.' });
+    } else {
+      try { response.end(); } catch { /* socket already gone */ }
+    }
+  }
+});
+
+// Last-resort process guards: log and stay up rather than letting a stray
+// rejection or error in a timer/callback take the whole ops server down.
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
+server.listen(PORT, HOST, () => {
+  console.log(`Shoreline ops server listening on http://${HOST}:${PORT} using ${stateStore.kind} storage`);
+  validateAuthConfig();
+  scheduleOwnerWeeklyDigestCheck();
+  const weeklyDigestTimer = setInterval(() => {
+    scheduleOwnerWeeklyDigestCheck();
+  }, 60 * 60 * 1000);
+  weeklyDigestTimer.unref?.();
+});
