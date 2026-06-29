@@ -69,25 +69,20 @@ test('root layout provides required html and body tags', () => {
   assert.match(layout, /\{children\}/);
 });
 
-test('legacy ops html URLs redirect to clean page routes', async () => {
+test('legacy ops html URLs are redirected without Next config .html prerender entries', async () => {
   const { default: nextConfig } = await import(pathToFileURL('next.config.mjs'));
 
   assert.equal(typeof nextConfig.redirects, 'function');
 
   const redirects = await nextConfig.redirects();
 
-  assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops.html' || redirect.source === '/ops-login.html'), [
-    {
-      source: '/ops.html',
-      destination: '/ops',
-      permanent: true
-    },
-    {
-      source: '/ops-login.html',
-      destination: '/ops-login',
-      permanent: true
-    }
-  ]);
+  assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops.html' || redirect.source === '/ops-login.html'), []);
+
+  const proxy = readText('src/proxy.ts');
+  assert.match(proxy, /legacyHtmlRedirects/);
+  assert.match(proxy, /export function proxy/);
+  assert.match(proxy, /'\/ops\.html': '\/ops'/);
+  assert.match(proxy, /'\/ops-login\.html': '\/ops-login'/);
 });
 
 test('Wrangler defines isolated development and production Cloudflare services', () => {

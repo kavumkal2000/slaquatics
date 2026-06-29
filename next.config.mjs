@@ -13,18 +13,7 @@ const nextConfig = {
     root: repoRoot
   },
   async redirects() {
-    return [
-      {
-        source: '/ops.html',
-        destination: '/ops',
-        permanent: true
-      },
-      {
-        source: '/ops-login.html',
-        destination: '/ops-login',
-        permanent: true
-      }
-    ];
+    return [];
   },
   async headers() {
     return [
