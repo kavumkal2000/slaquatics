@@ -16,9 +16,9 @@ const ENVIRONMENTS = {
   }
 };
 
-const IMAGE_DIR = 'public/assets/images';
-const VIDEO_DIR = 'public/assets/videos';
-const MANIFEST_PATH = 'public/assets/media-manifest.json';
+const IMAGE_DIR = 'media-source/images';
+const VIDEO_DIR = 'media-source/videos';
+const MANIFEST_PATH = 'media-source/media-manifest.json';
 const CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 function parseArgs(argv) {
@@ -54,10 +54,15 @@ function parseArgs(argv) {
 }
 
 function listFiles(dir) {
-  return readdirSync(dir)
+  try {
+    return readdirSync(dir)
     .map((entry) => `${dir}/${entry}`)
     .filter((file) => statSync(file).isFile())
     .sort((a, b) => a.localeCompare(b));
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
 }
 
 function contentType(file) {
@@ -141,6 +146,10 @@ const args = parseArgs(process.argv.slice(2));
 const target = ENVIRONMENTS[args.env];
 const entries = mediaEntries({ includeOriginals: args.includeOriginals });
 assertNoLegacyInput(entries);
+
+if (entries.length === 0) {
+  throw new Error('No media files found. Place upload sources under media-source/images or media-source/videos.');
+}
 
 const manifest = {
   generatedAt: new Date().toISOString(),

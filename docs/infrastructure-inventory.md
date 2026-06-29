@@ -88,6 +88,7 @@ This document records the current cloud/service dependencies and the remaining m
   - Development: `slaquatics-media-development` via `https://cdn.dev.slaquatics.com`.
   - Production: `slaquatics-media-production` via `https://cdn.slaquatics.com`.
 - Object keys are organized under `site/images/`, `site/videos/`, `brand/`, `ops/`, optional `originals/`, and `manifests/media-manifest.json`.
+- CDN media binaries are not committed to the repo or placed under `public/assets`; ignored `media-source/` folders are temporary upload staging only.
 - Publish and rollback rules are documented in `docs/media-cdn.md`.
 
 ### Social automation webhooks

@@ -132,12 +132,17 @@ test('media CDN publishing is deterministic and excludes legacy archive inputs',
   assert.match(script, /slaquatics-media-production/);
   assert.match(script, /cdn\.dev\.slaquatics\.com/);
   assert.match(script, /cdn\.slaquatics\.com/);
+  assert.match(script, /media-source\/images/);
+  assert.match(script, /media-source\/videos/);
   assert.match(script, /--env production/);
   assert.match(script, /legacy\//);
   assert.match(script, /manifests\/media-manifest\.json/);
   assert.match(script, /--cache-control/);
   assert.match(script, /--remote/);
   assert.doesNotMatch(script, /readFileSync\(['"]legacy\//);
+  assert.equal(existsSync('public/assets'), false);
+  assert.equal(existsSync('public/assets/videos'), false);
+  assert.ok(existsSync('media-source/README.md'));
 
   for (const required of [
     'slaquatics-media-development',
@@ -1244,27 +1249,9 @@ test('migrated components avoid React dev overlay warning patterns', () => {
   assert.equal(rgCount('src/features', /\sselected[=>]/g), 0);
 });
 
-test('existing static image URLs are mirrored into the Next public asset tree', () => {
-  [
-    'shoreline-customer-duo.png',
-    'shoreline-customer-group-wide.png',
-    'shoreline-customer-moments.png',
-    'shoreline-customer-riders.png',
-    'shoreline-pontoon-crop-final.png'
-  ].forEach((file) => {
-    assert.ok(existsSync(`assets/images/${file}`), `source asset ${file} should remain in place`);
-    assert.ok(existsSync(`public/assets/images/${file}`), `/assets/images/${file} should resolve in Next`);
-  });
-  [
-    'shoreline-jetski-close-group.webp',
-    'shoreline-jetski-duo-water.webp',
-    'shoreline-jetski-group-collage.webp',
-    'shoreline-jetski-shoreline-guests.webp',
-    'shoreline-jetski-solo-rider.webp',
-    'shoreline-jetski-two-riders.webp'
-  ].forEach((file) => {
-    assert.ok(existsSync(`public/assets/images/${file}`), `/assets/images/${file} should resolve in Next`);
-  });
+test('active media is CDN-backed and not bundled into the Worker static assets tree', () => {
+  assert.equal(existsSync('public/assets'), false, 'CDN media should not be committed under public/assets');
+  assert.ok(existsSync('media-source/README.md'), 'ignored local staging instructions should exist');
   assert.ok(existsSync('legacy/render/ops-sw.js'), 'legacy source service worker should remain archived');
   assert.ok(existsSync('public/ops-sw.js'), '/ops-sw.js should resolve in Next');
   assert.ok(existsSync('legacy/render/ops-app.webmanifest'), 'legacy source ops manifest should remain archived');

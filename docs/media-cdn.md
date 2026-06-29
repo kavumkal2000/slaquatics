@@ -20,7 +20,7 @@ The Worker binding name is `MEDIA_BUCKET` in both Wrangler environments. The bin
 - `originals/`: optional source/original retention. Upload only when explicitly needed with `--include-originals`.
 - `manifests/media-manifest.json`: generated upload manifest with local path, CDN key, content type, byte size, and SHA-256 for each uploaded object.
 
-`public/assets/**` remains the local source and rollback fallback until R2 verification is complete. Do not delete those files as part of the CDN cutover.
+R2 is the active store for deployed media. Do not commit CDN image or video binaries to this repository, and do not place media under `public/assets`; OpenNext copies `public/` into Worker Static Assets and Cloudflare Workers rejects individual static assets over 25 MiB. Local media files are temporary staging only under ignored `media-source/images/` and `media-source/videos/`.
 
 ## Commands
 
@@ -71,7 +71,7 @@ npm run media:publish -- --env production --include-originals
 
 ## Promotion Flow
 
-1. Add or replace files under `public/assets/images` or `public/assets/videos`.
+1. Add or replace image files under ignored `media-source/images` and video files under ignored `media-source/videos`.
 2. Update active app references through `src/lib/media.ts`; do not hardcode CDN or third-party media URLs in components.
 3. Run `npm run media:publish` and verify `https://cdn.dev.slaquatics.com/manifests/media-manifest.json`.
 4. Render-check the development site pages that use changed media.
@@ -80,8 +80,8 @@ npm run media:publish -- --env production --include-originals
 
 ## Rollback
 
-R2 objects use long-lived immutable cache headers. Roll forward by publishing a new filename/key and updating `src/lib/media.ts` or the component media key. For urgent rollback, restore the previous code reference and redeploy the Worker; `public/assets/**` remains available as the local source of truth for republishing.
+R2 objects use long-lived immutable cache headers. Roll forward by publishing a new filename/key and updating `src/lib/media.ts` or the component media key. For urgent rollback, restore the previous code reference and redeploy the Worker. If an old binary is needed, fetch it from the current R2 object or from an external asset archive into ignored `media-source/` and republish.
 
 ## Legacy Archive Rule
 
-The publisher only reads from `public/assets/images` and `public/assets/videos`. It refuses any path under `legacy/`. Archived Render/static media stays in `legacy/` strictly for migration reference and must not be imported by active app code or uploaded as Cloudflare CDN media.
+The publisher only reads images from `media-source/images` and videos from `media-source/videos`. It refuses any path under `legacy/`. Archived Render/static media stays in `legacy/` strictly for migration reference and must not be imported by active app code or uploaded as Cloudflare CDN media.
