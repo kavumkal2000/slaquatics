@@ -69,7 +69,7 @@ test('root layout provides required html and body tags', () => {
   assert.match(layout, /\{children\}/);
 });
 
-test('legacy ops html URLs are redirected without Next config .html prerender entries', async () => {
+test('legacy ops html URLs are redirected by the Cloudflare worker without Next middleware or .html prerender entries', async () => {
   const { default: nextConfig } = await import(pathToFileURL('next.config.mjs'));
 
   assert.equal(typeof nextConfig.redirects, 'function');
@@ -78,11 +78,15 @@ test('legacy ops html URLs are redirected without Next config .html prerender en
 
   assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops.html' || redirect.source === '/ops-login.html'), []);
 
-  const proxy = readText('src/proxy.ts');
-  assert.match(proxy, /legacyHtmlRedirects/);
-  assert.match(proxy, /export function proxy/);
-  assert.match(proxy, /'\/ops\.html': '\/ops'/);
-  assert.match(proxy, /'\/ops-login\.html': '\/ops-login'/);
+  const worker = readText('src/worker.ts');
+  assert.match(worker, /legacyHtmlRedirects/);
+  assert.match(worker, /'\/ops\.html': '\/ops'/);
+  assert.match(worker, /'\/ops-login\.html': '\/ops-login'/);
+  assert.match(worker, /Response\.redirect\(url\.toString\(\), 308\)/);
+
+  assert.equal(existsSync('src/proxy.ts'), false);
+  assert.equal(existsSync('src/app/ops.html/page.tsx'), false);
+  assert.equal(existsSync('src/app/ops-login.html/page.tsx'), false);
 });
 
 test('Wrangler defines isolated development and production Cloudflare services', () => {
