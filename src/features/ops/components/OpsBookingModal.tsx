@@ -75,13 +75,13 @@ export function OpsBookingModal() {
             <option value="yes">Yes — $50</option>
           </select>
         </div>
-        <div className="form-group"><label>Add karaoke?</label>
+        <div className="form-group" id="b-karaoke-group"><label>Add karaoke?</label>
           <select id="b-karaoke" onChange={calculateBookingPrice}>
             <option value="no">No karaoke</option>
             <option value="yes">Yes — $50</option>
           </select>
         </div>
-        <div className="form-group"><label>Add tube?</label>
+        <div className="form-group" id="b-tube-group"><label>Add tube?</label>
           <select id="b-tube" onChange={calculateBookingPrice}>
             <option value="no">No tube</option>
             <option value="yes">Yes — $50</option>

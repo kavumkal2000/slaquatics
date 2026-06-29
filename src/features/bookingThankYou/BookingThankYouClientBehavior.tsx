@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { LAUNCH_LOCATION_LABEL } from '../../lib/launch-info';
 
 type Booking = {
   publicToken?: string;
@@ -118,7 +119,7 @@ function showBooking(booking: Booking) {
   setText('summary-package', `${booking.craftLabel || ''} · ${booking.durationLabel || ''}`);
   setText('summary-date', formatDateLabel(booking.date));
   setText('summary-time', formatTimeLabel(booking.time));
-  setText('summary-location', booking.location || 'Shoreline Aquatics launch, Point Vista Rd, Hickory Creek, TX');
+  setText('summary-location', booking.location || LAUNCH_LOCATION_LABEL);
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
   setText('summary-deposit', formatCurrency(booking.depositAmount || 50));
   setText('summary-processing-fee', formatCurrency(booking.processingFeeAmount || 5));

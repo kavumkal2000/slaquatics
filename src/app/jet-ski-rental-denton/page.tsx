@@ -3,7 +3,7 @@ import { JetSkiRentalDentonPage } from '../../features/jetSkiRentalDenton/JetSki
 
 export const metadata: Metadata = {
   title: "Jet Ski Rental near Denton, TX | Shoreline Aquatics",
-  description: "Looking for a jet ski rental near Denton? Book with Shoreline Aquatics on Lake Lewisville with live availability, easy deposits, life jackets, and a full safety orientation.",
+  description: "Looking for a jet ski rental near Denton? Book Shoreline Aquatics at Point Vista Rd, Hickory Creek, TX 75065 on Lake Lewisville, open daily 10 AM-8 PM.",
   alternates: { canonical: "https://slaquatics.com/jet-ski-rental-denton/" }
 };
 

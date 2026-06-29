@@ -63,10 +63,15 @@ export async function sendResendEmail({ to, subject, text, html, bcc = [], idemp
 }
 
 export async function sendResendMassEmail({ to, subject, text, html, bcc = [] }: any) {
-  const recipients = (Array.isArray(bcc) ? bcc : [bcc]).map(normalizeEmail).filter(Boolean);
+  const recipients = Array.from(new Set((Array.isArray(bcc) ? bcc : [bcc]).map(normalizeEmail).filter(Boolean)));
   if (!recipients.length) throw new Error('At least one valid mass email recipient is required.');
-  const result = await sendResendEmail({ to, subject, text, html, bcc: recipients });
-  return { batches: 1, recipientCount: recipients.length, results: [result] };
+  const batchSize = 50;
+  const results = [];
+  for (let index = 0; index < recipients.length; index += batchSize) {
+    const batch = recipients.slice(index, index + batchSize);
+    results.push(await sendResendEmail({ to, subject, text, html, bcc: batch }));
+  }
+  return { batches: results.length, recipientCount: recipients.length, results };
 }
 
 export function reviewSettingsForState(state: any = null) {
