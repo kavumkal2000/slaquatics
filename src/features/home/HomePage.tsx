@@ -37,8 +37,8 @@ export function HomePage() {
       <HomeHowSection />
       <HomeWhySection />
       <HomeLocationSection />
-      <HomeFaqSection />
       <HomeReviewsSection />
+      <HomeFaqSection />
       <HomeInstagramSection />
       <HomeNotifySection />
       <HomeCtaBand />

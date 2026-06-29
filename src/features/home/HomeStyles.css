@@ -514,7 +514,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.2
 .bundle-action { margin-top: 1.2rem; display: flex; }
 
 /* ── ADD-ONS ── */
-.addons-grid { display: grid; grid-template-columns: minmax(0, 980px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
+.addons-grid { display: grid; grid-template-columns: minmax(0, 880px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
 .addon-card {
   background: var(--deep); border-radius: 14px; border: 1px solid var(--border);
   padding: 1.8rem; display: flex; flex-direction: column; gap: 0.8rem;
@@ -528,7 +528,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.2
     linear-gradient(140deg, #09172b 0%, #0b1f39 100%);
 }
 .addon-media {
-  position: relative; min-height: 360px; border-right: 1px solid rgba(255,255,255,0.06);
+  position: relative; min-height: 0; height: clamp(260px, 24vw, 320px); border-right: 1px solid rgba(255,255,255,0.06);
 }
 .addon-media::after {
   content: ""; position: absolute; inset: 0;
@@ -1096,7 +1096,7 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .fleet-grid { grid-template-columns: 1fr; }
   .addons-grid { grid-template-columns: 1fr; }
   .addon-card-feature { grid-template-columns: 1fr; }
-  .addon-media { min-height: 250px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .addon-media { min-height: 0; height: auto; aspect-ratio: 16 / 10; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .addon-content { padding: 1.5rem; }
   .how-grid { grid-template-columns: 1fr; }
   .how-step { padding: 1.85rem 1.1rem 1.15rem; }
