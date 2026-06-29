@@ -10,7 +10,7 @@ export function HomeAddOnsSection() {
     <div className="addons-grid">
       <div className="addon-card addon-card-feature">
         <div className="addon-media">
-          <img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Aerial drone footage over Lake Lewisville" />
+          <img loading="lazy" decoding="async" src="./assets/images/shoreline-aquatics-img-3615.webp" alt="Aerial drone footage over Lake Lewisville" />
         </div>
         <div className="addon-content">
           <div className="addon-topline">

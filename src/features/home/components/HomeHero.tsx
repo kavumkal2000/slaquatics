@@ -6,7 +6,6 @@ export function HomeHero() {
   return (
     <div className="hero">
   <div className="hero-video-wrap" id="hero-video-wrap">
-    {/* Video from the existing site */}
     <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="./assets/images/shoreline-jetski-group-collage.webp">
       <source src="https://storage.googleapis.com/msgsndr/3PgAS2jkeJsHjqRMEuF6/media/68181c55efb1e5d49ba97e25.mp4" type="video/mp4" />
     </video>

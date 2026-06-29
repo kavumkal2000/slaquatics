@@ -18,9 +18,9 @@ export function HomeFleetSection() {
     <div className="fleet-grid">
       <div className="fleet-card" id="jetski">
         <div className="fleet-media fleet-slider">
-          <img className="slide active" loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-close-group.webp" alt="Customers on Yamaha jet skis at Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-solo-rider.webp" alt="Customer riding a Yamaha jet ski on Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-group-collage.webp" alt="Shoreline Aquatics jet ski customers on the water" />
+          <img className="slide active" loading="lazy" decoding="async" src="./assets/images/shoreline-aquatics-img-4856.webp" alt="Customers on Yamaha jet skis at sunset on Lake Lewisville" />
+          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-aquatics-img-4198.webp" alt="Customer riding a Yamaha jet ski on Lake Lewisville" />
+          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-aquatics-e1efe821-ce35-4bb6-9bcf-46ea25bf784e.webp" alt="Shoreline Aquatics jet ski customers on the water" />
           <button className="slider-arrow prev" type="button" aria-label="Previous photo">‹</button>
           <button className="slider-arrow next" type="button" aria-label="Next photo">›</button>
           <div className="slider-dots" />
@@ -83,7 +83,7 @@ export function HomeFleetSection() {
           <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Pontoon boat on the water ready for a Shoreline group day" />
         </div>
         <div className="bundle-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-jetski-duo-water.webp" alt="Shoreline riders enjoying Yamaha jet skis on Lake Lewisville" />
+          <img loading="lazy" decoding="async" src="./assets/images/shoreline-aquatics-img-4197.webp" alt="Shoreline riders enjoying Yamaha jet skis on Lake Lewisville" />
         </div>
       </div>
       <div className="bundle-copy">
