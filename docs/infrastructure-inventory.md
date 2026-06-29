@@ -104,7 +104,6 @@ This document records the current cloud/service dependencies and the remaining m
 - Defined in: `.github/workflows/health.yml`
 - Current jobs:
   - `check`: runs `npm run check` and `npm run cf:build` on push/PR to `main` and `development`.
-  - `smoke`: runs daily/on-demand live checks.
 
 ### iOS native wrapper
 

@@ -6,7 +6,7 @@ How to catch bugs continuously for as long as the site exists — without relyin
 | Command | When | What it catches |
 |---|---|---|
 | `npm run check` | **Before every deploy** (and on every push, via CI) | validation failures, migration-route regressions, broken JSON-LD schema, and pricing drift |
-| `npm run smoke` | **After a deploy + daily** (via CI) | the live site or API being down / 404ing (e.g. the availability-endpoint outage we hit) |
+| `npm run smoke` | **On demand after deploys or while debugging** | the live site or API being down / 404ing (e.g. the availability-endpoint outage we hit) |
 
 Run `npm run smoke` against any environment: `SITE_URL=https://staging... API_URL=https://... npm run smoke`.
 
@@ -14,7 +14,6 @@ Run `npm run smoke` against any environment: `SITE_URL=https://staging... API_UR
 
 ### 1. ✅ GitHub Actions — already added (`.github/workflows/health.yml`)
 - Runs `npm run check` and `npm run cf:build` on every push/PR to `main` or `development` (a red ❌ on the PR means don't merge).
-- Runs `npm run smoke` **daily** and on-demand. If the live site is down, **GitHub emails you automatically**. No setup needed beyond pushing this file.
 
 ### 2. Cloudflare deploy notifications
 Use Cloudflare Worker deployment notifications or the connected CI status for deploy failure alerts.
@@ -24,7 +23,7 @@ Add two monitors:
 - `https://slaquatics.com/` (every 5 min)
 - `https://slaquatics.com/api/public/integrations/status` (every 5 min)
 
-This pings far more often than the daily CI smoke and texts/emails you within minutes of an outage.
+This texts/emails you within minutes of an outage.
 
 ### 4. The built-in runtime config check
 The developer **System page** in the ops tool shows warnings for missing `SESSION_SECRET`, weak default passwords, missing integration secrets, and storage mode.
@@ -34,7 +33,7 @@ For catching *runtime* errors real users hit (not just outages), add Sentry to t
 
 ## The routine (what to actually do)
 1. Make a change on a branch → `npm run check` → if green, merge to `main`.
-2. After Cloudflare deploys → `npm run smoke` (or trigger the GitHub "Health" workflow manually).
+2. After Cloudflare deploys → `npm run smoke` locally when live endpoint verification is useful.
 3. Monthly: skim Worker logs + the ops System page for config warnings; check UptimeRobot history.
 
 ## Extending the checks
