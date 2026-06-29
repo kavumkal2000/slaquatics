@@ -7,7 +7,7 @@
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://slaquatics.com/jetski-booking/">
 <title>Book a Rental | Shoreline Aquatics</title>
-<link rel="preconnect" href="https://shoreline-aquatics-ops.onrender.com" crossorigin>
+<link rel="preconnect" href="https://slaquatics.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script type="application/ld+json">
 {
@@ -24,7 +24,7 @@
       "description": "Jet ski and boat rentals on Lake Lewisville with live availability, life jackets included, and a full safety orientation.",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "2000 Main St",
+        "streetAddress": "Point Vista Rd",
         "addressLocality": "Hickory Creek",
         "addressRegion": "TX",
         "postalCode": "75065",
@@ -1326,14 +1326,13 @@ h1 span { color: var(--gold); }
 
 <script>
 const OPS_PUBLIC_API = window.location.protocol === 'file:'
-  ? 'https://shoreline-aquatics-ops.onrender.com'
+  ? 'https://slaquatics.com'
   : (
-      window.location.hostname.includes('shoreline-aquatics-ops') ||
       window.location.hostname === '127.0.0.1' ||
       window.location.hostname === 'localhost'
     )
       ? window.location.origin
-      : 'https://shoreline-aquatics-ops.onrender.com';
+      : 'https://slaquatics.com';
 
 const PRICING = {
   jetski2: { 2: 300, 3: 450, 4: 560, 6: 720, 8: 900 },
@@ -1923,7 +1922,7 @@ function createBookingPayload() {
     publicToken: qs('booking-token').value.trim(),
     date: qs('date').value,
     time: qs('time').value,
-    location: 'Shoreline Aquatics launch - 2000 Main St, Hickory Creek, TX',
+    location: 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX',
     contactMethod: 'text',
     partySize: '',
     notes: ''

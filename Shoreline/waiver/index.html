@@ -404,14 +404,13 @@ h3{font-size:1.75rem}
 
 <script>
 const OPS_PUBLIC_API = window.location.protocol === 'file:'
-  ? 'https://shoreline-aquatics-ops.onrender.com'
+  ? 'https://slaquatics.com'
   : (
-      window.location.hostname.includes('shoreline-aquatics-ops') ||
       window.location.hostname === '127.0.0.1' ||
       window.location.hostname === 'localhost'
     )
       ? window.location.origin
-      : 'https://shoreline-aquatics-ops.onrender.com';
+      : 'https://slaquatics.com';
 
 function qs(id) {
   return document.getElementById(id);
