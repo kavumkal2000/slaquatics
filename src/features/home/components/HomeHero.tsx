@@ -1,13 +1,14 @@
 'use client';
 
 import { LAUNCH_ADDRESS, LAUNCH_HOURS } from '../../../lib/launch-info';
+import { media } from '../../../lib/media';
 
 export function HomeHero() {
   return (
     <div className="hero">
   <div className="hero-video-wrap" id="hero-video-wrap">
-    <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="./assets/images/shoreline-jetski-group-collage.webp">
-      <source src="https://storage.googleapis.com/msgsndr/3PgAS2jkeJsHjqRMEuF6/media/68181c55efb1e5d49ba97e25.mp4" type="video/mp4" />
+    <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster={media.heroPoster}>
+      <source src={media.heroVideo} type="video/mp4" />
     </video>
     <button className="hero-video-play" id="hero-video-play" type="button">Tap To Play Video</button>
   </div>

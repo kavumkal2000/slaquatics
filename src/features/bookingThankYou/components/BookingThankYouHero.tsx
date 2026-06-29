@@ -1,3 +1,5 @@
+import { mediaUrl } from '../../../lib/media';
+
 export function BookingThankYouHero() {
   return (
     <div className="hero">
@@ -11,15 +13,15 @@ export function BookingThankYouHero() {
       </div>
       <div className="card media-card">
         <div className="hero-photo">
-          <img src="../assets/images/shoreline-jetski-group-collage.webp" alt="Shoreline Aquatics riders on the water" />
+          <img src={mediaUrl('site/images/shoreline-jetski-group-collage.webp')} alt="Shoreline Aquatics riders on the water" />
           <div className="hero-photo-badge">
             <strong>Lake day locked in</strong>
             <span>Save this page for directions and arrival info.</span>
           </div>
         </div>
         <div className="thumb-grid">
-          <div className="thumb"><img src="../assets/images/shoreline-jetski-close-group.webp" alt="Customers on Shoreline jet skis" /></div>
-          <div className="thumb"><img src="../assets/images/shoreline-jetski-solo-rider.webp" alt="Shoreline rider out on the water" /></div>
+          <div className="thumb"><img src={mediaUrl('site/images/shoreline-jetski-close-group.webp')} alt="Customers on Shoreline jet skis" /></div>
+          <div className="thumb"><img src={mediaUrl('site/images/shoreline-jetski-solo-rider.webp')} alt="Shoreline rider out on the water" /></div>
         </div>
       </div>
     </div>

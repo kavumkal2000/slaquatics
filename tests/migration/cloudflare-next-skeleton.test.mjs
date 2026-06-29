@@ -14,6 +14,15 @@ function rgCount(dir, pattern) {
   }
   return count;
 }
+function collectFiles(dir, pattern) {
+  const files = [];
+  for (const entry of readdirSync(dir)) {
+    const file = `${dir}/${entry}`;
+    if (statSync(file).isDirectory()) files.push(...collectFiles(file, pattern));
+    else if (pattern.test(file)) files.push(file);
+  }
+  return files;
+}
 
 test('modern stack scripts and dependencies are declared', () => {
   const pkg = readJson('package.json');
@@ -102,6 +111,65 @@ test('Wrangler defines isolated development and production Cloudflare services',
   assert.match(wrangler, /binding = "OPS_DB"/);
   assert.match(wrangler, /\[triggers\]\ncrons = \["0 14 \* \* 1"\]/);
   assert.doesNotMatch(wrangler, /shoreline-aquatics-ops\.onrender\.com/);
+});
+
+test('Wrangler defines split R2 media buckets and CDN domains per environment', () => {
+  const wrangler = readText('wrangler.toml');
+
+  assert.match(wrangler, /\[env\.development\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.dev\.slaquatics\.com"/);
+  assert.match(wrangler, /\[env\.production\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.slaquatics\.com"/);
+  assert.match(wrangler, /\[\[env\.development\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-development"/);
+  assert.match(wrangler, /\[\[env\.production\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-production"/);
+});
+
+test('media CDN publishing is deterministic and excludes legacy archive inputs', () => {
+  const pkg = readJson('package.json');
+  const script = readText('scripts/publish-media-r2.mjs');
+  const docs = readText('docs/media-cdn.md');
+
+  assert.equal(pkg.scripts['media:publish'], 'node scripts/publish-media-r2.mjs');
+  assert.match(script, /slaquatics-media-development/);
+  assert.match(script, /slaquatics-media-production/);
+  assert.match(script, /cdn\.dev\.slaquatics\.com/);
+  assert.match(script, /cdn\.slaquatics\.com/);
+  assert.match(script, /--env production/);
+  assert.match(script, /legacy\//);
+  assert.match(script, /manifests\/media-manifest\.json/);
+  assert.match(script, /--cache-control/);
+  assert.match(script, /--remote/);
+  assert.doesNotMatch(script, /readFileSync\(['"]legacy\//);
+
+  for (const required of [
+    'slaquatics-media-development',
+    'slaquatics-media-production',
+    'cdn.dev.slaquatics.com',
+    'cdn.slaquatics.com',
+    'site/images/',
+    'site/videos/',
+    'brand/',
+    'ops/',
+    'originals/',
+    'manifests/media-manifest.json'
+  ]) {
+    assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});
+
+test('active media references use the central CDN helper instead of legacy or third-party hosts', () => {
+  const helper = readText('src/lib/media.ts');
+  const activeDirs = ['src/app', 'src/features', 'src/lib'];
+  const activeSource = activeDirs
+    .flatMap((dir) => collectFiles(dir, /\.(tsx?|jsx?)$/))
+    .map((file) => readText(file))
+    .join('\n');
+
+  assert.match(helper, /PUBLIC_MEDIA_BASE_URL/);
+  assert.match(helper, /mediaUrl/);
+  assert.match(helper, /cdn\.slaquatics\.com/);
+  assert.doesNotMatch(activeSource, /images\.leadconnectorhq\.com/);
+  assert.doesNotMatch(activeSource, /storage\.googleapis\.com\/msgsndr/);
+  assert.doesNotMatch(activeSource, /src=["'](?:\.\.?\/)?assets\/images\//);
+  assert.doesNotMatch(activeSource, /https:\/\/slaquatics\.com\/assets\/images\//);
 });
 
 test('Cloudflare worker owns scheduled weekly digest dispatch', () => {

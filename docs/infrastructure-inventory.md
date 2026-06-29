@@ -80,13 +80,15 @@ This document records the current cloud/service dependencies and the remaining m
   - SMS messaging from ops.
   - SMS review requests.
 
-### Google and GoHighLevel assets
+### Media CDN
 
 - Google Fonts are used by public and ops pages.
 - Google review/search/maps links are embedded in public pages and server-generated messaging.
-- Several images are loaded from `images.leadconnectorhq.com`.
-- The main hero video is loaded from `storage.googleapis.com/msgsndr/...`.
-- These are content/runtime dependencies but not app hosting dependencies.
+- Active website images and videos are served from R2-backed CDN domains:
+  - Development: `slaquatics-media-development` via `https://cdn.dev.slaquatics.com`.
+  - Production: `slaquatics-media-production` via `https://cdn.slaquatics.com`.
+- Object keys are organized under `site/images/`, `site/videos/`, `brand/`, `ops/`, optional `originals/`, and `manifests/media-manifest.json`.
+- Publish and rollback rules are documented in `docs/media-cdn.md`.
 
 ### Social automation webhooks
 
@@ -185,4 +187,4 @@ Current reference points from official docs:
 3. Verify D1 row count/hash against the migrated source backup using read-only checks.
 4. Verify Stripe webhook configuration points at the Cloudflare `/api/webhooks/stripe` endpoint.
 5. Verify Resend sender/domain status for the Worker runtime.
-6. Decide whether external media should stay on GoHighLevel/Google-hosted URLs or move to Cloudflare R2/Images later.
+6. Verify the R2 media CDN custom domains and object headers after publishing development media, then production media.

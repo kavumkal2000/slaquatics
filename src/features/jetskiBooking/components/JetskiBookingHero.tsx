@@ -1,3 +1,5 @@
+import { media } from '../../../lib/media';
+
 export function JetskiBookingHero() {
   return (
     <div className="hero">
@@ -23,8 +25,8 @@ export function JetskiBookingHero() {
         </div>
         <div className="hero-video-panel">
           <div className="hero-video-shell" id="hero-video-wrap">
-            <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster="../assets/images/shoreline-jetski-group-collage.webp">
-              <source src="https://storage.googleapis.com/msgsndr/3PgAS2jkeJsHjqRMEuF6/media/68181c55efb1e5d49ba97e25.mp4" type="video/mp4" />
+            <video id="hero-video" autoPlay muted loop playsInline preload="auto" poster={media.heroPoster}>
+              <source src={media.heroVideo} type="video/mp4" />
             </video>
             <button className="hero-video-play" id="hero-video-play" type="button">Tap to play video</button>
           </div>

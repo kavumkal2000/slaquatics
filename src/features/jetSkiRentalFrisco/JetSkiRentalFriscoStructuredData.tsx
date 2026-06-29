@@ -1,4 +1,5 @@
 import { JsonLdStructuredData, type JsonLdValue } from '../JsonLdStructuredData';
+import { media } from '../../lib/media';
 
 const structuredData = [
   {
@@ -10,7 +11,7 @@ const structuredData = [
         "name": "Shoreline Aquatics Jet Ski & Boat Rentals",
         "url": "https://slaquatics.com/",
         "telephone": "+14696937164",
-        "image": "https://slaquatics.com/assets/images/shoreline-jetski-group-collage.webp",
+        "image": media.heroPoster,
         "priceRange": "$$",
         "address": {
           "@type": "PostalAddress",

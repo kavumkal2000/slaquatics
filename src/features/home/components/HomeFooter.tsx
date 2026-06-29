@@ -1,6 +1,7 @@
 'use client';
 
 import { LAUNCH_ADDRESS, LAUNCH_HOURS } from '../../../lib/launch-info';
+import { media } from '../../../lib/media';
 
 export function HomeFooter() {
   return (
@@ -8,7 +9,7 @@ export function HomeFooter() {
   <div className="footer-inner">
     <div>
       <div className="footer-logo">
-        <img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics" />
+        <img loading="lazy" decoding="async" src={media.logo} alt="Shoreline Aquatics" />
       </div>
       <p className="footer-about">Jet ski &amp; boat rentals at Lake Lewisville, TX. Meet us at {LAUNCH_ADDRESS} during {LAUNCH_HOURS}.</p>
       <div className="footer-socials">
