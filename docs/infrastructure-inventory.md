@@ -24,6 +24,7 @@ This document records the current cloud/service dependencies and the remaining m
   - `/jet-ski-rental-lewisville/`
 - Static assets are served by the OpenNext/Workers assets pipeline.
 - Search controls for private ops surfaces remain enforced in the app routes.
+- Legacy `.html` ops URLs are compatibility redirects only and are handled at the Worker boundary; they are not App Router pages or Next middleware.
 
 ### Cloudflare API and ops runtime
 
@@ -101,9 +102,15 @@ This document records the current cloud/service dependencies and the remaining m
 
 ### GitHub Actions
 
-- Defined in: `.github/workflows/health.yml`
-- Current jobs:
-  - `check`: runs `npm run check` and `npm run cf:build` on push/PR to `main` and `development`.
+- No active GitHub Actions workflow owns Cloudflare Worker deployment in this repository.
+- Cloudflare's connected build/deploy path runs the project validation command.
+
+### Legacy archive
+
+- Location: `legacy/`
+- Current role: migration accuracy and historical reference only.
+- The active Cloudflare app must not import from `legacy/` or `src/lib/legacy`.
+- `npm run start:legacy` is retained only as a local reference command for the archived Render-era app, not as a Cloudflare build, validation, or deployment surface.
 
 ### iOS native wrapper
 
