@@ -1,4 +1,5 @@
 import { JsonLdStructuredData, type JsonLdValue } from '../JsonLdStructuredData';
+import { media } from '../../lib/media';
 
 const structuredData = [
   {
@@ -9,7 +10,7 @@ const structuredData = [
         "@id": "https://slaquatics.com/#business",
         "name": "Shoreline Aquatics Jet Ski & Boat Rentals",
         "url": "https://slaquatics.com/",
-        "image": "https://slaquatics.com/assets/images/shoreline-jetski-group-collage.webp",
+        "image": media.heroPoster,
         "telephone": "+14696937164",
         "priceRange": "$$",
         "description": "Jet ski and boat rentals on Lake Lewisville with live availability, life jackets included, and a full safety orientation.",

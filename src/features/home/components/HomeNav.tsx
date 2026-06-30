@@ -1,10 +1,12 @@
 'use client';
 
+import { media } from '../../../lib/media';
+
 export function HomeNav() {
   return (
     <nav>
   <div className="nav-logo">
-    <img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics" />
+    <img loading="lazy" decoding="async" src={media.logo} alt="Shoreline Aquatics" />
   </div>
   <ul>
     <li><a href="#fleet">Fleet</a></li>

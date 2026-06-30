@@ -1,5 +1,7 @@
 'use client';
 
+import { mediaUrl } from '../../../lib/media';
+
 export function HomeAddOnsSection() {
   return (
     <section id="addons">
@@ -10,7 +12,7 @@ export function HomeAddOnsSection() {
     <div className="addons-grid">
       <div className="addon-card addon-card-feature">
         <div className="addon-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-aquatics-img-3615.webp" alt="Aerial drone footage over Lake Lewisville" />
+          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aerial-drone-video-pontoon.webp')} alt="Aerial drone footage over Lake Lewisville" />
         </div>
         <div className="addon-content">
           <div className="addon-topline">

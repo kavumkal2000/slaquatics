@@ -15,7 +15,6 @@ import { HomeLocationSection } from './components/HomeLocationSection';
 import { HomeFaqSection } from './components/HomeFaqSection';
 import { HomeReviewsSection } from './components/HomeReviewsSection';
 import { HomeInstagramSection } from './components/HomeInstagramSection';
-import { HomeNotifySection } from './components/HomeNotifySection';
 import { HomeCtaBand } from './components/HomeCtaBand';
 import { HomeFooter } from './components/HomeFooter';
 import { HomeMobileCtaBar } from './components/HomeMobileCtaBar';
@@ -37,10 +36,9 @@ export function HomePage() {
       <HomeHowSection />
       <HomeWhySection />
       <HomeLocationSection />
-      <HomeFaqSection />
       <HomeReviewsSection />
+      <HomeFaqSection />
       <HomeInstagramSection />
-      <HomeNotifySection />
       <HomeCtaBand />
       <HomeFooter />
       <HomeMobileCtaBar />

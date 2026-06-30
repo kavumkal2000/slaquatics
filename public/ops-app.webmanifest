@@ -10,12 +10,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/assets/images/shoreline-ops-app-icon-180.png",
+      "src": "https://cdn.slaquatics.com/ops/shoreline-ops-app-icon-180.png",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "/assets/images/shoreline-ops-app-icon-512.png",
+      "src": "https://cdn.slaquatics.com/ops/shoreline-ops-app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

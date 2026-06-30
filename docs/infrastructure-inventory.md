@@ -24,6 +24,7 @@ This document records the current cloud/service dependencies and the remaining m
   - `/jet-ski-rental-lewisville/`
 - Static assets are served by the OpenNext/Workers assets pipeline.
 - Search controls for private ops surfaces remain enforced in the app routes.
+- Legacy `.html` ops URLs are compatibility redirects only and are handled at the Worker boundary; they are not App Router pages or Next middleware.
 
 ### Cloudflare API and ops runtime
 
@@ -79,13 +80,16 @@ This document records the current cloud/service dependencies and the remaining m
   - SMS messaging from ops.
   - SMS review requests.
 
-### Google and GoHighLevel assets
+### Media CDN
 
 - Google Fonts are used by public and ops pages.
 - Google review/search/maps links are embedded in public pages and server-generated messaging.
-- Several images are loaded from `images.leadconnectorhq.com`.
-- The main hero video is loaded from `storage.googleapis.com/msgsndr/...`.
-- These are content/runtime dependencies but not app hosting dependencies.
+- Active website images and videos are served from R2-backed CDN domains:
+  - Development: `slaquatics-media-development` via `https://cdn.dev.slaquatics.com`.
+  - Production: `slaquatics-media-production` via `https://cdn.slaquatics.com`.
+- Object keys are organized under `site/images/`, `site/videos/`, `brand/`, `ops/`, optional `originals/`, and `manifests/media-manifest.json`.
+- CDN media binaries are not committed to the repo or placed under `public/assets`; ignored `media-source/` folders are temporary upload staging only.
+- Publish and rollback rules are documented in `docs/media-cdn.md`.
 
 ### Social automation webhooks
 
@@ -101,9 +105,15 @@ This document records the current cloud/service dependencies and the remaining m
 
 ### GitHub Actions
 
-- Defined in: `.github/workflows/health.yml`
-- Current jobs:
-  - `check`: runs `npm run check` and `npm run cf:build` on push/PR to `main` and `development`.
+- No active GitHub Actions workflow owns Cloudflare Worker deployment in this repository.
+- Cloudflare's connected build/deploy path runs the project validation command.
+
+### Legacy archive
+
+- Location: `legacy/`
+- Current role: migration accuracy and historical reference only.
+- The active Cloudflare app must not import from `legacy/` or `src/lib/legacy`.
+- `npm run start:legacy` is retained only as a local reference command for the archived Render-era app, not as a Cloudflare build, validation, or deployment surface.
 
 ### iOS native wrapper
 
@@ -178,4 +188,4 @@ Current reference points from official docs:
 3. Verify D1 row count/hash against the migrated source backup using read-only checks.
 4. Verify Stripe webhook configuration points at the Cloudflare `/api/webhooks/stripe` endpoint.
 5. Verify Resend sender/domain status for the Worker runtime.
-6. Decide whether external media should stay on GoHighLevel/Google-hosted URLs or move to Cloudflare R2/Images later.
+6. Verify the R2 media CDN custom domains and object headers after publishing development media, then production media.

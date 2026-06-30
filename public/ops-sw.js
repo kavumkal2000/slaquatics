@@ -3,8 +3,8 @@ const APP_SHELL = [
   '/ops-login',
   '/ops',
   '/ops-app.webmanifest',
-  '/assets/images/shoreline-ops-app-icon-180.png',
-  '/assets/images/shoreline-ops-app-icon-512.png'
+  'https://cdn.slaquatics.com/ops/shoreline-ops-app-icon-180.png',
+  'https://cdn.slaquatics.com/ops/shoreline-ops-app-icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

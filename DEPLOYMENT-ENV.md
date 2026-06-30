@@ -45,6 +45,7 @@ All runtime config for the Shoreline Aquatics Worker. Set non-secret values as W
 | `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_FROM_NUMBER` | Enables SMS sending from the ops tool. |
 | `GOOGLE_REVIEW_URL` | Your Google review short-link (used by the Reviews automation). |
 | `PUBLIC_SITE_URL` | Defaults to `https://slaquatics.com`. |
+| `PUBLIC_MEDIA_BASE_URL` | Development: `https://cdn.dev.slaquatics.com`; production: `https://cdn.slaquatics.com`. Declared in `wrangler.toml` with the matching `MEDIA_BUCKET` R2 binding. |
 | `PUBLIC_CORS_ALLOWED_ORIGINS` | Optional comma-separated list of allowed API origins. Leave unset only when legacy callers still require reflected CORS. |
 
 ---

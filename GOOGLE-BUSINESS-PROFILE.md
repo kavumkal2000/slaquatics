@@ -3,9 +3,9 @@
 For a local rental business, your **Google Business Profile drives more bookings than the website** — it's what shows up in the Map Pack and "jet ski rental near me" searches. Work through this once, then keep the recurring items going.
 
 ## One-time setup
-- [ ] **Claim & verify** the profile at [business.google.com](https://business.google.com) (Shoreline Aquatics, 2000 Main St, Hickory Creek, TX).
+- [ ] **Claim & verify** the profile at [business.google.com](https://business.google.com) (Shoreline Aquatics, Point Vista Rd, Hickory Creek, TX 75065, United States).
 - [ ] **Primary category:** `Boat rental service` or `Jet ski rental service` (pick the closest). Add secondary categories: `Boat tour agency`, `Marina` if relevant.
-- [ ] **NAP must match the website exactly:** Name "Shoreline Aquatics", Address "2000 Main St, Hickory Creek, TX 75065", Phone "(469) 693-7164". Inconsistent NAP hurts ranking.
+- [ ] **NAP must match the website exactly:** Name "Shoreline Aquatics", Address "Point Vista Rd, Hickory Creek, TX 75065, United States", Phone "(469) 693-7164". Inconsistent NAP hurts ranking.
 - [ ] **Hours:** Mon–Sun 8:30 AM – 8:30 PM (match the site). Set holiday hours when needed.
 - [ ] **Website link:** `https://slaquatics.com` — and add the **booking link** `https://slaquatics.com/jetski-booking/` as the "Appointment/Bookings" URL.
 - [ ] **Service area:** add Denton, Lewisville, Frisco, Flower Mound, The Colony, Little Elm, Highland Village (matches the landing pages).

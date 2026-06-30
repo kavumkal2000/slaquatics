@@ -204,8 +204,34 @@ body.nav-open { overflow: hidden; }
 }
 .hero-inner {
   position: relative; z-index: 1;
-  max-width: 1280px; width: 100%;
+  max-width: 1440px; width: 100%;
   padding: 9rem 4rem 3rem; margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(280px, 420px);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12rem, 16vw, 15rem);
+}
+.hero-copy-panel {
+  min-width: 0;
+}
+.hero-media-module {
+  justify-self: end;
+  width: min(100%, 420px);
+  aspect-ratio: 420 / 747;
+  border: 4px solid #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 26px 70px rgba(0,0,0,0.38);
+  transform: rotate(5deg);
+  transform-origin: center;
+}
+.hero-media-module img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .eyebrow { font-size: 0.92rem; letter-spacing: 0; text-transform: none; color: var(--muted); margin-bottom: 1rem; }
 .eyebrow::before { content: none; }
@@ -514,7 +540,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.2
 .bundle-action { margin-top: 1.2rem; display: flex; }
 
 /* ── ADD-ONS ── */
-.addons-grid { display: grid; grid-template-columns: minmax(0, 980px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
+.addons-grid { display: grid; grid-template-columns: minmax(0, 880px); justify-content: center; gap: 1.2rem; margin-top: 0.5rem; }
 .addon-card {
   background: var(--deep); border-radius: 14px; border: 1px solid var(--border);
   padding: 1.8rem; display: flex; flex-direction: column; gap: 0.8rem;
@@ -528,7 +554,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.2
     linear-gradient(140deg, #09172b 0%, #0b1f39 100%);
 }
 .addon-media {
-  position: relative; min-height: 360px; border-right: 1px solid rgba(255,255,255,0.06);
+  position: relative; min-height: 0; height: clamp(260px, 24vw, 320px); border-right: 1px solid rgba(255,255,255,0.06);
 }
 .addon-media::after {
   content: ""; position: absolute; inset: 0;
@@ -1051,7 +1077,9 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
 .footer-logo img { height: 70px; width: auto; margin-bottom: 1rem; }
 .footer-about { font-size: 0.85rem; color: rgba(255,255,255,0.65); line-height: 1.75; max-width: 280px; }
 .footer-socials { display: flex; gap: 0.7rem; margin-top: 1.5rem; }
-.footer-social { width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.55); text-decoration: none; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; }
+.footer-social { width: 36px; height: 36px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; justify-content: center; color: #fff; text-decoration: none; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; }
+.footer-social-icon { width: 18px; height: 18px; display: block; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.footer-social-icon path { fill: currentColor; stroke: none; }
 .footer-social:hover { background: var(--gold); border-color: var(--gold); color: #08111f; }
 .footer-col h5 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold); margin-bottom: 1.1rem; }
 .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
@@ -1089,14 +1117,23 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .nav-menu-btn { display: inline-flex; }
   .nav-phone { display: none; }
   section { padding: 4.5rem 1.5rem; }
-  .hero-inner { padding: 7rem 1.5rem 2.5rem; }
+  .hero-inner {
+    padding: 7rem 1.5rem 2.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+  }
+  .hero-media-module {
+    justify-self: start;
+    width: min(100%, 360px);
+    transform: rotate(3deg);
+  }
   .trust-inner { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 1.6rem 1.5rem; }
   .booking-calendar-shell { grid-template-columns: 1fr; }
   .calc-panel.active { grid-template-columns: 1fr; }
   .fleet-grid { grid-template-columns: 1fr; }
   .addons-grid { grid-template-columns: 1fr; }
   .addon-card-feature { grid-template-columns: 1fr; }
-  .addon-media { min-height: 250px; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .addon-media { min-height: 0; height: auto; aspect-ratio: 16 / 10; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .addon-content { padding: 1.5rem; }
   .how-grid { grid-template-columns: 1fr; }
   .how-step { padding: 1.85rem 1.1rem 1.15rem; }
@@ -1168,6 +1205,13 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .booking-calendar-day-meta { font-size: 0.64rem; }
   .booking-calendar-big-date { font-size: 1.7rem; }
   .hero-actions { gap: 0.75rem; }
+  .hero-media-module {
+    justify-self: center;
+    width: min(100%, 320px);
+    border-width: 3px;
+    border-radius: 16px;
+    transform: none;
+  }
   .hero-video-play {
     right: 1rem;
     bottom: 1rem;

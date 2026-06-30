@@ -1,10 +1,25 @@
 // @ts-expect-error OpenNext generates this file during `npm run cf:build`.
 import openNextWorker from '../.open-next/worker.js';
 
+const legacyHtmlRedirects: Record<string, string> = {
+  '/ops.html': '/ops',
+  '/ops-login.html': '/ops-login'
+};
+
 function applyEnv(env: Record<string, unknown>) {
   for (const [key, value] of Object.entries(env || {})) {
     if (typeof value === 'string') process.env[key] = value;
   }
+}
+
+function redirectLegacyHtmlRequest(request: Request) {
+  const url = new URL(request.url);
+  const destination = legacyHtmlRedirects[url.pathname];
+
+  if (!destination) return null;
+
+  url.pathname = destination;
+  return Response.redirect(url.toString(), 308);
 }
 
 async function dispatchScheduledDigest(env: Record<string, unknown>, ctx: any) {
@@ -26,6 +41,9 @@ async function dispatchScheduledDigest(env: Record<string, unknown>, ctx: any) {
 
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: any) {
+    const legacyRedirect = redirectLegacyHtmlRequest(request);
+    if (legacyRedirect) return legacyRedirect;
+
     applyEnv(env);
     return openNextWorker.fetch(request, env, ctx);
   },
