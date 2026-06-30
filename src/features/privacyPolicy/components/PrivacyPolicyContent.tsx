@@ -50,7 +50,7 @@ export function PrivacyPolicyContent() {
       <ul>
         <li>Phone: <a href="tel:4696937164">(469) 693-7164</a></li>
         <li>Email: <a href="mailto:shorelinerentals3@gmail.com">shorelinerentals3@gmail.com</a></li>
-        <li>Location: Point Vista Rd, Hickory Creek, TX 75065</li>
+        <li>Location: Point Vista Rd, Hickory Creek, TX 75065, United States</li>
       </ul>
       <div className="actions">
         <a className="btn btn-primary" href="../jetski-booking/">Start a booking request</a>

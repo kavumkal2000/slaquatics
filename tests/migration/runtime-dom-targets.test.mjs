@@ -8,24 +8,6 @@ function assertContainsId(source, id, file) {
   assert.match(source, new RegExp(`id="${id}"|id='${id}'`), `${file} should render #${id}`);
 }
 
-test('jetski booking markup restores live availability runtime targets', () => {
-  const file = 'src/features/jetskiBooking/components/JetskiBookingAvailabilitySpotlight.tsx';
-  const source = readText(file);
-
-  ['availability-spotlight-copy', 'availability-slot-grid'].forEach((id) => {
-    assertContainsId(source, id, file);
-  });
-});
-
-test('homepage notify section restores availability widget runtime targets', () => {
-  const file = 'src/features/home/components/HomeNotifySection.tsx';
-  const source = readText(file);
-
-  ['avail-date', 'avail-status', 'avail-slots'].forEach((id) => {
-    assertContainsId(source, id, file);
-  });
-});
-
 test('booking confirmation markup restores waiver payment runtime targets', () => {
   const pageFile = 'src/features/jetskiBookingConfirmation/JetskiBookingConfirmationPage.tsx';
   const formFile = 'src/features/jetskiBookingConfirmation/components/JetskiBookingConfirmationForm.tsx';

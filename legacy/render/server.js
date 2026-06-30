@@ -94,7 +94,7 @@ const PUBLIC_UNPAID_HOLD_MINUTES = Math.max(Number(process.env.PUBLIC_UNPAID_HOL
 const SHORELINE_PHONE_DISPLAY = '(469) 693-7164';
 const SHORELINE_PHONE_LINK = '4696937164';
 const SHORELINE_LOCATION_NAME = 'Shoreline Aquatics launch';
-const SHORELINE_ADDRESS = 'Point Vista Rd, Hickory Creek, TX 75065';
+const SHORELINE_ADDRESS = 'Point Vista Rd, Hickory Creek, TX 75065, United States';
 const OPS_APP_URL = process.env.OPS_APP_URL || 'https://shoreline-aquatics-ops.onrender.com/ops.html';
 const ARRIVAL_INSTRUCTIONS = [
   'Proceed down Main Street until you pass the storage units on your left.',
@@ -2737,7 +2737,7 @@ function upsertDraftBookingFromPayload(state, payload = {}, now = new Date().toI
   booking.amountDueToday = Number(((pricing.bookingDepositAmount + PROCESSING_FEE_CENTS) / 100).toFixed(2));
   booking.date = String(payload.date || '').trim();
   booking.time = String(payload.time || '').trim();
-  booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX').trim();
+  booking.location = String(payload.location || booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX 75065, United States').trim();
   booking.contactMethod = String(payload.contactMethod || booking.contactMethod || 'text').trim();
   booking.partySize = String(payload.partySize || booking.partySize || '').trim();
   booking.notes = String(payload.notes || booking.notes || '').trim();

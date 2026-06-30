@@ -58,7 +58,7 @@ function bookingRequestText(booking: any = {}) {
     `Meeting spot: ${bookingLocation(booking)}`,
     `Maps: ${LAUNCH_MAPS_URL}`,
     '',
-    'Point Vista Park directions:',
+    'Point Vista Park Directions:',
     arrivalDirectionsText(),
     '',
     'Open the booking site if you still need to finish the deposit.'
@@ -87,7 +87,7 @@ function ownerBookingAlertText(booking: any = {}) {
     `Booking status: ${booking.status || 'pending'}`,
     `Meeting spot: ${bookingLocation(booking)}`,
     `Maps: ${LAUNCH_MAPS_URL}`,
-    'Point Vista Park directions:',
+    'Point Vista Park Directions:',
     arrivalDirectionsText(),
     `Notes: ${booking.notes || 'None'}`,
     '',

@@ -71,7 +71,7 @@ export const cityRentalPages = {
     ],
     drive: {
       heading: 'The drive from Denton',
-      copy: 'From downtown Denton or UNT, Lake Lewisville is a short ~20-25 minute drive south down I-35E to the Hickory Creek launch at Point Vista Rd, Hickory Creek, TX 75065. Shoreline rents daily from 10 AM to 8 PM.'
+      copy: 'From downtown Denton or UNT, Lake Lewisville is a short ~20-25 minute drive south down I-35E to the Hickory Creek launch at Point Vista Rd, Hickory Creek, TX 75065, United States. Shoreline rents daily from 10 AM to 8 PM.'
     },
     pricingItems: [
       { heading: '2–4 Yamaha jet skis', copy: 'From $59/hr per ski on full-day blocks. Pick 2, 3, or 4 for your group.' },
@@ -118,7 +118,7 @@ export const cityRentalPages = {
     ],
     drive: {
       heading: 'The drive from Frisco',
-      copy: 'From The Star or downtown Frisco, the Hickory Creek launch on Lake Lewisville is roughly a 30-35 minute drive west via SH-121 and I-35E to Point Vista Rd, Hickory Creek, TX 75065. Shoreline rents daily from 10 AM to 8 PM.'
+      copy: 'From The Star or downtown Frisco, the Hickory Creek launch on Lake Lewisville is roughly a 30-35 minute drive west via SH-121 and I-35E to Point Vista Rd, Hickory Creek, TX 75065, United States. Shoreline rents daily from 10 AM to 8 PM.'
     },
     pricingItems: [
       { heading: '2–4 Yamaha jet skis', copy: 'From $59/hr per ski on full-day blocks. Pick 2, 3, or 4 for your group.' },
@@ -165,7 +165,7 @@ export const cityRentalPages = {
     ],
     drive: {
       heading: 'Right on Lake Lewisville',
-      copy: 'Shoreline launches from the Hickory Creek side of Lake Lewisville at Point Vista Rd, Hickory Creek, TX 75065, about a 10-15 minute drive for most Lewisville residents. Shoreline rents daily from 10 AM to 8 PM.'
+      copy: 'Shoreline launches from the Hickory Creek side of Lake Lewisville at Point Vista Rd, Hickory Creek, TX 75065, United States, about a 10-15 minute drive for most Lewisville residents. Shoreline rents daily from 10 AM to 8 PM.'
     },
     pricingItems: [
       { heading: '2–4 Yamaha jet skis', copy: 'From $59/hr per ski on full-day blocks. Pick 2, 3, or 4 for your group.' },

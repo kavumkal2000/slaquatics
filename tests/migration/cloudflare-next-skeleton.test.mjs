@@ -296,7 +296,6 @@ test('jetski booking page is split into named React sections instead of generate
     'JetskiBookingShell',
     'JetskiBookingTopbar',
     'JetskiBookingHero',
-    'JetskiBookingAvailabilitySpotlight',
     'JetskiBookingFirstTimer',
     'JetskiBookingFormCard',
     'JetskiBookingStickyMobileBar'
@@ -308,17 +307,14 @@ test('jetski booking page is split into named React sections instead of generate
   assert.equal(existsSync('src/features/jetskiBooking/components/JetskiBookingDiv2.tsx'), false);
 });
 
-test('public pages keep live availability markup required by client behavior', () => {
-  const homeNotify = readText('src/features/home/components/HomeNotifySection.tsx');
-  const booking = readText('src/features/jetskiBooking/components/JetskiBookingAvailabilitySpotlight.tsx');
+test('public pages do not render removed availability promo sections', () => {
+  const homePage = readText('src/features/home/HomePage.tsx');
+  const bookingPage = readText('src/features/jetskiBooking/JetskiBookingPage.tsx');
 
-  for (const id of ['avail-date', 'avail-status', 'avail-slots']) {
-    assert.match(homeNotify, new RegExp(`id="${id}"`), `Home availability widget should include ${id}`);
-  }
-
-  for (const id of ['availability-spotlight-copy', 'availability-slot-grid']) {
-    assert.match(booking, new RegExp(`id="${id}"`), `Booking availability spotlight should include ${id}`);
-  }
+  assert.doesNotMatch(homePage, /HomeNotifySection/);
+  assert.doesNotMatch(bookingPage, /JetskiBookingAvailabilitySpotlight/);
+  assert.equal(existsSync('src/features/home/components/HomeNotifySection.tsx'), false);
+  assert.equal(existsSync('src/features/jetskiBooking/components/JetskiBookingAvailabilitySpotlight.tsx'), false);
 });
 
 test('public booking completion routes use typed React behavior instead of generated script shortcuts', () => {
