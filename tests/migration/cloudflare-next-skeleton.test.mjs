@@ -31,8 +31,8 @@ test('modern stack scripts and dependencies are declared', () => {
   assert.equal(pkg.scripts.build, 'next build');
   assert.equal(pkg.scripts['cf:build'], 'opennextjs-cloudflare build');
   assert.equal(pkg.scripts['cf:preview'], 'opennextjs-cloudflare preview');
-  assert.equal(pkg.scripts['cf:deploy:dev'], 'wrangler deploy --env development');
-  assert.equal(pkg.scripts['cf:deploy:prod'], 'wrangler deploy --env production');
+  assert.equal(pkg.scripts['cf:deploy:dev'], 'opennextjs-cloudflare deploy --env development');
+  assert.equal(pkg.scripts['cf:deploy:prod'], 'opennextjs-cloudflare deploy --env production');
   assert.ok(pkg.dependencies.next);
   assert.ok(pkg.dependencies.react);
   assert.ok(pkg.dependencies['react-dom']);
