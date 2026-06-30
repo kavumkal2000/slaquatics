@@ -896,6 +896,86 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
   globalThis.fetch = originalFetch;
 });
 
+test('/api/public/create-checkout-session charges boat add-ons in Stripe and stores the due-today amount', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: 'cs_boat_addons_123', url: 'https://checkout.stripe.test/pay/cs_boat_addons_123' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({ STRIPE_SECRET_KEY: 'sk_test_boat_addons', PUBLIC_SITE_URL: 'https://slaquatics.com' }, async () => {
+      const route = await import(`../../src/app/api/public/create-checkout-session/route.ts?case=boat-addons-${Date.now()}`);
+      const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=boat-addons-${Date.now()}`);
+      const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=boat-addons-${Date.now()}`);
+      const payload = await responseJson(await route.POST(new Request('https://slaquatics.test/api/public/create-checkout-session', {
+        method: 'POST',
+        headers: { origin: 'https://slaquatics.com' },
+        body: JSON.stringify({
+          booking: {
+            name: 'Boat Addons Guest',
+            phone: '4695551777',
+            email: 'boat-addons@example.com',
+            craft: 'partyboat',
+            duration: 2,
+            date: '2026-07-10',
+            time: '10:00',
+            karaoke: true,
+            tube: true,
+            waiver: {
+              acceptedRisk: true,
+              acceptedDamage: true,
+              verified: true,
+              initials: 'BA',
+              signature: 'Boat Addons Guest'
+            }
+          }
+        })
+      })));
+
+      assert.equal(payload.ok, true);
+      assert.equal(payload.amountDue, 155);
+      assert.equal(requests.length, 1);
+      const stripeParams = new URLSearchParams(String(requests[0].init.body));
+      assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.get('line_items[1][price_data][unit_amount]'), '500');
+      assert.equal(stripeParams.get('line_items[2][price_data][product_data][name]'), 'Karaoke Setup');
+      assert.equal(stripeParams.get('line_items[2][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.get('line_items[3][price_data][product_data][name]'), 'Towable Tube');
+      assert.equal(stripeParams.get('line_items[3][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.get('metadata[karaokeAmount]'), '50.00');
+      assert.equal(stripeParams.get('metadata[tubeAmount]'), '50.00');
+      assert.equal(stripeParams.get('metadata[amountDueToday]'), '155.00');
+
+      process.env.OPS_DEV_PASSWORD = 'payment-test-password';
+      process.env.SESSION_SECRET = 'payment-test-session-secret';
+      const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'developer', password: 'payment-test-password' })
+      }));
+      const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
+        headers: { cookie: login.headers.get('set-cookie') || '' }
+      })));
+      const booking = state.state.bookings.find((entry) => entry.paymentSessionId === 'cs_boat_addons_123');
+      assert.equal(booking.total, 420);
+      assert.equal(booking.baseTotal, 320);
+      assert.equal(booking.karaoke, true);
+      assert.equal(booking.karaokeAmount, 50);
+      assert.equal(booking.tube, true);
+      assert.equal(booking.tubeAmount, 50);
+      assert.equal(booking.depositAmount, 50);
+      assert.equal(booking.processingFeeAmount, 5);
+      assert.equal(booking.amountDueToday, 155);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('/api/public/create-checkout-session rejects bookings ending after 8 PM before Stripe', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
