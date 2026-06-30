@@ -397,7 +397,8 @@ test('/api/public/booking-request customer email includes launch address and dir
       assert.equal(resendRequests.length, 1);
       const emailBody = JSON.parse(String(resendRequests[0].init.body));
       assert.deepEqual(emailBody.to, ['email-directions@example.com']);
-      assert.match(emailBody.text, /Point Vista Rd, Hickory Creek, TX 75065/);
+      assert.match(emailBody.text, /Point Vista Rd, Hickory Creek, TX 75065, United States/);
+      assert.match(emailBody.text, /Point Vista Park Directions/);
       assert.match(emailBody.text, /drive past it/i);
       assert.match(emailBody.text, /dead end/i);
       assert.match(emailBody.text, /walk down to the shoreline/i);
@@ -1084,7 +1085,8 @@ test('/api/public/checkout-session retrieves Stripe session and marks the matchi
     const emailBody = JSON.parse(String(resendRequests[0].init.body));
     assert.deepEqual(emailBody.to, ['paid@example.com']);
     assert.match(emailBody.subject, /Shoreline Aquatics booking confirmed/i);
-    assert.match(emailBody.text, /Point Vista Rd, Hickory Creek, TX 75065/);
+    assert.match(emailBody.text, /Point Vista Rd, Hickory Creek, TX 75065, United States/);
+    assert.match(emailBody.text, /Point Vista Park Directions/);
     assert.match(emailBody.text, /drive past it/i);
     assert.match(emailBody.text, /dead end/i);
     assert.match(emailBody.text, /walk down to the shoreline/i);

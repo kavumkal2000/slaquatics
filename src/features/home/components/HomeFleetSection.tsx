@@ -22,6 +22,7 @@ export function HomeFleetSection() {
           <img className="slide active" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4856.webp')} alt="Customers on Yamaha jet skis at sunset on Lake Lewisville" />
           <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4198.webp')} alt="Customer riding a Yamaha jet ski on Lake Lewisville" />
           <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-e1efe821-ce35-4bb6-9bcf-46ea25bf784e.webp')} alt="Shoreline Aquatics jet ski customers on the water" />
+          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-jetski-rentals-action-20260630.webp')} alt="Shoreline Aquatics Yamaha jet skis cruising on Lake Lewisville" />
           <button className="slider-arrow prev" type="button" aria-label="Previous photo">‹</button>
           <button className="slider-arrow next" type="button" aria-label="Next photo">›</button>
           <div className="slider-dots" />

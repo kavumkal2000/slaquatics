@@ -286,12 +286,14 @@ h3{font-size:1.7rem}
       </div>
       <div class="content-grid" style="margin-top:24px;">
         <div class="card">
-          <div class="block-label">Arrival Directions</div>
+          <div class="block-label">Point Vista Park Directions</div>
           <h2>Shoreline Aquatics launch</h2>
-          <div class="arrival-copy">The launch meeting spot is at <strong style="color:var(--ink)">Point Vista Rd, Hickory Creek, TX</strong>. Use the directions below once you arrive near the park entrance.</div>
+          <div class="arrival-copy">The launch meeting spot is at <strong style="color:var(--ink)">Point Vista Rd, Hickory Creek, TX 75065, United States</strong>. Use the directions below once you arrive near the park entrance.</div>
           <div class="address-card">
             <strong style="display:block;color:var(--ink);margin-bottom:6px">Address</strong>
-            Point Vista Rd, Hickory Creek, TX
+            Point Vista Rd<br>
+            Hickory Creek, TX 75065<br>
+            United States
           </div>
           <div class="arrival-list">
             <div class="arrival-item">1. Head down Point Vista Road, passing Hickory Park on your right.</div>
@@ -420,7 +422,7 @@ function showBooking(booking) {
   setText('summary-package', `${booking.craftLabel} · ${booking.durationLabel}`);
   setText('summary-date', formatDateLabel(booking.date));
   setText('summary-time', formatTimeLabel(booking.time));
-  setText('summary-location', booking.location || 'Shoreline Aquatics launch, Point Vista Rd, Hickory Creek, TX');
+  setText('summary-location', booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX 75065, United States');
   setText('summary-customer', booking.name ? `${booking.name} · ${booking.phone || ''}` : '-');
   setText('summary-deposit', formatCurrency(booking.depositAmount || 50));
   setText('summary-processing-fee', formatCurrency(booking.processingFeeAmount || 5));

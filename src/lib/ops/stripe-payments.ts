@@ -292,7 +292,7 @@ export async function sendBookingConfirmationEmail(state: OpsState, booking: any
     `Meeting spot: ${booking.location || LAUNCH_LOCATION_LABEL}`,
     `Maps: ${LAUNCH_MAPS_URL}`,
     '',
-    'Point Vista Park directions:',
+    'Point Vista Park Directions:',
     arrivalDirectionsText(),
     '',
     'We will see you at the launch.'

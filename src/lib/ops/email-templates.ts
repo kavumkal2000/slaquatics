@@ -161,7 +161,7 @@ export function renderBookingRequestCustomerEmail({
       { label: 'Meeting spot', value: booking.location || booking.meetingSpot || 'Point Vista Park' },
       { label: 'Maps', value: 'Open directions', href: mapsUrl }
     ],
-    sections: [`Point Vista Park directions:\n${directions}`],
+    sections: [`Point Vista Park Directions:\n${directions}`],
     actions: [{ label: 'Open Maps', href: mapsUrl }]
   });
 }
@@ -187,7 +187,7 @@ export function renderBookingConfirmationEmail({
       { label: 'Meeting spot', value: booking.location || booking.meetingSpot || 'Point Vista Park' },
       { label: 'Maps', value: 'Open directions', href: mapsUrl }
     ],
-    sections: [`Point Vista Park directions:\n${directions}`],
+    sections: [`Point Vista Park Directions:\n${directions}`],
     actions: [{ label: 'Open Maps', href: mapsUrl }]
   });
 }
@@ -222,7 +222,7 @@ export function renderOwnerBookingAlertEmail({
       { label: 'Maps', value: 'Open directions', href: mapsUrl }
     ],
     sections: [
-      `Point Vista Park directions:\n${directions}`,
+      `Point Vista Park Directions:\n${directions}`,
       `Notes:\n${booking.notes || 'None'}`
     ],
     actions: [{ label: 'Open Maps', href: mapsUrl }],

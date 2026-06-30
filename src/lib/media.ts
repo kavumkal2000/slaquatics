@@ -16,6 +16,7 @@ export function mediaUrl(key: MediaKey): string {
 export const media = {
   logo: mediaUrl('brand/shoreline-logo.webp'),
   heroVideo: mediaUrl('site/videos/shoreline-aquatics-hero.mp4'),
+  heroModuleAnimation: mediaUrl('site/images/shoreline-aquatics-hero-module-20260630.webp?v=20260630'),
   heroPoster: mediaUrl('site/images/shoreline-jetski-group-collage.webp'),
   opsIcon180: mediaUrl('ops/shoreline-ops-app-icon-180.png'),
   opsIcon512: mediaUrl('ops/shoreline-ops-app-icon-512.png')
