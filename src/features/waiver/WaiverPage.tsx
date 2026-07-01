@@ -2,11 +2,8 @@ import { WaiverClientBehavior } from './WaiverClientBehavior';
 import { WaiverStructuredData } from './WaiverStructuredData';
 import { WaiverStyles } from './WaiverStyles';
 import { WaiverFormSection } from './components/WaiverFormSection';
-import { WaiverHero } from './components/WaiverHero';
 import { WaiverShell } from './components/WaiverShell';
-import { WaiverSuccessCard } from './components/WaiverSuccessCard';
-import { WaiverTerms } from './components/WaiverTerms';
-import { WaiverTopbar } from './components/WaiverTopbar';
+import { SlaquaticsCmsPublicPageSection } from '../siteCms/SlaquaticsCmsPublicPageSection';
 
 export function WaiverPage() {
   return (
@@ -14,15 +11,15 @@ export function WaiverPage() {
       <WaiverStyles />
       <WaiverStructuredData />
       <WaiverShell>
-        <WaiverTopbar />
-        <WaiverHero />
+        <SlaquaticsCmsPublicPageSection slug="waiver" includeTypes={['topbar', 'hero']} />
         <div className="content-grid">
           <div className="form-column">
             <WaiverFormSection />
-            <WaiverSuccessCard />
+            <SlaquaticsCmsPublicPageSection slug="waiver" includeIds={['waiver-success-copy']} />
           </div>
-          <WaiverTerms />
+          <SlaquaticsCmsPublicPageSection slug="waiver" includeIds={['waiver-terms']} />
         </div>
+        <SlaquaticsCmsPublicPageSection slug="waiver" excludeTypes={['topbar', 'hero']} excludeIds={['waiver-success-copy', 'waiver-terms']} />
       </WaiverShell>
       <WaiverClientBehavior />
     </>

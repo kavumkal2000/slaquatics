@@ -845,6 +845,13 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
           time: '10:00',
           total: 1,
           baseTotal: 1,
+          amountDueToday: 1,
+          depositAmount: 1,
+          processingFeeAmount: 0,
+          stripePriceId: 'price_client_controlled',
+          stripeProductId: 'prod_client_controlled',
+          stripeLookupKey: 'cms-client-price',
+          products: [{ productKey: 'booking-deposit', displayPrice: '$1', unitAmount: 100 }],
           drone: true,
           karaoke: false,
           tube: false,
@@ -872,6 +879,13 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
     assert.match(String(stripeParams.get('success_url')), /booking-thank-you/);
     assert.ok(stripeParams.get('metadata[bookingId]'));
     assert.equal(stripeParams.get('metadata[totalQuote]'), '365');
+    assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '5000');
+    assert.equal(stripeParams.get('line_items[1][price_data][unit_amount]'), '500');
+    assert.equal(stripeParams.get('metadata[depositAmount]'), '50.00');
+    assert.equal(stripeParams.get('metadata[processingFeeAmount]'), '5.00');
+    assert.equal(stripeParams.get('metadata[amountDueToday]'), '55.00');
+    assert.equal(stripeParams.has('line_items[0][price]'), false);
+    assert.equal(stripeParams.has('line_items[0][price_data][product]'), false);
 
     process.env.OPS_DEV_PASSWORD = 'payment-test-password';
     process.env.SESSION_SECRET = 'payment-test-session-secret';

@@ -31,8 +31,8 @@ test('modern stack scripts and dependencies are declared', () => {
   assert.equal(pkg.scripts.build, 'next build');
   assert.equal(pkg.scripts['cf:build'], 'opennextjs-cloudflare build');
   assert.equal(pkg.scripts['cf:preview'], 'opennextjs-cloudflare preview');
-  assert.equal(pkg.scripts['cf:deploy:dev'], 'wrangler deploy --env development');
-  assert.equal(pkg.scripts['cf:deploy:prod'], 'wrangler deploy --env production');
+  assert.equal(pkg.scripts['cf:deploy:dev'], 'opennextjs-cloudflare deploy --env development');
+  assert.equal(pkg.scripts['cf:deploy:prod'], 'opennextjs-cloudflare deploy --env production');
   assert.ok(pkg.dependencies.next);
   assert.ok(pkg.dependencies.react);
   assert.ok(pkg.dependencies['react-dom']);
@@ -68,6 +68,34 @@ test('Next.js config pins the repository root for deterministic builds', () => {
 
   assert.match(config, /turbopack/);
   assert.match(config, /root/);
+});
+
+test('Next.js config hardens CMS admin API login and preview routes', () => {
+  const config = readText('next.config.mjs');
+
+  assert.match(config, /const cmsSecurityHeaders/);
+  for (const route of [
+    "source: '/cms'",
+    "source: '/cms/:path*'",
+    "source: '/cms-login'",
+    "source: '/api/cms/:path*'"
+  ]) {
+    assert.match(config, new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  for (const header of [
+    "Cache-Control', value: 'no-store'",
+    "X-Robots-Tag', value: 'noindex'",
+    'Content-Security-Policy',
+    "frame-src 'self'",
+    "frame-ancestors 'self'",
+    "object-src 'none'",
+    'X-Content-Type-Options',
+    'Referrer-Policy',
+    'Permissions-Policy'
+  ]) {
+    assert.match(config, new RegExp(header.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.doesNotMatch(config, /frame-ancestors 'none'/);
 });
 
 test('root layout provides required html and body tags', () => {
@@ -223,14 +251,16 @@ test('Wrangler D1 bindings use created Cloudflare database IDs, not placeholders
   const wrangler = readText('wrangler.toml');
   const databaseIds = [...wrangler.matchAll(/database_id = "([^"]+)"/g)].map((match) => match[1]);
 
-  assert.equal(databaseIds.length, 3);
+  assert.equal(databaseIds.length, 6);
   databaseIds.forEach((id) => {
     assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     assert.doesNotMatch(id, /replace-with/);
   });
-  assert.equal(new Set(databaseIds).size, 2);
+  assert.equal(new Set(databaseIds).size, 4);
   assert.match(wrangler, /database_name = "slaquatics-ops-development"\ndatabase_id = "cd7a9b41-a04f-4143-b081-a02bd245f1ac"/);
   assert.match(wrangler, /database_name = "slaquatics-ops-production"\ndatabase_id = "11cf5caf-2cd8-4851-aaa4-0aa754838287"/);
+  assert.match(wrangler, /database_name = "slaquatics-cms-development"\ndatabase_id = "efd7373f-78eb-4a4b-9d65-614e7a620e43"/);
+  assert.match(wrangler, /database_name = "slaquatics-cms-production"\ndatabase_id = "00f597be-2f26-4af7-b705-67c8553b7221"/);
 });
 
 test('D1 compatibility migration preserves the current single JSON ops_state model', () => {
@@ -294,8 +324,6 @@ test('jetski booking page is split into named React sections instead of generate
   assert.doesNotMatch(page, /JetskiBookingDiv[12]/);
   for (const component of [
     'JetskiBookingShell',
-    'JetskiBookingTopbar',
-    'JetskiBookingHero',
     'JetskiBookingFirstTimer',
     'JetskiBookingFormCard',
     'JetskiBookingStickyMobileBar'
@@ -303,6 +331,8 @@ test('jetski booking page is split into named React sections instead of generate
     assert.match(page, new RegExp(component));
     assert.ok(existsSync(`src/features/jetskiBooking/components/${component}.tsx`), `${component} should exist`);
   }
+  assert.match(page, /SlaquaticsCmsPublicPageSection/);
+  assert.ok(existsSync('src/features/siteCms/SlaquaticsCmsPublicRenderer.tsx'));
   assert.equal(existsSync('src/features/jetskiBooking/components/JetskiBookingDiv1.tsx'), false);
   assert.equal(existsSync('src/features/jetskiBooking/components/JetskiBookingDiv2.tsx'), false);
 });
@@ -333,8 +363,6 @@ test('booking confirmation page is split into named React sections instead of a 
   assert.doesNotMatch(page, /JetskiBookingConfirmationDiv1/);
   for (const component of [
     'JetskiBookingConfirmationShell',
-    'JetskiBookingConfirmationTopbar',
-    'JetskiBookingConfirmationHero',
     'JetskiBookingConfirmationEmptyState',
     'JetskiBookingConfirmationForm',
     'JetskiBookingConfirmationSummary'
@@ -342,6 +370,7 @@ test('booking confirmation page is split into named React sections instead of a 
     assert.match(page, new RegExp(component));
     assert.ok(existsSync(`src/features/jetskiBookingConfirmation/components/${component}.tsx`), `${component} should exist`);
   }
+  assert.match(page, /SlaquaticsCmsPublicPageSection/);
   assert.equal(existsSync('src/features/jetskiBookingConfirmation/components/JetskiBookingConfirmationDiv1.tsx'), false);
 });
 
@@ -351,15 +380,15 @@ test('booking thank-you page is split into named React sections instead of a gen
   assert.doesNotMatch(page, /BookingThankYouDiv1/);
   for (const component of [
     'BookingThankYouShell',
-    'BookingThankYouTopbar',
     'BookingThankYouEmptyState',
-    'BookingThankYouHero',
-    'BookingThankYouConfirmation',
     'BookingThankYouSummary',
-    'BookingThankYouArrival'
   ]) {
     assert.match(page, new RegExp(component));
     assert.ok(existsSync(`src/features/bookingThankYou/components/${component}.tsx`), `${component} should exist`);
+  }
+  assert.match(page, /SlaquaticsCmsPublicPageSection/);
+  for (const cmsBlock of ['booking-thank-you-confirmation-copy', 'booking-thank-you-arrival', 'booking-thank-you-launch-photo']) {
+    assert.match(page, new RegExp(cmsBlock));
   }
   assert.equal(existsSync('src/features/bookingThankYou/components/BookingThankYouDiv1.tsx'), false);
 });
@@ -380,33 +409,30 @@ test('waiver page is split into named React sections instead of a generated div 
   assert.doesNotMatch(page, /WaiverDiv1/);
   for (const component of [
     'WaiverShell',
-    'WaiverTopbar',
-    'WaiverHero',
     'WaiverFormSection',
-    'WaiverSuccessCard',
-    'WaiverTerms'
   ]) {
     assert.match(page, new RegExp(component));
     assert.ok(existsSync(`src/features/waiver/components/${component}.tsx`), `${component} should exist`);
   }
+  assert.match(page, /SlaquaticsCmsPublicPageSection/);
+  assert.match(page, /waiver-success-copy/);
+  assert.match(page, /waiver-terms/);
   assert.equal(existsSync('src/features/waiver/components/WaiverDiv1.tsx'), false);
 });
 
-test('city SEO pages use shared typed city rental components instead of generated div bodies', () => {
+test('city SEO pages use shared typed CMS-backed city content instead of generated div bodies', () => {
   const routes = [
     ['jetSkiRentalDenton', 'JetSkiRentalDenton'],
     ['jetSkiRentalFrisco', 'JetSkiRentalFrisco'],
     ['jetSkiRentalLewisville', 'JetSkiRentalLewisville']
   ];
 
-  assert.ok(existsSync('src/features/cityRental/CityRentalPage.tsx'));
-  assert.ok(existsSync('src/features/cityRental/cityRentalContent.tsx'));
+  assert.ok(existsSync('src/features/siteCms/SlaquaticsCmsPublicRenderer.tsx'));
 
   for (const [feature, prefix] of routes) {
     const page = readText(`src/features/${feature}/${prefix}Page.tsx`);
     assert.doesNotMatch(page, new RegExp(`${prefix}Div1`));
-    assert.match(page, /CityRentalPage/);
-    assert.match(page, /cityRentalPages/);
+    assert.match(page, /SlaquaticsCmsPublicPageSection/);
     assert.equal(existsSync(`src/features/${feature}/components/${prefix}Div1.tsx`), false);
   }
 });
@@ -416,11 +442,9 @@ test('privacy policy page is split into named React sections instead of a genera
 
   assert.doesNotMatch(page, /PrivacyPolicyDiv1/);
   assert.match(page, /PrivacyPolicyShell/);
-  assert.match(page, /PrivacyPolicyBrandLink/);
-  assert.match(page, /PrivacyPolicyContent/);
+  assert.match(page, /SlaquaticsCmsPublicPageSection/);
   assert.ok(existsSync('src/features/privacyPolicy/components/PrivacyPolicyShell.tsx'));
-  assert.ok(existsSync('src/features/privacyPolicy/components/PrivacyPolicyBrandLink.tsx'));
-  assert.ok(existsSync('src/features/privacyPolicy/components/PrivacyPolicyContent.tsx'));
+  assert.ok(existsSync('src/features/siteCms/SlaquaticsCmsPublicRenderer.tsx'));
   assert.equal(existsSync('src/features/privacyPolicy/components/PrivacyPolicyDiv1.tsx'), false);
 });
 
@@ -436,14 +460,14 @@ test('ops login page is split into named React sections instead of generated div
 
   assert.doesNotMatch(page, /OpsLoginDiv[12]/);
   for (const component of [
-    'OpsLoginInstallBanner',
     'OpsLoginShell',
-    'OpsLoginHero',
     'OpsLoginPanel'
   ]) {
     assert.match(page, new RegExp(component));
     assert.ok(existsSync(`src/features/opsLogin/components/${component}.tsx`), `${component} should exist`);
   }
+  assert.match(page, /SlaquaticsCmsPublicPageSection/);
+  assert.match(page, /ops-login-install-banner/);
   assert.equal(existsSync('src/features/opsLogin/components/OpsLoginDiv1.tsx'), false);
   assert.equal(existsSync('src/features/opsLogin/components/OpsLoginDiv2.tsx'), false);
 });
@@ -1123,7 +1147,7 @@ test('all migrated routes are composed from feature components, not LegacyHtml',
     const pagePath = `src/app/${route}/page.tsx`;
     const page = readText(pagePath);
     assert.doesNotMatch(page, /LegacyHtml/, `${pagePath} should not import the temporary legacy wrapper`);
-    assert.match(page, /<.+Page \/>/, `${pagePath} should render a named feature page component`);
+    assert.match(page, /<.+Page(?:\s[^>]*)? \/>/, `${pagePath} should render a named feature page component`);
   }
 });
 

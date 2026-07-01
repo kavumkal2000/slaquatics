@@ -3,23 +3,27 @@ import { JetskiBookingStructuredData } from './JetskiBookingStructuredData';
 import { JetskiBookingStyles } from './JetskiBookingStyles';
 import { JetskiBookingFirstTimer } from './components/JetskiBookingFirstTimer';
 import { JetskiBookingFormCard } from './components/JetskiBookingFormCard';
-import { JetskiBookingHero } from './components/JetskiBookingHero';
 import { JetskiBookingShell } from './components/JetskiBookingShell';
 import { JetskiBookingStickyMobileBar } from './components/JetskiBookingStickyMobileBar';
-import { JetskiBookingTopbar } from './components/JetskiBookingTopbar';
+import { SlaquaticsCmsPublicPageSection } from '../siteCms/SlaquaticsCmsPublicPageSection';
+import type { BookingFlowPanelContent } from '../../lib/site-cms/booking-panels';
 
-export function JetskiBookingPage() {
+type JetskiBookingPageProps = {
+  bookingPanel?: BookingFlowPanelContent;
+};
+
+export function JetskiBookingPage({ bookingPanel }: JetskiBookingPageProps = {}) {
   return (
     <>
       <JetskiBookingStyles />
       <JetskiBookingStructuredData />
       <JetskiBookingShell>
-        <JetskiBookingTopbar />
-        <JetskiBookingHero />
+        <SlaquaticsCmsPublicPageSection slug="jetski-booking" includeTypes={['topbar', 'hero']} />
         <JetskiBookingFirstTimer />
         <div className="content-grid">
-          <JetskiBookingFormCard />
+          <JetskiBookingFormCard content={bookingPanel} />
         </div>
+        <SlaquaticsCmsPublicPageSection slug="jetski-booking" excludeTypes={['topbar', 'hero']} />
       </JetskiBookingShell>
       <JetskiBookingStickyMobileBar />
       <JetskiBookingClientBehavior />

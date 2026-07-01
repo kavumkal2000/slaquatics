@@ -1,10 +1,13 @@
 // @ts-expect-error OpenNext generates this file during `npm run cf:build`.
 import openNextWorker from '../.open-next/worker.js';
+import { isCmsHost, routeCmsHostRequest } from './lib/cms/host-routing.ts';
 
 const legacyHtmlRedirects: Record<string, string> = {
   '/ops.html': '/ops',
   '/ops-login.html': '/ops-login'
 };
+
+// CMS hosts expose /cms-login, /cms/content, /cms/media, and /cms/preview through routeCmsHostRequest.
 
 function applyEnv(env: Record<string, unknown>) {
   for (const [key, value] of Object.entries(env || {})) {
@@ -41,11 +44,24 @@ async function dispatchScheduledDigest(env: Record<string, unknown>, ctx: any) {
 
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: any) {
-    const legacyRedirect = redirectLegacyHtmlRequest(request);
+    const cmsEnv = {
+      CMS_DEV_HOST: 'cms.dev.slaquatics.com',
+      CMS_PROD_HOST: 'cms.slaquatics.com',
+      ...env
+    };
+    const cmsRoute = routeCmsHostRequest(request, cmsEnv);
+    if (cmsRoute instanceof Response) return cmsRoute;
+    const routedRequest = cmsRoute || request;
+    if (isCmsHost(new URL(routedRequest.url).host, cmsEnv)) {
+      applyEnv(cmsEnv);
+      return openNextWorker.fetch(routedRequest, cmsEnv, ctx);
+    }
+
+    const legacyRedirect = redirectLegacyHtmlRequest(routedRequest);
     if (legacyRedirect) return legacyRedirect;
 
     applyEnv(env);
-    return openNextWorker.fetch(request, env, ctx);
+    return openNextWorker.fetch(routedRequest, env, ctx);
   },
 
   async scheduled(_event: any, env: Record<string, unknown>, ctx: any) {

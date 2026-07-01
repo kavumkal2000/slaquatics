@@ -1,107 +1,147 @@
-'use client';
+import type { CmsContent } from '../../../lib/cms/core';
+import { CMS_HOME_FLEET_SECTION, cmsSlaquaticsSiteConfig, loadSlaquaticsCmsContent } from '../../../lib/site-cms/slaquatics';
 
-import { mediaUrl } from '../../../lib/media';
+type CmsServiceItem = {
+  id: string;
+  badge: string;
+  title: string;
+  statLabel: string;
+  price: string;
+  copy: string;
+  rateNote?: string;
+  perks: string[];
+  buttons: { label: string; href: string; variant: string }[];
+  images: { src: string; alt: string }[];
+};
 
-export function HomeFleetSection() {
+type FleetBlockProps = {
+  eyebrow: string;
+  heading: string;
+  copy: string;
+  banner?: {
+    href: string;
+    strong: string;
+    text: string;
+    cta: string;
+  };
+  items: CmsServiceItem[];
+};
+
+type BundleBlockProps = {
+  heading: string;
+  copy: string;
+  badges: string[];
+  buttons: { label: string; href: string; variant: string }[];
+  images: { src: string; alt: string }[];
+};
+
+function fleetBlockProps(content: CmsContent): FleetBlockProps | undefined {
+  return content.blocks.find((block) => block.type === 'service-list')?.props as FleetBlockProps;
+}
+
+function bundleBlockProps(content: CmsContent): BundleBlockProps | undefined {
+  return content.blocks.find((block) => block.type === 'cta-band')?.props as BundleBlockProps;
+}
+
+function FleetMedia({ item }: { item: CmsServiceItem }) {
+  const isSlider = item.images.length > 1;
   return (
-    <section id="fleet" className="fleet-section">
-  <div className="section-inner">
-    <div className="section-tag">Our Fleet</div>
-    <h2>Pick Your Ride First</h2>
-    <p className="section-sub">Pick what fits your group and head straight to booking.</p>
-    <a className="holiday-banner" href="./jetski-booking/?type=jetski&craft=jetski2&date=2026-07-04">
-      <span className="holiday-banner-text">
-        <strong>July 4th</strong>
-        2 jet skis (4hr $900 / 8hr $1,350) or the boat (4hr $1,000 / 8hr $2,000) — 4 or 8 hour blocks only.
-      </span>
-      <span className="holiday-banner-cta">Book the 4th →</span>
-    </a>
-    <div className="fleet-grid">
-      <div className="fleet-card" id="jetski">
-        <div className="fleet-media fleet-slider">
-          <img className="slide active" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4856.webp')} alt="Customers on Yamaha jet skis at sunset on Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4198.webp')} alt="Customer riding a Yamaha jet ski on Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-e1efe821-ce35-4bb6-9bcf-46ea25bf784e.webp')} alt="Shoreline Aquatics jet ski customers on the water" />
-          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-jetski-rentals-action-20260630.webp')} alt="Shoreline Aquatics Yamaha jet skis cruising on Lake Lewisville" />
+    <div className={`fleet-media${isSlider ? ' fleet-slider' : ''}`}>
+      {item.images.map((image, index) => (
+        <img
+          className={isSlider ? `slide${index === 0 ? ' active' : ''}` : undefined}
+          loading="lazy"
+          decoding="async"
+          src={image.src}
+          alt={image.alt}
+          key={image.src}
+        />
+      ))}
+      {isSlider ? (
+        <>
           <button className="slider-arrow prev" type="button" aria-label="Previous photo">‹</button>
           <button className="slider-arrow next" type="button" aria-label="Next photo">›</button>
           <div className="slider-dots" />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function FleetCard({ item }: { item: CmsServiceItem }) {
+  const primaryButton = item.buttons[0];
+  return (
+    <div className="fleet-card" id={item.id}>
+      <FleetMedia item={item} />
+      <div className="fleet-body">
+        <div className="fleet-badge">{item.badge}</div>
+        <div className="fleet-title-row">
+          <div className="fleet-title">{item.title}</div>
+          <div className="fleet-stat">
+            <div className="fleet-stat-label">{item.statLabel}</div>
+            <div className="fleet-stat-value">{item.price}</div>
+          </div>
         </div>
-        <div className="fleet-body">
-          <div className="fleet-badge">2 to 4 Yamaha Jet Skis</div>
-          <div className="fleet-title-row">
-            <div className="fleet-title">Jet Ski Rentals</div>
-            <div className="fleet-stat">
-              <div className="fleet-stat-label">Starting as low as</div>
-              <div className="fleet-stat-value">$59/hr</div>
-            </div>
-          </div>
-          <p className="fleet-desc">Choose 2, 3, or 4 Yamaha jet skis, then pick the number of hours that fits your day on the water.</p>
-          <div className="fleet-rate-note">Rates begin at <strong style={{color: 'var(--gold)'}}>$59/hr per ski</strong> on the longest block, with full pricing, deposits, and add-ons shown during booking.</div>
-          <div className="fleet-perks">
-            <span className="fleet-perk">Life Jackets</span>
-            <span className="fleet-perk">Full Tank</span>
-            <span className="fleet-perk">Fast &amp; Easy Booking</span>
-            <span className="fleet-perk">Cooler</span>
-            <span className="fleet-perk">Safety Briefing</span>
-            <span className="fleet-perk">No License Needed</span>
-          </div>
+        <p className="fleet-desc">{item.copy}</p>
+        {item.rateNote ? <div className="fleet-rate-note">{item.rateNote}</div> : null}
+        <div className="fleet-perks">
+          {item.perks.map((perk) => <span className="fleet-perk" key={perk}>{perk}</span>)}
+        </div>
+        {primaryButton ? (
           <div className="fleet-actions">
-            <a href="#booking" className="btn-primary">Choose Jet Skis</a>
+            <a href={primaryButton.href} className="btn-primary">{primaryButton.label}</a>
           </div>
-        </div>
-      </div>
-      <div className="fleet-card" id="boat">
-        <div className="fleet-media">
-          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-pontoon-crop-final.png')} alt="Luxury tritoon on Lake Lewisville seating up to 14 guests" />
-        </div>
-        <div className="fleet-body">
-          <div className="fleet-badge">Starcraft Tritoon · Seats Up to 14</div>
-          <div className="fleet-title-row">
-            <div className="fleet-title">Boat Rental</div>
-            <div className="fleet-stat">
-              <div className="fleet-stat-label">Starting at</div>
-              <div className="fleet-stat-value">$160/hr</div>
-            </div>
-          </div>
-          <p className="fleet-desc">It's a <strong>Starcraft tritoon</strong> — three pontoons instead of two, so it rides smoother and faster than a regular pontoon. Seats up to 14 with cushioned loungers, Bluetooth speakers, and a shade top. Good for birthdays, bachelor and bachelorette trips, sandbar days, sunset cruises, and tubing. Comes with a captain.</p>
-          <div className="fleet-perks">
-            <span className="fleet-perk">Triple-Pontoon Tritoon</span>
-            <span className="fleet-perk">Bluetooth Sound</span>
-            <span className="fleet-perk">Seats up to 14</span>
-            <span className="fleet-perk">Captain Included</span>
-            <span className="fleet-perk">Loungers &amp; Shade</span>
-            <span className="fleet-perk">Tubing-Ready</span>
-          </div>
-          <div className="fleet-actions">
-            <a href="./jetski-booking/?type=boat&craft=partyboat" className="btn-primary">Book the Boat</a>
-          </div>
-        </div>
+        ) : null}
       </div>
     </div>
-    <div className="bundle-highlight">
-      <div className="bundle-media-stack">
-        <div className="bundle-media">
-          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-pontoon-crop-final.png')} alt="Pontoon boat on the water ready for a Shoreline group day" />
+  );
+}
+
+export async function HomeFleetSection() {
+  const content = await loadSlaquaticsCmsContent('home/fleet') || CMS_HOME_FLEET_SECTION;
+  const fleet = (fleetBlockProps(content) || fleetBlockProps(CMS_HOME_FLEET_SECTION))!;
+  const bundle = (bundleBlockProps(content) || bundleBlockProps(CMS_HOME_FLEET_SECTION))!;
+
+  return (
+    <section id="fleet" className="fleet-section" data-cms-site={cmsSlaquaticsSiteConfig.siteId}>
+      <div className="section-inner">
+        <div className="section-tag">{fleet.eyebrow}</div>
+        <h2>{fleet.heading}</h2>
+        <p className="section-sub">{fleet.copy}</p>
+        {fleet.banner ? (
+          <a className="holiday-banner" href={fleet.banner.href}>
+            <span className="holiday-banner-text">
+              <strong>{fleet.banner.strong}</strong>
+              {fleet.banner.text}
+            </span>
+            <span className="holiday-banner-cta">{fleet.banner.cta}</span>
+          </a>
+        ) : null}
+        <div className="fleet-grid">
+          {fleet.items.map((item) => <FleetCard item={item} key={item.id} />)}
         </div>
-        <div className="bundle-media">
-          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4197.webp')} alt="Shoreline riders enjoying Yamaha jet skis on Lake Lewisville" />
+        <div className="bundle-highlight">
+          <div className="bundle-media-stack">
+            {bundle.images.map((image) => (
+              <div className="bundle-media" key={image.src}>
+                <img loading="lazy" decoding="async" src={image.src} alt={image.alt} />
+              </div>
+            ))}
+          </div>
+          <div className="bundle-copy">
+            <h3>{bundle.heading}</h3>
+            <p>{bundle.copy}</p>
+            <div className="bundle-badges">
+              {bundle.badges.map((badge) => <span className="bundle-badge" key={badge}>{badge}</span>)}
+            </div>
+            {bundle.buttons[0] ? (
+              <div className="bundle-action">
+                <a href={bundle.buttons[0].href} className="btn-primary">{bundle.buttons[0].label}</a>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
-      <div className="bundle-copy">
-        <h3>Want the bundle instead?</h3>
-        <p>Pair Yamaha jet skis with the boat in one request so the whole group can ride, lounge, and stay together for the full lake day.</p>
-        <div className="bundle-badges">
-          <span className="bundle-badge">Jet skis + boat</span>
-          <span className="bundle-badge">Captain included</span>
-          <span className="bundle-badge">Built for bigger groups</span>
-        </div>
-        <div className="bundle-action">
-          <a href="#booking" className="btn-primary">Build a Bundle</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
   );
 }

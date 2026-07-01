@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { JetskiBookingConfirmationPage } from '../../features/jetskiBookingConfirmation/JetskiBookingConfirmationPage';
+import { waiverPaymentSummaryFromCms } from '../../lib/site-cms/booking-panels';
+import { loadSlaquaticsCmsContent } from '../../lib/site-cms/slaquatics';
 
 export const metadata: Metadata = {
   title: "Contact, Waiver & Deposit | Shoreline Aquatics",
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://slaquatics.com/jetski-booking-confirmation/" }
 };
 
-export default function Page() {
-  return <JetskiBookingConfirmationPage />;
+export default async function Page() {
+  const cmsContent = await loadSlaquaticsCmsContent('jetski-booking-confirmation');
+  return <JetskiBookingConfirmationPage waiverPaymentSummary={waiverPaymentSummaryFromCms(cmsContent)} />;
 }

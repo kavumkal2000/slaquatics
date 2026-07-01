@@ -1,9 +1,8 @@
 import { PrivacyPolicyClientBehavior } from './PrivacyPolicyClientBehavior';
 import { PrivacyPolicyStructuredData } from './PrivacyPolicyStructuredData';
 import { PrivacyPolicyStyles } from './PrivacyPolicyStyles';
-import { PrivacyPolicyBrandLink } from './components/PrivacyPolicyBrandLink';
-import { PrivacyPolicyContent } from './components/PrivacyPolicyContent';
 import { PrivacyPolicyShell } from './components/PrivacyPolicyShell';
+import { SlaquaticsCmsPublicPageSection } from '../siteCms/SlaquaticsCmsPublicPageSection';
 
 export function PrivacyPolicyPage() {
   return (
@@ -11,8 +10,7 @@ export function PrivacyPolicyPage() {
       <PrivacyPolicyStyles />
       <PrivacyPolicyStructuredData />
       <PrivacyPolicyShell>
-        <PrivacyPolicyBrandLink />
-        <PrivacyPolicyContent />
+        <SlaquaticsCmsPublicPageSection slug="privacy-policy" />
       </PrivacyPolicyShell>
       <PrivacyPolicyClientBehavior />
     </>

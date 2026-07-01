@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { JetskiBookingPage } from '../../features/jetskiBooking/JetskiBookingPage';
+import { bookingFlowPanelFromCms } from '../../lib/site-cms/booking-panels';
+import { loadSlaquaticsCmsContent } from '../../lib/site-cms/slaquatics';
 
 export const metadata: Metadata = {
   title: "Book a Rental | Shoreline Aquatics",
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://slaquatics.com/jetski-booking/" }
 };
 
-export default function Page() {
-  return <JetskiBookingPage />;
+export default async function Page() {
+  const cmsContent = await loadSlaquaticsCmsContent('jetski-booking');
+  return <JetskiBookingPage bookingPanel={bookingFlowPanelFromCms(cmsContent)} />;
 }

@@ -3,24 +3,28 @@ import { JetskiBookingConfirmationStructuredData } from './JetskiBookingConfirma
 import { JetskiBookingConfirmationStyles } from './JetskiBookingConfirmationStyles';
 import { JetskiBookingConfirmationEmptyState } from './components/JetskiBookingConfirmationEmptyState';
 import { JetskiBookingConfirmationForm } from './components/JetskiBookingConfirmationForm';
-import { JetskiBookingConfirmationHero } from './components/JetskiBookingConfirmationHero';
 import { JetskiBookingConfirmationShell } from './components/JetskiBookingConfirmationShell';
 import { JetskiBookingConfirmationSummary } from './components/JetskiBookingConfirmationSummary';
-import { JetskiBookingConfirmationTopbar } from './components/JetskiBookingConfirmationTopbar';
+import { SlaquaticsCmsPublicPageSection } from '../siteCms/SlaquaticsCmsPublicPageSection';
+import type { WaiverPaymentSummaryContent } from '../../lib/site-cms/booking-panels';
 
-export function JetskiBookingConfirmationPage() {
+type JetskiBookingConfirmationPageProps = {
+  waiverPaymentSummary?: WaiverPaymentSummaryContent;
+};
+
+export function JetskiBookingConfirmationPage({ waiverPaymentSummary }: JetskiBookingConfirmationPageProps = {}) {
   return (
     <>
       <JetskiBookingConfirmationStyles />
       <JetskiBookingConfirmationStructuredData />
       <JetskiBookingConfirmationShell>
-        <JetskiBookingConfirmationTopbar />
-        <JetskiBookingConfirmationHero />
+        <SlaquaticsCmsPublicPageSection slug="jetski-booking-confirmation" includeTypes={['topbar', 'hero']} />
         <JetskiBookingConfirmationEmptyState />
         <div className="content-grid" id="request-wrap" hidden>
-          <JetskiBookingConfirmationForm />
+          <JetskiBookingConfirmationForm content={waiverPaymentSummary} />
           <JetskiBookingConfirmationSummary />
         </div>
+        <SlaquaticsCmsPublicPageSection slug="jetski-booking-confirmation" excludeTypes={['topbar', 'hero']} />
       </JetskiBookingConfirmationShell>
       <JetskiBookingConfirmationClientBehavior />
     </>

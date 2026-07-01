@@ -1,14 +1,10 @@
 import { BookingThankYouClientBehavior } from './BookingThankYouClientBehavior';
 import { BookingThankYouStructuredData } from './BookingThankYouStructuredData';
 import { BookingThankYouStyles } from './BookingThankYouStyles';
-import { BookingThankYouArrival } from './components/BookingThankYouArrival';
-import { BookingThankYouConfirmation } from './components/BookingThankYouConfirmation';
 import { BookingThankYouEmptyState } from './components/BookingThankYouEmptyState';
-import { BookingThankYouHero } from './components/BookingThankYouHero';
-import { BookingThankYouLaunchPhoto } from './components/BookingThankYouLaunchPhoto';
 import { BookingThankYouShell } from './components/BookingThankYouShell';
 import { BookingThankYouSummary } from './components/BookingThankYouSummary';
-import { BookingThankYouTopbar } from './components/BookingThankYouTopbar';
+import { SlaquaticsCmsPublicPageSection } from '../siteCms/SlaquaticsCmsPublicPageSection';
 
 export function BookingThankYouPage() {
   return (
@@ -16,19 +12,20 @@ export function BookingThankYouPage() {
       <BookingThankYouStyles />
       <BookingThankYouStructuredData />
       <BookingThankYouShell>
-        <BookingThankYouTopbar />
+        <SlaquaticsCmsPublicPageSection slug="booking-thank-you" includeTypes={['topbar']} />
         <BookingThankYouEmptyState />
         <div id="thankyou-wrap" hidden>
-          <BookingThankYouHero />
+          <SlaquaticsCmsPublicPageSection slug="booking-thank-you" includeTypes={['hero']} />
           <div className="content-grid">
-            <BookingThankYouConfirmation />
+            <SlaquaticsCmsPublicPageSection slug="booking-thank-you" includeIds={['booking-thank-you-confirmation-copy']} />
             <BookingThankYouSummary />
           </div>
           <div className="content-grid" style={{ marginTop: 24 }}>
-            <BookingThankYouArrival />
-            <BookingThankYouLaunchPhoto />
+            <SlaquaticsCmsPublicPageSection slug="booking-thank-you" includeIds={['booking-thank-you-arrival']} />
+            <SlaquaticsCmsPublicPageSection slug="booking-thank-you" includeIds={['booking-thank-you-launch-photo']} />
           </div>
         </div>
+        <SlaquaticsCmsPublicPageSection slug="booking-thank-you" excludeTypes={['topbar', 'hero']} excludeIds={['booking-thank-you-confirmation-copy', 'booking-thank-you-arrival', 'booking-thank-you-launch-photo']} />
       </BookingThankYouShell>
       <BookingThankYouClientBehavior />
     </>

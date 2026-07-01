@@ -1,4 +1,3 @@
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { createD1OpsStateStore, type D1DatabaseLike, type OpsStateStore } from '../cloudflare/ops-state-store.ts';
 import { DEFAULT_STATE, sanitizeState, type OpsState } from './default-state.ts';
 
@@ -24,6 +23,7 @@ function serverStoreRequired() {
 
 export async function getOpsStateStore(): Promise<OpsStateStore<OpsState>> {
   try {
+    const { getCloudflareContext } = await import('@opennextjs/cloudflare');
     const context = await getCloudflareContext({ async: true });
     const env = context.env as Record<string, unknown>;
     const db = env.OPS_DB as D1DatabaseLike | undefined;

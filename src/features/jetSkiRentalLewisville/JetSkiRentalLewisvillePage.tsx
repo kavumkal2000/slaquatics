@@ -1,14 +1,16 @@
-import { CityRentalPage, cityRentalPages } from '../cityRental/cityRentalContent';
 import { JetSkiRentalLewisvilleClientBehavior } from './JetSkiRentalLewisvilleClientBehavior';
 import { JetSkiRentalLewisvilleStructuredData } from './JetSkiRentalLewisvilleStructuredData';
 import { JetSkiRentalLewisvilleStyles } from './JetSkiRentalLewisvilleStyles';
+import { SlaquaticsCmsPublicPageSection } from '../siteCms/SlaquaticsCmsPublicPageSection';
 
 export function JetSkiRentalLewisvillePage() {
   return (
     <>
       <JetSkiRentalLewisvilleStyles />
       <JetSkiRentalLewisvilleStructuredData />
-      <CityRentalPage content={cityRentalPages.lewisville} />
+      <div className="shell">
+        <SlaquaticsCmsPublicPageSection slug="jet-ski-rental-lewisville" />
+      </div>
       <JetSkiRentalLewisvilleClientBehavior />
     </>
   );

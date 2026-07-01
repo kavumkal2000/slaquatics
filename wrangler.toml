@@ -8,6 +8,8 @@ assets = { directory = ".open-next/assets", binding = "ASSETS" }
 PUBLIC_SITE_URL = "https://slaquatics.com"
 PUBLIC_MEDIA_BASE_URL = "https://cdn.slaquatics.com"
 REQUIRE_SERVER_STORE = "true"
+CMS_DEV_HOST = "cms.dev.slaquatics.com"
+CMS_PROD_HOST = "cms.slaquatics.com"
 
 [triggers]
 crons = ["0 14 * * 1"]
@@ -18,18 +20,32 @@ database_name = "slaquatics-ops-development"
 database_id = "cd7a9b41-a04f-4143-b081-a02bd245f1ac"
 migrations_dir = "migrations"
 
+[[d1_databases]]
+binding = "CMS_DB"
+database_name = "slaquatics-cms-development"
+database_id = "efd7373f-78eb-4a4b-9d65-614e7a620e43"
+migrations_dir = "migrations"
+
 [[r2_buckets]]
 binding = "MEDIA_BUCKET"
 bucket_name = "slaquatics-media-development"
 
+[[r2_buckets]]
+binding = "CMS_MEDIA_BUCKET"
+bucket_name = "slaquatics-cms-media-development"
+
 [env.development]
 name = "slaquatics-development"
-routes = []
+routes = [
+  { pattern = "cms.dev.slaquatics.com", custom_domain = true }
+]
 
 [env.development.vars]
 PUBLIC_SITE_URL = "https://dev.slaquatics.com"
 PUBLIC_MEDIA_BASE_URL = "https://cdn.dev.slaquatics.com"
 REQUIRE_SERVER_STORE = "true"
+CMS_DEV_HOST = "cms.dev.slaquatics.com"
+CMS_PROD_HOST = "cms.slaquatics.com"
 
 [[env.development.d1_databases]]
 binding = "OPS_DB"
@@ -37,18 +53,32 @@ database_name = "slaquatics-ops-development"
 database_id = "cd7a9b41-a04f-4143-b081-a02bd245f1ac"
 migrations_dir = "migrations"
 
+[[env.development.d1_databases]]
+binding = "CMS_DB"
+database_name = "slaquatics-cms-development"
+database_id = "efd7373f-78eb-4a4b-9d65-614e7a620e43"
+migrations_dir = "migrations"
+
 [[env.development.r2_buckets]]
 binding = "MEDIA_BUCKET"
 bucket_name = "slaquatics-media-development"
 
+[[env.development.r2_buckets]]
+binding = "CMS_MEDIA_BUCKET"
+bucket_name = "slaquatics-cms-media-development"
+
 [env.production]
 name = "slaquatics-production"
-routes = []
+routes = [
+  { pattern = "cms.slaquatics.com", custom_domain = true }
+]
 
 [env.production.vars]
 PUBLIC_SITE_URL = "https://slaquatics.com"
 PUBLIC_MEDIA_BASE_URL = "https://cdn.slaquatics.com"
 REQUIRE_SERVER_STORE = "true"
+CMS_DEV_HOST = "cms.dev.slaquatics.com"
+CMS_PROD_HOST = "cms.slaquatics.com"
 
 [[env.production.d1_databases]]
 binding = "OPS_DB"
@@ -56,6 +86,16 @@ database_name = "slaquatics-ops-production"
 database_id = "11cf5caf-2cd8-4851-aaa4-0aa754838287"
 migrations_dir = "migrations"
 
+[[env.production.d1_databases]]
+binding = "CMS_DB"
+database_name = "slaquatics-cms-production"
+database_id = "00f597be-2f26-4af7-b705-67c8553b7221"
+migrations_dir = "migrations"
+
 [[env.production.r2_buckets]]
 binding = "MEDIA_BUCKET"
 bucket_name = "slaquatics-media-production"
+
+[[env.production.r2_buckets]]
+binding = "CMS_MEDIA_BUCKET"
+bucket_name = "slaquatics-cms-media-production"

@@ -12,8 +12,8 @@ Run `npm run smoke` against any environment: `SITE_URL=https://staging... API_UR
 
 ## Automations to set up (ranked by value)
 
-### 1. ✅ GitHub Actions — already added (`.github/workflows/health.yml`)
-- Runs `npm run check` and `npm run cf:build` on every push/PR to `main` or `development` (a red ❌ on the PR means don't merge).
+### 1. ✅ Cloudflare connected builds
+- Runs `npm run check && npm run cf:build` from Cloudflare's connected build settings. Keep Cloudflare's automatic dependency install enabled; do not prepend another `npm ci` in the custom build command.
 
 ### 2. Cloudflare deploy notifications
 Use Cloudflare Worker deployment notifications or the connected CI status for deploy failure alerts.

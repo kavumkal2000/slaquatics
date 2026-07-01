@@ -1,21 +1,28 @@
-export function JetskiBookingConfirmationForm() {
+import { defaultWaiverPaymentSummaryContent, type WaiverPaymentSummaryContent } from '../../../lib/site-cms/booking-panels';
+import { safeCmsUrl } from '../../../lib/cms/validation';
+
+type JetskiBookingConfirmationFormProps = {
+  content?: WaiverPaymentSummaryContent;
+};
+
+export function JetskiBookingConfirmationForm({ content = defaultWaiverPaymentSummaryContent }: JetskiBookingConfirmationFormProps) {
   return (
     <div className="form-card">
-      <div className="block-label">Contact + Waiver</div>
-      <h2>Complete the rider details and waiver</h2>
+      <div className="block-label">{content.kicker}</div>
+      <h2>{content.heading}</h2>
       <div className="section-copy">
-        Finish the form below, then pay $55 today to move into the thank-you page and arrival instructions.
+        {content.copy}
       </div>
       <div className="match-card" id="match-card">
-        <div className="mini-kicker">Returning rider found</div>
-        <h2 id="match-title">Customer recognized</h2>
-        <div className="match-copy" id="match-copy">Welcome back. We filled in the details we already had for this rider.</div>
+        <div className="mini-kicker">{content.returningKicker}</div>
+        <h2 id="match-title">{content.returningTitle}</h2>
+        <div className="match-copy" id="match-copy">{content.returningCopy}</div>
         <div className="match-chip-row" id="match-chips" />
       </div>
       <form id="waiver-payment-form">
         <div className="form-stack">
           <div className="field-block">
-            <div className="block-label">Contact Details</div>
+            <div className="block-label">{content.contactLabel}</div>
             <div className="field-grid">
               <div className="field">
                 <label htmlFor="name">Customer name</label>
@@ -44,18 +51,18 @@ export function JetskiBookingConfirmationForm() {
             </div>
           </div>
           <div className="waiver-card">
-            <div className="block-label">Waiver</div>
-            <h3>Review the waiver and sign online</h3>
+            <div className="block-label">{content.waiverLabel}</div>
+            <h3>{content.waiverHeading}</h3>
             <div className="section-copy">
-              The rider confirms the normal on-the-water risks and Shoreline’s safety instructions before checkout.
+              {content.waiverCopy}
             </div>
-            <a className="waiver-link" href="../waiver/?view=terms#terms" target="_blank" rel="noreferrer">View full waiver terms</a>
+            <a className="waiver-link" href={safeCmsUrl(content.waiverTermsHref) || '../waiver/?view=terms#terms'} target="_blank" rel="noreferrer">{content.waiverTermsLabel}</a>
             <div className="legal-box">
-              <div className="mini-kicker">Agreement Summary</div>
+              <div className="mini-kicker">{content.agreementKicker}</div>
               <div className="legal-list">
-                <div className="legal-item"><div className="legal-dot">1</div><div>All watercraft are used at the renter’s and renter’s guests’ own risk, including weather, wakes, collisions, equipment issues, and operator error.</div></div>
-                <div className="legal-item"><div className="legal-dot">2</div><div>The rider accepts responsibility for operating the equipment safely and following Shoreline instructions throughout the rental.</div></div>
-                <div className="legal-item"><div className="legal-dot">3</div><div>The rider releases Shoreline Aquatics LLC from claims tied to normal participation risks and authorizes Shoreline to keep this waiver on file so future bookings can be faster.</div></div>
+                {content.legalItems.map((item, index) => (
+                  <div className="legal-item" key={item}><div className="legal-dot">{index + 1}</div><div>{item}</div></div>
+                ))}
               </div>
             </div>
             <div className="check-list">
@@ -89,11 +96,11 @@ export function JetskiBookingConfirmationForm() {
           </div>
         </div>
         <div className="payment-note">
-          <strong>Pay today:</strong> $55 total. That includes a $50 booking deposit and a $5 processing fee. The remaining rental balance is handled directly with Shoreline before launch.
+          <strong>{content.paymentStrong}</strong> {content.paymentCopy}
         </div>
-        <div className="status" id="copy-status">Finish the form, then pay $55 today to hold the rental date.</div>
+        <div className="status" id="copy-status">{content.statusCopy}</div>
         <div className="actions">
-          <button className="btn btn-primary" id="stripe-link" type="submit">Pay $55 today</button>
+          <button className="btn btn-primary" id="stripe-link" type="submit">{content.submitLabel}</button>
         </div>
       </form>
     </div>

@@ -1,9 +1,26 @@
-export function JetskiBookingFormCard() {
+import { defaultBookingFlowPanelContent, type BookingFlowPanelContent } from '../../../lib/site-cms/booking-panels';
+
+type JetskiBookingFormCardProps = {
+  content?: BookingFlowPanelContent;
+};
+
+const addonInputIds: Record<BookingFlowPanelContent['addons'][number]['id'], string> = {
+  drone: 'addon-drone',
+  karaoke: 'addon-karaoke',
+  tube: 'addon-tube'
+};
+
+const addonRowIds: Partial<Record<BookingFlowPanelContent['addons'][number]['id'], string>> = {
+  karaoke: 'addon-karaoke-row',
+  tube: 'addon-tube-row'
+};
+
+export function JetskiBookingFormCard({ content = defaultBookingFlowPanelContent }: JetskiBookingFormCardProps) {
   return (
     <div className="form-card" id="booking-form-card">
-      <h2 className="section-title">Pick the rental date first</h2>
+      <h2 className="section-title">{content.heading}</h2>
       <p className="section-copy">
-        Choose the date and start time here. The next page combines the rider contact form, waiver, and $55 checkout in one step.
+        {content.copy}
       </p>
       <form id="booking-form">
         <input id="booking-token" type="hidden" defaultValue="" />
@@ -14,8 +31,8 @@ export function JetskiBookingFormCard() {
               <div className="calendar-frame">
                 <div className="calendar-head">
                   <div>
-                    <h3>Choose the rental day first</h3>
-                    <p>Pick the day up front so the rest of the booking stays locked to the right rental date.</p>
+                    <h3>{content.calendarHeading}</h3>
+                    <p>{content.calendarCopy}</p>
                   </div>
                   <div className="calendar-nav">
                     <button type="button" aria-label="Previous month">←</button>
@@ -35,20 +52,20 @@ export function JetskiBookingFormCard() {
                 <div className="calendar-grid" id="calendar-grid" />
               </div>
               <div className="calendar-summary">
-                <div className="calendar-picked"><span>Selected</span><span id="calendar-pill-date">Today</span></div>
+                <div className="calendar-picked"><span>{content.selectedLabel}</span><span id="calendar-pill-date">Today</span></div>
                 <div className="calendar-big-date" id="calendar-big-date">Today</div>
-                <p id="calendar-copy">Choose the date that works best, then continue to the contact, waiver, and $55 checkout page.</p>
+                <p id="calendar-copy">{content.calendarSummaryCopy}</p>
                 <div className="calendar-mini">
                   <div className="calendar-mini-item">
-                    <strong>Requested date</strong>
+                    <strong>{content.requestedDateLabel}</strong>
                     <span id="calendar-selected-inline">Today</span>
                   </div>
                   <div className="field">
-                    <label htmlFor="date">Requested date</label>
+                    <label htmlFor="date">{content.requestedDateLabel}</label>
                     <input id="date" name="date" type="date" required />
                   </div>
                   <div className="field">
-                    <label htmlFor="time">Preferred start time</label>
+                    <label htmlFor="time">{content.timeLabel}</label>
                     <select id="time" name="time" required>
                       <option value="10:00">10:00 AM</option>
                       <option value="11:00">11:00 AM</option>
@@ -67,13 +84,13 @@ export function JetskiBookingFormCard() {
             </div>
           </div>
           <div className="summary-card holiday-special" id="holiday-special" hidden>
-            <div className="summary-kicker" id="holiday-title">July 4th Special</div>
-            <p className="holiday-note" id="holiday-note">Holiday special: we’re only running 2 jet skis on the 4th — pick a 4-hour or 8-hour block below.</p>
+            <div className="summary-kicker" id="holiday-title">{content.holidayTitle}</div>
+            <p className="holiday-note" id="holiday-note">{content.holidayNote}</p>
             <div className="holiday-options" id="holiday-options" />
           </div>
           <div className="summary-card bottom-summary">
-            <div className="summary-kicker">Package summary</div>
-            <h3>Review the booking before the next step</h3>
+            <div className="summary-kicker">{content.summaryKicker}</div>
+            <h3>{content.summaryHeading}</h3>
             <div className="summary-total" id="summary-total">$300</div>
             <div className="summary-title" id="summary-title">2 Yamaha Jet Skis</div>
             <div className="summary-note" id="summary-note">2 hour rental with 2 Yamaha jet skis, life jackets, a full tank, and safety briefing included.</div>
@@ -91,26 +108,24 @@ export function JetskiBookingFormCard() {
               <div className="summary-row"><span>Duration</span><strong id="summary-duration">2 hours</strong></div>
               <div className="summary-row"><span>Rental date</span><strong id="summary-date">Today</strong></div>
               <div className="summary-row"><span>Start time</span><strong id="summary-time">10:00 AM</strong></div>
-              <div className="summary-row"><span>Due today</span><strong>$55</strong></div>
+              <div className="summary-row"><span>{content.dueTodayLabel}</span><strong>$55</strong></div>
             </div>
             <div className="footer-note" style={{ marginTop: 18 }}>
-              Need to change the package? Head back to the homepage booking section before continuing.
+              {content.changePackageNote}
             </div>
           </div>
           <div className="summary-card" style={{ marginTop: 14 }}>
-            <div className="summary-kicker">Add-ons · $50 each</div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <input type="checkbox" id="addon-drone" style={{ width: 18, height: 18, accentColor: 'var(--gold)' }} />
-              <span style={{ flex: 1 }}>🚁 Aerial drone video</span><strong style={{ color: 'var(--gold)' }}>+$50</strong>
-            </label>
-            <label id="addon-karaoke-row" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <input type="checkbox" id="addon-karaoke" style={{ width: 18, height: 18, accentColor: 'var(--gold)' }} />
-              <span style={{ flex: 1 }}>🎤 Karaoke setup</span><strong style={{ color: 'var(--gold)' }}>+$50</strong>
-            </label>
-            <label id="addon-tube-row" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0', cursor: 'pointer' }}>
-              <input type="checkbox" id="addon-tube" style={{ width: 18, height: 18, accentColor: 'var(--gold)' }} />
-              <span style={{ flex: 1 }}>🛟 Towable tube</span><strong style={{ color: 'var(--gold)' }}>+$50</strong>
-            </label>
+            <div className="summary-kicker">{content.addonsKicker}</div>
+            {content.addons.map((addon, index) => (
+              <label
+                id={addonRowIds[addon.id]}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0', cursor: 'pointer', borderBottom: index === content.addons.length - 1 ? undefined : '1px solid rgba(255,255,255,0.08)' }}
+                key={addon.id}
+              >
+                <input type="checkbox" id={addonInputIds[addon.id]} style={{ width: 18, height: 18, accentColor: 'var(--gold)' }} />
+                <span style={{ flex: 1 }}>{addon.label}</span><strong style={{ color: 'var(--gold)' }}>{addon.priceLabel}</strong>
+              </label>
+            ))}
           </div>
           <div hidden aria-hidden="true">
             <span id="craft-label" />
@@ -119,9 +134,9 @@ export function JetskiBookingFormCard() {
           </div>
         </div>
         <div className="status" id="form-status" />
-        <button className="btn btn-primary" type="submit">Continue To Contact + Waiver</button>
+        <button className="btn btn-primary" type="submit">{content.submitLabel}</button>
         <div className="footer-note">
-          The next page combines the contact form, waiver, and $55 checkout in one clean step.
+          {content.footerNote}
         </div>
       </form>
     </div>
