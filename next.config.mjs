@@ -9,6 +9,9 @@ const nextConfig = {
   poweredByHeader: false,
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
+  env: {
+    NEXT_PUBLIC_MEDIA_BASE_URL: process.env.NEXT_PUBLIC_MEDIA_BASE_URL || process.env.PUBLIC_MEDIA_BASE_URL || 'https://cdn.slaquatics.com'
+  },
   turbopack: {
     root: repoRoot
   },

@@ -33,42 +33,48 @@ export function HomeAddOnsSection() {
           </div>
         </div>
       </div>
-      <div className="addon-card">
-        <div className="addon-topline">
-          <span className="addon-tag">Boat-only add-on</span>
-          <span className="addon-tag addon-tag-soft">Indivisible</span>
+      <div className="addon-card addon-card-feature">
+        <div className="addon-media">
+          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-karaoke-setup-pontoon.webp')} alt="Karaoke speaker and microphones set up on the boat" />
         </div>
-        <div className="addon-name">Karaoke Setup</div>
-        <p className="addon-desc">Add karaoke to a boat rental for groups that want music and singing time while they are out on the water.</p>
-        <div className="addon-points">
-          <span className="addon-point">Boat rentals only</span>
-          <span className="addon-point">Charged at checkout</span>
-        </div>
-        <div className="addon-foot">
-          <div className="addon-price-wrap">
-            <div className="addon-price">$50 <span style={{fontSize: '0.8rem', fontWeight: 400, color: 'rgba(255,255,255,0.6)'}}>flat add-on</span></div>
-            <div className="addon-price-note">Cannot be split or prorated</div>
+        <div className="addon-content">
+          <div className="addon-topline">
+            <span className="addon-tag">Boat-only add-on</span>
           </div>
-          <a href="#booking" className="addon-cta">Choose a boat rental →</a>
+          <div className="addon-name">Karaoke Setup</div>
+          <p className="addon-desc">Add karaoke to a boat rental for groups that want music and singing time while they are out on the water.</p>
+          <div className="addon-points">
+            <span className="addon-point">Boat rentals only</span>
+            <span className="addon-point">Charged at checkout</span>
+          </div>
+          <div className="addon-foot">
+            <div className="addon-price-wrap">
+              <div className="addon-price">$50 <span style={{fontSize: '0.8rem', fontWeight: 400, color: 'rgba(255,255,255,0.6)'}}>flat add-on</span></div>
+            </div>
+            <a href="#booking" className="addon-cta">Choose a boat rental →</a>
+          </div>
         </div>
       </div>
-      <div className="addon-card">
-        <div className="addon-topline">
-          <span className="addon-tag">Boat-only add-on</span>
-          <span className="addon-tag addon-tag-soft">Indivisible</span>
+      <div className="addon-card addon-card-feature">
+        <div className="addon-media">
+          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-pool-tube-pontoon.webp')} alt="Pool tube staged on the boat deck" />
         </div>
-        <div className="addon-name">Towable Tube</div>
-        <p className="addon-desc">Add the tube to a boat rental when the group wants a more active ride behind the boat.</p>
-        <div className="addon-points">
-          <span className="addon-point">Boat rentals only</span>
-          <span className="addon-point">Charged at checkout</span>
-        </div>
-        <div className="addon-foot">
-          <div className="addon-price-wrap">
-            <div className="addon-price">$50 <span style={{fontSize: '0.8rem', fontWeight: 400, color: 'rgba(255,255,255,0.6)'}}>flat add-on</span></div>
-            <div className="addon-price-note">Cannot be split or prorated</div>
+        <div className="addon-content">
+          <div className="addon-topline">
+            <span className="addon-tag">Boat-only add-on</span>
           </div>
-          <a href="#booking" className="addon-cta">Choose a boat rental →</a>
+          <div className="addon-name">Pool Tube</div>
+          <p className="addon-desc">Add a pool tube to a boat rental when the group wants an easy float for the lake day.</p>
+          <div className="addon-points">
+            <span className="addon-point">Boat rentals only</span>
+            <span className="addon-point">Charged at checkout</span>
+          </div>
+          <div className="addon-foot">
+            <div className="addon-price-wrap">
+              <div className="addon-price">$50 <span style={{fontSize: '0.8rem', fontWeight: 400, color: 'rgba(255,255,255,0.6)'}}>flat add-on</span></div>
+            </div>
+            <a href="#booking" className="addon-cta">Choose a boat rental →</a>
+          </div>
         </div>
       </div>
     </div>

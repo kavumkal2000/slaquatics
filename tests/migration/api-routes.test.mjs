@@ -945,7 +945,7 @@ test('/api/public/create-checkout-session charges boat add-ons in Stripe and sto
       assert.equal(stripeParams.get('line_items[1][price_data][unit_amount]'), '500');
       assert.equal(stripeParams.get('line_items[2][price_data][product_data][name]'), 'Karaoke Setup');
       assert.equal(stripeParams.get('line_items[2][price_data][unit_amount]'), '5000');
-      assert.equal(stripeParams.get('line_items[3][price_data][product_data][name]'), 'Towable Tube');
+      assert.equal(stripeParams.get('line_items[3][price_data][product_data][name]'), 'Pool Tube');
       assert.equal(stripeParams.get('line_items[3][price_data][unit_amount]'), '5000');
       assert.equal(stripeParams.get('metadata[karaokeAmount]'), '50.00');
       assert.equal(stripeParams.get('metadata[tubeAmount]'), '50.00');

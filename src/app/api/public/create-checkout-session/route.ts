@@ -25,8 +25,8 @@ function addonLineItems(booking: any) {
     {
       enabled: Boolean(booking.tube),
       amount: Number(booking.tubeAmount || 0),
-      name: 'Towable Tube',
-      description: 'Boat rental towable tube add-on'
+      name: 'Pool Tube',
+      description: 'Boat rental pool tube add-on'
     }
   ].filter((addon) => addon.enabled && addon.amount > 0).map((addon) => ({
     quantity: 1,

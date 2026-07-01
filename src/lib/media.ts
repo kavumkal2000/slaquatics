@@ -7,7 +7,11 @@ export type MediaKey =
   | `site/images/${string}`
   | `site/videos/${string}`;
 
-export const mediaBaseUrl = (process.env.PUBLIC_MEDIA_BASE_URL || DEFAULT_MEDIA_BASE_URL).replace(/\/+$/, '');
+export const mediaBaseUrl = (
+  process.env.NEXT_PUBLIC_MEDIA_BASE_URL ||
+  process.env.PUBLIC_MEDIA_BASE_URL ||
+  DEFAULT_MEDIA_BASE_URL
+).replace(/\/+$/, '');
 
 export function mediaUrl(key: MediaKey): string {
   return `${mediaBaseUrl}/${key.replace(/^\/+/, '')}`;
