@@ -1,7 +1,7 @@
 // @ts-expect-error OpenNext generates this file during `npm run cf:build`.
 import openNextWorker from '../.open-next/worker.js';
 
-// issue with deployment *ignore*
+// issue with deployment *ignore 2*
 
 const legacyHtmlRedirects: Record<string, string> = {
   '/ops.html': '/ops',
