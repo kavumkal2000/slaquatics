@@ -118,6 +118,11 @@ test('Wrangler defines split R2 media buckets and CDN domains per environment', 
 
   assert.match(wrangler, /\[env\.development\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.dev\.slaquatics\.com"/);
   assert.match(wrangler, /\[env\.production\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.slaquatics\.com"/);
+  assert.match(wrangler, /\[env\.development\.placement\]\nmode = "smart"/);
+  assert.match(wrangler, /\[env\.production\.placement\]\nmode = "smart"/);
+  assert.match(wrangler, /\[\[env\.development\.routes\]\]\npattern = "dev\.slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.production\.routes\]\]\npattern = "slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.production\.routes\]\]\npattern = "www\.slaquatics\.com"\ncustom_domain = true/);
   assert.match(wrangler, /\[\[env\.development\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-development"/);
   assert.match(wrangler, /\[\[env\.production\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-production"/);
 });

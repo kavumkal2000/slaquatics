@@ -24,7 +24,13 @@ bucket_name = "slaquatics-media-development"
 
 [env.development]
 name = "slaquatics-development"
-routes = []
+
+[env.development.placement]
+mode = "smart"
+
+[[env.development.routes]]
+pattern = "dev.slaquatics.com"
+custom_domain = true
 
 [env.development.vars]
 PUBLIC_SITE_URL = "https://dev.slaquatics.com"
@@ -43,7 +49,17 @@ bucket_name = "slaquatics-media-development"
 
 [env.production]
 name = "slaquatics-production"
-routes = []
+
+[env.production.placement]
+mode = "smart"
+
+[[env.production.routes]]
+pattern = "slaquatics.com"
+custom_domain = true
+
+[[env.production.routes]]
+pattern = "www.slaquatics.com"
+custom_domain = true
 
 [env.production.vars]
 PUBLIC_SITE_URL = "https://slaquatics.com"
