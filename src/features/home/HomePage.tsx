@@ -1,9 +1,9 @@
+'use client';
+
 import { HomeClientBehavior } from './HomeClientBehavior';
 import { HomeStructuredData } from './HomeStructuredData';
 import { HomeStyles } from './HomeStyles';
 import { HomeNav } from './components/HomeNav';
-import { HomeMobileBackdrop } from './components/HomeMobileBackdrop';
-import { HomeMobileNav } from './components/HomeMobileNav';
 import { HomeHero } from './components/HomeHero';
 import { HomeTrustBar } from './components/HomeTrustBar';
 import { HomeFleetSection } from './components/HomeFleetSection';
@@ -26,8 +26,7 @@ export function HomePage() {
       <HomeStyles />
       <HomeStructuredData />
       <HomeNav />
-      <HomeMobileBackdrop />
-      <HomeMobileNav />
+      <HomeClientBehavior />
       <HomeHero />
       <HomeTrustBar />
       <HomeFleetSection />
@@ -43,7 +42,6 @@ export function HomePage() {
       <HomeFooter />
       <HomeMobileCtaBar />
       <HomeBackToTop />
-      <HomeClientBehavior />
     </>
   );
 }

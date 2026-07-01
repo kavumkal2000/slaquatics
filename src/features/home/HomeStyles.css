@@ -291,7 +291,7 @@ h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.2
   display: flex; align-items: center; justify-content: space-between;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
   border-radius: 8px; padding: 0.85rem 1rem; cursor: pointer;
-  transition: all 0.18s; user-select: none;
+  transition: all 0.18s; user-select: none; touch-action: manipulation;
 }
 .calc-option:hover { border-color: rgba(245,166,35,0.4); background: rgba(245,166,35,0.06); }
 .calc-option.selected { border-color: var(--gold); background: rgba(245,166,35,0.1); }
@@ -302,6 +302,13 @@ h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 3.2
 .calc-option.selected .calc-check { border-color: var(--gold); background: var(--gold); }
 .calc-check::after { content: '✓'; font-size: 0.65rem; color: #08111f; display: none; font-weight: 700; }
 .calc-option.selected .calc-check::after { display: block; }
+.calc-addon-toggle { position: relative; }
+.calc-addon-input { position: absolute; opacity: 0; pointer-events: none; }
+.calc-addon-toggle .calc-check { border-radius: 5px; }
+.calc-addon-toggle:has(.calc-addon-input:focus-visible) { outline: 2px solid rgba(245,166,35,0.7); outline-offset: 3px; }
+.calc-addon-toggle:has(.calc-addon-input:checked) { border-color: var(--gold); background: rgba(245,166,35,0.1); }
+.calc-addon-toggle:has(.calc-addon-input:checked) .calc-check { border-color: var(--gold); background: var(--gold); }
+.calc-addon-toggle:has(.calc-addon-input:checked) .calc-check::after { display: block; }
 .calc-divider { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 1.2rem 0; }
 .calc-addon-box {
   margin-top: 1rem;
@@ -1231,11 +1238,13 @@ footer { background: #050d1a; border-top: 1px solid rgba(245,166,35,0.1); paddin
   .trust-num { font-size: 1.8rem; }
   .trust-label { font-size: 0.62rem; line-height: 1.35; letter-spacing: 0.07em; }
   .fleet-media { aspect-ratio: 16 / 11; }
+  .fleet-grid { grid-auto-rows: auto; align-items: start; }
   .fleet-body { padding: 1.4rem 1.25rem 1.5rem; }
   .fleet-title-row { flex-direction: column; align-items: start; min-height: 0; }
   .fleet-stat { text-align: left; }
   .fleet-actions,
   .bundle-action { width: 100%; }
+  .fleet-actions { margin-top: 0.35rem; }
   .fleet-actions .btn-primary,
   .bundle-action .btn-primary { width: 100%; text-align: center; }
   .fleet-price-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

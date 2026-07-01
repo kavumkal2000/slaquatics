@@ -158,7 +158,7 @@ function createConfirmationController(signal: AbortSignal) {
     `Party size: ${booking.partySize || 'Not provided'}`,
     `Aerial drone coverage: ${booking.drone ? 'Yes' : 'No'}`,
     `Karaoke setup: ${booking.karaoke ? 'Yes' : 'No'}`,
-    `Towable tube: ${booking.tube ? 'Yes' : 'No'}`,
+    `Pool tube: ${booking.tube ? 'Yes' : 'No'}`,
     `Meeting spot: ${booking.location || LAUNCH_LOCATION_LABEL}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
     `Booking payment: ${booking.paymentStatus === 'paid' || booking.deposit ? '$55 paid ($50 deposit + $5 processing fee)' : '$55 due today ($50 deposit + $5 processing fee)'}`,
