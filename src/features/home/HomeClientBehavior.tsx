@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 
 type Craft =
   | 'jetski2'
@@ -52,8 +52,25 @@ function selectOption(groupId: string, element: HTMLElement) {
   element.classList.add('selected');
 }
 
-function getDroneSelection(groupId: string) {
-  return (selectedDataset(groupId, 'drone') || 'no') === 'yes';
+function selectedAddons(groupId: string) {
+  const selected = new Set(
+    Array.from(document.querySelectorAll<HTMLInputElement>(`#${groupId} .calc-addon-input:checked`))
+      .map((option) => option.dataset.addon || '')
+      .filter(Boolean)
+  );
+  return {
+    drone: selected.has('drone'),
+    karaoke: selected.has('karaoke'),
+    tube: selected.has('tube')
+  };
+}
+
+function addonLabels(addons: { drone?: boolean; karaoke?: boolean; tube?: boolean }) {
+  return [
+    addons.drone ? 'Drone added' : '',
+    addons.karaoke ? 'Karaoke added' : '',
+    addons.tube ? 'Tube added' : ''
+  ].filter(Boolean);
 }
 
 function getJetSkiCount(craft: string) {
@@ -110,43 +127,68 @@ function appendSpan(parent: Element, className: string, text: string) {
 function calculateJetSkis() {
   const craft = selectedDataset('js-craft-opts', 'craft') || 'jetski2';
   const hours = Number.parseInt(selectedDataset('js-dur-opts', 'hours'), 10) || 2;
-  const drone = getDroneSelection('js-drone-opts');
+  const addons = selectedAddons('js-addon-opts');
   const basePrice = PRICING[craft]?.[hours] || 0;
-  const total = basePrice + (drone ? 50 : 0);
+  const total = basePrice + (addons.drone ? 50 : 0);
   const durationLabel = hours === 8 ? 'Full Day (8hrs)' : `${hours}hrs`;
+  const labels = addonLabels(addons);
 
   setText('js-price', money(total));
-  setText('js-desc', `${CRAFT_NAMES[craft as Craft] || craft} · ${durationLabel} · ${hourlyRateLabel(craft, hours, basePrice)}${drone ? ' · Drone added' : ''}`);
+  setText('js-desc', `${CRAFT_NAMES[craft as Craft] || craft} · ${durationLabel} · ${hourlyRateLabel(craft, hours, basePrice)}${labels.length ? ` · ${labels.join(' · ')}` : ''}`);
   setText('js-book-btn', 'Continue to Calendar & Contact + Waiver →');
   setText('js-savings-note', savingsLabel(craft, hours, basePrice));
-  setHref('js-book-btn', bookingUrl({ type: 'jetski', craft, hours, drone: drone ? 'yes' : 'no', total }));
+  setHref('js-book-btn', bookingUrl({ type: 'jetski', craft, hours, drone: addons.drone ? 'yes' : 'no', total }));
 }
 
 function calculateBoat() {
   const hours = Number.parseInt(selectedDataset('bt-dur-opts', 'hours'), 10) || 4;
-  const drone = getDroneSelection('bt-drone-opts');
+  const addons = selectedAddons('bt-addon-opts');
   const basePrice = PRICING.partyboat[hours] || 0;
-  const total = basePrice + (drone ? 50 : 0);
+  const total = basePrice + (addons.drone ? 50 : 0) + (addons.karaoke ? 50 : 0) + (addons.tube ? 50 : 0);
+  const dueToday = 55 + (addons.karaoke ? 50 : 0) + (addons.tube ? 50 : 0);
   const durationLabel = hours === 8 ? 'Full Day (8hrs)' : `${hours}hr${hours > 1 ? 's' : ''}`;
+  const labels = addonLabels(addons);
 
   setText('bt-price', money(total));
-  setText('bt-desc', `Boat Rental · ${durationLabel} · Up to 14 guests${drone ? ' · Drone added' : ''}`);
+  setText('bt-desc', `Boat Rental · ${durationLabel} · Up to 14 guests${labels.length ? ` · ${labels.join(' · ')}` : ''}`);
+  setText('bt-due-today', money(dueToday));
+  setText('bt-savings-note', `Easy hourly pricing with the captain included. ${money(dueToday)} due today at checkout.`);
   setText('bt-book-btn', 'Continue to Calendar & Contact + Waiver →');
-  setHref('bt-book-btn', bookingUrl({ type: 'boat', craft: 'partyboat', hours, drone: drone ? 'yes' : 'no', total }));
+  setHref('bt-book-btn', bookingUrl({
+    type: 'boat',
+    craft: 'partyboat',
+    hours,
+    drone: addons.drone ? 'yes' : 'no',
+    karaoke: addons.karaoke ? 'yes' : 'no',
+    tube: addons.tube ? 'yes' : 'no',
+    total
+  }));
 }
 
 function calculateBundle() {
   const craft = selectedDataset('bd-craft-opts', 'craft') || 'bundle2';
   const hours = Number.parseInt(selectedDataset('bd-dur-opts', 'hours'), 10) || 2;
-  const drone = getDroneSelection('bd-drone-opts');
+  const addons = selectedAddons('bd-addon-opts');
   const basePrice = PRICING[craft]?.[hours] || 0;
-  const total = basePrice + (drone ? 50 : 0);
+  const total = basePrice + (addons.drone ? 50 : 0) + (addons.karaoke ? 50 : 0) + (addons.tube ? 50 : 0);
+  const dueToday = 55 + (addons.karaoke ? 50 : 0) + (addons.tube ? 50 : 0);
   const durationLabel = hours === 8 ? 'Full Day (8hrs)' : `${hours}hrs`;
+  const labels = addonLabels(addons);
 
   setText('bd-price', money(total));
-  setText('bd-desc', `${CRAFT_NAMES[craft as Craft]} · ${durationLabel}${drone ? ' · Drone added' : ''}`);
+  setText('bd-desc', `${CRAFT_NAMES[craft as Craft]} · ${durationLabel}${labels.length ? ` · ${labels.join(' · ')}` : ''}`);
+  setText('bd-due-today', money(dueToday));
+  setText('bd-savings-note', `Found a lower price? We'll match it. ${money(dueToday)} due today at checkout.`);
   setText('bd-book-btn', 'Continue to Calendar & Contact + Waiver →');
-  setHref('bd-book-btn', bookingUrl({ type: 'bundle', craft, hours, drone: drone ? 'yes' : 'no', total }));
+  setHref('bd-book-btn', bookingUrl({
+    type: 'bundle',
+    craft,
+    hours,
+    drone: addons.drone ? 'yes' : 'no',
+    karaoke: addons.karaoke ? 'yes' : 'no',
+    tube: addons.tube ? 'yes' : 'no',
+    total
+  }));
 }
 
 function recalculateForGroup(groupId: string) {
@@ -452,17 +494,6 @@ function setupPageInteractions(signal: AbortSignal) {
     }, { signal });
   });
 
-  document.querySelectorAll<HTMLElement>('.calc-tab-btn[id^="tab-"]').forEach((button) => {
-    button.addEventListener('click', () => switchCalculatorTab(button.id.replace('tab-', '')), { signal });
-  });
-  document.querySelectorAll<HTMLElement>('.calc-select-group .calc-option').forEach((option) => {
-    option.addEventListener('click', () => {
-      const group = option.closest<HTMLElement>('.calc-select-group');
-      if (!group?.id) return;
-      selectOption(group.id, option);
-      recalculateForGroup(group.id);
-    }, { signal });
-  });
   byId('btt')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }), { signal });
 
   const onScroll = () => {
@@ -477,29 +508,25 @@ function setupPageInteractions(signal: AbortSignal) {
     });
   };
   window.addEventListener('scroll', onScroll, { signal });
+}
 
-  calculateJetSkis();
-  calculateBoat();
-  calculateBundle();
+function installHomeClientBehavior() {
+  const controller = new AbortController();
+  const { signal } = controller;
+  setupPageInteractions(signal);
+  setupHeroVideo(signal);
+  setupFleetSliders(signal);
+  setupReviews(signal);
+  setupAvailability(signal);
+  setupLeadCapture(signal);
+  return () => controller.abort();
 }
 
 export function HomeClientBehavior() {
-  const initialized = useRef(false);
-
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    const controller = new AbortController();
-    const { signal } = controller;
-    setupPageInteractions(signal);
-    setupMobileNav(signal);
-    setupHeroVideo(signal);
-    setupFleetSliders(signal);
-    setupReviews(signal);
-    setupAvailability(signal);
-    setupLeadCapture(signal);
-    return () => controller.abort();
+    const abort = installHomeClientBehavior();
+    return () => abort();
   }, []);
 
-  return null;
+  return <span hidden data-home-client-behavior="" />;
 }

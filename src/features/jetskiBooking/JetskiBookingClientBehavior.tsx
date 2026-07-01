@@ -500,7 +500,7 @@ function createBookingController(signal: AbortSignal) {
     const selectedAddons = [
       payload.drone ? 'aerial drone video' : '',
       payload.karaoke ? 'karaoke setup' : '',
-      payload.tube ? 'towable tube' : ''
+      payload.tube ? 'pool tube' : ''
     ].filter(Boolean);
     const addonsNote = selectedAddons.length ? ` Add-ons: ${selectedAddons.join(', ')} (+$50 each).` : '';
 
