@@ -259,10 +259,10 @@ export async function consumeClientMagicLink(token: string, request: Request) {
 }
 
 export async function passkeyStatusForUser(user: OpsAuthUser | SessionUser | null) {
-  if (!user) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '' };
+  if (!user) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '', count: 0 };
   const role = String(user.role || '').toLowerCase();
-  const required = role === 'owner' || role === 'developer';
-  if (!required) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '' };
+  const required = role === 'owner';
+  if (!required) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '', count: 0 };
   const store = await getOpsAuthStore();
   const passkeys = await store.listPasskeysForUser(user.id);
   const graceSeconds = Number(process.env.OWNER_PASSKEY_GRACE_SECONDS || 60 * 60 * 24 * 7);
@@ -273,7 +273,8 @@ export async function passkeyStatusForUser(user: OpsAuthUser | SessionUser | nul
     required,
     enrolled,
     shouldPrompt: !enrolled,
-    graceEndsAt
+    graceEndsAt,
+    count: passkeys.length
   };
 }
 

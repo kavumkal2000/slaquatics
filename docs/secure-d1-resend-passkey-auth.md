@@ -9,7 +9,7 @@ This blueprint describes the native authentication system used for SLAquatics an
 - Store only hashes of session tokens and magic-link tokens.
 - Use Resend only to deliver single-use client magic links.
 - Use password login for privileged staff/owner accounts, and allow clients to add an optional password after magic-link sign-in.
-- Require owner/developer passkey enrollment after password login.
+- Require the business owner to enroll passkeys after password login. Developer/admin accounts do not get self-service passkey or password management.
 - Protect auth entrypoints with Cloudflare Turnstile in production.
 - Revoke sessions server-side by updating D1.
 
@@ -84,6 +84,7 @@ Use password login for privileged staff roles, plus optional client passwords af
   - `enrolled`
   - `shouldPrompt`
   - `graceEndsAt`
+  - `count`
 
 ## Client Magic Links
 
@@ -118,7 +119,9 @@ Use `@simplewebauthn/server` and `@simplewebauthn/browser`.
 
 Registration:
 
-- Owner/developer signs in with password.
+- Owner signs in with password.
+- Developer/admin accounts cannot self-register passkeys.
+- Enforce a maximum of 10 owner passkeys.
 - Server generates registration options with RP name, RP ID, user ID, username, and existing credentials to exclude.
 - Store the challenge hash and raw challenge in `ops_auth_challenges`.
 - Browser calls `startRegistration`.
@@ -134,6 +137,13 @@ Authentication:
 - Server verifies origin, RP ID, challenge, public key, and counter.
 - Update the counter and `last_used_at`.
 - Issue the same opaque session cookie with `auth_method = 'passkey'`.
+
+Owner password changes:
+
+- Only the `owner` role can use the owner password-change endpoint.
+- A password-authenticated owner must prove the current password.
+- A passkey-authenticated owner may change the password without retyping the old password because the active session was created by WebAuthn.
+- Developer/admin accounts must be changed through the database/seed path, not CRM self-service.
 
 ## Turnstile
 
@@ -161,6 +171,7 @@ Record at least:
 - `passkey_registration_options`
 - `passkey_registered`
 - `passkey_login_success`
+- `owner_password_changed`
 - session revocation and password rotation events
 
 ## Production Secrets
@@ -202,7 +213,9 @@ Never add Supabase, OAuth provider secrets, or service-role keys for this patter
 - Client session is opaque, persists, and can be revoked.
 - Client role cannot access ops APIs.
 - Owner password login returns passkey prompt state.
-- Passkey registration options require owner/developer session.
+- Passkey registration options require an owner password session.
+- Passkey registration rejects developer/admin sessions and enforces the 10-passkey owner limit.
 - Passkey registration persists credential metadata.
+- Owner password change requires owner role plus current-password or passkey session proof.
 - Passkey login verifies challenge, origin, RP ID, and counter.
 - Cross-origin authenticated mutations are rejected.

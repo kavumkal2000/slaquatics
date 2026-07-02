@@ -455,7 +455,8 @@ const memory = {
   magicLinks: new Map<string, { email: string; roleIntent: 'client'; expiresAt: string; consumedAt: string }>(),
   passkeys: [] as OpsPasskey[],
   challenges: new Map<string, OpsChallenge>(),
-  audit: [] as AuthAuditInput[]
+  audit: [] as AuthAuditInput[],
+  seedSignature: ''
 };
 
 function legacyHash(password: string) {
@@ -481,7 +482,7 @@ function addMemoryUser(user: Partial<OpsAuthUser> & { username: string; role: Op
 
 function seedMemoryUsersFromEnv() {
   const clientUsers = memory.users.filter((user) => user.role === 'client');
-  memory.users = [];
+  const existingPrivilegedUsers = memory.users.filter((user) => user.role !== 'client');
   const legacyOpsPassword = process.env.OPS_PASSWORD || '';
   const configs = [
     ['OPS_DEV', 'developer', 'Developer', 'developer'],
@@ -489,10 +490,30 @@ function seedMemoryUsersFromEnv() {
     ['OPS_EMPLOYEE', 'employee', 'Employee', 'hugoprado'],
     ['OPS_CREW', 'crew', 'Crew', 'crew']
   ] as const;
+  const seedSignature = JSON.stringify(configs.map(([prefix, role, , fallbackUsername]) => ({
+    prefix,
+    role,
+    username: process.env[`${prefix}_USERNAME`] || fallbackUsername,
+    passwordHash: process.env[`${prefix}_PASSWORD_HASH`] || '',
+    password: process.env[`${prefix}_PASSWORD`] || '',
+    legacyOpsPassword
+  })));
+  const preserveExplicitPasswordUpdates = memory.seedSignature === seedSignature;
+  memory.seedSignature = seedSignature;
+  memory.users = [];
   configs.forEach(([prefix, role, displayName, fallbackUsername]) => {
     const username = process.env[`${prefix}_USERNAME`] || fallbackUsername;
     const passwordHash = process.env[`${prefix}_PASSWORD_HASH`] || (process.env[`${prefix}_PASSWORD`] || legacyOpsPassword ? legacyHash(process.env[`${prefix}_PASSWORD`] || legacyOpsPassword) : '');
-    addMemoryUser({ username, role, displayName, passwordHash });
+    const existing = preserveExplicitPasswordUpdates
+      ? existingPrivilegedUsers.find((user) => user.username === normalizeUsername(username) && user.authProvider === 'password')
+      : null;
+    addMemoryUser({
+      username,
+      role,
+      displayName,
+      passwordHash: existing?.passwordHash || passwordHash,
+      authProvider: existing?.authProvider || ''
+    });
   });
   clientUsers.forEach((user) => {
     user.id = memory.users.length + 1;

@@ -956,6 +956,7 @@ test('/api/auth session exposes privileged passkey enrollment state after passwo
     assert.equal(session.passkey.required, true);
     assert.equal(session.passkey.enrolled, false);
     assert.match(session.passkey.graceEndsAt, /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal(session.passkey.count, 0);
 
     const developerLogin = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
       method: 'POST',
@@ -968,18 +969,20 @@ test('/api/auth session exposes privileged passkey enrollment state after passwo
 
     assert.equal(developerLogin.status, 200);
     assert.equal(developerPayload.user.role, 'developer');
-    assert.equal(developerPayload.passkey.required, true);
+    assert.equal(developerPayload.passkey.required, false);
     assert.equal(developerPayload.passkey.enrolled, false);
-    assert.equal(developerPayload.passkey.shouldPrompt, true);
-    assert.equal(developerSession.passkey.required, true);
+    assert.equal(developerPayload.passkey.shouldPrompt, false);
+    assert.equal(developerSession.passkey.required, false);
     assert.equal(developerSession.passkey.enrolled, false);
-    assert.match(developerSession.passkey.graceEndsAt, /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal(developerSession.passkey.graceEndsAt, '');
+    assert.equal(developerSession.passkey.count, 0);
   });
 });
 
-test('/api/auth passkey registration options require an owner/admin session and persist a challenge', async () => {
+test('/api/auth passkey registration options require an owner password session and persist a challenge', async () => {
   await withEnv({
     SESSION_SECRET: 'passkey-options-session-secret',
+    OPS_DEV_PASSWORD: 'passkey-options-dev-password',
     OPS_OWNER_PASSWORD: 'passkey-options-password'
   }, async () => {
     const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=passkey-options-login-${Date.now()}`);
@@ -988,19 +991,131 @@ test('/api/auth passkey registration options require an owner/admin session and 
       method: 'POST',
       body: JSON.stringify({ username: 'owner', password: 'passkey-options-password' })
     }));
+    const developerLogin = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'passkey-options-dev-password' })
+    }));
     const unauthorized = await responseJson(await route.GET(new Request('https://slaquatics.test/api/auth/passkey/register/options')));
     const response = await route.GET(new Request('https://slaquatics.test/api/auth/passkey/register/options', {
       headers: { cookie: login.headers.get('set-cookie') || '' }
     }));
+    const developerDenied = await responseJson(await route.GET(new Request('https://slaquatics.test/api/auth/passkey/register/options', {
+      headers: { cookie: developerLogin.headers.get('set-cookie') || '' }
+    })));
     const payload = await responseJson(response);
 
     assert.equal(unauthorized.error, 'Authentication required.');
+    assert.equal(developerDenied.error, 'Owner access required.');
     assert.equal(response.status, 200);
     assert.equal(payload.ok, true);
     assert.equal(payload.options.rp.name, 'Shoreline Aquatics');
     assert.equal(payload.options.user.name, 'owner');
     assert.ok(String(payload.options.challenge || '').length >= 20);
   });
+});
+
+test('/api/auth passkey registration enforces owner max of ten passkeys', async () => {
+  await withEnv({
+    SESSION_SECRET: 'passkey-limit-session-secret',
+    OPS_OWNER_PASSWORD: 'passkey-limit-password'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=passkey-limit-login-${Date.now()}`);
+    const route = await import(`../../src/app/api/auth/passkey/register/options/route.ts?case=passkey-limit-${Date.now()}`);
+    const { getOpsAuthStore } = await import('../../src/lib/ops/auth-store.ts');
+    const store = await getOpsAuthStore();
+    const owner = await store.findUserForPasswordLogin('owner');
+    for (let index = 0; index < 10; index += 1) {
+      await store.createPasskey({
+        userId: owner.id,
+        credentialId: `owner-credential-${index}`,
+        publicKey: `owner-public-key-${index}`,
+        counter: index
+      });
+    }
+
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'owner', password: 'passkey-limit-password' })
+    }));
+    const response = await responseJson(await route.GET(new Request('https://slaquatics.test/api/auth/passkey/register/options', {
+      headers: { cookie: login.headers.get('set-cookie') || '' }
+    })));
+
+    assert.equal(response.error, 'Passkey limit reached.');
+  });
+});
+
+test('/api/auth owner password changes require owner session and password or passkey proof', async () => {
+  await withEnv({
+    SESSION_SECRET: 'owner-password-change-session-secret',
+    OPS_DEV_PASSWORD: 'owner-password-change-dev',
+    OPS_OWNER_PASSWORD: 'owner-password-change-old'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=owner-password-change-login-${Date.now()}`);
+    const route = await import(`../../src/app/api/auth/owner/password/route.ts?case=owner-password-change-${Date.now()}`);
+    const { createSessionCookie } = await import('../../src/lib/ops/auth.ts');
+    const { getOpsAuthStore } = await import('../../src/lib/ops/auth-store.ts');
+    const store = await getOpsAuthStore();
+
+    const ownerLogin = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'owner', password: 'owner-password-change-old' })
+    }));
+    const developerLogin = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'owner-password-change-dev' })
+    }));
+
+    const developerDenied = await responseJson(await route.POST(new Request('https://slaquatics.test/api/auth/owner/password', {
+      method: 'POST',
+      headers: { cookie: developerLogin.headers.get('set-cookie') || '', origin: 'https://slaquatics.test' },
+      body: JSON.stringify({ currentPassword: 'owner-password-change-dev', newPassword: 'Admin!' })
+    })));
+    const wrongCurrent = await responseJson(await route.POST(new Request('https://slaquatics.test/api/auth/owner/password', {
+      method: 'POST',
+      headers: { cookie: ownerLogin.headers.get('set-cookie') || '', origin: 'https://slaquatics.test' },
+      body: JSON.stringify({ currentPassword: 'wrong-password', newPassword: 'Owner!' })
+    })));
+    const changedWithPassword = await responseJson(await route.POST(new Request('https://slaquatics.test/api/auth/owner/password', {
+      method: 'POST',
+      headers: { cookie: ownerLogin.headers.get('set-cookie') || '', origin: 'https://slaquatics.test' },
+      body: JSON.stringify({ currentPassword: 'owner-password-change-old', newPassword: 'Owner!' })
+    })));
+    const loginWithNewPassword = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'owner', password: 'Owner!' })
+    }));
+
+    const owner = await store.findUserForPasswordLogin('owner');
+    const passkeyCookie = await createSessionCookie(owner, new Request('https://slaquatics.test/api/auth/owner/password'), { authMethod: 'passkey' });
+    const changedWithPasskey = await responseJson(await route.POST(new Request('https://slaquatics.test/api/auth/owner/password', {
+      method: 'POST',
+      headers: { cookie: passkeyCookie, origin: 'https://slaquatics.test' },
+      body: JSON.stringify({ newPassword: 'Owner2!' })
+    })));
+
+    assert.equal(developerDenied.error, 'Owner access required.');
+    assert.equal(wrongCurrent.error, 'Current password is incorrect.');
+    assert.equal(changedWithPassword.ok, true);
+    assert.equal(loginWithNewPassword.status, 200);
+    assert.equal(changedWithPasskey.ok, true);
+  });
+});
+
+test('ops CRM exposes owner-only passkey and password controls', async () => {
+  const [workspaceSource, runtimeSource] = await Promise.all([
+    import('node:fs/promises').then((fs) => fs.readFile(new URL('../../src/features/ops/components/OpsDashboardWorkspace.tsx', import.meta.url), 'utf8')),
+    import('node:fs/promises').then((fs) => fs.readFile(new URL('../../src/features/ops/runtime/opsRuntime.client.js', import.meta.url), 'utf8'))
+  ]);
+
+  assert.match(workspaceSource, /id="owner-security-card"/);
+  assert.match(workspaceSource, /data-owner-auth-action="add-passkey"/);
+  assert.match(workspaceSource, /data-owner-auth-action="change-password"/);
+  assert.match(runtimeSource, /function isOwnerSession\(\)/);
+  assert.match(runtimeSource, /role \|\| ''\)\.toLowerCase\(\) === 'owner'/);
+  assert.match(runtimeSource, /\/api\/auth\/owner\/password/);
+  assert.match(runtimeSource, /\/api\/auth\/passkey\/register\/options/);
+  assert.match(runtimeSource, /count >= 10/);
 });
 
 test('passkey verification source delegates WebAuthn checks and updates counters', async () => {

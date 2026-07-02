@@ -69,6 +69,9 @@ function runOpsRuntime() {
       canAccessWebsiteDevelopment: false
     };
   }
+  function isOwnerSession() {
+    return String(currentSession?.user?.role || '').toLowerCase() === 'owner';
+  }
   
   function snapshotState() {
     return {
@@ -416,6 +419,66 @@ function runOpsRuntime() {
     }
     return payload;
   }
+  function setOwnerSecurityStatus(message = '', level = '') {
+    const status = document.getElementById('owner-security-status');
+    if (!status) return;
+    status.textContent = message;
+    status.style.color = level === 'error' ? 'var(--danger)' : level === 'success' ? 'var(--green)' : 'var(--muted)';
+  }
+  function renderOwnerSecurityPanel() {
+    const card = document.getElementById('owner-security-card');
+    if (!card) return;
+    card.hidden = !isOwnerSession();
+    if (!isOwnerSession()) return;
+    const summary = document.getElementById('owner-security-summary');
+    const addButton = document.querySelector('[data-owner-auth-action="add-passkey"]');
+    const passkey = currentSession?.passkey || {};
+    const count = Number(passkey.count || 0);
+    if (summary) {
+      summary.textContent = `${count}/10 passkeys registered. Add passkeys after password sign-in, or change your password after password or passkey sign-in.`;
+    }
+    if (addButton) addButton.disabled = count >= 10;
+  }
+  async function addOwnerPasskey() {
+    if (!isOwnerSession()) return;
+    setOwnerSecurityStatus('Opening passkey setup...');
+    try {
+      const { startRegistration } = await import('@simplewebauthn/browser');
+      const optionsPayload = await requestJson('/api/auth/passkey/register/options');
+      const credential = await startRegistration({ optionsJSON: optionsPayload.options });
+      await requestJson('/api/auth/passkey/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credential)
+      });
+      currentSession = await detectBackendSession();
+      renderOwnerSecurityPanel();
+      setOwnerSecurityStatus('Passkey added.', 'success');
+    } catch (error) {
+      setOwnerSecurityStatus(error?.message || 'Could not add passkey.', 'error');
+    }
+  }
+  async function changeOwnerPassword() {
+    if (!isOwnerSession()) return;
+    const currentPassword = document.getElementById('owner-current-password')?.value || '';
+    const newPassword = document.getElementById('owner-new-password')?.value || '';
+    setOwnerSecurityStatus('Updating password...');
+    try {
+      await requestJson('/api/auth/owner/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const currentInput = document.getElementById('owner-current-password');
+      const newInput = document.getElementById('owner-new-password');
+      if (currentInput) currentInput.value = '';
+      if (newInput) newInput.value = '';
+      currentSession = await detectBackendSession();
+      setOwnerSecurityStatus('Password changed.', 'success');
+    } catch (error) {
+      setOwnerSecurityStatus(error?.message || 'Could not change password.', 'error');
+    }
+  }
   async function detectBackendSession() {
     try {
       const response = await fetch('/api/auth/session', {
@@ -428,7 +491,8 @@ function runOpsRuntime() {
         available:true,
         authenticated:Boolean(payload.authenticated),
         storage:String(payload.storage || ''),
-        user: payload.user || null
+        user: payload.user || null,
+        passkey: payload.passkey || null
       };
     } catch (error) {
       return {available:false, authenticated:false, storage:'', user:null};
@@ -5030,6 +5094,7 @@ function runOpsRuntime() {
   }
   
   function renderCRM() {
+    renderOwnerSecurityPanel();
     const searchedCustomers = customers.filter((customer) => {
       if (!crmSearchQuery) return true;
       return [customer.name, customer.phone, customer.email, customer.company, customer.source, customer.crmTags, customer.crmNotes, customer.emergencyName]
@@ -5149,6 +5214,17 @@ function runOpsRuntime() {
     } else if (action === 'delete') {
       deleteCustomer(id);
     }
+  });
+  document.addEventListener('click', (event) => {
+    const target = event.target instanceof Element ? event.target.closest('[data-owner-auth-action]') : null;
+    if (!target) return;
+    event.preventDefault();
+    const action = target.getAttribute('data-owner-auth-action');
+    if (action === 'add-passkey') {
+      void addOwnerPasskey();
+      return;
+    }
+    if (action === 'change-password') void changeOwnerPassword();
   });
   
   async function saveCustomer() {

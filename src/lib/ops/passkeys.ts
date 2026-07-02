@@ -10,6 +10,7 @@ import { getOpsAuthStore, type OpsAuthUser, type OpsPasskey } from './auth-store
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const RP_NAME = 'Shoreline Aquatics';
+const OWNER_PASSKEY_LIMIT = 10;
 
 function base64UrlToBytes(value: string) {
   return Uint8Array.from(Buffer.from(value, 'base64url'));
@@ -52,12 +53,18 @@ function transportsFor(passkey: OpsPasskey) {
 export async function createPasskeyRegistrationOptions(request: Request) {
   const session = await getSession(request);
   if (!session) return { error: 'Authentication required.', status: 401 as const };
-  if (!['owner', 'developer'].includes(String(session.role || '').toLowerCase())) {
-    return { error: 'Owner or developer access required.', status: 403 as const };
+  if (String(session.role || '').toLowerCase() !== 'owner') {
+    return { error: 'Owner access required.', status: 403 as const };
+  }
+  if (String(session.authMethod || '') !== 'password') {
+    return { error: 'Password login required to add passkeys.', status: 403 as const };
   }
 
   const store = await getOpsAuthStore();
   const existing = await store.listPasskeysForUser(session.id);
+  if (existing.length >= OWNER_PASSKEY_LIMIT) {
+    return { error: 'Passkey limit reached.', status: 400 as const };
+  }
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: rpIDFor(request),
@@ -88,8 +95,18 @@ export async function createPasskeyRegistrationOptions(request: Request) {
 export async function verifyPasskeyRegistration(request: Request, response: RegistrationResponseJSON) {
   const session = await getSession(request);
   if (!session) return { error: 'Authentication required.', status: 401 as const };
+  if (String(session.role || '').toLowerCase() !== 'owner') {
+    return { error: 'Owner access required.', status: 403 as const };
+  }
+  if (String(session.authMethod || '') !== 'password') {
+    return { error: 'Password login required to add passkeys.', status: 403 as const };
+  }
   const challenge = parseClientChallenge(response);
   const store = await getOpsAuthStore();
+  const existing = await store.listPasskeysForUser(session.id);
+  if (existing.length >= OWNER_PASSKEY_LIMIT) {
+    return { error: 'Passkey limit reached.', status: 400 as const };
+  }
   const stored = challenge ? await store.findChallenge(hashAuthToken(challenge)) : null;
   if (!stored || stored.userId !== session.id || stored.purpose !== 'passkey-registration' || stored.consumedAt || Date.parse(stored.expiresAt) <= Date.now()) {
     return { error: 'Passkey challenge expired. Try again.', status: 400 as const };

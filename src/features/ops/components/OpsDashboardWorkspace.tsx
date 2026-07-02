@@ -83,6 +83,29 @@ export function OpsDashboardWorkspace() {
         </div>
         <div className="import-pill" id="crm-import-pill">No CRM import yet</div>
       </div>
+      <div className="list-card" id="owner-security-card" hidden>
+        <div className="crm-workspace-head">
+          <div>
+            <h3>Owner account security</h3>
+            <p id="owner-security-summary">Add passkeys after password sign-in, or change your owner password after password or passkey sign-in.</p>
+          </div>
+          <button className="btn btn-primary btn-sm" type="button" data-owner-auth-action="add-passkey">Add Passkey</button>
+        </div>
+        <div className="compose-grid" style={{marginTop: '1rem'}}>
+          <div>
+            <label htmlFor="owner-current-password">Current password</label>
+            <input id="owner-current-password" type="password" autoComplete="current-password" placeholder="Required unless signed in with passkey" />
+          </div>
+          <div>
+            <label htmlFor="owner-new-password">New password</label>
+            <input id="owner-new-password" type="password" autoComplete="new-password" placeholder="6+ chars, uppercase, special" />
+          </div>
+        </div>
+        <div className="compose-actions" style={{marginTop: '1rem'}}>
+          <button className="btn btn-ghost btn-sm" type="button" data-owner-auth-action="change-password">Change Password</button>
+          <span className="sub" id="owner-security-status" />
+        </div>
+      </div>
       <div className="kpi-grid crm-kpi-grid">
         <div className="kpi-card"><div className="label">Total customers</div><div className="value" id="crm-kpi-total">0</div><div className="delta up" id="crm-kpi-total-meta">All saved contacts</div></div>
         <div className="kpi-card"><div className="label">Need follow-up</div><div className="value" style={{color: 'var(--amber)'}} id="crm-kpi-followup">0</div><div className="delta warn" id="crm-kpi-followup-meta">No recent booking or touchpoint</div></div>

@@ -243,7 +243,7 @@ function createOpsLoginController(signal: AbortSignal) {
       }
       if (data.passkey?.shouldPrompt && passkeyRegisterBtn) {
         passkeyRegisterBtn.hidden = false;
-        setStatus('Password accepted. Set up a passkey to secure this admin account.', 'success');
+        setStatus('Password accepted. Set up a passkey to secure this owner account.', 'success');
         setBusy(false);
         return;
       }
