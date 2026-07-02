@@ -10,6 +10,7 @@ type OpsGlobalActions = {
   deleteTracker?: () => void;
   exportReportsCsv?: () => void;
   filterByStatus?: (status: string, tab?: Element | null) => void;
+  filterCommCustomers?: (input: HTMLInputElement) => void;
   filterCRM?: (input: HTMLInputElement) => void;
   filterInvoices?: (input: HTMLInputElement) => void;
   filterMassEmailRecipients?: (input: HTMLInputElement) => void;
@@ -116,6 +117,10 @@ export function filterBookingTable(input: HTMLInputElement) {
 
 export function filterBookingsByStatus(status: string, tab?: Element | null) {
   opsActions().filterByStatus?.(status, tab);
+}
+
+export function filterCommCustomers(input: HTMLInputElement) {
+  opsActions().filterCommCustomers?.(input);
 }
 
 export function filterCRM(input: HTMLInputElement) {

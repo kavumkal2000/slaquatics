@@ -1325,6 +1325,45 @@ test('/api/ops/messages/send chunks mass email BCC recipients into batches of 50
   }
 });
 
+test('/api/ops/customers/search finds email recipients from persisted ops state', async () => {
+  await withEnv({
+    OPS_DEV_PASSWORD: 'customer-search-password',
+    SESSION_SECRET: 'customer-search-session-secret'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=customer-search-login-${Date.now()}`);
+    const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=customer-search-state-${Date.now()}`);
+    const searchRoute = await import(`../../src/app/api/ops/customers/search/route.ts?case=customer-search-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'customer-search-password' })
+    }));
+    const cookie = login.headers.get('set-cookie') || '';
+    await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
+      method: 'POST',
+      headers: { cookie },
+      body: JSON.stringify({
+        customers: [
+          { id: 101, name: 'Avery Carter', email: 'avery@example.com', phone: '469-555-0101', company: 'Lakehouse Group', crmTags: 'vip repeat' },
+          { id: 102, name: 'Blake No Email', phone: '469-555-0102', crmNotes: 'Asked about July weekend' },
+          { id: 103, name: 'Casey Reed', email: 'casey@example.com', phone: '469-555-0103', source: 'Website Booking' }
+        ]
+      })
+    }));
+
+    const response = await searchRoute.GET(new Request('https://slaquatics.test/api/ops/customers/search?q=lakehouse&emailOnly=true', {
+      headers: { cookie }
+    }));
+    const payload = await responseJson(response);
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.customers.length, 1);
+    assert.equal(payload.customers[0].id, 101);
+    assert.equal(payload.customers[0].email, 'avery@example.com');
+    assert.equal(payload.customers[0].name, 'Avery Carter');
+  });
+});
+
 test('booking payment waiver and ops-login workflow works through App Router routes without Render', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
