@@ -55,20 +55,28 @@ export type OpsAuthStore = {
   findSession(tokenHash: string): Promise<{ user: OpsAuthUser; expiresAt: string; revokedAt: string; authMethod: string } | null>;
   createMagicLink(input: MagicLinkInput): Promise<void>;
   findMagicLink(tokenHash: string): Promise<{ tokenHash: string; email: string; roleIntent: 'client'; expiresAt: string; consumedAt: string } | null>;
-  consumeMagicLink(tokenHash: string): Promise<void>;
+  consumeMagicLink(tokenHash: string): Promise<boolean>;
   updateUserPassword(userId: number, passwordHash: string, authProvider?: string): Promise<void>;
   listPasskeysForUser(userId: number): Promise<OpsPasskey[]>;
   findPasskeyByCredentialId(credentialId: string): Promise<OpsPasskey | null>;
-  createPasskey(input: CreatePasskeyInput): Promise<void>;
+  createPasskey(input: CreatePasskeyInput, limit?: number): Promise<boolean>;
   updatePasskeyCounter(credentialId: string, counter: number): Promise<void>;
   createChallenge(input: CreateChallengeInput): Promise<void>;
   findChallenge(challengeHash: string): Promise<OpsChallenge | null>;
-  consumeChallenge(challengeHash: string): Promise<void>;
+  consumeChallenge(challengeHash: string): Promise<boolean>;
+  incrementRateLimit(input: AuthRateLimitInput): Promise<{ allowed: boolean; retryAfterSeconds: number }>;
   revokeSession(tokenHash: string): Promise<void>;
   revokeUserSessions(userId: number): Promise<void>;
   recordLogin(userId: number, at: string): Promise<void>;
   audit(input: AuthAuditInput): Promise<void>;
   authReady(): Promise<boolean>;
+};
+
+export type AuthRateLimitInput = {
+  key: string;
+  limit: number;
+  windowMs: number;
+  now?: number;
 };
 
 export type OpsPasskey = {
@@ -226,8 +234,20 @@ const CREATE_AUTH_SQL = [
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   )`,
   'CREATE INDEX IF NOT EXISTS idx_ops_auth_challenges_user_id ON ops_auth_challenges (user_id)',
-  'CREATE INDEX IF NOT EXISTS idx_ops_auth_challenges_expires_at ON ops_auth_challenges (expires_at)'
+  'CREATE INDEX IF NOT EXISTS idx_ops_auth_challenges_expires_at ON ops_auth_challenges (expires_at)',
+  `CREATE TABLE IF NOT EXISTS ops_auth_rate_limits (
+    key TEXT PRIMARY KEY,
+    count INTEGER NOT NULL,
+    reset_at INTEGER NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_ops_auth_rate_limits_reset_at ON ops_auth_rate_limits (reset_at)'
 ];
+
+function changed(result: any) {
+  const changes = result?.meta?.changes ?? result?.changes;
+  return changes === undefined ? true : Number(changes) > 0;
+}
 
 const OPTIONAL_AUTH_SQL = [
   "ALTER TABLE ops_auth_sessions ADD COLUMN auth_method TEXT NOT NULL DEFAULT 'password'",
@@ -368,9 +388,10 @@ function createD1AuthStore(db: D1DatabaseLike): OpsAuthStore {
     },
     async consumeMagicLink(tokenHash) {
       await ensureReady();
-      await db.prepare(
+      const result = await db.prepare(
         "UPDATE ops_auth_magic_links SET consumed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE token_hash = ? AND consumed_at IS NULL"
       ).bind(tokenHash).run();
+      return changed(result);
     },
     async updateUserPassword(userId, passwordHash, authProvider = 'password') {
       await ensureReady();
@@ -388,11 +409,20 @@ function createD1AuthStore(db: D1DatabaseLike): OpsAuthStore {
       const row = await db.prepare('SELECT * FROM ops_auth_passkeys WHERE credential_id = ? LIMIT 1').bind(credentialId).first<PasskeyRow>();
       return row ? passkeyFromRow(row) : null;
     },
-    async createPasskey(input) {
+    async createPasskey(input, limit) {
       await ensureReady();
+      if (Number.isFinite(limit)) {
+        const result = await db.prepare(
+          `INSERT INTO ops_auth_passkeys (user_id, credential_id, public_key, counter, transports)
+           SELECT ?, ?, ?, ?, ?
+           WHERE (SELECT COUNT(*) FROM ops_auth_passkeys WHERE user_id = ?) < ?`
+        ).bind(input.userId, input.credentialId, input.publicKey, input.counter, input.transports || '', input.userId, Number(limit)).run();
+        return changed(result);
+      }
       await db.prepare(
         'INSERT INTO ops_auth_passkeys (user_id, credential_id, public_key, counter, transports) VALUES (?, ?, ?, ?, ?)'
       ).bind(input.userId, input.credentialId, input.publicKey, input.counter, input.transports || '').run();
+      return true;
     },
     async updatePasskeyCounter(credentialId, counter) {
       await ensureReady();
@@ -420,9 +450,31 @@ function createD1AuthStore(db: D1DatabaseLike): OpsAuthStore {
     },
     async consumeChallenge(challengeHash) {
       await ensureReady();
-      await db.prepare(
+      const result = await db.prepare(
         "UPDATE ops_auth_challenges SET consumed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE challenge_hash = ? AND consumed_at IS NULL"
       ).bind(challengeHash).run();
+      return changed(result);
+    },
+    async incrementRateLimit(input) {
+      await ensureReady();
+      const now = Number(input.now || Date.now());
+      const windowMs = Math.max(1000, Number(input.windowMs || 60000));
+      const resetAt = now + windowMs;
+      const row = await db.prepare('SELECT count, reset_at FROM ops_auth_rate_limits WHERE key = ? LIMIT 1').bind(input.key).first<{ count: number; reset_at: number }>();
+      if (!row || Number(row.reset_at || 0) <= now) {
+        await db.prepare(
+          "INSERT OR REPLACE INTO ops_auth_rate_limits (key, count, reset_at, updated_at) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+        ).bind(input.key, 1, resetAt).run();
+        return { allowed: true, retryAfterSeconds: Math.ceil(windowMs / 1000) };
+      }
+      const count = Number(row.count || 0) + 1;
+      await db.prepare(
+        "UPDATE ops_auth_rate_limits SET count = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE key = ?"
+      ).bind(count, input.key).run();
+      return {
+        allowed: count <= Number(input.limit),
+        retryAfterSeconds: Math.max(1, Math.ceil((Number(row.reset_at) - now) / 1000))
+      };
     },
     async revokeSession(tokenHash) {
       await ensureReady();
@@ -580,7 +632,11 @@ function createMemoryAuthStore(): OpsAuthStore {
     },
     async consumeMagicLink(tokenHash) {
       const link = memory.magicLinks.get(tokenHash);
-      if (link && !link.consumedAt) link.consumedAt = new Date().toISOString();
+      if (link && !link.consumedAt) {
+        link.consumedAt = new Date().toISOString();
+        return true;
+      }
+      return false;
     },
     async updateUserPassword(userId, passwordHash, authProvider = 'password') {
       const user = memory.users.find((item) => item.id === Number(userId));
@@ -596,7 +652,10 @@ function createMemoryAuthStore(): OpsAuthStore {
     async findPasskeyByCredentialId(credentialId) {
       return memory.passkeys.find((passkey) => passkey.credentialId === credentialId) || null;
     },
-    async createPasskey(input) {
+    async createPasskey(input, limit) {
+      if (Number.isFinite(limit) && memory.passkeys.filter((passkey) => passkey.userId === Number(input.userId)).length >= Number(limit)) {
+        return false;
+      }
       const now = new Date().toISOString();
       memory.passkeys.push({
         id: memory.passkeys.length + 1,
@@ -608,6 +667,7 @@ function createMemoryAuthStore(): OpsAuthStore {
         createdAt: now,
         lastUsedAt: ''
       });
+      return true;
     },
     async updatePasskeyCounter(credentialId, counter) {
       const passkey = memory.passkeys.find((item) => item.credentialId === credentialId);
@@ -631,7 +691,34 @@ function createMemoryAuthStore(): OpsAuthStore {
     },
     async consumeChallenge(challengeHash) {
       const challenge = memory.challenges.get(challengeHash);
-      if (challenge && !challenge.consumedAt) challenge.consumedAt = new Date().toISOString();
+      if (challenge && !challenge.consumedAt) {
+        challenge.consumedAt = new Date().toISOString();
+        return true;
+      }
+      return false;
+    },
+    async incrementRateLimit(input) {
+      const now = Number(input.now || Date.now());
+      const windowMs = Math.max(1000, Number(input.windowMs || 60000));
+      const key = `rate:${input.key}`;
+      const current = memory.challenges.get(key);
+      if (!current || Date.parse(current.expiresAt) <= now) {
+        memory.challenges.set(key, {
+          challengeHash: key,
+          userId: 0,
+          purpose: 'rate-limit',
+          challenge: '1',
+          expiresAt: new Date(now + windowMs).toISOString(),
+          consumedAt: ''
+        });
+        return { allowed: true, retryAfterSeconds: Math.ceil(windowMs / 1000) };
+      }
+      const count = Number(current.challenge || 0) + 1;
+      current.challenge = String(count);
+      return {
+        allowed: count <= Number(input.limit),
+        retryAfterSeconds: Math.max(1, Math.ceil((Date.parse(current.expiresAt) - now) / 1000))
+      };
     },
     async revokeSession(tokenHash) {
       const session = memory.sessions.get(tokenHash);

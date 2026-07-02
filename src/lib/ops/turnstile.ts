@@ -7,12 +7,13 @@ type TurnstileResult = {
 function clientIpFor(request: Request) {
   const cloudflareIp = request.headers.get('cf-connecting-ip');
   if (cloudflareIp) return cloudflareIp;
+  if (process.env.NODE_ENV === 'production') return '';
   const forwardedFor = String(request.headers.get('x-forwarded-for') || '')
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
   if (forwardedFor.length) return forwardedFor[forwardedFor.length - 1];
-  return request.headers.get('cf-connecting-ip') || '';
+  return '';
 }
 
 export function publicTurnstileSiteKey() {

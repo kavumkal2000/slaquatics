@@ -441,7 +441,7 @@ test('/api/public/booking-request preserves confirmed bookings when updating by 
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{
           id: 612,
@@ -489,7 +489,7 @@ test('/api/public/booking-request preserves confirmed bookings when updating by 
     })));
 
     const synced = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const booking = synced.state.bookings.find((entry) => entry.publicToken === 'confirmed-public-token');
 
@@ -629,15 +629,15 @@ test('/api/auth login, session, logout, and /api/ops/state use signed same-origi
   assert.match(cookie, /sla_ops_session=/);
 
   const session = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
-    headers: { cookie }
+    headers: { cookie, origin: 'https://slaquatics.test' }
   })));
   const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-    headers: { cookie }
+    headers: { cookie, origin: 'https://slaquatics.test' }
   })));
-  const logout = await logoutRoute.POST(new Request('https://slaquatics.test/api/auth/logout', {
-    method: 'POST',
-    headers: { cookie }
-  }));
+      const logout = await logoutRoute.POST(new Request('https://slaquatics.test/api/auth/logout', {
+        method: 'POST',
+        headers: { cookie, origin: 'https://slaquatics.test' }
+      }));
 
   assert.equal(session.authenticated, true);
   assert.equal(session.user.role, 'developer');
@@ -663,6 +663,36 @@ test('/api/auth login accepts native form-encoded submissions', async () => {
 
     assert.equal(login.status, 200);
     assert.match(login.headers.get('set-cookie') || '', /sla_ops_session=/);
+  });
+});
+
+test('/api/auth logout and same-origin mutations reject missing origins', async () => {
+  await withEnv({
+    SESSION_SECRET: 'missing-origin-session-secret',
+    OPS_DEV_PASSWORD: 'missing-origin-password'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=missing-origin-login-${Date.now()}`);
+    const logoutRoute = await import(`../../src/app/api/auth/logout/route.ts?case=missing-origin-logout-${Date.now()}`);
+    const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=missing-origin-state-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'missing-origin-password' })
+    }));
+    const cookie = login.headers.get('set-cookie') || '';
+
+    const logout = await responseJson(await logoutRoute.POST(new Request('https://slaquatics.test/api/auth/logout', {
+      method: 'POST',
+      headers: { cookie },
+      body: ''
+    })));
+    const state = await responseJson(await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
+      method: 'POST',
+      headers: { cookie },
+      body: JSON.stringify({ bookings: [], customers: [], invoices: [] })
+    })));
+
+    assert.equal(logout.error, 'Invalid request origin.');
+    assert.equal(state.error, 'Invalid request origin.');
   });
 });
 
@@ -776,7 +806,7 @@ test('/api/auth cookies include Secure in production mode', async () => {
       }));
       const logout = await logoutRoute.POST(new Request('https://slaquatics.test/api/auth/logout', {
         method: 'POST',
-        headers: { cookie: login.headers.get('set-cookie') || '' }
+        headers: { cookie: login.headers.get('set-cookie') || '', origin: 'https://slaquatics.test' }
       }));
 
       assert.match(login.headers.get('set-cookie') || '', /;\s*Secure(?:;|$)/);
@@ -849,10 +879,10 @@ test('/api/auth client magic-link sends a single-use Resend link and consumes it
       assert.match(cookie, /sla_ops_session=/);
 
       const session = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
-        headers: { cookie }
+        headers: { cookie, origin: 'https://slaquatics.test' }
       })));
       const opsState = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-        headers: { cookie }
+        headers: { cookie, origin: 'https://slaquatics.test' }
       })));
       const replay = await consumeRoute.GET(new Request(link));
 
@@ -862,6 +892,70 @@ test('/api/auth client magic-link sends a single-use Resend link and consumes it
       assert.equal(opsState.error, 'Ops access required.');
       assert.equal(replay.status, 303);
       assert.match(replay.headers.get('location') || '', /auth_error=magic-link-invalid/);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('/api/auth magic-link token consumption is atomic at the auth store boundary', async () => {
+  await withEnv({
+    SESSION_SECRET: 'atomic-magic-link-session-secret'
+  }, async () => {
+    const { hashAuthToken } = await import(`../../src/lib/ops/auth.ts?case=atomic-magic-${Date.now()}`);
+    const { getOpsAuthStore } = await import(`../../src/lib/ops/auth-store.ts?case=atomic-magic-store-${Date.now()}`);
+    const request = new Request('https://slaquatics.test/api/auth/client/magic-link', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '203.0.113.15' }
+    });
+    const store = await getOpsAuthStore();
+    const token = crypto.randomBytes(32).toString('base64url');
+    const tokenHash = hashAuthToken(token);
+    await store.createMagicLink({
+      tokenHash,
+      email: 'atomic-client@example.com',
+      roleIntent: 'client',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      ip: request.headers.get('x-forwarded-for') || '',
+      userAgent: ''
+    });
+
+    assert.equal(await store.consumeMagicLink(tokenHash), true);
+    assert.equal(await store.consumeMagicLink(tokenHash), false);
+  });
+});
+
+test('/api/auth client magic-link requests are throttled per email and client', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ id: 'email_rate_limit' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  try {
+    await withEnv({
+      RESEND_API_KEY: 're_magic_link_rate_limit',
+      AUTH_RESEND_FROM_EMAIL: 'auth@slaquatics.test',
+      TURNSTILE_SECRET_KEY: undefined
+    }, async () => {
+      const magicRoute = await import(`../../src/app/api/auth/client/magic-link/route.ts?case=magic-rate-${Date.now()}`);
+      const headers = { 'x-forwarded-for': '203.0.113.44' };
+      for (let index = 0; index < 5; index += 1) {
+        const response = await magicRoute.POST(new Request('https://slaquatics.test/api/auth/client/magic-link', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ email: 'rate-limited-client@example.com' })
+        }));
+        assert.equal(response.status, 200);
+      }
+
+      const limited = await responseJson(await magicRoute.POST(new Request('https://slaquatics.test/api/auth/client/magic-link', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ email: 'rate-limited-client@example.com' })
+      })));
+
+      assert.equal(limited.error, 'Too many sign-in links requested. Please try again later.');
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -901,7 +995,7 @@ test('/api/auth client magic-link session prompts optional password setup and ca
       const consume = await consumeRoute.GET(new Request(link));
       const cookie = consume.headers.get('set-cookie') || '';
       const initialSession = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
-        headers: { cookie }
+        headers: { cookie, origin: 'https://slaquatics.test' }
       })));
 
       assert.equal(initialSession.user.role, 'client');
@@ -924,7 +1018,7 @@ test('/api/auth client magic-link session prompts optional password setup and ca
       assert.equal(saved.ok, true);
 
       const updatedSession = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
-        headers: { cookie }
+        headers: { cookie, origin: 'https://slaquatics.test' }
       })));
       assert.equal(updatedSession.clientPassword.canSet, true);
       assert.equal(updatedSession.clientPassword.hasPassword, true);
@@ -1094,6 +1188,65 @@ test('/api/auth passkey registration enforces owner max of ten passkeys', async 
     })));
 
     assert.equal(response.error, 'Passkey limit reached.');
+  });
+});
+
+test('/api/auth passkey challenges and owner passkey limit are atomic at the auth store boundary', async () => {
+  await withEnv({
+    SESSION_SECRET: 'atomic-passkey-session-secret',
+    OPS_OWNER_PASSWORD: 'atomic-passkey-password'
+  }, async () => {
+    const { hashAuthToken } = await import(`../../src/lib/ops/auth.ts?case=atomic-passkey-auth-${Date.now()}`);
+    const { getOpsAuthStore } = await import(`../../src/lib/ops/auth-store.ts?case=atomic-passkey-store-${Date.now()}`);
+    const store = await getOpsAuthStore();
+    const owner = await store.findUserForPasswordLogin('owner');
+    const challengeHash = hashAuthToken('atomic-passkey-challenge');
+    await store.createChallenge({
+      challengeHash,
+      userId: owner.id,
+      purpose: 'passkey-authentication',
+      challenge: 'atomic-passkey-challenge',
+      expiresAt: new Date(Date.now() + 60_000).toISOString()
+    });
+
+    assert.equal(await store.consumeChallenge(challengeHash), true);
+    assert.equal(await store.consumeChallenge(challengeHash), false);
+
+    for (let index = 0; index < 9; index += 1) {
+      assert.equal(await store.createPasskey({
+        userId: owner.id,
+        credentialId: `atomic-owner-credential-${index}`,
+        publicKey: `atomic-owner-public-key-${index}`,
+        counter: index
+      }, 10), true);
+    }
+    assert.equal(await store.createPasskey({
+      userId: owner.id,
+      credentialId: 'atomic-owner-credential-9',
+      publicKey: 'atomic-owner-public-key-9',
+      counter: 9
+    }, 10), true);
+    assert.equal(await store.createPasskey({
+      userId: owner.id,
+      credentialId: 'atomic-owner-credential-over-limit',
+      publicKey: 'atomic-owner-public-key-over-limit',
+      counter: 11
+    }, 10), false);
+  });
+});
+
+test('/api/auth passkey login challenge creation is throttled', async () => {
+  await withEnv({
+    SESSION_SECRET: 'passkey-options-rate-session-secret'
+  }, async () => {
+    const route = await import(`../../src/app/api/auth/passkey/login/options/route.ts?case=passkey-rate-${Date.now()}`);
+    const headers = { 'x-forwarded-for': '203.0.113.77' };
+    for (let index = 0; index < 20; index += 1) {
+      const response = await route.GET(new Request('https://slaquatics.test/api/auth/passkey/login/options', { headers }));
+      assert.equal(response.status, 200);
+    }
+    const limited = await responseJson(await route.GET(new Request('https://slaquatics.test/api/auth/passkey/login/options', { headers })));
+    assert.equal(limited.error, 'Too many passkey attempts. Please try again shortly.');
   });
 });
 
@@ -1276,7 +1429,7 @@ test('/api/ops/integrations/status includes saved review links from ops state', 
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [],
         customers: [],
@@ -1291,7 +1444,7 @@ test('/api/ops/integrations/status includes saved review links from ops state', 
     }));
 
     const payload = await responseJson(await integrationsRoute.GET(new Request('https://slaquatics.test/api/ops/integrations/status', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
 
     assert.equal(payload.ok, true);
@@ -1304,7 +1457,7 @@ test('/api/ops/integrations/status includes saved review links from ops state', 
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [],
         customers: [],
@@ -1645,7 +1798,7 @@ test('/api/public/checkout-session retrieves Stripe session and marks the matchi
     const cookie = login.headers.get('set-cookie') || '';
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{ id: 1, publicToken: 'paid-token', name: 'Paid Rider', email: 'paid@example.com', paymentSessionId: 'cs_paid_123', total: 315 }],
         customers: [],
@@ -1675,7 +1828,7 @@ test('/api/public/checkout-session retrieves Stripe session and marks the matchi
     assert.match(emailBody.text, /dead end/i);
     assert.match(emailBody.text, /walk down to the shoreline/i);
     const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const booking = state.state.bookings.find((entry) => entry.id === 1);
     assert.equal(booking.confirmationEmailId, 'email_paid_123');
@@ -1700,7 +1853,7 @@ test('/api/webhooks/stripe verifies Stripe signature and applies checkout comple
     const cookie = login.headers.get('set-cookie') || '';
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{ id: 44, publicToken: 'hook-token', name: 'Hook Rider', paymentSessionId: 'cs_hook_123', paymentStatus: 'pending' }],
         customers: [],
@@ -1727,7 +1880,7 @@ test('/api/webhooks/stripe verifies Stripe signature and applies checkout comple
       headers: { 'stripe-signature': stripeSignatureHeader(rawBody, 'whsec_route_parity') },
       body: rawBody
     })));
-    const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', { headers: { cookie } })));
+    const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', { headers: { cookie, origin: 'https://slaquatics.test' } })));
     const booking = state.state.bookings.find((entry) => entry.id === 44);
 
     assert.equal(webhook.received, true);
@@ -1758,13 +1911,14 @@ test('ops messaging review owner update and social routes enforce auth and confi
       const route = await import(`${modulePath}?case=ops-${Date.now()}-${Math.random()}`);
       const unauthorized = await responseJson(await route.POST(new Request('https://slaquatics.test/api/ops/test', {
         method: 'POST',
+        headers: { origin: 'https://slaquatics.test' },
         body: JSON.stringify(body)
       })));
       assert.equal(unauthorized.error, 'Authentication required.');
 
       const response = await route.POST(new Request('https://slaquatics.test/api/ops/test', {
         method: 'POST',
-        headers: { cookie },
+        headers: { cookie, origin: 'https://slaquatics.test' },
         body: JSON.stringify(body)
       }));
       const payload = await responseJson(response);
@@ -1808,7 +1962,7 @@ test('/api/ops/messages/send chunks mass email BCC recipients into batches of 50
       const recipients = Array.from({ length: 121 }, (_, index) => `guest${index}@example.com`);
       const response = await route.POST(new Request('https://slaquatics.test/api/ops/messages/send', {
         method: 'POST',
-        headers: { cookie },
+        headers: { cookie, origin: 'https://slaquatics.test' },
         body: JSON.stringify({
           channel: 'mass-email',
           bcc: recipients,
@@ -1844,7 +1998,7 @@ test('/api/ops/customers/search finds email recipients from persisted ops state'
     const cookie = login.headers.get('set-cookie') || '';
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         customers: [
           { id: 101, name: 'Avery Carter', email: 'avery@example.com', phone: '469-555-0101', company: 'Lakehouse Group', crmTags: 'vip repeat' },
@@ -1855,7 +2009,7 @@ test('/api/ops/customers/search finds email recipients from persisted ops state'
     }));
 
     const response = await searchRoute.GET(new Request('https://slaquatics.test/api/ops/customers/search?q=lakehouse&emailOnly=true', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     }));
     const payload = await responseJson(response);
 
@@ -1953,7 +2107,7 @@ test('/api/ops/state filters employee and crew sessions and preserves hidden ser
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie: developerCookie },
+      headers: { cookie: developerCookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{
           id: 501,
@@ -1967,6 +2121,18 @@ test('/api/ops/state filters employee and crew sessions and preserves hidden ser
           craftLabel: '2 Yamaha Jet Skis',
           status: 'pending',
           waiverSignedAt: '2026-07-01T00:00:00.000Z',
+          deposit: false,
+          paymentStatus: 'unpaid'
+        }, {
+          id: 502,
+          name: 'Omitted Rider',
+          phone: '4695555002',
+          email: 'omitted@example.com',
+          total: 275,
+          date: '2026-07-16',
+          time: '14:00',
+          craftLabel: 'Single Jet Ski',
+          status: 'pending',
           deposit: false,
           paymentStatus: 'unpaid'
         }],
@@ -1983,7 +2149,7 @@ test('/api/ops/state filters employee and crew sessions and preserves hidden ser
     }));
 
     const employeeState = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie: employeeCookie }
+      headers: { cookie: employeeCookie, origin: 'https://slaquatics.test' }
     })));
 
     assert.equal(employeeState.state.bookings[0].name, 'Private Rider');
@@ -1996,21 +2162,23 @@ test('/api/ops/state filters employee and crew sessions and preserves hidden ser
     assert.equal(employeeState.state.customers[0].waiverOnFile, true);
 
     employeeState.state.bookings[0].status = 'confirmed';
+    employeeState.state.bookings = employeeState.state.bookings.slice(0, 1);
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie: employeeCookie },
+      headers: { cookie: employeeCookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify(employeeState.state)
     }));
     const afterEmployeeWrite = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie: developerCookie }
+      headers: { cookie: developerCookie, origin: 'https://slaquatics.test' }
     })));
     assert.equal(afterEmployeeWrite.state.bookings[0].status, 'confirmed');
     assert.equal(afterEmployeeWrite.state.bookings[0].phone, '4695555001');
     assert.equal(afterEmployeeWrite.state.bookings[0].email, 'private@example.com');
     assert.equal(afterEmployeeWrite.state.bookings[0].total, 415);
+    assert.ok(afterEmployeeWrite.state.bookings.find((booking) => booking.id === 502), 'employee writes must preserve omitted existing bookings');
 
     const crewState = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie: crewCookie }
+      headers: { cookie: crewCookie, origin: 'https://slaquatics.test' }
     })));
     assert.equal(crewState.state.bookings[0].name, 'Private Rider');
     assert.equal(crewState.state.bookings[0].phone, undefined);
@@ -2023,11 +2191,11 @@ test('/api/ops/state filters employee and crew sessions and preserves hidden ser
     crewState.state.bookings.push({ id: 999, name: 'Injected Booking', checkedIn: true, status: 'completed' });
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie: crewCookie },
+      headers: { cookie: crewCookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify(crewState.state)
     }));
     const afterCrewWrite = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie: developerCookie }
+      headers: { cookie: developerCookie, origin: 'https://slaquatics.test' }
     })));
     assert.equal(afterCrewWrite.state.bookings[0].checkedIn, true);
     assert.equal(afterCrewWrite.state.bookings[0].status, 'completed');
@@ -2044,7 +2212,7 @@ test('/api/ops/state preserves server-owned digest metadata on full state writes
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie: developerCookie },
+      headers: { cookie: developerCookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [],
         customers: [],
@@ -2066,7 +2234,7 @@ test('/api/ops/state preserves server-owned digest metadata on full state writes
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie: developerCookie },
+      headers: { cookie: developerCookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [],
         customers: [],
@@ -2081,7 +2249,7 @@ test('/api/ops/state preserves server-owned digest metadata on full state writes
     }));
 
     const afterWrite = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie: developerCookie }
+      headers: { cookie: developerCookie, origin: 'https://slaquatics.test' }
     })));
 
     assert.equal(afterWrite.state.ownerWeeklyDigest.lastSentAt, '2026-06-20T10:00:00.000Z');
@@ -2103,7 +2271,7 @@ test('/api/ops/state read syncs customer records from bookings', async () => {
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{
           id: 301,
@@ -2122,10 +2290,10 @@ test('/api/ops/state read syncs customer records from bookings', async () => {
     }));
 
     const synced = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const persisted = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const customer = synced.state.customers.find((entry) => entry.email === 'sync@example.com');
     const booking = synced.state.bookings.find((entry) => entry.id === 301);
@@ -2152,7 +2320,7 @@ test('/api/ops/state read syncs booking payment state from invoices', async () =
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{
           id: 401,
@@ -2183,7 +2351,7 @@ test('/api/ops/state read syncs booking payment state from invoices', async () =
     }));
 
     const synced = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const booking = synced.state.bookings.find((entry) => entry.id === 401);
 
@@ -2208,7 +2376,7 @@ test('/api/ops/state read creates website booking invoices with legacy booking l
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         bookings: [{
           id: 402,
@@ -2240,7 +2408,7 @@ test('/api/ops/state read creates website booking invoices with legacy booking l
     }));
 
     const synced = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const invoice = synced.state.invoices.find((entry) => Number(entry.bookingId) === 402);
 
@@ -2273,7 +2441,7 @@ test('/api/ops/state read includes collected invoices in customer spend rollups'
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
-      headers: { cookie },
+      headers: { cookie, origin: 'https://slaquatics.test' },
       body: JSON.stringify({
         customers: [{
           id: 701,
@@ -2317,7 +2485,7 @@ test('/api/ops/state read includes collected invoices in customer spend rollups'
     }));
 
     const synced = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
-      headers: { cookie }
+      headers: { cookie, origin: 'https://slaquatics.test' }
     })));
     const customer = synced.state.customers.find((entry) => Number(entry.id) === 701);
 

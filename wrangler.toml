@@ -23,6 +23,22 @@ migrations_dir = "migrations"
 binding = "MEDIA_BUCKET"
 bucket_name = "slaquatics-media-development"
 
+[[ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2101"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[ratelimits]]
+name = "AUTH_STRICT_RATE_LIMITER"
+namespace_id = "2102"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
 [env.development]
 name = "slaquatics-development"
 
@@ -47,6 +63,22 @@ migrations_dir = "migrations"
 [[env.development.r2_buckets]]
 binding = "MEDIA_BUCKET"
 bucket_name = "slaquatics-media-development"
+
+[[env.development.ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2111"
+
+  [env.development.ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[env.development.ratelimits]]
+name = "AUTH_STRICT_RATE_LIMITER"
+namespace_id = "2112"
+
+  [env.development.ratelimits.simple]
+  limit = 10
+  period = 60
 
 [env.production]
 name = "slaquatics-production"
@@ -76,3 +108,19 @@ migrations_dir = "migrations"
 [[env.production.r2_buckets]]
 binding = "MEDIA_BUCKET"
 bucket_name = "slaquatics-media-production"
+
+[[env.production.ratelimits]]
+name = "AUTH_RATE_LIMITER"
+namespace_id = "2121"
+
+  [env.production.ratelimits.simple]
+  limit = 30
+  period = 60
+
+[[env.production.ratelimits]]
+name = "AUTH_STRICT_RATE_LIMITER"
+namespace_id = "2122"
+
+  [env.production.ratelimits.simple]
+  limit = 10
+  period = 60

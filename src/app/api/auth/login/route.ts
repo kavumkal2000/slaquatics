@@ -12,6 +12,7 @@ import {
 } from '../../../../lib/ops/auth.ts';
 import { jsonResponse } from '../../../../lib/cloudflare/http.ts';
 import { verifyTurnstileToken } from '../../../../lib/ops/turnstile.ts';
+import { authRateLimit, rateLimitHeaders } from '../../../../lib/ops/rate-limit.ts';
 
 type LoginBody = {
   username: string;
@@ -60,6 +61,19 @@ export async function POST(request: Request) {
   try {
     const body = await parseLoginBody(request);
     const rateKey = loginRateKey(request, body.username);
+    const throttle = await authRateLimit(request, {
+      scope: 'auth-login',
+      subject: body.username,
+      limit: 120,
+      windowMs: 60_000,
+      bindingName: 'AUTH_RATE_LIMITER'
+    });
+    if (!throttle.allowed) {
+      return jsonResponse(
+        { error: 'Too many login attempts. Please try again shortly.' },
+        { status: 429, headers: rateLimitHeaders(throttle) }
+      );
+    }
     const lockMs = loginLockRemainingMs(rateKey);
     if (lockMs > 0) {
       return jsonResponse(

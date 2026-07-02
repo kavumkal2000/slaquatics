@@ -1,4 +1,5 @@
 import { jsonResponse } from '../../../../../lib/cloudflare/http.ts';
+import { readLimitedJson } from '../../../../../lib/cloudflare/rate-limit.ts';
 import { requireMessagingSession } from '../../../../../lib/ops/api-auth.ts';
 import { renderOpsMessageEmail } from '../../../../../lib/ops/email-templates.ts';
 import { sendResendEmail, sendResendMassEmail, sendTwilioSms } from '../../../../../lib/ops/outbound.ts';
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
 
   try {
-    const body = await request.json();
+    const body = await readLimitedJson(request, { scope: 'ops-messages-send', rateLimit: 20, windowMs: 60_000, maxBytes: 64 * 1024 });
     const channel = String(body.channel || '').toLowerCase();
     if (channel === 'sms') {
       const result = await sendTwilioSms({ to: body.to, body: body.body });
@@ -39,6 +40,6 @@ export async function POST(request: Request) {
     }
     return jsonResponse({ error: 'Unsupported messaging channel.' }, { status: 400 });
   } catch (error: any) {
-    return jsonResponse({ error: error.message || 'Could not send message.' }, { status: 400 });
+    return jsonResponse({ error: error.message || 'Could not send message.' }, { status: error.status || 400 });
   }
 }

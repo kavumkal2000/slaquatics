@@ -22,12 +22,13 @@ function normalizeUsername(username = '') {
 function clientIpFor(request: Request) {
   const cloudflareIp = request.headers.get('cf-connecting-ip');
   if (cloudflareIp) return cloudflareIp;
+  if (process.env.NODE_ENV === 'production') return 'unknown';
   const forwardedFor = String(request.headers.get('x-forwarded-for') || '')
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
   if (forwardedFor.length) return forwardedFor[forwardedFor.length - 1];
-  return request.headers.get('cf-connecting-ip') || 'unknown';
+  return 'unknown';
 }
 
 function userAgentFor(request: Request) {
@@ -252,7 +253,10 @@ export async function consumeClientMagicLink(token: string, request: Request) {
     await store.audit({ event: 'magic_link_rejected', detail: 'invalid-or-expired', ip: clientIpFor(request), userAgent: userAgentFor(request) });
     return null;
   }
-  await store.consumeMagicLink(tokenHash);
+  if (!await store.consumeMagicLink(tokenHash)) {
+    await store.audit({ event: 'magic_link_rejected', detail: 'already-consumed', ip: clientIpFor(request), userAgent: userAgentFor(request) });
+    return null;
+  }
   const user = await store.findOrCreateClientUser({ email: link.email, displayName: link.email, provider: 'magic-link' });
   await store.audit({ event: 'magic_link_login_success', username: user.username, userId: user.id, ip: clientIpFor(request), userAgent: userAgentFor(request) });
   return { user, cookie: await createSessionCookie(user, request, { authMethod: 'magic-link' }) };

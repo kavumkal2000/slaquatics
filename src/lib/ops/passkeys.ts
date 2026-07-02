@@ -122,14 +122,18 @@ export async function verifyPasskeyRegistration(request: Request, response: Regi
   if (!result.verified) return { error: 'Passkey registration failed.', status: 400 as const };
 
   const credential = result.registrationInfo.credential;
-  await store.createPasskey({
+  if (!await store.consumeChallenge(stored.challengeHash)) {
+    return { error: 'Passkey challenge expired. Try again.', status: 400 as const };
+  }
+
+  const created = await store.createPasskey({
     userId: session.id,
     credentialId: credential.id,
     publicKey: bytesToBase64Url(credential.publicKey),
     counter: credential.counter,
     transports: Array.isArray(response.response.transports) ? response.response.transports.join(',') : ''
-  });
-  await store.consumeChallenge(stored.challengeHash);
+  }, OWNER_PASSKEY_LIMIT);
+  if (!created) return { error: 'Passkey limit reached.', status: 400 as const };
   await store.audit({ event: 'passkey_registered', username: session.username, userId: session.id });
   return { ok: true };
 }
@@ -175,8 +179,10 @@ export async function verifyPasskeyAuthentication(request: Request, response: Au
   });
   if (!result.verified) return { error: 'Passkey sign-in failed.', status: 401 as const };
 
+  if (!await store.consumeChallenge(stored.challengeHash)) {
+    return { error: 'Passkey challenge expired. Try again.', status: 400 as const };
+  }
   await store.updatePasskeyCounter(passkey.credentialId, result.authenticationInfo.newCounter);
-  await store.consumeChallenge(stored.challengeHash);
   await store.audit({ event: 'passkey_login_success', username: user.username, userId: user.id });
   return { ok: true, user, cookie: await createSessionCookie(user as OpsAuthUser, request, { authMethod: 'passkey' }) };
 }

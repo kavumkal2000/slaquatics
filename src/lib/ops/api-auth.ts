@@ -23,7 +23,7 @@ export function sameOriginMutationError(request: Request) {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) return null;
   const url = new URL(request.url);
   const source = request.headers.get('origin') || request.headers.get('referer') || '';
-  if (!source) return null;
+  if (!source) return jsonResponse({ error: 'Invalid request origin.' }, { status: 403 });
   try {
     const sourceUrl = new URL(source);
     if (sourceUrl.origin === url.origin) return null;

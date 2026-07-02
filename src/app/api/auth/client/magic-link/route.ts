@@ -2,6 +2,7 @@ import { jsonResponse } from '../../../../../lib/cloudflare/http.ts';
 import { createClientMagicLink, normalizeEmail } from '../../../../../lib/ops/auth.ts';
 import { renderShorelineEmail } from '../../../../../lib/ops/email-templates.ts';
 import { sendResendEmail } from '../../../../../lib/ops/outbound.ts';
+import { authRateLimit, rateLimitHeaders } from '../../../../../lib/ops/rate-limit.ts';
 import { verifyTurnstileToken } from '../../../../../lib/ops/turnstile.ts';
 
 function validEmail(value = '') {
@@ -16,6 +17,20 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const email = normalizeEmail(body.email || '');
   if (!validEmail(email)) return jsonResponse({ error: 'A valid email is required.' }, { status: 400 });
+
+  const throttle = await authRateLimit(request, {
+    scope: 'client-magic-link',
+    subject: email,
+    limit: 5,
+    windowMs: 15 * 60_000,
+    bindingName: 'AUTH_STRICT_RATE_LIMITER'
+  });
+  if (!throttle.allowed) {
+    return jsonResponse(
+      { error: 'Too many sign-in links requested. Please try again later.' },
+      { status: 429, headers: rateLimitHeaders(throttle) }
+    );
+  }
 
   const turnstile = await verifyTurnstileToken(request, body.turnstileToken || body['cf-turnstile-response'] || '');
   if (!turnstile.ok) return jsonResponse({ error: turnstile.error || 'Security check failed.' }, { status: 403 });

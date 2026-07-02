@@ -109,6 +109,10 @@ test('Wrangler defines isolated development and production Cloudflare services',
   assert.match(wrangler, /\[\[env\.development\.d1_databases\]\]/);
   assert.match(wrangler, /\[\[env\.production\.d1_databases\]\]/);
   assert.match(wrangler, /binding = "OPS_DB"/);
+  assert.match(wrangler, /\[\[env\.development\.ratelimits\]\][\s\S]*name = "AUTH_RATE_LIMITER"/);
+  assert.match(wrangler, /\[\[env\.development\.ratelimits\]\][\s\S]*name = "AUTH_STRICT_RATE_LIMITER"/);
+  assert.match(wrangler, /\[\[env\.production\.ratelimits\]\][\s\S]*name = "AUTH_RATE_LIMITER"/);
+  assert.match(wrangler, /\[\[env\.production\.ratelimits\]\][\s\S]*name = "AUTH_STRICT_RATE_LIMITER"/);
   assert.match(wrangler, /\[triggers\]\ncrons = \["0 14 \* \* 1"\]/);
   assert.doesNotMatch(wrangler, /shoreline-aquatics-ops\.onrender\.com/);
 });
