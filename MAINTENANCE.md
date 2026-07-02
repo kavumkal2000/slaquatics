@@ -14,6 +14,7 @@ Run `npm run smoke` against any environment: `SITE_URL=https://staging... API_UR
 
 ### 1. ✅ GitHub Actions Cloudflare deploys
 - Runs `npm run check && npm run cf:build` on pull requests and pushes.
+- Uploads a Cloudflare preview version for same-repository pull requests targeting `development` and comments the preview link on the PR.
 - Deploys through OpenNext on pushes to `development` and `main`.
 - Requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` repository secrets.
 - Keep Cloudflare connected builds disabled to avoid duplicate deployments.

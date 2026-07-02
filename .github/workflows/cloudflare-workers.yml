@@ -36,6 +36,105 @@ jobs:
       - name: Validate and build
         run: npm run check && npm run cf:build
 
+  preview:
+    name: Upload PR preview
+    needs: validate
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Check required secrets
+        run: |
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ] || [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN repository secret." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run cf:build
+
+      - name: Upload preview version
+        id: preview
+        run: |
+          set -o pipefail
+          npm run cf:upload:dev -- --preview-alias "pr-${PR_NUMBER}" 2>&1 | tee preview-upload.log
+          node <<'NODE'
+          const { appendFileSync, readFileSync } = require('node:fs');
+
+          const output = readFileSync('preview-upload.log', 'utf8');
+          const preferredPrefix = `pr-${process.env.PR_NUMBER}-slaquatics-development.`;
+          const urls = [...output.matchAll(/https?:\/\/[a-z0-9.-]+\.workers\.dev[^\s)]*/gi)].map((match) => match[0]);
+          const bareHosts = [...output.matchAll(/\b[a-z0-9-]+-slaquatics-development\.[a-z0-9-]+\.workers\.dev\b/gi)]
+            .map((match) => `https://${match[0]}`);
+          const candidates = [...urls, ...bareHosts];
+          const previewUrl = candidates.find((url) => url.includes(preferredPrefix)) || candidates[0];
+
+          if (!previewUrl) {
+            console.error('Could not find a workers.dev preview URL in the upload output.');
+            process.exit(1);
+          }
+
+          appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl}\n`);
+          NODE
+
+      - name: Comment preview link
+        uses: actions/github-script@v8
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        with:
+          script: |
+            const marker = '<!-- shoreline-preview-link -->';
+            const pr = context.payload.pull_request;
+            const body = [
+              marker,
+              `Shoreline preview: [Open PR #${pr.number} preview](${process.env.PREVIEW_URL})`,
+              '',
+              `Alias: \`pr-${pr.number}\``,
+              'Worker: `slaquatics-development`',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) => comment.user.type === 'Bot' && comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body,
+              });
+            }
+
   deploy:
     name: Deploy Worker
     needs: validate
