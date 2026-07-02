@@ -896,7 +896,7 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
   globalThis.fetch = originalFetch;
 });
 
-test('/api/public/create-checkout-session charges boat add-ons in Stripe and stores the due-today amount', async () => {
+test('/api/public/create-checkout-session defers add-ons to the later invoice instead of Stripe deposit checkout', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (url, init = {}) => {
@@ -938,18 +938,15 @@ test('/api/public/create-checkout-session charges boat add-ons in Stripe and sto
       })));
 
       assert.equal(payload.ok, true);
-      assert.equal(payload.amountDue, 155);
+      assert.equal(payload.amountDue, 55);
       assert.equal(requests.length, 1);
       const stripeParams = new URLSearchParams(String(requests[0].init.body));
       assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '5000');
       assert.equal(stripeParams.get('line_items[1][price_data][unit_amount]'), '500');
-      assert.equal(stripeParams.get('line_items[2][price_data][product_data][name]'), 'Karaoke Setup');
-      assert.equal(stripeParams.get('line_items[2][price_data][unit_amount]'), '5000');
-      assert.equal(stripeParams.get('line_items[3][price_data][product_data][name]'), 'Pool Tube');
-      assert.equal(stripeParams.get('line_items[3][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.has('line_items[2][price_data][product_data][name]'), false);
       assert.equal(stripeParams.get('metadata[karaokeAmount]'), '50.00');
       assert.equal(stripeParams.get('metadata[tubeAmount]'), '50.00');
-      assert.equal(stripeParams.get('metadata[amountDueToday]'), '155.00');
+      assert.equal(stripeParams.get('metadata[amountDueToday]'), '55.00');
 
       process.env.OPS_DEV_PASSWORD = 'payment-test-password';
       process.env.SESSION_SECRET = 'payment-test-session-secret';
@@ -969,7 +966,7 @@ test('/api/public/create-checkout-session charges boat add-ons in Stripe and sto
       assert.equal(booking.tubeAmount, 50);
       assert.equal(booking.depositAmount, 50);
       assert.equal(booking.processingFeeAmount, 5);
-      assert.equal(booking.amountDueToday, 155);
+      assert.equal(booking.amountDueToday, 55);
     });
   } finally {
     globalThis.fetch = originalFetch;

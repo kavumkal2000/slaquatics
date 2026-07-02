@@ -14,34 +14,6 @@ function dollarsToCents(value: number) {
   return Math.round(Number(value || 0) * 100);
 }
 
-function addonLineItems(booking: any) {
-  return [
-    {
-      enabled: Boolean(booking.karaoke),
-      amount: Number(booking.karaokeAmount || 0),
-      name: 'Karaoke Setup',
-      description: 'Boat rental karaoke add-on'
-    },
-    {
-      enabled: Boolean(booking.tube),
-      amount: Number(booking.tubeAmount || 0),
-      name: 'Pool Tube',
-      description: 'Boat rental pool tube add-on'
-    }
-  ].filter((addon) => addon.enabled && addon.amount > 0).map((addon) => ({
-    quantity: 1,
-    price_data: {
-      currency: 'usd',
-      unit_amount: dollarsToCents(addon.amount),
-      product_data: {
-        name: addon.name,
-        description: addon.description,
-        metadata: { bookingId: String(booking.id) }
-      }
-    }
-  }));
-}
-
 export async function POST(request: Request) {
   if (!stripeConfigured()) {
     return publicJsonResponse(
@@ -85,7 +57,6 @@ export async function POST(request: Request) {
 
     const bookingToken = booking.publicToken;
     const amountDueToday = Number(booking.amountDueToday || 55);
-    const addonItems = addonLineItems(booking);
     const session = await createStripeCheckoutSession({
       mode: 'payment',
       success_url: `${siteOrigin}/booking-thank-you/?session_id={CHECKOUT_SESSION_ID}&booking=${encodeURIComponent(bookingToken)}`,
@@ -119,7 +90,7 @@ export async function POST(request: Request) {
             }
           }
         }
-      ].concat(addonItems),
+      ],
       payment_intent_data: {
         metadata: {
           bookingId: String(booking.id),
@@ -150,9 +121,7 @@ export async function POST(request: Request) {
       client_reference_id: String(booking.id),
       custom_text: {
         submit: {
-          message: addonItems.length
-            ? `Today you are paying the $${amountDueToday.toFixed(2)} checkout total, including the booking deposit, processing fee, and selected boat add-ons. The remaining rental balance is handled with Shoreline before launch.`
-            : 'Today you are paying the $50 booking deposit plus a $5 processing fee. The remaining rental balance is handled with Shoreline before launch.'
+          message: 'Today you are paying the $50 booking deposit plus a $5 processing fee. Selected add-ons and the remaining rental balance are handled with Shoreline on the later invoice.'
         }
       }
     });
