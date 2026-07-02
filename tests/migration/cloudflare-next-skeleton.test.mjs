@@ -228,6 +228,9 @@ test('GitHub Actions validates PRs and deploys Cloudflare Workers from protected
   assert.match(workflow, /push:\n\s+branches:\n\s+- development\n\s+- main/);
   assert.match(workflow, /if: github\.event_name == 'push'/);
   assert.match(workflow, /npm run check && npm run cf:build/);
+  assert.match(workflow, /name: Restore production build cache\n\s+if: github\.ref_name == 'main'/);
+  assert.match(workflow, /path: \.next\/cache/);
+  assert.match(workflow, /key: next-production-/);
   assert.match(workflow, /npm run cf:deploy:dev/);
   assert.match(workflow, /npm run cf:deploy:prod/);
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID/);
