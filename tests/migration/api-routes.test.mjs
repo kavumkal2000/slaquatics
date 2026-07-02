@@ -666,6 +666,41 @@ test('/api/auth login accepts native form-encoded submissions', async () => {
   });
 });
 
+test('/api/auth login accepts form-encoded submissions mislabeled as JSON', async () => {
+  await withEnv({
+    SESSION_SECRET: 'mislabeled-form-login-session-secret',
+    OPS_DEV_PASSWORD: 'mislabeled-form-login-password'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=mislabeled-form-login-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: new URLSearchParams({ username: 'developer', password: 'mislabeled-form-login-password' }).toString()
+    }));
+
+    assert.equal(login.status, 200);
+    assert.match(login.headers.get('set-cookie') || '', /sla_ops_session=/);
+  });
+});
+
+test('/api/auth login handles empty payloads as credential failures instead of parse failures', async () => {
+  await withEnv({
+    SESSION_SECRET: 'empty-login-session-secret',
+    OPS_DEV_PASSWORD: 'empty-login-password'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=empty-login-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: ''
+    }));
+    const payload = await responseJson(login);
+
+    assert.equal(login.status, 401);
+    assert.equal(payload.error, 'Incorrect username or password.');
+  });
+});
+
 test('/api/auth login rejects default credentials when ops secrets are not configured', async () => {
   const previousDevPassword = process.env.OPS_DEV_PASSWORD;
   const previousOpsPassword = process.env.OPS_PASSWORD;
