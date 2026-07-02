@@ -24,6 +24,20 @@ function loginErrorPayload(error: string, code: string, reason: string) {
   return { error, code, reason };
 }
 
+function authDependencyReason(step: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (/OPS_DB|Persistent ops auth store/i.test(message)) {
+    return `${step}: OPS_DB is not available to this Worker environment.`;
+  }
+  if (/D1|SQL|no such table|database|constraint|prepare/i.test(message)) {
+    return `${step}: D1 auth storage rejected the operation.`;
+  }
+  if (/fetch|Turnstile|Security check|siteverify/i.test(message)) {
+    return `${step}: Turnstile verification could not complete.`;
+  }
+  return `${step}: Auth dependency failed.`;
+}
+
 function stringField(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
@@ -72,6 +86,7 @@ export async function POST(request: Request) {
     );
   }
 
+  let step = 'rate-limit';
   try {
     const rateKey = loginRateKey(request, body.username);
     const throttle = await authRateLimit(request, {
@@ -87,6 +102,7 @@ export async function POST(request: Request) {
         { status: 429, headers: rateLimitHeaders(throttle) }
       );
     }
+    step = 'login-lock';
     const lockMs = loginLockRemainingMs(rateKey);
     if (lockMs > 0) {
       return jsonResponse(
@@ -94,6 +110,7 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
+    step = 'turnstile';
     const turnstile = await verifyTurnstileToken(request, body.turnstileToken);
     if (!turnstile.ok) {
       registerLoginFailure(rateKey);
@@ -102,6 +119,7 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+    step = 'user-lookup';
     const resolvedUser = await findOpsUser(body.username, body.password);
     if (!resolvedUser) {
       registerLoginFailure(rateKey);
@@ -111,15 +129,18 @@ export async function POST(request: Request) {
       );
     }
     clearLoginFailures(rateKey);
+    step = 'passkey-status';
     const passkey = await passkeyStatusForUser(resolvedUser);
     const clientPassword = clientPasswordStatusForUser(resolvedUser);
+    step = 'session-create';
+    const sessionCookie = await createSessionCookie(resolvedUser, request);
     return jsonResponse(
       { ok: true, user: sessionUserPayload(resolvedUser), passkey, clientPassword },
-      { headers: { 'Set-Cookie': await createSessionCookie(resolvedUser, request) } }
+      { headers: { 'Set-Cookie': sessionCookie } }
     );
-  } catch {
+  } catch (error) {
     return jsonResponse(
-      loginErrorPayload('Authentication service is unavailable. Please try again shortly.', 'AUTH_LOGIN_SERVICE_ERROR', 'A server-side auth dependency failed before credentials could be checked.'),
+      loginErrorPayload('Authentication service is unavailable. Please try again shortly.', 'AUTH_LOGIN_SERVICE_ERROR', authDependencyReason(step, error)),
       { status: 503, headers: { 'Set-Cookie': clearSessionCookie() } }
     );
   }

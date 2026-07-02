@@ -758,6 +758,26 @@ test('/api/auth login rejects default credentials when ops secrets are not confi
   else process.env.SESSION_SECRET = previousSessionSecret;
 });
 
+test('/api/auth login reports the failing auth dependency when persistent auth storage is missing', async () => {
+  await withEnv({
+    REQUIRE_SERVER_STORE: 'true',
+    SESSION_SECRET: 'missing-auth-store-session-secret',
+    OPS_OWNER_USERNAME: 'previewowner',
+    OPS_OWNER_PASSWORD: 'PreviewOwner!'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=missing-auth-store-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'previewowner', password: 'PreviewOwner!' })
+    }));
+    const payload = await responseJson(login);
+
+    assert.equal(login.status, 503);
+    assert.equal(payload.code, 'AUTH_LOGIN_SERVICE_ERROR');
+    assert.match(payload.reason, /user-lookup: OPS_DB is not available/);
+  });
+});
+
 test('/api/auth login locks repeated failures for the same user and client', async () => {
   await withEnv({
     SESSION_SECRET: 'login-lock-session-secret',
