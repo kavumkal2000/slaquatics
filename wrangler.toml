@@ -2,6 +2,7 @@ name = "slaquatics"
 main = "src/worker.ts"
 compatibility_date = "2026-06-28"
 compatibility_flags = ["nodejs_compat"]
+preview_urls = true
 assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
 [vars]

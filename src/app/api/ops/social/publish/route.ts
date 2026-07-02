@@ -3,7 +3,7 @@ import { requireMessagingSession } from '../../../../../lib/ops/api-auth.ts';
 import { dispatchSocialPost } from '../../../../../lib/ops/outbound.ts';
 
 export async function POST(request: Request) {
-  const auth = requireMessagingSession(request, 'This login cannot publish social posts.');
+  const auth = await requireMessagingSession(request, 'This login cannot publish social posts.');
   if (auth.response) return auth.response;
 
   try {

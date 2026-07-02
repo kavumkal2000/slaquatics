@@ -227,11 +227,22 @@ test('GitHub Actions validates PRs and deploys Cloudflare Workers from protected
   assert.match(workflow, /pull_request:\n\s+branches:\n\s+- development\n\s+- main/);
   assert.match(workflow, /push:\n\s+branches:\n\s+- development\n\s+- main/);
   assert.match(workflow, /if: github\.event_name == 'push'/);
+  assert.match(workflow, /if: github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.ref == 'development'/);
   assert.match(workflow, /npm run check && npm run cf:build/);
+  assert.match(workflow, /npm run cf:upload:dev -- --preview-alias "pr-\$\{PR_NUMBER\}"/);  assert.match(workflow, /actions\/github-script@v8/);  assert.match(workflow, /Shoreline preview:/);
+  assert.match(workflow, /name: Restore production build cache\n\s+if: github\.ref_name == 'main'/);
+  assert.match(workflow, /path: \.next\/cache/);
+  assert.match(workflow, /key: next-production-/);
   assert.match(workflow, /npm run cf:deploy:dev/);
   assert.match(workflow, /npm run cf:deploy:prod/);
   assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID/);
   assert.match(workflow, /CLOUDFLARE_API_TOKEN/);
+
+  const pkg = JSON.parse(readText('package.json'));
+  assert.equal(pkg.scripts['cf:upload:dev'], 'opennextjs-cloudflare upload --env development');
+
+  const wrangler = readText('wrangler.toml');
+  assert.match(wrangler, /^preview_urls = true$/m);
 });
 
 test('Wrangler D1 bindings use created Cloudflare database IDs, not placeholders', () => {

@@ -896,7 +896,7 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
   globalThis.fetch = originalFetch;
 });
 
-test('/api/public/create-checkout-session charges boat add-ons in Stripe and stores the due-today amount', async () => {
+test('/api/public/create-checkout-session defers add-ons to the later invoice instead of Stripe deposit checkout', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (url, init = {}) => {
@@ -938,18 +938,15 @@ test('/api/public/create-checkout-session charges boat add-ons in Stripe and sto
       })));
 
       assert.equal(payload.ok, true);
-      assert.equal(payload.amountDue, 155);
+      assert.equal(payload.amountDue, 55);
       assert.equal(requests.length, 1);
       const stripeParams = new URLSearchParams(String(requests[0].init.body));
       assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '5000');
       assert.equal(stripeParams.get('line_items[1][price_data][unit_amount]'), '500');
-      assert.equal(stripeParams.get('line_items[2][price_data][product_data][name]'), 'Karaoke Setup');
-      assert.equal(stripeParams.get('line_items[2][price_data][unit_amount]'), '5000');
-      assert.equal(stripeParams.get('line_items[3][price_data][product_data][name]'), 'Pool Tube');
-      assert.equal(stripeParams.get('line_items[3][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.has('line_items[2][price_data][product_data][name]'), false);
       assert.equal(stripeParams.get('metadata[karaokeAmount]'), '50.00');
       assert.equal(stripeParams.get('metadata[tubeAmount]'), '50.00');
-      assert.equal(stripeParams.get('metadata[amountDueToday]'), '155.00');
+      assert.equal(stripeParams.get('metadata[amountDueToday]'), '55.00');
 
       process.env.OPS_DEV_PASSWORD = 'payment-test-password';
       process.env.SESSION_SECRET = 'payment-test-session-secret';
@@ -969,7 +966,7 @@ test('/api/public/create-checkout-session charges boat add-ons in Stripe and sto
       assert.equal(booking.tubeAmount, 50);
       assert.equal(booking.depositAmount, 50);
       assert.equal(booking.processingFeeAmount, 5);
-      assert.equal(booking.amountDueToday, 155);
+      assert.equal(booking.amountDueToday, 55);
     });
   } finally {
     globalThis.fetch = originalFetch;
@@ -1323,6 +1320,45 @@ test('/api/ops/messages/send chunks mass email BCC recipients into batches of 50
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('/api/ops/customers/search finds email recipients from persisted ops state', async () => {
+  await withEnv({
+    OPS_DEV_PASSWORD: 'customer-search-password',
+    SESSION_SECRET: 'customer-search-session-secret'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=customer-search-login-${Date.now()}`);
+    const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=customer-search-state-${Date.now()}`);
+    const searchRoute = await import(`../../src/app/api/ops/customers/search/route.ts?case=customer-search-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'customer-search-password' })
+    }));
+    const cookie = login.headers.get('set-cookie') || '';
+    await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
+      method: 'POST',
+      headers: { cookie },
+      body: JSON.stringify({
+        customers: [
+          { id: 101, name: 'Avery Carter', email: 'avery@example.com', phone: '469-555-0101', company: 'Lakehouse Group', crmTags: 'vip repeat' },
+          { id: 102, name: 'Blake No Email', phone: '469-555-0102', crmNotes: 'Asked about July weekend' },
+          { id: 103, name: 'Casey Reed', email: 'casey@example.com', phone: '469-555-0103', source: 'Website Booking' }
+        ]
+      })
+    }));
+
+    const response = await searchRoute.GET(new Request('https://slaquatics.test/api/ops/customers/search?q=lakehouse&emailOnly=true', {
+      headers: { cookie }
+    }));
+    const payload = await responseJson(response);
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.customers.length, 1);
+    assert.equal(payload.customers[0].id, 101);
+    assert.equal(payload.customers[0].email, 'avery@example.com');
+    assert.equal(payload.customers[0].name, 'Avery Carter');
+  });
 });
 
 test('booking payment waiver and ops-login workflow works through App Router routes without Render', async () => {
