@@ -220,8 +220,18 @@ test('iOS native wrapper uses canonical HTTPS ops host only', () => {
   assert.match(readme, /https:\/\/slaquatics\.com\/ops-login/);
 });
 
-test('GitHub Actions does not own Cloudflare Worker deploys', () => {
-  assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), false);
+test('GitHub Actions validates PRs and deploys Cloudflare Workers from protected branches', () => {
+  assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), true);
+  const workflow = readText('.github/workflows/cloudflare-workers.yml');
+
+  assert.match(workflow, /pull_request:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /push:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /if: github\.event_name == 'push'/);
+  assert.match(workflow, /npm run check && npm run cf:build/);
+  assert.match(workflow, /npm run cf:deploy:dev/);
+  assert.match(workflow, /npm run cf:deploy:prod/);
+  assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(workflow, /CLOUDFLARE_API_TOKEN/);
 });
 
 test('Wrangler D1 bindings use created Cloudflare database IDs, not placeholders', () => {

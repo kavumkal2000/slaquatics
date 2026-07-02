@@ -12,8 +12,11 @@ Run `npm run smoke` against any environment: `SITE_URL=https://staging... API_UR
 
 ## Automations to set up (ranked by value)
 
-### 1. ✅ Cloudflare connected builds
-- Runs `npm run check && npm run cf:build` from Cloudflare's connected build settings. Keep Cloudflare's automatic dependency install enabled; do not prepend another `npm ci` in the custom build command.
+### 1. ✅ GitHub Actions Cloudflare deploys
+- Runs `npm run check && npm run cf:build` on pull requests and pushes.
+- Deploys through OpenNext on pushes to `development` and `main`.
+- Requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` repository secrets.
+- Keep Cloudflare connected builds disabled to avoid duplicate deployments.
 
 ### 2. Cloudflare deploy notifications
 Use Cloudflare Worker deployment notifications or the connected CI status for deploy failure alerts.
@@ -33,7 +36,7 @@ For catching *runtime* errors real users hit (not just outages), add Sentry to t
 
 ## The routine (what to actually do)
 1. Make a change on a branch → `npm run check` → if green, merge to `main`.
-2. After Cloudflare deploys → `npm run smoke` locally when live endpoint verification is useful.
+2. After GitHub Actions deploys → `npm run smoke` locally when live endpoint verification is useful.
 3. Monthly: skim Worker logs + the ops System page for config warnings; check UptimeRobot history.
 
 ## Extending the checks
