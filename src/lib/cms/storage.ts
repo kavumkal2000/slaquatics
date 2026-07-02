@@ -1,5 +1,6 @@
 import { contentIsPublished, type CmsAuditEvent, type CmsChangeRequest, type CmsContent, type CmsContentStatus, type CmsContentType, type CmsMediaAsset, type CmsRevision, type CmsRole } from './core.ts';
 import { userCanReadCmsContent } from './policy.ts';
+import { ensureCmsAuditTables, recordCmsAudit } from './audit.ts';
 
 type CmsRoleHolder = {
   id?: string;
@@ -38,6 +39,8 @@ export type CmsStore = {
   createPreviewToken(contentId: string, userId: string): Promise<string>;
   saveMediaAsset(asset: CmsMediaAsset): Promise<CmsMediaAsset>;
   updateMediaAsset(asset: CmsMediaAsset): Promise<CmsMediaAsset>;
+  replaceMediaAsset(id: string, replacement: CmsMediaAsset, userId: string): Promise<CmsMediaAsset | null>;
+  deleteMediaAsset(id: string, userId: string): Promise<CmsMediaAsset | null>;
   listMediaAssets(limit?: number): Promise<CmsMediaAsset[]>;
   recordAuditEvent(event: CmsAuditEvent): Promise<CmsAuditEvent>;
 };
@@ -200,6 +203,7 @@ export class D1CmsStore implements CmsStore {
     await this.db.prepare(CREATE_CHANGE_REQUESTS_CONTENT_INDEX_SQL).run();
     await this.db.prepare(CREATE_CHANGE_REQUESTS_BLOCK_INDEX_SQL).run();
     await this.db.prepare(CREATE_AUDIT_SQL).run();
+    await ensureCmsAuditTables(this.db);
   }
 
   async listContent(options: CmsContentListOptions = {}): Promise<CmsContent[]> {
@@ -521,6 +525,43 @@ export class D1CmsStore implements CmsStore {
     return updated;
   }
 
+  async replaceMediaAsset(id: string, replacement: CmsMediaAsset, userId: string): Promise<CmsMediaAsset | null> {
+    await this.init();
+    const current = await this.getMediaAsset(id);
+    if (!current) return null;
+    const updated: CmsMediaAsset = {
+      ...current,
+      key: replacement.key,
+      url: replacement.url,
+      contentType: replacement.contentType,
+      alt: replacement.alt || current.alt,
+      caption: replacement.caption ?? current.caption,
+      uploadedBy: userId,
+      uploadedAt: replacement.uploadedAt,
+      image: replacement.image
+    };
+    const result = await this.db
+      .prepare('UPDATE cms_media_assets SET key = ?, content_type = ?, payload = ?, uploaded_at = ?, uploaded_by = ? WHERE id = ?')
+      .bind(updated.key, updated.contentType, JSON.stringify(updated), updated.uploadedAt, updated.uploadedBy, id)
+      .run();
+    if (!changed(result)) return null;
+    await this.recordAuditEvent(createAuditEvent(userId, 'media.replace', id, { previousKey: current.key, key: updated.key, contentType: updated.contentType }));
+    return updated;
+  }
+
+  async deleteMediaAsset(id: string, userId: string): Promise<CmsMediaAsset | null> {
+    await this.init();
+    const current = await this.getMediaAsset(id);
+    if (!current) return null;
+    const result = await this.db
+      .prepare('DELETE FROM cms_media_assets WHERE id = ?')
+      .bind(id)
+      .run();
+    if (!changed(result)) return null;
+    await this.recordAuditEvent(createAuditEvent(userId, 'media.delete', id, { key: current.key, contentType: current.contentType }));
+    return current;
+  }
+
   private async getMediaAsset(id: string): Promise<CmsMediaAsset | null> {
     const row = await this.db
       .prepare('SELECT payload FROM cms_media_assets WHERE id = ?')
@@ -572,12 +613,15 @@ export class D1CmsStore implements CmsStore {
   }
 
   async recordAuditEvent(event: CmsAuditEvent): Promise<CmsAuditEvent> {
-    await this.init();
-    await this.db
-      .prepare('INSERT INTO cms_audit_log (id, actor_id, action, target_id, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(event.id, event.actorId, event.action, event.targetId, JSON.stringify(event.payload), event.createdAt)
-      .run();
-    return event;
+    return recordCmsAudit({
+      actorId: event.actorId,
+      actorRole: event.actorRole,
+      action: event.action,
+      targetType: event.targetType,
+      targetId: event.targetId,
+      status: event.status || 'succeeded',
+      metadata: event.payload
+    });
   }
 }
 

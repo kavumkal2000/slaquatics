@@ -19,8 +19,8 @@ export function cmsContentTypeIsShared(type: CmsContentType): boolean {
 
 export function userCanWriteCmsContentType(user: CmsRoleHolder, type: CmsContentType): boolean {
   if (GLOBAL_CONTENT_TYPES.has(type)) return user.role === 'owner' || user.role === 'admin';
-  if (cmsContentTypeIsShared(type)) return user.role === 'owner' || user.role === 'admin' || user.role === 'editor';
-  return user.role === 'owner' || user.role === 'admin' || user.role === 'editor' || user.role === 'client';
+  if (cmsContentTypeIsShared(type)) return user.role === 'owner' || user.role === 'admin';
+  return user.role === 'owner' || user.role === 'admin' || user.role === 'client';
 }
 
 export function userCanPublishCmsContentType(user: CmsRoleHolder, type: CmsContentType): boolean {
@@ -29,7 +29,7 @@ export function userCanPublishCmsContentType(user: CmsRoleHolder, type: CmsConte
 }
 
 export function userCanReadCmsContent(user: CmsRoleHolder, content: CmsContent): boolean {
-  if (user.role === 'owner' || user.role === 'admin' || user.role === 'editor') return true;
+  if (user.role === 'owner' || user.role === 'admin') return true;
   if (user.role !== 'client') return false;
   return cmsContentAssignedToUser(user, content);
 }
@@ -37,7 +37,7 @@ export function userCanReadCmsContent(user: CmsRoleHolder, content: CmsContent):
 export function userCanWriteCmsContent(user: CmsRoleHolder, content: CmsContent): boolean {
   if (!userCanWriteCmsContentType(user, content.contentType)) return false;
   if (content.metadata?.access?.locked && user.role !== 'owner' && user.role !== 'admin') return false;
-  if (user.role === 'owner' || user.role === 'admin' || user.role === 'editor') return true;
+  if (user.role === 'owner' || user.role === 'admin') return true;
   if (user.role !== 'client') return false;
   return cmsContentAssignedToUser(user, content);
 }

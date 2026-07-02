@@ -1,4 +1,5 @@
 import { requireCmsMutationRequest, requireCmsPermission } from '../../../../../lib/cms/auth.ts';
+import { recordCmsAudit } from '../../../../../lib/cms/audit.ts';
 import { getCmsStore } from '../../../../../lib/cms/storage.ts';
 import { userCanReadCmsContent } from '../../../../../lib/cms/policy.ts';
 import { cmsJson } from '../../../../../lib/cms/security-headers.ts';
@@ -22,6 +23,15 @@ export async function GET(request: Request) {
     ...asset,
     usedBy: mediaUsageForContent(asset, readableContent)
   }));
+  await recordCmsAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: 'media.list',
+    targetType: 'media',
+    targetId: 'cms_media_assets',
+    request,
+    metadata: { count: assetsWithUsage.length, query }
+  });
   if (user.role === 'client') {
     return cmsJson({
       ok: true,

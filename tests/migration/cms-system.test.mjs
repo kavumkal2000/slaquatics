@@ -109,6 +109,8 @@ test('Wrangler defines embedded CMS databases, media storage, and CMS hostnames 
   assert.match(wrangler, /\[\[env\.production\.d1_databases\]\][\s\S]*binding = "CMS_DB"[\s\S]*database_id = "[0-9a-f-]{36}"/);
   assert.match(wrangler, /\[\[env\.development\.r2_buckets\]\][\s\S]*binding = "CMS_MEDIA_BUCKET"/);
   assert.match(wrangler, /\[\[env\.production\.r2_buckets\]\][\s\S]*binding = "CMS_MEDIA_BUCKET"/);
+  assert.match(wrangler, /\[\[env\.development\.r2_buckets\]\][\s\S]*binding = "CMS_AUDIT_BUCKET"[\s\S]*slaquatics-cms-audit-development/);
+  assert.match(wrangler, /\[\[env\.production\.r2_buckets\]\][\s\S]*binding = "CMS_AUDIT_BUCKET"[\s\S]*slaquatics-cms-audit-production/);
 });
 
 test('Worker routes CMS hosts into the embedded admin while hiding admin UI from public hosts', () => {
@@ -165,10 +167,16 @@ test('CMS admin routes require authenticated sessions and public routes only exp
     'src/app/api/cms/admin/content/[id]/revisions/[revisionId]/route.ts',
     'src/app/api/cms/admin/media/route.ts',
     'src/app/api/cms/admin/media/upload/route.ts',
+    'src/app/api/cms/admin/media/[id]/route.ts',
+    'src/app/api/cms/admin/media/[id]/replace/route.ts',
+    'src/app/api/cms/admin/audit/route.ts',
+    'src/app/api/cms/admin/audit/[id]/retry-r2/route.ts',
     'src/app/api/cms/admin/export/route.ts',
     'src/app/api/cms/admin/import/route.ts',
     'src/app/api/cms/admin/users/route.ts',
     'src/app/api/cms/admin/users/[id]/deactivate/route.ts',
+    'src/app/api/cms/admin/users/[id]/sessions/route.ts',
+    'src/app/api/cms/admin/users/[id]/sessions/[sessionId]/route.ts',
     'src/app/api/cms/admin/login/route.ts',
     'src/app/api/cms/admin/logout/route.ts'
   ]) {
@@ -193,16 +201,23 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   const revisionDetailRoute = readText('src/app/api/cms/admin/content/[id]/revisions/[revisionId]/route.ts');
   const mediaRoute = readText('src/app/api/cms/admin/media/route.ts');
   const mediaUploadRoute = readText('src/app/api/cms/admin/media/upload/route.ts');
+  const mediaDeleteRoute = readText('src/app/api/cms/admin/media/[id]/route.ts');
+  const mediaReplaceRoute = readText('src/app/api/cms/admin/media/[id]/replace/route.ts');
+  const auditRoute = readText('src/app/api/cms/admin/audit/route.ts');
+  const auditRetryRoute = readText('src/app/api/cms/admin/audit/[id]/retry-r2/route.ts');
   const exportRoute = readText('src/app/api/cms/admin/export/route.ts');
   const importRoute = readText('src/app/api/cms/admin/import/route.ts');
   const usersRoute = readText('src/app/api/cms/admin/users/route.ts');
   const deactivateUserRoute = readText('src/app/api/cms/admin/users/[id]/deactivate/route.ts');
+  const userSessionsRoute = readText('src/app/api/cms/admin/users/[id]/sessions/route.ts');
+  const userSessionRevokeRoute = readText('src/app/api/cms/admin/users/[id]/sessions/[sessionId]/route.ts');
   const pageGuard = readText('src/app/cms/require-cms-page-user.ts');
   const securityHeaders = readText('src/lib/cms/security-headers.ts');
   const hostRouting = readText('src/lib/cms/host-routing.ts');
   const nextConfig = readText('next.config.mjs');
   const storage = readText('src/lib/cms/storage.ts');
-  const migration = readText('migrations/0002_cms.sql');
+  const migration = `${readText('migrations/0002_cms.sql')}\n${readText('migrations/0003_cms_audit_access.sql')}`;
+  const audit = readText('src/lib/cms/audit.ts');
   const publicRoute = readText('src/app/api/cms/public/[slug]/route.ts');
   const publicListRoute = readText('src/app/api/cms/public/route.ts');
   const previewRoute = readText('src/app/api/cms/preview/[token]/[slug]/route.ts');
@@ -215,6 +230,9 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   assert.doesNotMatch(adminSource, /OPS_DB/);
   assert.match(auth, /type CmsPermission/);
   assert.match(auth, /'users\.manage'/);
+  assert.match(auth, /'audit\.read'/);
+  assert.match(auth, /'audit\.retry'/);
+  assert.match(auth, /'session\.manage'/);
   assert.match(auth, /'site\.export'/);
   assert.match(auth, /'site\.import'/);
   assert.match(auth, /userHasCmsPermission/);
@@ -223,21 +241,24 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   assert.match(auth, /cmsJson/);
   assert.match(auth, /pbkdf2-sha256/);
   assert.match(auth, /constantTimeEqual/);
-  assert.match(auth, /editor: \['content\.read', 'content\.write', 'media\.read', 'media\.write', 'revision\.read'\]/);
+  assert.doesNotMatch(auth, /editor: \[/);
   assert.match(auth, /client: \['content\.read', 'content\.write', 'media\.read', 'revision\.read'\]/);
   assert.match(auth, /owner: \[[^\]]*users\.manage/);
+  assert.match(auth, /owner: \[[^\]]*audit\.read/);
+  assert.match(auth, /admin: \[[^\]]*audit\.read/);
+  assert.match(auth, /owner: \[[^\]]*session\.manage/);
+  assert.match(auth, /admin: \[[^\]]*session\.manage/);
   assert.match(auth, /owner: \[[^\]]*site\.export/);
   assert.match(auth, /admin: \[[^\]]*site\.export/);
   assert.match(auth, /owner: \[[^\]]*site\.import/);
   assert.match(auth, /admin: \[[^\]]*site\.import/);
-  assert.doesNotMatch(auth, /editor: \[[^\]]*site\.export/);
   assert.doesNotMatch(auth, /client: \[[^\]]*site\.export/);
-  assert.doesNotMatch(auth, /editor: \[[^\]]*site\.import/);
   assert.doesNotMatch(auth, /client: \[[^\]]*site\.import/);
   assert.doesNotMatch(auth, /admin: \[[^\]]*users\.manage/);
   assert.doesNotMatch(auth, /client: \[[^\]]*content\.publish/);
-  assert.doesNotMatch(auth, /editor: \[[^\]]*content\.publish/);
   assert.doesNotMatch(auth, /client: \[[^\]]*content\.rollback/);
+  assert.match(auth, /role IN \('owner', 'admin', 'client'\)/);
+  assert.match(auth, /role = 'editor' AND active = 1/);
   assert.match(auth, /cms_login_attempts/);
   assert.match(auth, /loginIsRateLimited/);
   assert.match(auth, /sessionTokenHash/);
@@ -252,10 +273,19 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   assert.match(auth, /listCmsUsers/);
   assert.match(auth, /createManagedCmsUser/);
   assert.match(auth, /deactivateCmsUser/);
-  assert.match(auth, /return role !== 'owner'/);
+  assert.match(auth, /return role === 'admin' \|\| role === 'client'/);
   assert.match(auth, /DELETE FROM cms_sessions WHERE user_id = \?/);
+  assert.match(auth, /listCmsUserSessions/);
+  assert.match(auth, /revokeCmsUserSession/);
   assert.match(auth, /auth\.userCreated/);
   assert.match(auth, /auth\.userDeactivated/);
+  assert.match(auth, /auth\.sessionRevoked/);
+  assert.match(audit, /CMS_AUDIT_BUCKET/);
+  assert.match(audit, /audit\/\$\{keyDate\}\/\$\{id\}\.json/);
+  assert.match(audit, /cms_audit_outbox/);
+  assert.match(audit, /r2_status/);
+  assert.match(audit, /retryCmsAuditR2Write/);
+  assert.match(migration, /CMS_AUDIT_BUCKET|cms_audit_outbox|r2_key|r2_status|WHERE role = 'editor'/);
   assert.match(contentRoute, /requireCmsPermission\(request, 'content\.write'\)/);
   assert.match(contentRoute, /cmsJson/);
   assert.match(contentRoute, /userCanWriteCmsContentType/);
@@ -335,6 +365,20 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   assert.match(mediaRoute, /updateMediaAsset/);
   assert.match(mediaUploadRoute, /requireCmsPermission\(request, 'media\.write'\)/);
   assert.match(mediaUploadRoute, /cmsJson/);
+  assert.match(mediaDeleteRoute, /export async function DELETE/);
+  assert.match(mediaDeleteRoute, /requireCmsPermission\(request, 'media\.write'\)/);
+  assert.match(mediaDeleteRoute, /media\.deleteBlocked/);
+  assert.match(mediaDeleteRoute, /force/);
+  assert.match(mediaDeleteRoute, /deleteMediaAsset/);
+  assert.match(mediaReplaceRoute, /export async function POST/);
+  assert.match(mediaReplaceRoute, /requireCmsPermission\(request, 'media\.write'\)/);
+  assert.match(mediaReplaceRoute, /replaceMediaAsset/);
+  assert.match(mediaReplaceRoute, /CMS_MEDIA_BUCKET/);
+  assert.match(auditRoute, /requireCmsPermission\(request, 'audit\.read'\)/);
+  assert.match(auditRoute, /listCmsAuditEvents/);
+  assert.match(auditRoute, /audit\.view/);
+  assert.match(auditRetryRoute, /requireCmsPermission\(request, 'audit\.retry'\)/);
+  assert.match(auditRetryRoute, /retryCmsAuditR2Write/);
   assert.match(exportRoute, /export async function GET/);
   assert.match(exportRoute, /requireCmsPermission\(request, 'site\.export'\)/);
   assert.match(exportRoute, /buildCmsExportManifest/);
@@ -359,8 +403,15 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   assert.match(usersRoute, /requireCmsMutationRequest\(request, \{ requireHeader: true \}\)/);
   assert.match(usersRoute, /createManagedCmsUser/);
   assert.match(usersRoute, /listCmsUsers/);
+  assert.match(usersRoute, /auth\.usersViewed/);
   assert.match(usersRoute, /cmsJson/);
   assert.doesNotMatch(usersRoute, /password_hash/);
+  assert.match(userSessionsRoute, /requireCmsPermission\(request, 'session\.manage'\)/);
+  assert.match(userSessionsRoute, /listCmsUserSessions/);
+  assert.match(userSessionsRoute, /auth\.sessionsViewed/);
+  assert.match(userSessionRevokeRoute, /export async function DELETE/);
+  assert.match(userSessionRevokeRoute, /requireCmsPermission\(request, 'session\.manage'\)/);
+  assert.match(userSessionRevokeRoute, /revokeCmsUserSession/);
   assert.match(deactivateUserRoute, /requireCmsPermission\(request, 'users\.manage'\)/);
   assert.match(deactivateUserRoute, /requireCmsMutationRequest\(request, \{ requireHeader: true \}\)/);
   assert.match(deactivateUserRoute, /Cannot deactivate your own CMS account/);
@@ -411,6 +462,8 @@ test('CMS admin routes require authenticated sessions and public routes only exp
   assert.match(seedOwner, /pbkdf2Sync/);
   assert.match(seedOwner, /pbkdf2-sha256/);
   assert.match(storage, /cms_media_assets/);
+  assert.match(storage, /replaceMediaAsset/);
+  assert.match(storage, /deleteMediaAsset/);
   assert.match(storage, /listContent/);
   assert.match(storage, /getRevision\(contentId: string, revisionId: string\): Promise<CmsRevision \| null>/);
   assert.match(storage, /SELECT payload FROM cms_revisions WHERE content_id = \? AND id = \?/);
@@ -540,7 +593,6 @@ test('CMS content access policy isolates client users to assigned content', asyn
   const now = '2026-06-30T00:00:00.000Z';
   const owner = { id: 'owner-1', role: 'owner' };
   const admin = { id: 'admin-1', role: 'admin' };
-  const editor = { id: 'editor-1', role: 'editor' };
   const clientA = { id: 'client-a', role: 'client' };
   const clientB = { id: 'client-b', role: 'client' };
   const assignedPage = {
@@ -582,9 +634,6 @@ test('CMS content access policy isolates client users to assigned content', asyn
   assert.equal(userCanWriteCmsContent(clientB, assignedPage), false);
   assert.equal(userCanReadCmsContent(clientA, unassignedPage), false);
   assert.equal(userCanWriteCmsContent(clientA, unassignedPage), false);
-  assert.equal(userCanReadCmsContent(editor, unassignedPage), true);
-  assert.equal(userCanWriteCmsContent(editor, unassignedPage), true);
-  assert.equal(userCanWriteCmsContent(editor, lockedPage), false);
   assert.equal(userCanWriteCmsContent(admin, lockedPage), true);
   assert.equal(userCanPublishCmsContent(clientA, assignedPage), false);
   assert.equal(userCanPublishCmsContent(admin, assignedPage), true);
@@ -852,6 +901,10 @@ test('CMS admin UI uses isolated CMS routes and supports the planned editing sur
     'src/app/cms/content/page.tsx',
     'src/app/cms/media/page.tsx',
     'src/app/cms/users/page.tsx',
+    'src/app/cms/audit/page.tsx',
+    'src/app/cms/navigation/page.tsx',
+    'src/app/cms/patterns/page.tsx',
+    'src/app/cms/settings/page.tsx',
     'src/app/cms/preview/[token]/[slug]/page.tsx',
     'src/app/blog/page.tsx',
     'src/app/blog/[slug]/page.tsx',
@@ -865,6 +918,7 @@ test('CMS admin UI uses isolated CMS routes and supports the planned editing sur
   const shell = readText('src/features/cms/CmsAdminShell.tsx');
   const editor = readText('src/features/cms/CmsContentEditor.tsx');
   const users = readText('src/features/cms/CmsUserManagement.tsx');
+  const auditLog = readText('src/features/cms/CmsAuditLog.tsx');
   const contentPage = readText('src/app/cms/content/page.tsx');
   const slaquaticsEditor = readText('src/features/siteCms/SlaquaticsCmsContentEditor.tsx');
   const slaquaticsRenderer = readText('src/features/siteCms/SlaquaticsCmsPublicRenderer.tsx');
@@ -884,7 +938,11 @@ test('CMS admin UI uses isolated CMS routes and supports the planned editing sur
     'src/app/cms/page.tsx',
     'src/app/cms/content/page.tsx',
     'src/app/cms/media/page.tsx',
-    'src/app/cms/users/page.tsx'
+    'src/app/cms/users/page.tsx',
+    'src/app/cms/audit/page.tsx',
+    'src/app/cms/navigation/page.tsx',
+    'src/app/cms/patterns/page.tsx',
+    'src/app/cms/settings/page.tsx'
   ].map((file) => readText(file)).join('\n');
 
   assert.match(protectedPages, /requireCmsPageUser/);
@@ -1042,18 +1100,31 @@ test('CMS admin UI uses isolated CMS routes and supports the planned editing sur
     assert.match(editor, new RegExp(control.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
   assert.match(shell, /href="\/users"/);
+  assert.match(shell, /href="\/audit"/);
+  assert.match(shell, /href="\/navigation"/);
+  assert.match(shell, /href="\/patterns"/);
+  assert.match(shell, /href="\/settings"/);
   assert.match(shell, /href="\/content#import"/);
   assert.match(shell, /href="\/api\/cms\/admin\/export"/);
   assert.match(shell, /download/);
   assert.match(shell, /User Management/);
   assert.match(shell, /CmsUserManagement/);
   assert.match(users, /\/api\/cms\/admin\/users/);
+  assert.match(users, /\/sessions/);
   assert.match(users, /\/deactivate/);
   assert.match(users, /Create User/);
   assert.match(users, /Deactivate/);
+  assert.match(users, /Revoke/);
+  assert.match(users, /Client/);
+  assert.doesNotMatch(users, /<option value="editor">/);
   assert.match(users, /x-cms-request/);
+  assert.match(auditLog, /\/api\/cms\/admin\/audit/);
+  assert.match(auditLog, /retry-r2/);
+  assert.match(auditLog, /Event filters/);
+  assert.match(auditLog, /R2 key/);
   assert.match(protectedPages, /requireCmsPageUser/);
   assert.match(protectedPages, /users\.manage/);
+  assert.match(protectedPages, /audit\.read/);
 
   assert.match(editor, /<CmsRenderer[\s\S]*content=\{previewContent\}[\s\S]*siteConfig=\{siteConfig\}/);
   assert.match(editor, /type RevisionDetail/);
@@ -1080,6 +1151,10 @@ test('CMS admin UI uses isolated CMS routes and supports the planned editing sur
     'usedBy',
     'Used by',
     'Save Metadata',
+    'Replace file',
+    'Force Delete',
+    '/replace',
+    "method: 'DELETE'",
     '/api/cms/admin/media?limit=100',
     "params.set('q', mediaSearch.trim())",
     '/api/cms/admin/media/upload',
@@ -1281,6 +1356,16 @@ test('Slaquatics CMS registry covers every public editable site page with WordPr
     'booking-add-on-catalog',
     'policy-list',
     'policy-card-list',
+    'rental-package-builder',
+    'rental-offering-cards',
+    'local-service-area-page',
+    'seasonal-rental-offer',
+    'review-summary-carousel',
+    'rental-waiver-checklist',
+    'rental-policy-cards',
+    'trust-metric-bar',
+    'rental-process-steps',
+    'value-prop-grid',
     'seasonal-offer-banner',
     'location-service-area',
     'waiver-checklist',
@@ -1311,6 +1396,20 @@ test('Slaquatics CMS registry covers every public editable site page with WordPr
     'effectiveDate'
   ]) {
     assert.match(adapter, new RegExp(businessField), `${businessField} should be modeled in business-specific CMS block schemas`);
+  }
+  for (const promotedBlock of [
+    'rental-package-builder',
+    'rental-offering-cards',
+    'local-service-area-page',
+    'seasonal-rental-offer',
+    'review-summary-carousel',
+    'rental-waiver-checklist',
+    'rental-policy-cards',
+    'trust-metric-bar',
+    'rental-process-steps',
+    'value-prop-grid'
+  ]) {
+    assert.match(renderer, new RegExp(promotedBlock), `${promotedBlock} should have a renderer path`);
   }
   assert.match(adapter, /legalItems: \{ control: 'stringList' \}/);
   assert.match(adapter, /addons: \{ control: 'collection'/);

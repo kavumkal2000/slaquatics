@@ -1,4 +1,4 @@
-export type CmsRole = 'owner' | 'admin' | 'editor' | 'client';
+export type CmsRole = 'owner' | 'admin' | 'client';
 export type CmsContentStatus = 'draft' | 'published' | 'scheduled' | 'archived';
 export type CmsContentType =
   | 'page'
@@ -108,8 +108,22 @@ export type CmsMediaAsset = {
 export type CmsAuditEvent = {
   id: string;
   actorId: string;
+  actorRole?: CmsRole | 'anonymous' | 'system';
+  siteId?: string;
+  environment?: string;
   action: string;
+  targetType?: string;
   targetId: string;
+  status?: 'attempted' | 'succeeded' | 'failed' | 'denied';
+  method?: string;
+  path?: string;
+  host?: string;
+  ipHash?: string;
+  cfRay?: string;
+  userAgentHash?: string;
+  requestId?: string;
+  r2Key?: string;
+  r2Status?: 'pending' | 'stored' | 'failed' | 'skipped';
   payload: Record<string, unknown>;
   createdAt: string;
 };

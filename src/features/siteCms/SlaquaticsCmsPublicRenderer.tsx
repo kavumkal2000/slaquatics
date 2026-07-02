@@ -726,13 +726,23 @@ function renderBookingEntry(block: CmsBlock) {
 }
 
 function renderBookingPackageSelector(block: CmsBlock) {
-  const props = blockProps<{ heading?: string; copy?: string; tabs?: Record<string, unknown>[]; pricingSource?: string }>(block);
+  const props = blockProps<{ heading?: string; copy?: string; tabs?: Record<string, unknown>[]; packages?: Record<string, unknown>[]; pricingSource?: string }>(block);
+  const tabs: Record<string, unknown>[] = props.tabs?.length ? props.tabs : (props.packages || []).map((item) => ({
+    id: item.id,
+    label: item.label || item.title,
+    submitLabel: item.submitLabel || 'Book Package',
+    bookingPath: item.bookingPath,
+    durationOptions: [{
+      label: item.displayPrice || item.price || item.badge || '',
+      rateLabel: Array.isArray(item.includes) ? (item.includes as unknown[]).join(', ') : item.description || ''
+    }]
+  }));
   return (
     <section className="card mini cms-booking-package-selector" data-cms-block-id={block.id} data-pricing-source={String(props.pricingSource || 'code-owned')}>
       {props.heading ? <h2>{props.heading}</h2> : null}
       {props.copy ? <p>{props.copy}</p> : null}
       <div className="grid" style={{ marginTop: 16 }}>
-        {(props.tabs || []).map((tab, index) => {
+        {tabs.map((tab, index) => {
           const craftOptions = Array.isArray(tab.craftOptions) ? tab.craftOptions as Record<string, unknown>[] : [];
           const durationOptions = Array.isArray(tab.durationOptions) ? tab.durationOptions as Record<string, unknown>[] : [];
           const bookingPath = safeCmsUrl(tab.bookingPath) || '/jetski-booking/';
@@ -890,6 +900,11 @@ function renderBusinessCardList(block: CmsBlock) {
     pricingSource?: string;
     products?: Record<string, unknown>[];
     addons?: Record<string, unknown>[];
+    packages?: Record<string, unknown>[];
+    offerings?: Record<string, unknown>[];
+    metrics?: Record<string, unknown>[];
+    steps?: Record<string, unknown>[];
+    valueProps?: Record<string, unknown>[];
     checkboxes?: Record<string, unknown>[];
     localFaq?: Record<string, unknown>[];
     policies?: Record<string, unknown>[];
@@ -897,7 +912,7 @@ function renderBusinessCardList(block: CmsBlock) {
     nearbyCities?: string[];
     items?: Record<string, unknown>[];
   }>(block);
-  const records = props.products || props.addons || props.checkboxes || props.localFaq || props.policies || props.items || [];
+  const records = props.products || props.addons || props.packages || props.offerings || props.metrics || props.steps || props.valueProps || props.checkboxes || props.localFaq || props.policies || props.items || [];
   const title = props.heading || props.headline || props.city || props.offerKey || block.label || 'CMS block';
   const copy = props.copy || props.body || props.routeCopy || (props.termsVersion ? `Terms version: ${props.termsVersion}` : '');
   return (
@@ -907,10 +922,10 @@ function renderBusinessCardList(block: CmsBlock) {
       <div className="grid" style={{ marginTop: 16 }}>
         {records.map((item, index) => (
           <div className="item" key={String(item.productKey || item.addonKey || item.policyKey || item.id || item.question || index)}>
-            <strong>{String(item.displayName || item.label || item.title || item.question || item.productKey || item.addonKey || item.policyKey || 'Item')}</strong>
-            <span>{String(item.displayPrice || item.priceLabel || item.summary || item.answer || item.body || '')}</span>
-            {item.stripePriceId || item.checkoutLineItemKey || item.effectiveDate ? (
-              <small>{String(item.stripePriceId || item.checkoutLineItemKey || item.effectiveDate)} configured</small>
+            <strong>{String(item.displayName || item.label || item.title || item.question || item.productKey || item.addonKey || item.policyKey || item.value || 'Item')}</strong>
+            <span>{String(item.displayPrice || item.price || item.priceLabel || item.summary || item.answer || item.body || item.copy || item.description || item.caption || '')}</span>
+            {item.stripePriceId || item.checkoutLineItemKey || item.effectiveDate || item.bookingPath ? (
+              <small>{String(item.stripePriceId || item.checkoutLineItemKey || item.effectiveDate || item.bookingPath)} configured</small>
             ) : null}
           </div>
         ))}
@@ -928,16 +943,16 @@ function renderBlock(block: CmsBlock) {
   if (block.type === 'image' || block.type === 'carousel' || block.type === 'gallery' || block.type === 'embed') return renderImage(block);
   if (block.type === 'video') return renderVideo(block);
   if (block.type === 'button-group') return renderButtonGroup(block);
-  if (block.type === 'card-grid' || block.type === 'reviews-social' || block.type === 'review-carousel') return renderCardGrid(normalizeReviewBlock(block));
-  if (block.type === 'service-list' || block.type === 'product-list' || block.type === 'rental-product-cards' || block.type === 'rental-offering-list' || block.type === 'add-ons' || block.type === 'addon-list' || block.type === 'safety-requirements' || block.type === 'policy-list') return renderServiceList(normalizeServiceBlock(block));
+  if (block.type === 'card-grid' || block.type === 'reviews-social' || block.type === 'review-carousel' || block.type === 'review-summary-carousel') return renderCardGrid(normalizeReviewBlock(block));
+  if (block.type === 'service-list' || block.type === 'product-list' || block.type === 'rental-product-cards' || block.type === 'rental-offering-list' || block.type === 'rental-offering-cards' || block.type === 'add-ons' || block.type === 'addon-list' || block.type === 'safety-requirements' || block.type === 'policy-list' || block.type === 'rental-process-steps' || block.type === 'value-prop-grid') return renderServiceList(normalizeServiceBlock(block));
   if (block.type === 'booking-entry') return renderBookingEntry(block);
-  if (block.type === 'booking-package-selector') return renderBookingPackageSelector(block);
+  if (block.type === 'booking-package-selector' || block.type === 'rental-package-builder') return renderBookingPackageSelector(block);
   if (block.type === 'rental-rate-table') return renderRentalRateTable(block);
   if (block.type === 'availability-checker' || block.type === 'live-availability-panel') return renderAvailabilityChecker(block);
   if (block.type === 'availability-waiver-payment-cta') return renderWaiverPaymentCta(block);
   if (block.type === 'location-directions') return renderLocationDirections(block);
   if (block.type === 'stripe-product-list' || block.type === 'stripe-catalog-display') return renderStripeProductList(block);
-  if (block.type === 'stripe-checkout-products' || block.type === 'booking-add-on-catalog' || block.type === 'waiver-checklist' || block.type === 'seasonal-offer-banner' || block.type === 'location-service-area' || block.type === 'policy-card-list') return renderBusinessCardList(block);
+  if (block.type === 'stripe-checkout-products' || block.type === 'booking-add-on-catalog' || block.type === 'waiver-checklist' || block.type === 'rental-waiver-checklist' || block.type === 'seasonal-offer-banner' || block.type === 'seasonal-rental-offer' || block.type === 'location-service-area' || block.type === 'local-service-area-page' || block.type === 'policy-card-list' || block.type === 'rental-policy-cards' || block.type === 'trust-metric-bar') return renderBusinessCardList(block);
   if (block.type === 'faq') return renderFaq(block);
   if (block.type === 'cta-band') return renderCtaBand(block);
   if (block.type === 'break') return <div className="cms-site-break" data-cms-block-id={block.id} />;
@@ -945,6 +960,50 @@ function renderBlock(block: CmsBlock) {
 }
 
 function normalizeServiceBlock(block: CmsBlock): CmsBlock {
+  if (block.type === 'rental-offering-cards') {
+    const props = blockProps<{ offerings?: Record<string, unknown>[] }>(block);
+    return {
+      ...block,
+      props: {
+        ...block.props,
+        items: (props.offerings || []).map((item) => ({
+          title: item.title || item.label || item.id,
+          copy: item.copy || item.description,
+          price: item.price,
+          badge: item.badge,
+          buttons: item.buttons
+        }))
+      }
+    };
+  }
+  if (block.type === 'rental-process-steps') {
+    const props = blockProps<{ steps?: Record<string, unknown>[] }>(block);
+    return {
+      ...block,
+      props: {
+        ...block.props,
+        items: (props.steps || []).map((item) => ({
+          title: item.title || item.label,
+          copy: item.copy,
+          badge: item.label
+        }))
+      }
+    };
+  }
+  if (block.type === 'value-prop-grid') {
+    const props = blockProps<{ valueProps?: Record<string, unknown>[] }>(block);
+    return {
+      ...block,
+      props: {
+        ...block.props,
+        items: (props.valueProps || []).map((item) => ({
+          title: item.title,
+          copy: item.copy,
+          image: item.image
+        }))
+      }
+    };
+  }
   if (block.type !== 'policy-list') return block;
   const props = blockProps<{ heading?: string; intro?: string; items?: Record<string, unknown>[] }>(block);
   return {
@@ -962,7 +1021,7 @@ function normalizeServiceBlock(block: CmsBlock): CmsBlock {
 }
 
 function normalizeReviewBlock(block: CmsBlock): CmsBlock {
-  if (block.type !== 'review-carousel') return block;
+  if (block.type !== 'review-carousel' && block.type !== 'review-summary-carousel') return block;
   const props = blockProps<{ reviews?: Record<string, unknown>[] }>(block);
   return {
     ...block,

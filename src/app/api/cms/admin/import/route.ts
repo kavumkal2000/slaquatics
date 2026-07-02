@@ -1,4 +1,5 @@
 import { requireCmsMutationRequest, requireCmsPermission } from '../../../../../lib/cms/auth.ts';
+import { recordCmsAudit } from '../../../../../lib/cms/audit.ts';
 import type { CmsContent, CmsMediaAsset, CmsSiteConfig } from '../../../../../lib/cms/core.ts';
 import { cmsJson } from '../../../../../lib/cms/security-headers.ts';
 import { getCmsStore } from '../../../../../lib/cms/storage.ts';
@@ -72,13 +73,45 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const dryRun = body?.dryRun !== false;
   const plan = buildCmsImportPlan(body?.manifest || body, activeCmsSiteAdapter.siteConfig);
-  if (!plan.ok) return cmsJson({ ok: false, errors: plan.errors }, { status: 400 });
-  if (dryRun) return cmsJson({ ok: true, dryRun, plan });
+  if (!plan.ok) {
+    await recordCmsAudit({
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'site.importFailed',
+      targetType: 'site',
+      targetId: activeCmsSiteAdapter.siteConfig.siteId,
+      status: 'failed',
+      request,
+      metadata: { errors: plan.errors }
+    });
+    return cmsJson({ ok: false, errors: plan.errors }, { status: 400 });
+  }
+  if (dryRun) {
+    await recordCmsAudit({
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'site.importDryRun',
+      targetType: 'site',
+      targetId: activeCmsSiteAdapter.siteConfig.siteId,
+      request,
+      metadata: { contentCount: plan.content.length, mediaCount: plan.media.length, sourceSiteId: plan.sourceSiteId }
+    });
+    return cmsJson({ ok: true, dryRun, plan });
+  }
   const store = await getCmsStore();
   const imported: CmsContent[] = [];
   for (const content of plan.content) {
     imported.push(await store.saveDraft(content, user.id));
   }
+  await recordCmsAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: 'site.import',
+    targetType: 'site',
+    targetId: activeCmsSiteAdapter.siteConfig.siteId,
+    request,
+    metadata: { contentCount: imported.length, mediaCount: plan.media.length, sourceSiteId: plan.sourceSiteId }
+  });
   return cmsJson({ ok: true, dryRun, imported, media: plan.media, warnings: plan.warnings });
 }
 

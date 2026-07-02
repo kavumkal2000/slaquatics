@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { CmsBlockDefinition, CmsContent, CmsSiteConfig } from '../../lib/cms/core.ts';
+import { CmsAuditLog } from './CmsAuditLog';
 import { CmsContentEditor } from './CmsContentEditor';
 import { CmsMediaLibrary } from './CmsMediaLibrary';
 import { CmsUserManagement } from './CmsUserManagement';
@@ -25,7 +26,7 @@ const editingSurfaces = [
 const workflow = ['Draft', 'Preview', 'Publish', 'Rollback'];
 
 type CmsAdminShellProps = {
-  view?: 'dashboard' | 'content' | 'media' | 'users' | 'login';
+  view?: 'dashboard' | 'content' | 'media' | 'users' | 'audit' | 'navigation' | 'patterns' | 'settings' | 'login';
   pages?: { slug: string; title: string; content?: CmsContent }[];
   blockLabels?: string[];
   blocks?: CmsBlockDefinition[];
@@ -57,7 +58,11 @@ export function CmsAdminShell({ view = 'dashboard', pages = [], blockLabels = []
         <a href="/">Dashboard</a>
         <a href="/content">Content</a>
         <a href="/media">Media</a>
+        <a href="/patterns">Patterns</a>
+        <a href="/navigation">Navigation</a>
+        <a href="/audit">Audit</a>
         <a href="/users">Users</a>
+        <a href="/settings">Settings</a>
         <a href="/content#import">Import</a>
         <a href="/api/cms/admin/export" download>Export</a>
         <form action="/api/cms/admin/logout" method="post" className="cms-sidebar-form">
@@ -68,7 +73,7 @@ export function CmsAdminShell({ view = 'dashboard', pages = [], blockLabels = []
         <div className="cms-topbar">
           <div>
             <div className="cms-kicker">Embedded CMS</div>
-            <h1>{view === 'media' ? 'Media Library' : view === 'content' ? 'Content Editor' : view === 'users' ? 'User Management' : 'Dashboard'}</h1>
+            <h1>{view === 'media' ? 'Media Library' : view === 'content' ? 'Content Editor' : view === 'users' ? 'User Management' : view === 'audit' ? 'Audit Log' : view === 'navigation' ? 'Navigation' : view === 'patterns' ? 'Patterns' : view === 'settings' ? 'Settings' : 'Dashboard'}</h1>
           </div>
           <div className="cms-workflow">
             {workflow.map((item) => <span key={item}>{item}</span>)}
@@ -91,6 +96,14 @@ export function CmsAdminShell({ view = 'dashboard', pages = [], blockLabels = []
           <CmsMediaLibrary />
         ) : view === 'users' ? (
           <CmsUserManagement />
+        ) : view === 'audit' ? (
+          <CmsAuditLog />
+        ) : view === 'navigation' ? (
+          children || <CmsSectionPlaceholder title="Navigation" copy="Nested menus are edited as structured navigation content with child items, URL validation, and publish review." />
+        ) : view === 'patterns' ? (
+          children || <CmsSectionPlaceholder title="Patterns" copy="Reusable sections stay adapter-safe and can be inserted as synced content blocks." />
+        ) : view === 'settings' ? (
+          children || <CmsSectionPlaceholder title="Settings" copy="Site-level CMS settings are restricted to owner and admin users." />
         ) : (
         <div className="cms-grid">
           {pages.map((page) => (
@@ -117,5 +130,15 @@ export function CmsAdminShell({ view = 'dashboard', pages = [], blockLabels = []
         )}
       </section>
     </main>
+  );
+}
+
+function CmsSectionPlaceholder({ title, copy }: { title: string; copy: string }) {
+  return (
+    <section className="cms-panel">
+      <div className="cms-kicker">CMS Section</div>
+      <h2>{title}</h2>
+      <p>{copy}</p>
+    </section>
   );
 }

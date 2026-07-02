@@ -1,5 +1,6 @@
 import type { CmsD1Database } from './storage.ts';
 import type { CmsRole } from './core.ts';
+import { ensureCmsAuditTables, recordCmsAudit } from './audit.ts';
 import { cmsJson } from './security-headers.ts';
 
 export type CmsUser = {
@@ -29,6 +30,9 @@ export type CmsPermission =
   | 'media.write'
   | 'revision.read'
   | 'users.manage'
+  | 'audit.read'
+  | 'audit.retry'
+  | 'session.manage'
   | 'site.export'
   | 'site.import';
 
@@ -37,9 +41,8 @@ const CMS_MUTATION_HEADER = 'x-cms-request';
 const PASSWORD_ITERATIONS = 210000;
 
 const rolePermissions: Record<CmsRole, CmsPermission[]> = {
-  owner: ['content.read', 'content.write', 'content.publish', 'content.rollback', 'media.read', 'media.write', 'revision.read', 'users.manage', 'site.export', 'site.import'],
-  admin: ['content.read', 'content.write', 'content.publish', 'content.rollback', 'media.read', 'media.write', 'revision.read', 'site.export', 'site.import'],
-  editor: ['content.read', 'content.write', 'media.read', 'media.write', 'revision.read'],
+  owner: ['content.read', 'content.write', 'content.publish', 'content.rollback', 'media.read', 'media.write', 'revision.read', 'users.manage', 'audit.read', 'audit.retry', 'session.manage', 'site.export', 'site.import'],
+  admin: ['content.read', 'content.write', 'content.publish', 'content.rollback', 'media.read', 'media.write', 'revision.read', 'audit.read', 'audit.retry', 'session.manage', 'site.export', 'site.import'],
   client: ['content.read', 'content.write', 'media.read', 'revision.read']
 };
 
@@ -59,7 +62,11 @@ const CREATE_USERS_SQL = `
 const CREATE_SESSIONS_SQL = `
   CREATE TABLE IF NOT EXISTS cms_sessions (
     token TEXT PRIMARY KEY,
+    id TEXT,
     user_id TEXT NOT NULL,
+    host TEXT,
+    ip_hash TEXT,
+    user_agent_hash TEXT,
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL
   )
@@ -126,8 +133,16 @@ async function ensureAuthTables(db: CmsD1Database) {
   await addColumnIfMissing(db, 'ALTER TABLE cms_users ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
   await addColumnIfMissing(db, 'ALTER TABLE cms_users ADD COLUMN updated_at TEXT');
   await db.prepare(CREATE_SESSIONS_SQL).run();
+  await addColumnIfMissing(db, 'ALTER TABLE cms_sessions ADD COLUMN id TEXT');
+  await addColumnIfMissing(db, 'ALTER TABLE cms_sessions ADD COLUMN host TEXT');
+  await addColumnIfMissing(db, 'ALTER TABLE cms_sessions ADD COLUMN ip_hash TEXT');
+  await addColumnIfMissing(db, 'ALTER TABLE cms_sessions ADD COLUMN user_agent_hash TEXT');
   await db.prepare(CREATE_LOGIN_ATTEMPTS_SQL).run();
   await db.prepare(CREATE_AUDIT_SQL).run();
+  await ensureCmsAuditTables(db);
+  await db.prepare("UPDATE cms_users SET active = 0, updated_at = ? WHERE role = 'editor' AND active = 1")
+    .bind(new Date().toISOString())
+    .run();
 }
 
 async function addColumnIfMissing(db: CmsD1Database, sql: string) {
@@ -216,10 +231,11 @@ export async function requireCmsUser(request: Request): Promise<CmsUser | Respon
   const token = readCmsSessionCookie(request);
   if (!token) return cmsJson({ error: 'CMS login required.' }, { status: 401 });
   const row = await db
-    .prepare('SELECT u.id, u.email, u.role, u.name, s.expires_at FROM cms_sessions s JOIN cms_users u ON u.id = s.user_id WHERE s.token = ? AND u.active = 1')
+    .prepare("SELECT u.id, u.email, u.role, u.name, s.expires_at FROM cms_sessions s JOIN cms_users u ON u.id = s.user_id WHERE s.token = ? AND u.active = 1 AND u.role IN ('owner', 'admin', 'client')")
     .bind(await sessionTokenHash(token))
     .first<CmsUser & { expires_at: string }>();
   if (!row || Date.parse(row.expires_at) <= Date.now()) {
+    await recordCmsAuthAudit(db, 'anonymous', 'auth.sessionDenied', 'session', request, { reason: row ? 'expired' : 'missing' }, 'denied');
     return cmsJson({ error: 'CMS login required.' }, { status: 401 });
   }
   return { id: row.id, email: row.email, role: row.role, name: row.name };
@@ -233,6 +249,7 @@ export async function requireCmsPermission(request: Request, permission: CmsPerm
   const user = await requireCmsUser(request);
   if (user instanceof Response) return user;
   if (!userHasCmsPermission(user, permission)) {
+    await recordCmsAuthAudit(await getCmsDb(), user.id, 'auth.permissionDenied', permission, request, { permission, role: user.role }, 'denied', user.role);
     return cmsJson({ error: 'CMS permission denied.' }, { status: 403 });
   }
   return user;
@@ -268,17 +285,17 @@ export async function loginCmsUser(request: Request, email: string, password: st
   const normalizedEmail = email.trim().toLowerCase();
   const ip = clientIp(request);
   if (await loginIsRateLimited(db, normalizedEmail, ip)) {
-    await recordCmsAuthAudit(db, 'anonymous', 'auth.rateLimited', normalizedEmail, request, { ip });
+    await recordCmsAuthAudit(db, 'anonymous', 'auth.rateLimited', normalizedEmail, request, { ip }, 'denied');
     return cmsJson({ error: 'Too many CMS login attempts. Try again later.' }, { status: 429 });
   }
   const user = await db
-    .prepare('SELECT id, email, role, name, password_hash FROM cms_users WHERE lower(email) = lower(?) AND active = 1')
+    .prepare("SELECT id, email, role, name, password_hash FROM cms_users WHERE lower(email) = lower(?) AND active = 1 AND role IN ('owner', 'admin', 'client')")
     .bind(normalizedEmail)
     .first<CmsUser & { password_hash: string }>();
   const verification = user ? await verifyPassword(password, user.password_hash) : { ok: false, needsUpgrade: false };
   if (!user || !verification.ok) {
     await recordLoginAttempt(db, normalizedEmail, ip, false);
-    await recordCmsAuthAudit(db, 'anonymous', 'auth.loginFailed', normalizedEmail, request, { ip });
+    await recordCmsAuthAudit(db, 'anonymous', 'auth.loginFailed', normalizedEmail, request, { ip }, 'failed');
     return cmsJson({ error: 'Invalid CMS login.' }, { status: 401 });
   }
   if (verification.needsUpgrade) {
@@ -289,13 +306,15 @@ export async function loginCmsUser(request: Request, email: string, password: st
   }
   await recordLoginAttempt(db, normalizedEmail, ip, true);
   const token = await createSessionToken();
+  const sessionId = crypto.randomUUID();
   const now = new Date().toISOString();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const url = new URL(request.url);
   await db
-    .prepare('INSERT INTO cms_sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)')
-    .bind(await sessionTokenHash(token), user.id, expiresAt, now)
+    .prepare('INSERT INTO cms_sessions (token, id, user_id, host, ip_hash, user_agent_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(await sessionTokenHash(token), sessionId, user.id, url.host, await sha256Value(ip), await sha256Value(request.headers.get('user-agent') || ''), expiresAt, now)
     .run();
-  await recordCmsAuthAudit(db, user.id, 'auth.loginSucceeded', user.id, request, { ip });
+  await recordCmsAuthAudit(db, user.id, 'auth.loginSucceeded', user.id, request, { sessionId }, 'succeeded', user.role);
   return cmsJson(
     { ok: true, user: { id: user.id, email: user.email, role: user.role, name: user.name } },
     { headers: { 'set-cookie': createCmsSessionCookie(token, request) } }
@@ -310,7 +329,7 @@ export async function listCmsUsers(): Promise<CmsUser[]> {
   const db = await getCmsDb();
   await ensureAuthTables(db);
   const { results = [] } = await db
-    .prepare('SELECT id, email, role, name, active, created_at FROM cms_users ORDER BY created_at DESC LIMIT 200')
+    .prepare("SELECT id, email, role, name, active, created_at FROM cms_users WHERE role IN ('owner', 'admin', 'client') ORDER BY created_at DESC LIMIT 200")
     .bind()
     .all<CmsUserRow>();
   return results.map((user) => ({
@@ -325,7 +344,7 @@ export async function listCmsUsers(): Promise<CmsUser[]> {
 
 export function userCanCreateCmsRole(actor: CmsUser, role: CmsRole): boolean {
   if (actor.role !== 'owner') return false;
-  return role !== 'owner';
+  return role === 'admin' || role === 'client';
 }
 
 export async function createManagedCmsUser(input: { email: string; name: string; role: CmsRole; password: string }, actor: CmsUser, request: Request): Promise<CmsUser | Response> {
@@ -334,7 +353,7 @@ export async function createManagedCmsUser(input: { email: string; name: string;
   const email = input.email.trim().toLowerCase();
   const name = input.name.trim().slice(0, 160);
   const role = input.role;
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name || !['owner', 'admin', 'editor', 'client'].includes(role)) {
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || !name || !['owner', 'admin', 'client'].includes(role)) {
     return cmsJson({ error: 'Valid CMS user email, name, and role are required.' }, { status: 400 });
   }
   if (!userCanCreateCmsRole(actor, role)) {
@@ -360,7 +379,7 @@ export async function createManagedCmsUser(input: { email: string; name: string;
   } catch {
     return cmsJson({ error: 'CMS user could not be created. The email may already exist.' }, { status: 409 });
   }
-  await recordCmsAuthAudit(db, actor.id, 'auth.userCreated', user.id, request, { email: user.email, role: user.role });
+  await recordCmsAuthAudit(db, actor.id, 'auth.userCreated', user.id, request, { email: user.email, role: user.role }, 'succeeded', actor.role);
   return user;
 }
 
@@ -384,7 +403,7 @@ export async function deactivateCmsUser(id: string, actor: CmsUser, request: Req
     .prepare('DELETE FROM cms_sessions WHERE user_id = ?')
     .bind(id)
     .run();
-  await recordCmsAuthAudit(db, actor.id, 'auth.userDeactivated', id, request, { email: existing.email, role: existing.role });
+  await recordCmsAuthAudit(db, actor.id, 'auth.userDeactivated', id, request, { email: existing.email, role: existing.role }, 'succeeded', actor.role);
   return {
     id: existing.id,
     email: existing.email,
@@ -408,6 +427,50 @@ export async function logoutCmsUser(request: Request): Promise<Response> {
   await recordCmsAuthAudit(db, 'session', 'auth.logout', 'session', request, { ip: clientIp(request) });
   const expired = createCmsSessionCookie('', request).replace('Max-Age=604800', 'Max-Age=0');
   return cmsJson({ ok: true }, { headers: { 'set-cookie': expired } });
+}
+
+export type CmsSessionSummary = {
+  id: string;
+  userId: string;
+  host: string;
+  ipHash: string;
+  userAgentHash: string;
+  current: boolean;
+  expiresAt: string;
+  createdAt: string;
+};
+
+export async function listCmsUserSessions(userId: string, request: Request): Promise<CmsSessionSummary[]> {
+  const db = await getCmsDb();
+  await ensureAuthTables(db);
+  const currentToken = readCmsSessionCookie(request);
+  const currentHash = currentToken ? await sessionTokenHash(currentToken) : '';
+  const { results = [] } = await db
+    .prepare('SELECT token, id, user_id, host, ip_hash, user_agent_hash, expires_at, created_at FROM cms_sessions WHERE user_id = ? ORDER BY created_at DESC LIMIT 100')
+    .bind(userId)
+    .all<{ token: string; id?: string | null; user_id: string; host?: string | null; ip_hash?: string | null; user_agent_hash?: string | null; expires_at: string; created_at: string }>();
+  return results.map((session) => ({
+    id: session.id || session.token,
+    userId: session.user_id,
+    host: session.host || '',
+    ipHash: session.ip_hash || '',
+    userAgentHash: session.user_agent_hash || '',
+    current: Boolean(currentHash && session.token === currentHash),
+    expiresAt: session.expires_at,
+    createdAt: session.created_at
+  }));
+}
+
+export async function revokeCmsUserSession(userId: string, sessionId: string, actor: CmsUser, request: Request): Promise<boolean> {
+  const db = await getCmsDb();
+  await ensureAuthTables(db);
+  const result = await db
+    .prepare('DELETE FROM cms_sessions WHERE user_id = ? AND (id = ? OR token = ?)')
+    .bind(userId, sessionId, sessionId)
+    .run();
+  const removed = (result.meta?.changes ?? result.changes ?? 0) > 0;
+  await recordCmsAuthAudit(db, actor.id, removed ? 'auth.sessionRevoked' : 'auth.sessionRevokeMiss', sessionId, request, { userId, sessionId }, removed ? 'succeeded' : 'failed', actor.role);
+  return removed;
 }
 
 async function createSessionToken(): Promise<string> {
@@ -440,20 +503,16 @@ async function recordLoginAttempt(db: CmsD1Database, email: string, ip: string, 
     .run();
 }
 
-async function recordCmsAuthAudit(db: CmsD1Database, actorId: string, action: string, targetId: string, request: Request, payload: Record<string, unknown>): Promise<void> {
-  await db
-    .prepare('INSERT INTO cms_audit_log (id, actor_id, action, target_id, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(
-      crypto.randomUUID(),
-      actorId,
-      action,
-      targetId,
-      JSON.stringify({
-        ...payload,
-        host: new URL(request.url).host,
-        ray: request.headers.get('cf-ray') || ''
-      }),
-      new Date().toISOString()
-    )
-    .run();
+async function recordCmsAuthAudit(db: CmsD1Database, actorId: string, action: string, targetId: string, request: Request, payload: Record<string, unknown>, status: 'attempted' | 'succeeded' | 'failed' | 'denied' = 'succeeded', actorRole?: CmsRole | 'anonymous' | 'system'): Promise<void> {
+  void db;
+  await recordCmsAudit({
+    actorId,
+    actorRole,
+    action,
+    targetType: action.startsWith('auth.user') ? 'user' : 'auth',
+    targetId,
+    status,
+    request,
+    metadata: payload
+  });
 }

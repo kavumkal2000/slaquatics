@@ -83,6 +83,40 @@ export function CmsMediaLibrary() {
     setState((current) => ({ ...current, saving: '', message: 'Media metadata saved.' }));
   }
 
+  async function replaceAsset(asset: CmsMediaAsset, file: File | undefined) {
+    if (!file) return;
+    setState((current) => ({ ...current, saving: asset.id, message: 'Replacing media asset...' }));
+    const response = await fetch(`/api/cms/admin/media/${encodeURIComponent(asset.id)}/replace`, {
+      method: 'POST',
+      headers: { 'content-type': file.type || 'application/octet-stream', 'x-cms-request': '1' },
+      body: file
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setState((current) => ({ ...current, saving: '', message: String(payload.error || 'Media replacement failed.') }));
+      return;
+    }
+    const replaced = payload.asset as CmsMediaAsset;
+    setAssets((current) => current.map((item) => item.id === replaced.id ? { ...item, ...replaced, usedBy: item.usedBy } : item));
+    setState((current) => ({ ...current, saving: '', message: 'Media asset replaced.' }));
+  }
+
+  async function deleteAsset(asset: CmsMediaAssetWithUsage, force = false) {
+    setState((current) => ({ ...current, saving: asset.id, message: 'Deleting media asset...' }));
+    const response = await fetch(`/api/cms/admin/media/${encodeURIComponent(asset.id)}${force ? '?force=1' : ''}`, {
+      method: 'DELETE',
+      headers: { 'x-cms-request': '1' }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const usage = Array.isArray(payload.usedBy) ? ` Used by ${payload.usedBy.length} content record${payload.usedBy.length === 1 ? '' : 's'}.` : '';
+      setState((current) => ({ ...current, saving: '', message: `${String(payload.error || 'Media delete failed.')}${usage}` }));
+      return;
+    }
+    setAssets((current) => current.filter((item) => item.id !== asset.id));
+    setState((current) => ({ ...current, saving: '', message: 'Media asset deleted.' }));
+  }
+
   function updateAsset(id: string, updater: (asset: CmsMediaAsset) => CmsMediaAsset) {
     setAssets((current) => current.map((asset) => asset.id === id ? updater(asset) : asset));
   }
@@ -148,6 +182,23 @@ export function CmsMediaLibrary() {
             <button type="button" onClick={() => void saveAsset(asset)} disabled={state.saving === asset.id}>
               {state.saving === asset.id ? 'Saving...' : 'Save Metadata'}
             </button>
+            <label className="cms-replace-target">
+              Replace file
+              <input
+                type="file"
+                accept="image/*,video/*"
+                onChange={(event) => void replaceAsset(asset, event.target.files?.[0])}
+                disabled={state.saving === asset.id}
+              />
+            </label>
+            <button type="button" onClick={() => void deleteAsset(asset)} disabled={state.saving === asset.id}>
+              Delete
+            </button>
+            {asset.usedBy?.length ? (
+              <button type="button" onClick={() => void deleteAsset(asset, true)} disabled={state.saving === asset.id}>
+                Force Delete
+              </button>
+            ) : null}
             <div className="cms-media-usage">
               <strong>Used by</strong>
               {asset.usedBy?.length ? (

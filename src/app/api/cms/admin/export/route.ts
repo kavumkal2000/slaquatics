@@ -1,4 +1,5 @@
 import { requireCmsPermission } from '../../../../../lib/cms/auth.ts';
+import { recordCmsAudit } from '../../../../../lib/cms/audit.ts';
 import type { CmsContent, CmsMediaAsset } from '../../../../../lib/cms/core.ts';
 import { cmsJson } from '../../../../../lib/cms/security-headers.ts';
 import { getCmsStore } from '../../../../../lib/cms/storage.ts';
@@ -33,6 +34,15 @@ export async function GET(request: Request) {
   const store = await getCmsStore();
   const content = await store.listContent({ limit: 1000 });
   const media = await store.listMediaAssets(1000);
+  await recordCmsAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: 'site.export',
+    targetType: 'site',
+    targetId: activeCmsSiteAdapter.siteConfig.siteId,
+    request,
+    metadata: { contentCount: content.length, mediaCount: media.length }
+  });
   return cmsJson(buildCmsExportManifest({
     siteId: activeCmsSiteAdapter.siteConfig.siteId,
     exportedAt: new Date().toISOString(),

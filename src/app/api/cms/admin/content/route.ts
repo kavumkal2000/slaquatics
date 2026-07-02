@@ -1,4 +1,5 @@
 import { requireCmsMutationRequest, requireCmsPermission } from '../../../../../lib/cms/auth.ts';
+import { recordCmsAudit } from '../../../../../lib/cms/audit.ts';
 import { getCmsStore } from '../../../../../lib/cms/storage.ts';
 import { activeCmsSiteAdapter } from '../../../../../lib/site-cms/active.ts';
 import { validateAndSanitizeCmsContent } from '../../../../../lib/cms/validation.ts';
@@ -31,14 +32,46 @@ export async function POST(request: Request) {
   if (user instanceof Response) return user;
   const body = await request.json().catch(() => ({}));
   const result = validateAndSanitizeCmsContent(body?.content, activeCmsSiteAdapter.siteConfig);
-  if (!result.ok) return cmsJson({ error: result.error }, { status: 400 });
+  if (!result.ok) {
+    await recordCmsAudit({
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'content.validationFailed',
+      targetType: 'content',
+      targetId: 'unknown',
+      status: 'failed',
+      request,
+      metadata: { error: result.error }
+    });
+    return cmsJson({ error: result.error }, { status: 400 });
+  }
   const store = await getCmsStore();
   const existing = await store.getContentById(result.content.id);
   const permissionTarget = existing || result.content;
   if (!userCanWriteCmsContentType(user, result.content.contentType)) {
+    await recordCmsAudit({
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'content.writeDenied',
+      targetType: 'content',
+      targetId: result.content.id,
+      status: 'denied',
+      request,
+      metadata: { contentType: result.content.contentType, slug: result.content.slug }
+    });
     return cmsJson({ error: 'CMS role cannot edit this content type.' }, { status: 403 });
   }
   if (!userCanWriteCmsContent(user, permissionTarget)) {
+    await recordCmsAudit({
+      actorId: user.id,
+      actorRole: user.role,
+      action: 'content.writeDenied',
+      targetType: 'content',
+      targetId: result.content.id,
+      status: 'denied',
+      request,
+      metadata: { contentType: result.content.contentType, slug: result.content.slug }
+    });
     return cmsJson({ error: 'CMS role cannot edit this content.' }, { status: 403 });
   }
   const draft = await store.saveDraft(applyCmsAccessForSave(user, result.content, existing), user.id);
