@@ -1,5 +1,6 @@
 import { getSession } from '../../../../lib/ops/auth.ts';
 import { sameOriginMutationError } from '../../../../lib/ops/api-auth.ts';
+import { readLimitedJson } from '../../../../lib/cloudflare/rate-limit.ts';
 import { jsonResponse } from '../../../../lib/cloudflare/http.ts';
 import { copyOpsStateVersion } from '../../../../lib/cloudflare/ops-state-store.ts';
 import { opsStateStorageKind, readOpsState, writeOpsState } from '../../../../lib/ops/public-state.ts';
@@ -77,7 +78,7 @@ function mergeServerOwnedCommunications(currentLog: any[] = [], incomingLog: any
 function normalizeRole(session: any) {
   const role = String(session?.role || '').trim().toLowerCase();
   if (role === 'developer' || role === 'owner' || role === 'employee' || role === 'crew') return role;
-  return 'owner';
+  return 'none';
 }
 
 function pickFields(record: any = {}, fields: string[]) {
@@ -142,8 +143,9 @@ function mergeEmployeeState(currentState: OpsState, incomingState: OpsState) {
   const next = sanitizeState(currentState);
   const incoming = sanitizeState(incomingState);
   const currentBookingsById = new Map(next.bookings.map((booking) => [Number(booking.id), booking]));
+  const nextBookingsById = new Map<number, any>();
   let maxBookingId = next.bookings.reduce((max, booking) => Math.max(max, Number(booking.id) || 0), 0);
-  next.bookings = incoming.bookings.map((booking) => {
+  for (const booking of incoming.bookings) {
     const existing = currentBookingsById.get(Number(booking.id));
     if (!existing) {
       const created = pickFields(booking, EMPLOYEE_EDITABLE_BOOKING_FIELDS);
@@ -153,14 +155,19 @@ function mergeEmployeeState(currentState: OpsState, incomingState: OpsState) {
       created.paymentStatus = 'unpaid';
       created.source = 'Employee Entry';
       created.createdAt = new Date().toISOString();
-      return created;
+      nextBookingsById.set(Number(created.id), created);
+      continue;
     }
     const merged = { ...existing };
     for (const field of EMPLOYEE_EDITABLE_BOOKING_FIELDS) {
       if (booking[field] !== undefined) merged[field] = booking[field];
     }
-    return merged;
-  });
+    nextBookingsById.set(Number(merged.id), merged);
+  }
+  next.bookings = next.bookings.map((booking) => nextBookingsById.get(Number(booking.id)) || booking);
+  for (const booking of nextBookingsById.values()) {
+    if (!currentBookingsById.has(Number(booking.id))) next.bookings.push(booking);
+  }
   return next;
 }
 
@@ -183,8 +190,9 @@ function isOpsStateConflict(error: unknown) {
 }
 
 export async function GET(request: Request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return unauthorized();
+  if (normalizeRole(session) === 'none') return jsonResponse({ error: 'Ops access required.' }, { status: 403 });
   const state = await readOpsState();
   const invoiceChanged = syncBookingsFromInvoices(state);
   const customerChanged = syncCustomersFromBookings(state);
@@ -196,28 +204,32 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const originError = sameOriginMutationError(request);
   if (originError) return originError;
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return unauthorized();
-  const body = await request.json();
-  const currentState = await readOpsState();
-  const role = normalizeRole(session);
-  const nextState = role === 'crew'
-    ? mergeCrewState(currentState, body)
-    : role === 'employee'
-      ? mergeEmployeeState(currentState, body)
-      : sanitizeState(body);
-  copyOpsStateVersion(currentState, nextState);
-  nextState.ownerWeeklyDigest = mergeOwnerWeeklyDigestState(currentState.ownerWeeklyDigest, nextState.ownerWeeklyDigest);
-  nextState.communicationsLog = mergeServerOwnedCommunications(currentState.communicationsLog, nextState.communicationsLog);
-  syncBookingsFromInvoices(nextState);
-  syncCustomersFromBookings(nextState);
-  syncWebsiteBookingInvoices(nextState);
   try {
+    const body = await readLimitedJson(request, { scope: 'ops-state', rateLimit: 120, windowMs: 60_000, maxBytes: 512 * 1024 });
+    const currentState = await readOpsState();
+    const role = normalizeRole(session);
+    if (role === 'none') return jsonResponse({ error: 'Ops access required.' }, { status: 403 });
+    const nextState = role === 'crew'
+      ? mergeCrewState(currentState, body)
+      : role === 'employee'
+        ? mergeEmployeeState(currentState, body)
+        : sanitizeState(body);
+    copyOpsStateVersion(currentState, nextState);
+    nextState.ownerWeeklyDigest = mergeOwnerWeeklyDigestState(currentState.ownerWeeklyDigest, nextState.ownerWeeklyDigest);
+    nextState.communicationsLog = mergeServerOwnedCommunications(currentState.communicationsLog, nextState.communicationsLog);
+    syncBookingsFromInvoices(nextState);
+    syncCustomersFromBookings(nextState);
+    syncWebsiteBookingInvoices(nextState);
     const state = await writeOpsState(nextState);
     return jsonResponse({ ok: true, state: statePayloadForSession(state, session) });
   } catch (error) {
     if (isOpsStateConflict(error)) {
       return jsonResponse({ error: 'Ops state changed while saving. Reload and try again.' }, { status: 409 });
+    }
+    if ((error as any)?.status) {
+      return jsonResponse({ error: (error as any).message || 'Could not save ops state.' }, { status: (error as any).status });
     }
     throw error;
   }

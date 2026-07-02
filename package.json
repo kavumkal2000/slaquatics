@@ -11,11 +11,13 @@
     "check": "node scripts/validate.js && npm run test:migration",
     "smoke": "node scripts/smoke.js",
     "ops-state:transfer": "node scripts/transfer-ops-state.mjs",
+    "ops-auth:hash": "node scripts/generate-ops-password-hash.mjs",
     "media:publish": "node scripts/publish-media-r2.mjs",
     "media:bucket:create:dev": "wrangler r2 bucket create slaquatics-media-development",
     "media:bucket:create:prod": "wrangler r2 bucket create slaquatics-media-production",
     "media:domain:dev": "wrangler r2 bucket domain add slaquatics-media-development --domain cdn.dev.slaquatics.com --zone-id $CLOUDFLARE_ZONE_ID",
     "media:domain:prod": "wrangler r2 bucket domain add slaquatics-media-production --domain cdn.slaquatics.com --zone-id $CLOUDFLARE_ZONE_ID",
+    "turnstile:hostnames": "node scripts/sync-turnstile-hostnames.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:upload:dev": "opennextjs-cloudflare upload --env development",
@@ -24,6 +26,8 @@
     "test:migration": "node --experimental-strip-types --test tests/migration/*.test.mjs"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "next": "^16.2.9",
     "pg": "^8.16.3",
     "react": "^19.2.7",

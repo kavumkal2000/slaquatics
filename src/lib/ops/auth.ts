@@ -1,43 +1,38 @@
 import crypto from 'node:crypto';
+import { getOpsAuthStore, type OpsAuthUser, type OpsRole } from './auth-store.ts';
 
 export const COOKIE_NAME = 'sla_ops_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
 const LOGIN_MAX_ATTEMPTS = 8;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_LOCK_MS = 15 * 60 * 1000;
+const PBKDF2_ITERATIONS = 210000;
+const PBKDF2_KEY_LENGTH = 32;
 const loginAttempts = new Map<string, { count: number; firstAt: number; lockedUntil: number }>();
 
-type OpsUser = {
-  username: string;
-  role: 'developer' | 'owner' | 'employee' | 'crew';
-  displayName: string;
-  password: string;
-  passwordHash: string;
+type SessionUser = OpsAuthUser & {
+  sessionTokenHash?: string;
+  authMethod?: string;
 };
-
-function secret() {
-  return process.env.SESSION_SECRET || '';
-}
-
-function configuredPassword(primaryKey: string) {
-  return process.env[primaryKey] || process.env.OPS_PASSWORD || '';
-}
-
-function configuredPasswordHash(primaryKey: string) {
-  return process.env[`${primaryKey}_HASH`] || '';
-}
 
 function normalizeUsername(username = '') {
   return String(username || '').trim().toLowerCase();
 }
 
 function clientIpFor(request: Request) {
+  const cloudflareIp = request.headers.get('cf-connecting-ip');
+  if (cloudflareIp) return cloudflareIp;
+  if (process.env.NODE_ENV === 'production') return 'unknown';
   const forwardedFor = String(request.headers.get('x-forwarded-for') || '')
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
   if (forwardedFor.length) return forwardedFor[forwardedFor.length - 1];
-  return request.headers.get('cf-connecting-ip') || 'unknown';
+  return 'unknown';
+}
+
+function userAgentFor(request: Request) {
+  return String(request.headers.get('user-agent') || '').slice(0, 500);
 }
 
 export function loginRateKey(request: Request, username = '') {
@@ -68,67 +63,7 @@ export function clearLoginFailures(key: string) {
   loginAttempts.delete(key);
 }
 
-export function collectAuthConfigWarnings() {
-  const warnings: string[] = [];
-  const legacyOpsPassword = process.env.OPS_PASSWORD || '';
-  const devPassword = process.env.OPS_DEV_PASSWORD || legacyOpsPassword;
-  const ownerPassword = process.env.OPS_OWNER_PASSWORD || legacyOpsPassword;
-  const employeePassword = process.env.OPS_EMPLOYEE_PASSWORD || legacyOpsPassword;
-  const sessionSecret = process.env.SESSION_SECRET || '';
-
-  if (!sessionSecret) {
-    warnings.push('SESSION_SECRET is not set — sessions reset on every restart/deploy (everyone gets logged out). Set a fixed random SESSION_SECRET.');
-  } else if (sessionSecret.length < 32) {
-    warnings.push('SESSION_SECRET is short — use a fixed random value with at least 32 characters.');
-  }
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.OPS_OWNER_PASSWORD && !process.env.OPS_OWNER_PASSWORD_HASH) {
-      warnings.push('No owner password configured — set OPS_OWNER_PASSWORD_HASH (preferred) or OPS_OWNER_PASSWORD.');
-    }
-    if (employeePassword === 'default') {
-      warnings.push("Employee password is the weak default 'default' — set OPS_EMPLOYEE_PASSWORD.");
-    }
-    if (legacyOpsPassword && (devPassword === legacyOpsPassword || ownerPassword === legacyOpsPassword)) {
-      warnings.push('A role is using the shared OPS_PASSWORD fallback — give each role its own password so one leak does not expose all accounts.');
-    }
-  }
-  return warnings;
-}
-
-function users(): OpsUser[] {
-  return [
-    {
-      username: String(process.env.OPS_DEV_USERNAME || 'developer').toLowerCase(),
-      role: 'developer',
-      displayName: 'Developer',
-      password: configuredPassword('OPS_DEV_PASSWORD'),
-      passwordHash: configuredPasswordHash('OPS_DEV_PASSWORD')
-    },
-    {
-      username: String(process.env.OPS_OWNER_USERNAME || 'owner').toLowerCase(),
-      role: 'owner',
-      displayName: 'Owner',
-      password: configuredPassword('OPS_OWNER_PASSWORD'),
-      passwordHash: configuredPasswordHash('OPS_OWNER_PASSWORD')
-    },
-    {
-      username: String(process.env.OPS_EMPLOYEE_USERNAME || 'hugoprado').toLowerCase(),
-      role: 'employee',
-      displayName: 'Employee',
-      password: configuredPassword('OPS_EMPLOYEE_PASSWORD'),
-      passwordHash: configuredPasswordHash('OPS_EMPLOYEE_PASSWORD')
-    },
-    {
-      username: String(process.env.OPS_CREW_USERNAME || 'crew').toLowerCase(),
-      role: 'crew',
-      displayName: 'Crew',
-      password: configuredPassword('OPS_CREW_PASSWORD'),
-      passwordHash: configuredPasswordHash('OPS_CREW_PASSWORD')
-    }
-  ];
-}
-
-function timingSafeStringEqual(leftValue = '', rightValue = '') {
+export function timingSafeStringEqual(leftValue = '', rightValue = '') {
   const left = Buffer.from(String(leftValue));
   const right = Buffer.from(String(rightValue));
   if (left.length !== right.length) return false;
@@ -139,7 +74,48 @@ function sha256Hex(value: string) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-function verifyPasswordHash(password: string, hash = '') {
+export function hashAuthToken(token: string) {
+  return sha256Hex(token);
+}
+
+function sessionCookieAttributes() {
+  const attributes = ['Path=/', 'HttpOnly', 'SameSite=Strict'];
+  if (process.env.NODE_ENV === 'production') attributes.push('Secure');
+  return attributes.join('; ');
+}
+
+function parseSessionToken(request: Request) {
+  const cookie = request.headers.get('cookie') || '';
+  const match = cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+function rolePermissions(role: string) {
+  const normalized = String(role || '').toLowerCase();
+  return {
+    canAccessSystem: normalized === 'developer',
+    canManageOps: ['developer', 'owner', 'employee'].includes(normalized),
+    canManageMessaging: ['developer', 'owner'].includes(normalized),
+    canAccessBusinessData: ['developer', 'owner'].includes(normalized),
+    canAccessBookingsOnly: normalized === 'employee',
+    canAccessCrewOnly: normalized === 'crew',
+    canAccessWebsiteDevelopment: normalized === 'developer',
+    hideMoney: ['employee', 'crew', 'client'].includes(normalized)
+  };
+}
+
+export function sessionUserPayload(user: any) {
+  if (!user) return null;
+  const role = String(user.role || '');
+  return {
+    username: String(user.username || ''),
+    role,
+    displayName: String(user.displayName || ''),
+    permissions: rolePermissions(role)
+  };
+}
+
+function verifyLegacyPasswordHash(password: string, hash = '') {
   const normalized = String(hash || '').trim();
   if (!normalized) return false;
   const parts = normalized.split(':');
@@ -152,70 +128,194 @@ function verifyPasswordHash(password: string, hash = '') {
   return false;
 }
 
-function sign(payload: string) {
-  return crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
+export function createPasswordHash(password: string, salt = crypto.randomBytes(16).toString('base64url')) {
+  const hash = crypto.pbkdf2Sync(String(password), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH, 'sha256').toString('base64url');
+  return `pbkdf2-sha256:${PBKDF2_ITERATIONS}:${salt}:${hash}`;
 }
 
-function encode(value: Record<string, unknown>) {
-  const payload = Buffer.from(JSON.stringify(value)).toString('base64url');
-  return `${payload}.${sign(payload)}`;
+export function passwordPolicyError(password = '') {
+  const value = String(password || '');
+  if (value.length < 6) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  if (!/[A-Z]/.test(value)) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  if (!/[^A-Za-z0-9]/.test(value)) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  return '';
 }
 
-function decode(value = '') {
-  if (!secret()) return null;
-  const [payload = '', signature = ''] = value.split('.');
-  if (!payload || !signature || !timingSafeStringEqual(signature, sign(payload))) return null;
-  const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-  if (Number(parsed.expiresAt || 0) < Date.now()) return null;
-  return parsed;
+export function verifyPassword(password: string, storedHash = '') {
+  const hash = String(storedHash || '').trim();
+  const [algorithm, iterationsValue, salt, expected] = hash.split(':');
+  if (algorithm === 'pbkdf2-sha256' && iterationsValue && salt && expected) {
+    const iterations = Number(iterationsValue);
+    if (!Number.isFinite(iterations) || iterations < 100000) return false;
+    const actual = crypto.pbkdf2Sync(String(password), salt, iterations, PBKDF2_KEY_LENGTH, 'sha256').toString('base64url');
+    return timingSafeStringEqual(actual, expected);
+  }
+  return verifyLegacyPasswordHash(password, hash);
 }
 
-export function findOpsUser(username = '', password = '') {
-  if (!process.env.SESSION_SECRET) return null;
-  const normalized = normalizeUsername(username);
-  return users().find((user) => {
-    if (user.username !== normalized) return false;
-    if (user.passwordHash) return verifyPasswordHash(password, user.passwordHash);
-    return Boolean(user.password) && timingSafeStringEqual(user.password, password);
-  }) || null;
+export async function findOpsUser(username = '', password = '') {
+  const store = await getOpsAuthStore();
+  const user = await store.findUserForPasswordLogin(username);
+  if (!user || !user.enabled || !user.passwordHash || !verifyPassword(password, user.passwordHash)) return null;
+  return user;
 }
 
-export function sessionUserPayload(user: any) {
-  if (!user) return null;
-  return {
-    username: String(user.username || ''),
-    role: String(user.role || ''),
-    displayName: String(user.displayName || ''),
-    permissions: {
-      canAccessSystem: user.role === 'developer',
-      canManageOps: ['developer', 'owner', 'employee'].includes(user.role),
-      canManageMessaging: ['developer', 'owner'].includes(user.role)
-    }
-  };
+export function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
 }
 
-export function createSessionCookie(user: OpsUser) {
-  const value = encode({
-    username: user.username,
-    role: user.role,
-    displayName: user.displayName,
-    expiresAt: Date.now() + (SESSION_TTL_SECONDS * 1000)
+export function publicAuthOrigin(request: Request) {
+  const url = new URL(request.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+export async function createSessionCookie(user: OpsAuthUser | any, request?: Request, options: { authMethod?: string } = {}) {
+  const store = await getOpsAuthStore();
+  const resolvedUser = Number(user?.id)
+    ? user as OpsAuthUser
+    : await store.findUserForPasswordLogin(String(user?.username || user?.email || ''));
+  if (!resolvedUser) throw new Error('Cannot create a session for an unknown user.');
+  const token = crypto.randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + (SESSION_TTL_SECONDS * 1000)).toISOString();
+  await store.createSession({
+    userId: resolvedUser.id,
+    tokenHash: hashAuthToken(token),
+    authMethod: options.authMethod || 'password',
+    expiresAt,
+    ip: request ? clientIpFor(request) : '',
+    userAgent: request ? userAgentFor(request) : ''
   });
-  return `${COOKIE_NAME}=${encodeURIComponent(value)}; ${sessionCookieAttributes()}; Max-Age=${SESSION_TTL_SECONDS}`;
+  await store.recordLogin(resolvedUser.id, new Date().toISOString());
+  await store.audit({ event: `${options.authMethod || 'password'}_login_success`, username: resolvedUser.username, userId: resolvedUser.id, ip: request ? clientIpFor(request) : '', userAgent: request ? userAgentFor(request) : '' });
+  return `${COOKIE_NAME}=${encodeURIComponent(token)}; ${sessionCookieAttributes()}; Max-Age=${SESSION_TTL_SECONDS}`;
 }
 
 export function clearSessionCookie() {
   return `${COOKIE_NAME}=; ${sessionCookieAttributes()}; Max-Age=0`;
 }
 
-function sessionCookieAttributes() {
-  const attributes = ['Path=/', 'HttpOnly', 'SameSite=Strict'];
-  if (process.env.NODE_ENV === 'production') attributes.push('Secure');
-  return attributes.join('; ');
+export async function clearCurrentSession(request: Request) {
+  const token = parseSessionToken(request);
+  if (token) {
+    const store = await getOpsAuthStore();
+    await store.revokeSession(hashAuthToken(token));
+    await store.audit({ event: 'logout', detail: 'session revoked', ip: clientIpFor(request), userAgent: userAgentFor(request) });
+  }
+  return clearSessionCookie();
 }
 
-export function getSession(request: Request) {
-  const cookie = request.headers.get('cookie') || '';
-  const match = cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-  return match ? decode(decodeURIComponent(match[1])) : null;
+export async function getSession(request: Request): Promise<SessionUser | null> {
+  const token = parseSessionToken(request);
+  if (!token) return null;
+  const store = await getOpsAuthStore();
+  const session = await store.findSession(hashAuthToken(token));
+  if (!session || session.revokedAt || Date.parse(session.expiresAt) <= Date.now() || !session.user.enabled) return null;
+  return { ...session.user, sessionTokenHash: hashAuthToken(token), authMethod: session.authMethod };
+}
+
+export function magicLinkTtlMs() {
+  return 15 * 60 * 1000;
+}
+
+export async function createClientMagicLink(input: { email: string; request: Request }) {
+  const store = await getOpsAuthStore();
+  const email = normalizeEmail(input.email);
+  const token = crypto.randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + magicLinkTtlMs()).toISOString();
+  await store.createMagicLink({
+    tokenHash: hashAuthToken(token),
+    email,
+    roleIntent: 'client',
+    expiresAt,
+    ip: clientIpFor(input.request),
+    userAgent: userAgentFor(input.request)
+  });
+  await store.audit({
+    event: 'magic_link_sent',
+    username: email,
+    detail: 'role=client',
+    ip: clientIpFor(input.request),
+    userAgent: userAgentFor(input.request)
+  });
+  return {
+    email,
+    token,
+    expiresAt,
+    url: `${publicAuthOrigin(input.request)}/api/auth/magic-link/consume?token=${encodeURIComponent(token)}`
+  };
+}
+
+export async function consumeClientMagicLink(token: string, request: Request) {
+  const store = await getOpsAuthStore();
+  const tokenHash = hashAuthToken(token);
+  const link = await store.findMagicLink(tokenHash);
+  if (!link || link.consumedAt || Date.parse(link.expiresAt) <= Date.now() || link.roleIntent !== 'client') {
+    await store.audit({ event: 'magic_link_rejected', detail: 'invalid-or-expired', ip: clientIpFor(request), userAgent: userAgentFor(request) });
+    return null;
+  }
+  if (!await store.consumeMagicLink(tokenHash)) {
+    await store.audit({ event: 'magic_link_rejected', detail: 'already-consumed', ip: clientIpFor(request), userAgent: userAgentFor(request) });
+    return null;
+  }
+  const user = await store.findOrCreateClientUser({ email: link.email, displayName: link.email, provider: 'magic-link' });
+  await store.audit({ event: 'magic_link_login_success', username: user.username, userId: user.id, ip: clientIpFor(request), userAgent: userAgentFor(request) });
+  return { user, cookie: await createSessionCookie(user, request, { authMethod: 'magic-link' }) };
+}
+
+export async function passkeyStatusForUser(user: OpsAuthUser | SessionUser | null) {
+  if (!user) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '', count: 0 };
+  const role = String(user.role || '').toLowerCase();
+  const required = role === 'owner';
+  if (!required) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '', count: 0 };
+  const store = await getOpsAuthStore();
+  const passkeys = await store.listPasskeysForUser(user.id);
+  const graceSeconds = Number(process.env.OWNER_PASSKEY_GRACE_SECONDS || 60 * 60 * 24 * 7);
+  const createdAt = Date.parse(user.createdAt || '') || Date.now();
+  const graceEndsAt = new Date(createdAt + Math.max(0, graceSeconds) * 1000).toISOString();
+  const enrolled = passkeys.length > 0;
+  return {
+    required,
+    enrolled,
+    shouldPrompt: !enrolled,
+    graceEndsAt,
+    count: passkeys.length
+  };
+}
+
+export function clientPasswordStatusForUser(user: OpsAuthUser | SessionUser | null) {
+  const role = String(user?.role || '').toLowerCase();
+  if (role !== 'client') return { canSet: false, hasPassword: false, shouldPrompt: false };
+  const hasPassword = Boolean(user?.passwordHash);
+  return { canSet: true, hasPassword, shouldPrompt: !hasPassword };
+}
+
+export function authResendFromEmail() {
+  return process.env.AUTH_RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || '';
+}
+
+export function collectAuthConfigWarnings() {
+  const warnings: string[] = [];
+  const sessionSecret = process.env.SESSION_SECRET || '';
+  const legacyPasswordKeys = ['OPS_PASSWORD', 'OPS_DEV_PASSWORD', 'OPS_OWNER_PASSWORD', 'OPS_EMPLOYEE_PASSWORD', 'OPS_CREW_PASSWORD']
+    .filter((key) => Boolean(process.env[key]));
+
+  if (!sessionSecret) {
+    warnings.push('SESSION_SECRET is not set. Set a fixed random SESSION_SECRET before production rollout.');
+  } else if (sessionSecret.length < 32) {
+    warnings.push('SESSION_SECRET is short. Use a fixed random value with at least 32 characters.');
+  }
+  if (legacyPasswordKeys.length) {
+    warnings.push(`Legacy env password fallback is present (${legacyPasswordKeys.join(', ')}). Rotate these users into D1 hashes and remove the env passwords before cutover.`);
+  }
+  if (!process.env.RESEND_API_KEY || !authResendFromEmail()) {
+    warnings.push('Resend email is not configured yet. Client magic-link sign-in cannot send email until RESEND_API_KEY and AUTH_RESEND_FROM_EMAIL are set.');
+  }
+  if (!process.env.TURNSTILE_SECRET_KEY) {
+    warnings.push('TURNSTILE_SECRET_KEY is not set. Auth spam protection is disabled until Cloudflare Turnstile is configured.');
+  }
+  return warnings;
+}
+
+export function isOpsRole(role: string): role is OpsRole {
+  return ['developer', 'owner', 'employee', 'crew', 'client'].includes(role);
 }

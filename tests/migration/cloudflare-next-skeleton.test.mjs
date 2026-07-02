@@ -109,6 +109,10 @@ test('Wrangler defines isolated development and production Cloudflare services',
   assert.match(wrangler, /\[\[env\.development\.d1_databases\]\]/);
   assert.match(wrangler, /\[\[env\.production\.d1_databases\]\]/);
   assert.match(wrangler, /binding = "OPS_DB"/);
+  assert.match(wrangler, /\[\[env\.development\.ratelimits\]\][\s\S]*name = "AUTH_RATE_LIMITER"/);
+  assert.match(wrangler, /\[\[env\.development\.ratelimits\]\][\s\S]*name = "AUTH_STRICT_RATE_LIMITER"/);
+  assert.match(wrangler, /\[\[env\.production\.ratelimits\]\][\s\S]*name = "AUTH_RATE_LIMITER"/);
+  assert.match(wrangler, /\[\[env\.production\.ratelimits\]\][\s\S]*name = "AUTH_STRICT_RATE_LIMITER"/);
   assert.match(wrangler, /\[triggers\]\ncrons = \["0 14 \* \* 1"\]/);
   assert.doesNotMatch(wrangler, /shoreline-aquatics-ops\.onrender\.com/);
 });
@@ -224,12 +228,21 @@ test('GitHub Actions validates PRs and deploys Cloudflare Workers from protected
   assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), true);
   const workflow = readText('.github/workflows/cloudflare-workers.yml');
 
-  assert.match(workflow, /pull_request:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /pull_request:[\s\S]*?branches:\n\s+- development\n\s+- main/);
   assert.match(workflow, /push:\n\s+branches:\n\s+- development\n\s+- main/);
   assert.match(workflow, /if: github\.event_name == 'push'/);
-  assert.match(workflow, /if: github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.ref == 'development'/);
+  assert.match(workflow, /if: github\.event_name == 'pull_request'[\s\S]*?github\.event\.pull_request\.base\.ref == 'development'/);
   assert.match(workflow, /npm run check && npm run cf:build/);
-  assert.match(workflow, /npm run cf:upload:dev -- --preview-alias "pr-\$\{PR_NUMBER\}"/);  assert.match(workflow, /actions\/github-script@v8/);  assert.match(workflow, /Shoreline preview:/);
+  assert.match(workflow, /npm run cf:upload:dev -- --preview-alias "pr-\$\{PR_NUMBER\}"/);
+  assert.match(workflow, /actions\/github-script@v8/);
+  assert.match(workflow, /Cloudflare CI\/CD/);
+  assert.match(workflow, /deleteComment/);
+  assert.match(workflow, /createComment/);
+  assert.match(workflow, /CLOUDFLARE_TURNSTILE_API_TOKEN/);
+  assert.match(workflow, /DEV_TURNSTILE_WIDGET_ID/);
+  assert.match(workflow, /npm run turnstile:hostnames -- --add "\$PREVIEW_HOSTNAME"/);
+  assert.match(workflow, /npm run turnstile:hostnames -- --remove "\$PREVIEW_HOSTNAME"/);
+  assert.match(workflow, /github\.event\.action == 'closed'/);
   assert.match(workflow, /name: Restore production build cache\n\s+if: github\.ref_name == 'main'/);
   assert.match(workflow, /path: \.next\/cache/);
   assert.match(workflow, /key: next-production-/);

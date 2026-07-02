@@ -1,18 +1,29 @@
-import { collectAuthConfigWarnings, getSession } from '../../../../../lib/ops/auth.ts';
+import { authResendFromEmail, collectAuthConfigWarnings, getSession } from '../../../../../lib/ops/auth.ts';
 import { jsonResponse } from '../../../../../lib/cloudflare/http.ts';
 import { integrationStatus } from '../../../../../lib/cloudflare/integrations.ts';
+import { getOpsAuthStore } from '../../../../../lib/ops/auth-store.ts';
 import { opsStateStorageKind } from '../../../../../lib/ops/public-state.ts';
+import { publicTurnstileSiteKey } from '../../../../../lib/ops/turnstile.ts';
 
 export async function GET(request: Request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return jsonResponse({ error: 'Authentication required.' }, { status: 401 });
   if (session.role !== 'developer') return jsonResponse({ error: 'Developer access required.' }, { status: 403 });
   const warnings = collectAuthConfigWarnings();
   let storage = 'unavailable';
+  let authStorage = 'unavailable';
+  let authReady = false;
   try {
     storage = await opsStateStorageKind();
   } catch (error) {
     warnings.push(error instanceof Error ? error.message : 'Persistent ops state store is unavailable.');
+  }
+  try {
+    const authStore = await getOpsAuthStore();
+    authStorage = authStore.kind;
+    authReady = await authStore.authReady();
+  } catch (error) {
+    warnings.push(error instanceof Error ? error.message : 'Persistent ops auth store is unavailable.');
   }
   return jsonResponse({
     ok: true,
@@ -23,7 +34,14 @@ export async function GET(request: Request) {
       storage,
       sessionSecretSet: Boolean(process.env.SESSION_SECRET)
     },
-    auth: { ok: warnings.length === 0, warnings },
+    auth: {
+      ok: warnings.length === 0,
+      warnings,
+      storage: authStorage,
+      d1Ready: authReady,
+      magicLinkConfigured: Boolean(process.env.RESEND_API_KEY && authResendFromEmail()),
+      turnstileConfigured: Boolean(process.env.TURNSTILE_SECRET_KEY && publicTurnstileSiteKey())
+    },
     integrations: integrationStatus()
   });
 }

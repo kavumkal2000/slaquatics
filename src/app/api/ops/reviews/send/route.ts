@@ -1,4 +1,5 @@
 import { jsonResponse } from '../../../../../lib/cloudflare/http.ts';
+import { readLimitedJson } from '../../../../../lib/cloudflare/rate-limit.ts';
 import { requireMessagingSession } from '../../../../../lib/ops/api-auth.ts';
 import { renderReviewRequestEmail } from '../../../../../lib/ops/email-templates.ts';
 import { readOpsState } from '../../../../../lib/ops/public-state.ts';
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
   if (auth.response) return auth.response;
 
   try {
-    const body = await request.json();
+    const body = await readLimitedJson(request, { scope: 'ops-reviews-send', rateLimit: 20, windowMs: 60_000, maxBytes: 32 * 1024 });
     const state = await readOpsState();
     const settings = reviewSettingsForState(state);
     if (!settings.googleUrl && !settings.facebookUrl) throw new Error('Review links are not configured yet.');
@@ -31,6 +32,6 @@ export async function POST(request: Request) {
       : await sendTwilioSms({ to: body.phone, body: text });
     return jsonResponse({ ok: true, channel, result });
   } catch (error: any) {
-    return jsonResponse({ error: error.message || 'Could not send review request.' }, { status: 400 });
+    return jsonResponse({ error: error.message || 'Could not send review request.' }, { status: error.status || 400 });
   }
 }

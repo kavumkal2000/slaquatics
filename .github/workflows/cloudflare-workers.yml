@@ -2,6 +2,11 @@ name: Cloudflare Workers
 
 on:
   pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
     branches:
       - development
       - main
@@ -18,6 +23,7 @@ concurrency:
 jobs:
   validate:
     name: Validate Worker build
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -39,7 +45,7 @@ jobs:
   preview:
     name: Upload PR preview
     needs: validate
-    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.base.ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -95,6 +101,16 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT, `url=${previewUrl}\n`);
           NODE
 
+      - name: Add preview hostname to Turnstile
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TURNSTILE_API_TOKEN }}
+          TURNSTILE_WIDGET_ID: ${{ secrets.DEV_TURNSTILE_WIDGET_ID }}
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+        run: |
+          PREVIEW_HOSTNAME="$(node -e "console.log(new URL(process.env.PREVIEW_URL).hostname)")"
+          npm run turnstile:hostnames -- --add "$PREVIEW_HOSTNAME"
+
       - name: Comment preview link
         uses: actions/github-script@v8
         env:
@@ -105,10 +121,12 @@ jobs:
             const pr = context.payload.pull_request;
             const body = [
               marker,
-              `Shoreline preview: [Open PR #${pr.number} preview](${process.env.PREVIEW_URL})`,
+              '### <img src="https://www.cloudflare.com/favicon.ico" width="20" height="20" alt="Cloudflare" /> Cloudflare CI/CD',
               '',
+              `Preview: [Open PR #${pr.number} preview](${process.env.PREVIEW_URL})`,
               `Alias: \`pr-${pr.number}\``,
               'Worker: `slaquatics-development`',
+              `Commit: \`${context.sha.slice(0, 7)}\``,
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
@@ -118,22 +136,46 @@ jobs:
               per_page: 100,
             });
 
-            const existing = comments.find((comment) => comment.user.type === 'Bot' && comment.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
+            const existing = comments.filter((comment) => comment.user.type === 'Bot' && comment.body.includes(marker));
+            for (const comment of existing) {
+              await github.rest.issues.deleteComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: pr.number,
-                body,
+                comment_id: comment.id,
               });
             }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });
+
+  cleanup-preview-turnstile:
+    name: Remove PR preview from Turnstile
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.base.ref == 'development' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_TURNSTILE_API_TOKEN }}
+      TURNSTILE_WIDGET_ID: ${{ secrets.DEV_TURNSTILE_WIDGET_ID }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      WORKERS_PREVIEW_ROOT: jeremymathewgithub.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Remove preview hostname from Turnstile
+        run: |
+          PREVIEW_HOSTNAME="pr-${PR_NUMBER}-slaquatics-development.${WORKERS_PREVIEW_ROOT}"
+          npm run turnstile:hostnames -- --remove "$PREVIEW_HOSTNAME"
 
   deploy:
     name: Deploy Worker
