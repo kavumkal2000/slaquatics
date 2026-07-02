@@ -13,9 +13,18 @@ import {
 import { jsonResponse } from '../../../../lib/cloudflare/http.ts';
 import { verifyTurnstileToken } from '../../../../lib/ops/turnstile.ts';
 
+async function parseLoginBody(request: Request) {
+  const contentType = request.headers.get('content-type') || '';
+  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+    const form = await request.formData();
+    return Object.fromEntries(form.entries());
+  }
+  return await request.json();
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await parseLoginBody(request);
     const rateKey = loginRateKey(request, body.username);
     const lockMs = loginLockRemainingMs(rateKey);
     if (lockMs > 0) {

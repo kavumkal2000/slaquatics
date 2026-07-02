@@ -649,6 +649,23 @@ test('/api/auth login, session, logout, and /api/ops/state use signed same-origi
   else process.env.SESSION_SECRET = previousSessionSecret;
 });
 
+test('/api/auth login accepts native form-encoded submissions', async () => {
+  await withEnv({
+    SESSION_SECRET: 'form-login-session-secret',
+    OPS_DEV_PASSWORD: 'form-login-password'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=form-login-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ username: 'developer', password: 'form-login-password' })
+    }));
+
+    assert.equal(login.status, 200);
+    assert.match(login.headers.get('set-cookie') || '', /sla_ops_session=/);
+  });
+});
+
 test('/api/auth login rejects default credentials when ops secrets are not configured', async () => {
   const previousDevPassword = process.env.OPS_DEV_PASSWORD;
   const previousOpsPassword = process.env.OPS_PASSWORD;
