@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { LAUNCH_LOCATION_LABEL } from '../../lib/launch-info';
 
 type RentalType = 'jetski' | 'boat' | 'bundle';
 type CraftKey = 'jetski2' | 'jetski3' | 'jetski4' | 'boat' | 'bundle2' | 'bundle3' | 'bundle4' | 'partyboat';
@@ -285,8 +286,9 @@ function createBookingController(signal: AbortSignal) {
     const craft = holiday ? resolveHolidayCraft(holiday) : currentCraft();
     const duration = holiday ? holidayDuration : currentDuration();
     const drone = checkbox('addon-drone')?.checked || false;
-    const karaoke = checkbox('addon-karaoke')?.checked || false;
-    const tube = checkbox('addon-tube')?.checked || false;
+    const showBoatAddons = craftUsesBoat(craft);
+    const karaoke = showBoatAddons && (checkbox('addon-karaoke')?.checked || false);
+    const tube = showBoatAddons && (checkbox('addon-tube')?.checked || false);
     const addonsTotal = (drone ? 50 : 0) + (karaoke ? 50 : 0) + (tube ? 50 : 0);
     const baseTotal = holiday ? Number(holidayDurationsFor(holiday)[duration] || 0) : (PRICING[craft]?.[duration] || 0);
     return {
@@ -498,7 +500,7 @@ function createBookingController(signal: AbortSignal) {
     const selectedAddons = [
       payload.drone ? 'aerial drone video' : '',
       payload.karaoke ? 'karaoke setup' : '',
-      payload.tube ? 'towable tube' : ''
+      payload.tube ? 'pool tube' : ''
     ].filter(Boolean);
     const addonsNote = selectedAddons.length ? ` Add-ons: ${selectedAddons.join(', ')} (+$50 each).` : '';
 
@@ -577,7 +579,7 @@ function createBookingController(signal: AbortSignal) {
       publicToken: tokenInput()?.value.trim() || '',
       date: dateInput()?.value || '',
       time: timeSelect()?.value || '',
-      location: 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX',
+      location: LAUNCH_LOCATION_LABEL,
       contactMethod: 'text',
       partySize: '',
       notes: ''

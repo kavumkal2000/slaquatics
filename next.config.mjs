@@ -9,22 +9,15 @@ const nextConfig = {
   poweredByHeader: false,
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
+  allowedDevOrigins: ['100.84.72.59'],
+  env: {
+    NEXT_PUBLIC_MEDIA_BASE_URL: process.env.NEXT_PUBLIC_MEDIA_BASE_URL || process.env.PUBLIC_MEDIA_BASE_URL || 'https://cdn.slaquatics.com'
+  },
   turbopack: {
     root: repoRoot
   },
   async redirects() {
-    return [
-      {
-        source: '/ops.html',
-        destination: '/ops',
-        permanent: true
-      },
-      {
-        source: '/ops-login.html',
-        destination: '/ops-login',
-        permanent: true
-      }
-    ];
+    return [];
   },
   async headers() {
     return [

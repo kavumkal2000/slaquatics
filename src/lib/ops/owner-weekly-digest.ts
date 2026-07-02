@@ -1,5 +1,6 @@
 import { mutateOpsState } from './public-state.ts';
 import { sendResendEmail } from './outbound.ts';
+import { renderOwnerWeeklyDigestEmail } from './email-templates.ts';
 
 function recipients() {
   return String(process.env.OWNER_UPDATE_EMAILS || process.env.BOOKING_ALERT_EMAILS || '')
@@ -29,11 +30,21 @@ export async function sendOwnerWeeklyDigest({ force = false } = {}) {
       return { sent: false, reason: 'already-sent', weekKey: currentWeekKey };
     }
 
+    const pendingBookingCount = state.bookings.filter((booking: any) => String(booking.status || '').toLowerCase() === 'pending').length;
+    const text = force ? 'Manual weekly owner update requested.' : 'Weekly owner update requested.';
+    const html = renderOwnerWeeklyDigestEmail({
+      force,
+      weekKey: currentWeekKey,
+      bookingCount: state.bookings.length,
+      pendingBookingCount,
+      customerCount: state.customers.length,
+      reviewRequestCount: state.reviewRequests.length
+    });
     const result = await sendResendEmail({
       to,
       subject: 'Shoreline Aquatics weekly owner update',
-      text: force ? 'Manual weekly owner update requested.' : 'Weekly owner update requested.',
-      html: '<p>Weekly owner update requested.</p>',
+      text,
+      html,
       idempotencyKey: `shoreline-owner-weekly-digest-${currentWeekKey}`
     });
     const now = new Date().toISOString();

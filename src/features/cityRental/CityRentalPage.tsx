@@ -1,4 +1,5 @@
 import type { CityRentalContent } from './cityRentalContent';
+import { LAUNCH_ADDRESS, LAUNCH_HOURS } from '../../lib/launch-info';
 
 type CityRentalPageProps = {
   content: CityRentalContent;
@@ -67,7 +68,7 @@ export function CityRentalPage({ content }: CityRentalPageProps) {
       <footer className="card mini" style={{ marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: '14px 28px', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <strong style={{ fontFamily: '"Bebas Neue",cursive', fontSize: '1.3rem', letterSpacing: '.04em' }}>Shoreline Aquatics</strong>
-          <p style={{ margin: '4px 0 0', fontSize: '.86rem' }}>Point Vista Rd, Hickory Creek, TX · Mon–Sun 10 AM–8 PM · <a href="tel:14696937164" style={{ color: '#f5a623' }}>(469) 693-7164</a></p>
+          <p style={{ margin: '4px 0 0', fontSize: '.86rem' }}>{LAUNCH_ADDRESS} · {LAUNCH_HOURS} · <a href="tel:14696937164" style={{ color: '#f5a623' }}>(469) 693-7164</a></p>
         </div>
         <div className="cta-row" style={{ margin: 0 }}>
           {content.footerLinks.map((link) => (

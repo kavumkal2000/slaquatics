@@ -1,5 +1,7 @@
 import type { OpsState } from './default-state.ts';
 import { sendResendEmail } from './outbound.ts';
+import { renderBookingRequestCustomerEmail, renderOwnerBookingAlertEmail } from './email-templates.ts';
+import { LAUNCH_LOCATION_LABEL, LAUNCH_MAPS_URL, arrivalDirectionsText } from '../launch-info.ts';
 
 function nextId(items: any[]) {
   return items.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
@@ -34,7 +36,7 @@ function formatTimeLabel(value = '') {
 }
 
 function bookingLocation(booking: any) {
-  return String(booking.location || booking.meetingSpot || 'Not provided');
+  return String(booking.location || booking.meetingSpot || LAUNCH_LOCATION_LABEL);
 }
 
 function bookingRequestSubject(booking: any = {}) {
@@ -54,6 +56,10 @@ function bookingRequestText(booking: any = {}) {
     `Quoted total: ${formatCurrency(booking.total || 0)}`,
     `Amount due today: ${formatCurrency(booking.amountDueToday || 55)}`,
     `Meeting spot: ${bookingLocation(booking)}`,
+    `Maps: ${LAUNCH_MAPS_URL}`,
+    '',
+    'Point Vista Park Directions:',
+    arrivalDirectionsText(),
     '',
     'Open the booking site if you still need to finish the deposit.'
   ].join('\n');
@@ -80,14 +86,13 @@ function ownerBookingAlertText(booking: any = {}) {
     `Payment status: ${booking.paymentStatus || 'unpaid'}`,
     `Booking status: ${booking.status || 'pending'}`,
     `Meeting spot: ${bookingLocation(booking)}`,
+    `Maps: ${LAUNCH_MAPS_URL}`,
+    'Point Vista Park Directions:',
+    arrivalDirectionsText(),
     `Notes: ${booking.notes || 'None'}`,
     '',
     'Open the Shoreline ops CRM to review or update the booking.'
   ].join('\n');
-}
-
-function htmlFromText(text: string) {
-  return `<p>${text.replace(/[&<>]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[char] || char)).replace(/\n/g, '<br>')}</p>`;
 }
 
 export async function sendBookingRequestCustomerEmail(state: OpsState, booking: any, now = new Date().toISOString()) {
@@ -103,11 +108,16 @@ export async function sendBookingRequestCustomerEmail(state: OpsState, booking: 
   }
   const bookingKey = String(booking.publicToken || booking.paymentSessionId || booking.createdAt || booking.id || '').trim();
   const text = bookingRequestText(booking);
+  const html = renderBookingRequestCustomerEmail({
+    booking,
+    mapsUrl: LAUNCH_MAPS_URL,
+    directions: arrivalDirectionsText()
+  });
   const result = await sendResendEmail({
     to: booking.email,
     subject: bookingRequestSubject(booking),
     text,
-    html: htmlFromText(text),
+    html,
     idempotencyKey: `shoreline-booking-request-customer-${bookingKey}`
   });
   booking.requestConfirmationEmailSentAt = now;
@@ -135,11 +145,16 @@ export async function sendNewBookingOwnerAlert(state: OpsState, booking: any, no
   }
   const bookingKey = String(booking.publicToken || booking.paymentSessionId || booking.createdAt || booking.id || '').trim();
   const text = ownerBookingAlertText(booking);
+  const html = renderOwnerBookingAlertEmail({
+    booking,
+    mapsUrl: LAUNCH_MAPS_URL,
+    directions: arrivalDirectionsText()
+  });
   const result = await sendResendEmail({
     to: recipients,
     subject: ownerBookingAlertSubject(booking),
     text,
-    html: htmlFromText(text),
+    html,
     idempotencyKey: `shoreline-booking-alert-owner-${bookingKey}`
   });
   booking.ownerAlertEmailSentAt = now;

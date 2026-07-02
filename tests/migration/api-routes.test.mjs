@@ -250,8 +250,8 @@ test('/api/public/booking-draft creates and reads back a public booking token', 
       total: 1,
       baseTotal: 1,
       drone: true,
-      karaoke: true,
-      tube: true
+      karaoke: false,
+      tube: false
     })
   });
 
@@ -261,15 +261,65 @@ test('/api/public/booking-draft creates and reads back a public booking token', 
   assert.equal(draft.ok, true);
   assert.equal(draft.booking.name, 'Jordan Guest');
   assert.equal(draft.booking.status, 'draft');
-  assert.equal(loaded.booking.total, 465);
+  assert.equal(loaded.booking.total, 365);
   assert.equal(loaded.booking.baseTotal, 315);
   assert.equal(loaded.booking.publicToken, draft.booking.publicToken);
   assert.equal(loaded.booking.drone, true);
   assert.equal(loaded.booking.droneAmount, 50);
-  assert.equal(loaded.booking.karaoke, true);
-  assert.equal(loaded.booking.karaokeAmount, 50);
-  assert.equal(loaded.booking.tube, true);
-  assert.equal(loaded.booking.tubeAmount, 50);
+  assert.equal(loaded.booking.karaoke, false);
+  assert.equal(loaded.booking.karaokeAmount, 0);
+  assert.equal(loaded.booking.tube, false);
+  assert.equal(loaded.booking.tubeAmount, 0);
+});
+
+test('/api/public/booking-draft rejects boat-only add-ons for jet ski rentals', async () => {
+  const draftRoute = await import(`../../src/app/api/public/booking-draft/route.ts?case=addon-gate-${Date.now()}`);
+  const response = await draftRoute.POST(new Request('https://slaquatics.test/api/public/booking-draft', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Addon Gate Guest',
+      phone: '4695550112',
+      email: 'addon-gate@example.com',
+      craft: 'jetski2',
+      duration: 2,
+      date: '2026-07-03',
+      time: '10:00',
+      karaoke: true,
+      tube: true
+    })
+  }));
+  const payload = await responseJson(response);
+
+  assert.equal(response.status, 400);
+  assert.match(payload.error, /karaoke and tube add-ons are only available/i);
+});
+
+test('/api/public/booking-request rejects bookings ending after 8 PM', async () => {
+  const bookingRequestRoute = await import(`../../src/app/api/public/booking-request/route.ts?case=hours-validation-${Date.now()}`);
+  const response = await bookingRequestRoute.POST(new Request('https://slaquatics.test/api/public/booking-request', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Late Booking Guest',
+      phone: '4695550113',
+      email: 'late-booking@example.com',
+      craft: 'jetski2',
+      duration: 4,
+      date: '2026-07-03',
+      time: '18:00',
+      waiver: {
+        acceptedRisk: true,
+        acceptedDamage: true,
+        verified: true,
+        dateOfBirth: '1992-02-02',
+        initials: 'LB',
+        signature: 'Late Booking Guest'
+      }
+    })
+  }));
+  const payload = await responseJson(response);
+
+  assert.equal(response.status, 400);
+  assert.match(payload.error, /end by 8:00 PM/i);
 });
 
 test('/api/public/booking-request requires a completed waiver before saving', async () => {
@@ -304,6 +354,58 @@ test('/api/public/booking-request requires a completed waiver before saving', as
 
   assert.equal(missingWaiver.error, 'A completed waiver is required before saving this booking request.');
   assert.equal(incompleteWaiver.error, 'A completed waiver is required before saving this booking request.');
+});
+
+test('/api/public/booking-request customer email includes launch address and directions', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: 'email_request_123' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({ RESEND_API_KEY: 're_booking_request', RESEND_FROM_EMAIL: 'dock@slaquatics.test' }, async () => {
+      const bookingRequestRoute = await import(`../../src/app/api/public/booking-request/route.ts?case=booking-email-directions-${Date.now()}`);
+      const response = await bookingRequestRoute.POST(new Request('https://slaquatics.test/api/public/booking-request', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Email Directions Guest',
+          phone: '4695550780',
+          email: 'email-directions@example.com',
+          craft: 'jetski2',
+          duration: 2,
+          date: '2026-09-04',
+          time: '10:00',
+          waiver: {
+            acceptedRisk: true,
+            acceptedDamage: true,
+            verified: true,
+            dateOfBirth: '1990-04-10',
+            initials: 'ED',
+            signature: 'Email Directions Guest'
+          }
+        })
+      }));
+      const payload = await responseJson(response);
+
+      assert.equal(payload.ok, true);
+      const resendRequests = requests.filter((request) => request.url.includes('api.resend.com/emails'));
+      assert.equal(resendRequests.length, 1);
+      const emailBody = JSON.parse(String(resendRequests[0].init.body));
+      assert.deepEqual(emailBody.to, ['email-directions@example.com']);
+      assert.match(emailBody.text, /Point Vista Rd, Hickory Creek, TX 75065, United States/);
+      assert.match(emailBody.text, /Point Vista Park Directions/);
+      assert.match(emailBody.text, /drive past it/i);
+      assert.match(emailBody.text, /dead end/i);
+      assert.match(emailBody.text, /walk down to the shoreline/i);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('/api/public/booking-request preserves confirmed bookings when updating by token', async () => {
@@ -647,6 +749,73 @@ test('/api/ops/system/health is developer-only and reports configured integratio
   });
 });
 
+test('/api/ops/integrations/status includes saved review links from ops state', async () => {
+  await withEnv({
+    SESSION_SECRET: 'ops-integrations-review-settings-secret',
+    OPS_DEV_PASSWORD: 'ops-integrations-review-settings-password',
+    TWILIO_ACCOUNT_SID: 'ACopsintegrations',
+    TWILIO_AUTH_TOKEN: 'ops-integrations-twilio-token',
+    TWILIO_FROM_NUMBER: '+14695550101',
+    RESEND_API_KEY: 're_ops_integrations',
+    RESEND_FROM_EMAIL: 'dock@slaquatics.test',
+    GOOGLE_REVIEW_URL: undefined,
+    FACEBOOK_REVIEW_URL: undefined
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=ops-integrations-login-${Date.now()}`);
+    const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=ops-integrations-state-${Date.now()}`);
+    const integrationsRoute = await import(`../../src/app/api/ops/integrations/status/route.ts?case=ops-integrations-status-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'ops-integrations-review-settings-password' })
+    }));
+    const cookie = login.headers.get('set-cookie') || '';
+
+    await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
+      method: 'POST',
+      headers: { cookie },
+      body: JSON.stringify({
+        bookings: [],
+        customers: [],
+        invoices: [],
+        reviewSettings: {
+          googleUrl: 'https://reviews.example/saved-google',
+          facebookUrl: '',
+          autoSend: true,
+          channel: 'sms'
+        }
+      })
+    }));
+
+    const payload = await responseJson(await integrationsRoute.GET(new Request('https://slaquatics.test/api/ops/integrations/status', {
+      headers: { cookie }
+    })));
+
+    assert.equal(payload.ok, true);
+    assert.equal(payload.integrations.smsConfigured, true);
+    assert.equal(payload.integrations.emailConfigured, true);
+    assert.equal(payload.integrations.reviewLinksConfigured, true);
+    assert.equal(payload.integrations.reviewGoogleUrl, 'https://reviews.example/saved-google');
+    assert.equal(payload.integrations.reviewAutomationEnabled, true);
+    assert.equal(payload.integrations.reviewChannel, 'sms');
+
+    await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
+      method: 'POST',
+      headers: { cookie },
+      body: JSON.stringify({
+        bookings: [],
+        customers: [],
+        invoices: [],
+        reviewSettings: {
+          googleUrl: '',
+          facebookUrl: '',
+          autoSend: false,
+          channel: 'sms'
+        }
+      })
+    }));
+  });
+});
+
 test('/api/public/create-checkout-session creates a Stripe checkout session and stores pending payment state', async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
@@ -677,8 +846,8 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
           total: 1,
           baseTotal: 1,
           drone: true,
-          karaoke: true,
-          tube: true,
+          karaoke: false,
+          tube: false,
           waiver: {
             acceptedRisk: true,
             acceptedDamage: true,
@@ -702,7 +871,7 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
     const stripeParams = new URLSearchParams(String(requests[0].init.body));
     assert.match(String(stripeParams.get('success_url')), /booking-thank-you/);
     assert.ok(stripeParams.get('metadata[bookingId]'));
-    assert.equal(stripeParams.get('metadata[totalQuote]'), '465');
+    assert.equal(stripeParams.get('metadata[totalQuote]'), '365');
 
     process.env.OPS_DEV_PASSWORD = 'payment-test-password';
     process.env.SESSION_SECRET = 'payment-test-session-secret';
@@ -714,17 +883,144 @@ test('/api/public/create-checkout-session creates a Stripe checkout session and 
       headers: { cookie: login.headers.get('set-cookie') || '' }
     })));
     const booking = state.state.bookings.find((entry) => entry.paymentSessionId === 'cs_test_123');
-    assert.equal(booking.total, 465);
+    assert.equal(booking.total, 365);
     assert.equal(booking.baseTotal, 315);
     assert.equal(booking.droneAmount, 50);
-    assert.equal(booking.karaokeAmount, 50);
-    assert.equal(booking.tubeAmount, 50);
+    assert.equal(booking.karaokeAmount, 0);
+    assert.equal(booking.tubeAmount, 0);
     assert.equal(booking.paymentStatus, 'pending');
     assert.equal(booking.amountDueToday, 55);
     assert.equal(booking.waiverAccepted, true);
   });
 
   globalThis.fetch = originalFetch;
+});
+
+test('/api/public/create-checkout-session charges boat add-ons in Stripe and stores the due-today amount', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: 'cs_boat_addons_123', url: 'https://checkout.stripe.test/pay/cs_boat_addons_123' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({ STRIPE_SECRET_KEY: 'sk_test_boat_addons', PUBLIC_SITE_URL: 'https://slaquatics.com' }, async () => {
+      const route = await import(`../../src/app/api/public/create-checkout-session/route.ts?case=boat-addons-${Date.now()}`);
+      const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=boat-addons-${Date.now()}`);
+      const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=boat-addons-${Date.now()}`);
+      const payload = await responseJson(await route.POST(new Request('https://slaquatics.test/api/public/create-checkout-session', {
+        method: 'POST',
+        headers: { origin: 'https://slaquatics.com' },
+        body: JSON.stringify({
+          booking: {
+            name: 'Boat Addons Guest',
+            phone: '4695551777',
+            email: 'boat-addons@example.com',
+            craft: 'partyboat',
+            duration: 2,
+            date: '2026-07-10',
+            time: '10:00',
+            karaoke: true,
+            tube: true,
+            waiver: {
+              acceptedRisk: true,
+              acceptedDamage: true,
+              verified: true,
+              initials: 'BA',
+              signature: 'Boat Addons Guest'
+            }
+          }
+        })
+      })));
+
+      assert.equal(payload.ok, true);
+      assert.equal(payload.amountDue, 155);
+      assert.equal(requests.length, 1);
+      const stripeParams = new URLSearchParams(String(requests[0].init.body));
+      assert.equal(stripeParams.get('line_items[0][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.get('line_items[1][price_data][unit_amount]'), '500');
+      assert.equal(stripeParams.get('line_items[2][price_data][product_data][name]'), 'Karaoke Setup');
+      assert.equal(stripeParams.get('line_items[2][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.get('line_items[3][price_data][product_data][name]'), 'Pool Tube');
+      assert.equal(stripeParams.get('line_items[3][price_data][unit_amount]'), '5000');
+      assert.equal(stripeParams.get('metadata[karaokeAmount]'), '50.00');
+      assert.equal(stripeParams.get('metadata[tubeAmount]'), '50.00');
+      assert.equal(stripeParams.get('metadata[amountDueToday]'), '155.00');
+
+      process.env.OPS_DEV_PASSWORD = 'payment-test-password';
+      process.env.SESSION_SECRET = 'payment-test-session-secret';
+      const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'developer', password: 'payment-test-password' })
+      }));
+      const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
+        headers: { cookie: login.headers.get('set-cookie') || '' }
+      })));
+      const booking = state.state.bookings.find((entry) => entry.paymentSessionId === 'cs_boat_addons_123');
+      assert.equal(booking.total, 420);
+      assert.equal(booking.baseTotal, 320);
+      assert.equal(booking.karaoke, true);
+      assert.equal(booking.karaokeAmount, 50);
+      assert.equal(booking.tube, true);
+      assert.equal(booking.tubeAmount, 50);
+      assert.equal(booking.depositAmount, 50);
+      assert.equal(booking.processingFeeAmount, 5);
+      assert.equal(booking.amountDueToday, 155);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('/api/public/create-checkout-session rejects bookings ending after 8 PM before Stripe', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: 'cs_should_not_create_late', url: 'https://checkout.stripe.test/pay/cs_should_not_create_late' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({ STRIPE_SECRET_KEY: 'sk_test_late_checkout', PUBLIC_SITE_URL: 'https://slaquatics.com' }, async () => {
+      const route = await import(`../../src/app/api/public/create-checkout-session/route.ts?case=late-checkout-${Date.now()}`);
+      const response = await route.POST(new Request('https://slaquatics.test/api/public/create-checkout-session', {
+        method: 'POST',
+        headers: { origin: 'https://slaquatics.com' },
+        body: JSON.stringify({
+          booking: {
+            name: 'Late Checkout Guest',
+            phone: '4695551412',
+            email: 'late-checkout@example.com',
+            craft: 'jetski2',
+            duration: 4,
+            date: '2026-09-07',
+            time: '18:00',
+            waiver: {
+              acceptedRisk: true,
+              acceptedDamage: true,
+              verified: true,
+              initials: 'LC',
+              signature: 'Late Checkout Guest'
+            }
+          }
+        })
+      }));
+      const payload = await responseJson(response);
+
+      assert.equal(response.status, 400);
+      assert.match(payload.error, /end by 8:00 PM/i);
+      assert.equal(requests.length, 0);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('/api/public/create-checkout-session rejects unavailable boat slots before Stripe', async () => {
@@ -869,6 +1165,11 @@ test('/api/public/checkout-session retrieves Stripe session and marks the matchi
     const emailBody = JSON.parse(String(resendRequests[0].init.body));
     assert.deepEqual(emailBody.to, ['paid@example.com']);
     assert.match(emailBody.subject, /Shoreline Aquatics booking confirmed/i);
+    assert.match(emailBody.text, /Point Vista Rd, Hickory Creek, TX 75065, United States/);
+    assert.match(emailBody.text, /Point Vista Park Directions/);
+    assert.match(emailBody.text, /drive past it/i);
+    assert.match(emailBody.text, /dead end/i);
+    assert.match(emailBody.text, /walk down to the shoreline/i);
     const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
       headers: { cookie }
     })));
@@ -973,6 +1274,55 @@ test('ops messaging review owner update and social routes enforce auth and confi
       }
     }
   });
+});
+
+test('/api/ops/messages/send chunks mass email BCC recipients into batches of 50', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: `email_batch_${requests.length}` }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({
+      OPS_DEV_PASSWORD: 'mass-email-password',
+      SESSION_SECRET: 'mass-email-session-secret',
+      RESEND_API_KEY: 're_mass_email',
+      RESEND_FROM_EMAIL: 'dock@slaquatics.test'
+    }, async () => {
+      const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=mass-email-login-${Date.now()}`);
+      const route = await import(`../../src/app/api/ops/messages/send/route.ts?case=mass-email-${Date.now()}`);
+      const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'developer', password: 'mass-email-password' })
+      }));
+      const cookie = login.headers.get('set-cookie') || '';
+      const recipients = Array.from({ length: 121 }, (_, index) => `guest${index}@example.com`);
+      const response = await route.POST(new Request('https://slaquatics.test/api/ops/messages/send', {
+        method: 'POST',
+        headers: { cookie },
+        body: JSON.stringify({
+          channel: 'mass-email',
+          bcc: recipients,
+          subject: 'Shoreline Aquatics update',
+          body: 'Lake day booking update from Shoreline Aquatics.'
+        })
+      }));
+      const payload = await responseJson(response);
+
+      assert.equal(payload.ok, true);
+      assert.equal(payload.result.batches, 3);
+      assert.equal(payload.result.recipientCount, 121);
+      assert.equal(requests.length, 3);
+      assert.deepEqual(requests.map((request) => JSON.parse(String(request.init.body)).bcc.length), [50, 50, 21]);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('booking payment waiver and ops-login workflow works through App Router routes without Render', async () => {

@@ -6,6 +6,7 @@ assets = { directory = ".open-next/assets", binding = "ASSETS" }
 
 [vars]
 PUBLIC_SITE_URL = "https://slaquatics.com"
+PUBLIC_MEDIA_BASE_URL = "https://cdn.slaquatics.com"
 REQUIRE_SERVER_STORE = "true"
 
 [triggers]
@@ -17,12 +18,23 @@ database_name = "slaquatics-ops-development"
 database_id = "cd7a9b41-a04f-4143-b081-a02bd245f1ac"
 migrations_dir = "migrations"
 
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "slaquatics-media-development"
+
 [env.development]
 name = "slaquatics-development"
-routes = []
+
+[env.development.placement]
+mode = "smart"
+
+[[env.development.routes]]
+pattern = "dev.slaquatics.com"
+custom_domain = true
 
 [env.development.vars]
 PUBLIC_SITE_URL = "https://dev.slaquatics.com"
+PUBLIC_MEDIA_BASE_URL = "https://cdn.dev.slaquatics.com"
 REQUIRE_SERVER_STORE = "true"
 
 [[env.development.d1_databases]]
@@ -31,12 +43,27 @@ database_name = "slaquatics-ops-development"
 database_id = "cd7a9b41-a04f-4143-b081-a02bd245f1ac"
 migrations_dir = "migrations"
 
+[[env.development.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "slaquatics-media-development"
+
 [env.production]
 name = "slaquatics-production"
-routes = []
+
+[env.production.placement]
+mode = "smart"
+
+[[env.production.routes]]
+pattern = "slaquatics.com"
+custom_domain = true
+
+[[env.production.routes]]
+pattern = "www.slaquatics.com"
+custom_domain = true
 
 [env.production.vars]
 PUBLIC_SITE_URL = "https://slaquatics.com"
+PUBLIC_MEDIA_BASE_URL = "https://cdn.slaquatics.com"
 REQUIRE_SERVER_STORE = "true"
 
 [[env.production.d1_databases]]
@@ -44,3 +71,7 @@ binding = "OPS_DB"
 database_name = "slaquatics-ops-production"
 database_id = "11cf5caf-2cd8-4851-aaa4-0aa754838287"
 migrations_dir = "migrations"
+
+[[env.production.r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "slaquatics-media-production"

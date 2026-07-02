@@ -1745,7 +1745,14 @@ function runOpsRuntime() {
     renderInvoices();
   }
   async function recalcAllInvoices() {
-    if (!confirm('Recalculate every invoice from its booking? This re-applies the latest rules to all existing records: a completed rental counts as paid in full, and no-shows collapse to the $50 kept (or $0 refunded).')) return;
+    const confirmed = await requestOpsConfirm({
+      title: 'Recalculate invoices?',
+      message: 'Recalculate every invoice from its booking?',
+      detail: 'This re-applies the latest rules to all existing records: completed rentals count as paid in full, and no-shows collapse to the kept deposit or $0 if refunded.',
+      confirmLabel: 'Recalculate',
+      tone: 'primary'
+    });
+    if (!confirmed) return;
     const prevInvoices = JSON.parse(JSON.stringify(invoices));
     let count = 0;
     bookings.forEach((b) => {
@@ -2575,6 +2582,34 @@ function runOpsRuntime() {
     updatePendingBadge();
     showToast(existingInvoice ? '✅ Invoice updated' : '✅ Invoice saved');
   }
+  function invoiceDeletionSummary(invoice) {
+    const contact = invoiceDisplayContact(invoice);
+    const linkedBooking = linkedBookingForInvoiceRecord(invoice);
+    const bookingName = String(linkedBooking?.name || '').trim();
+    return {
+      customerName: contact.name || bookingName || 'Unknown customer',
+      invoiceLabel: invoice.invoiceNumber || invoice.invoiceName || `Invoice #${invoice.id}`,
+      amount: moneyLabel(invoice.total || 0)
+    };
+  }
+
+  async function openInvoiceDeleteModal(invoiceId) {
+    const invoice = invoices.find((item) => Number(item.id) === Number(invoiceId));
+    if (!invoice) {
+      showToast('⚠️ Invoice record not found');
+      return;
+    }
+    const summary = invoiceDeletionSummary(invoice);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete invoice?',
+      message: `Are you sure you want to delete ${summary.invoiceLabel} for ${summary.customerName}?`,
+      detailTitle: summary.customerName,
+      detail: `${summary.invoiceLabel} · ${summary.amount}`,
+      confirmLabel: 'Delete Invoice'
+    });
+    if (confirmed) await deleteInvoice(invoiceId);
+  }
+
   async function deleteInvoice(invoiceId) {
     const invoice = invoices.find((item) => Number(item.id) === Number(invoiceId));
     if (!invoice) {
@@ -2582,8 +2617,6 @@ function runOpsRuntime() {
       return;
     }
     const linkedCustomer = linkedCustomerForInvoice({...invoice});
-    const confirmed = window.confirm(`Delete invoice ${invoice.invoiceNumber || invoice.invoiceName}?`);
-    if (!confirmed) return;
     const previousInvoices = JSON.parse(JSON.stringify(invoices));
     const previousCustomers = JSON.parse(JSON.stringify(customers));
     const previousBookings = JSON.parse(JSON.stringify(bookings));
@@ -2616,6 +2649,7 @@ function runOpsRuntime() {
     updatePendingBadge();
     showToast('🗑️ Invoice removed');
   }
+
   function triggerCRMImport() {
     const fileInput = document.getElementById('crm-import-input');
     if (fileInput) fileInput.click();
@@ -2932,7 +2966,58 @@ function runOpsRuntime() {
   // ── MODALS ──
   function openModal(id) { document.getElementById(id).classList.add('open'); }
   function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+  let pendingOpsConfirmResolve = null;
+  function setTextContent(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+  function requestOpsConfirm(options = {}) {
+    const {
+      title = 'Are you sure?',
+      message = 'Confirm this action before continuing.',
+      detailTitle = 'Details',
+      detail = '',
+      confirmLabel = 'Confirm',
+      cancelLabel = 'Cancel',
+      tone = 'danger'
+    } = options;
+    setTextContent('ops-confirm-title', title);
+    setTextContent('ops-confirm-message', message);
+    setTextContent('ops-confirm-detail-title', detailTitle);
+    setTextContent('ops-confirm-detail', detail);
+    setTextContent('ops-confirm-action', confirmLabel);
+    setTextContent('ops-confirm-cancel', cancelLabel);
+    const detailCard = document.getElementById('ops-confirm-detail-card');
+    if (detailCard) detailCard.style.display = detail ? '' : 'none';
+    const action = document.getElementById('ops-confirm-action');
+    if (action) {
+      action.classList.toggle('btn-danger', tone === 'danger');
+      action.classList.toggle('btn-primary', tone !== 'danger');
+    }
+    openModal('ops-confirm-modal');
+    return new Promise((resolve) => {
+      pendingOpsConfirmResolve = resolve;
+    });
+  }
+  function finishOpsConfirm(value) {
+    closeModal('ops-confirm-modal');
+    if (pendingOpsConfirmResolve) pendingOpsConfirmResolve(Boolean(value));
+    pendingOpsConfirmResolve = null;
+  }
+  function resolveOpsConfirm() {
+    finishOpsConfirm(true);
+  }
+  function cancelOpsConfirm() {
+    finishOpsConfirm(false);
+  }
+  document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => {
+    if (e.target !== m) return;
+    if (m.id === 'ops-confirm-modal') {
+      cancelOpsConfirm();
+      return;
+    }
+    m.classList.remove('open');
+  }));
   function resetCustomerForm() {
     editingCustomerId = null;
     document.getElementById('c-id').value = '';
@@ -3110,12 +3195,26 @@ function runOpsRuntime() {
   }
   
   // ── BOOKING PRICE CALC ──
+  function updateBookingAddonAvailability() {
+    const craft = normalizeCraftKey(document.getElementById('b-craft')?.value || '');
+    const showBoatAddons = craftUsesBoat(craft);
+    [
+      ['b-karaoke-group', 'b-karaoke'],
+      ['b-tube-group', 'b-tube']
+    ].forEach(([groupId, selectId]) => {
+      const group = document.getElementById(groupId);
+      const select = document.getElementById(selectId);
+      if (group) group.style.display = showBoatAddons ? '' : 'none';
+      if (!showBoatAddons && select) select.value = 'no';
+    });
+  }
   function suggestedBookingAmount() {
     const craft = normalizeCraftKey(document.getElementById('b-craft')?.value || '');
     const dur = parseInt(document.getElementById('b-duration')?.value || '0', 10);
     const drone = document.getElementById('b-drone')?.value === 'yes';
-    const karaoke = document.getElementById('b-karaoke')?.value === 'yes';
-    const tube = document.getElementById('b-tube')?.value === 'yes';
+    const showBoatAddons = craftUsesBoat(craft);
+    const karaoke = showBoatAddons && document.getElementById('b-karaoke')?.value === 'yes';
+    const tube = showBoatAddons && document.getElementById('b-tube')?.value === 'yes';
     if (!craft || !dur) return 0;
     const base = Number(PRICING[craft]?.[dur] || 0);
     if (!base) return 0;
@@ -3144,8 +3243,9 @@ function runOpsRuntime() {
       breakdownEl.textContent = 'That duration is not available for this package';
       return;
     }
-    const karaoke = document.getElementById('b-karaoke')?.value === 'yes';
-    const tube = document.getElementById('b-tube')?.value === 'yes';
+    const showBoatAddons = craftUsesBoat(craft);
+    const karaoke = showBoatAddons && document.getElementById('b-karaoke')?.value === 'yes';
+    const tube = showBoatAddons && document.getElementById('b-tube')?.value === 'yes';
     const summary = `${CRAFT_NAMES[craft]} · ${dur === 8 ? '8 hrs (full day)' : `${dur}hrs`}${drone ? ' + Drone ($50)' : ''}${karaoke ? ' + Karaoke ($50)' : ''}${tube ? ' + Tube ($50)' : ''}`;
     if (bookingAmountManuallyEdited && hasEnteredAmount) {
       breakdownEl.textContent = `${summary} · custom total ${moneyLabel(enteredValue)}`;
@@ -3162,6 +3262,7 @@ function runOpsRuntime() {
     updateBookingAmountPreview();
   }
   function calcBookingPrice() {
+    updateBookingAddonAvailability();
     const amountEl = document.getElementById('b-amount');
     const suggested = suggestedBookingAmount();
     if (!suggested) {
@@ -3300,9 +3401,10 @@ function runOpsRuntime() {
     bookingRecord.invoiceSuppressed = false;
     bookingRecord.drone = document.getElementById('b-drone').value === 'yes';
     bookingRecord.droneAmount = bookingRecord.drone ? 50 : 0;
-    bookingRecord.karaoke = document.getElementById('b-karaoke')?.value === 'yes';
+    const usesBoat = craftUsesBoat(craft);
+    bookingRecord.karaoke = usesBoat && document.getElementById('b-karaoke')?.value === 'yes';
     bookingRecord.karaokeAmount = bookingRecord.karaoke ? 50 : 0;
-    bookingRecord.tube = document.getElementById('b-tube')?.value === 'yes';
+    bookingRecord.tube = usesBoat && document.getElementById('b-tube')?.value === 'yes';
     bookingRecord.tubeAmount = bookingRecord.tube ? 50 : 0;
     const addonTotal = bookingRecord.droneAmount + bookingRecord.karaokeAmount + bookingRecord.tubeAmount;
     bookingRecord.baseTotal = Number(Math.max(bookingValue - addonTotal, 0).toFixed(2));
@@ -4428,7 +4530,12 @@ function runOpsRuntime() {
       showToast('⚠️ Tracker record not found');
       return;
     }
-    const confirmed = window.confirm(`Delete tracker "${tracker.name}" (${tracker.serialNumber || 'no serial'})?`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete tracker?',
+      message: `Delete tracker "${tracker.name}"?`,
+      detail: tracker.serialNumber || 'No serial number on file',
+      confirmLabel: 'Delete Tracker'
+    });
     if (!confirmed) return;
     const previousTrackers = JSON.parse(JSON.stringify(trackers));
     const previousSelectedTrackerId = selectedTrackerId;
@@ -4539,7 +4646,12 @@ function runOpsRuntime() {
       showToast('⚠️ Booking record not found');
       return;
     }
-    const confirmed = window.confirm(`Delete the booking for ${bookingDisplayName(booking)}? This cannot be undone from ops.`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete booking?',
+      message: `Delete the booking for ${bookingDisplayName(booking)}?`,
+      detail: 'This cannot be undone from ops.',
+      confirmLabel: 'Delete Booking'
+    });
     if (!confirmed) return;
     const previousBookings = JSON.parse(JSON.stringify(bookings));
     const previousInvoices = JSON.parse(JSON.stringify(invoices));
@@ -4633,7 +4745,14 @@ function runOpsRuntime() {
     if (!invoice) return;
     const outstanding = invoiceOutstandingAmount(invoice);
     if (outstanding <= 0) { showToast('Already fully collected ✓'); return; }
-    if (!confirm(`Mark this invoice fully paid? This records ${moneyLabel(outstanding)} collected.`)) return;
+    const confirmed = await requestOpsConfirm({
+      title: 'Mark invoice paid?',
+      message: 'Mark this invoice fully paid?',
+      detail: `This records ${moneyLabel(outstanding)} collected.`,
+      confirmLabel: 'Mark Paid',
+      tone: 'primary'
+    });
+    if (!confirmed) return;
     const prevStatus = invoice.status;
     const prevPaid = invoice.paidAmount;
     const prevBalance = invoice.balanceDue;
@@ -4740,7 +4859,7 @@ function runOpsRuntime() {
     } else if (action === 'edit') {
       openInvoiceModal(id);
     } else if (action === 'delete') {
-      deleteInvoice(id);
+      openInvoiceDeleteModal(id);
     }
   });
   
@@ -5086,7 +5205,12 @@ function runOpsRuntime() {
       showToast('⚠️ Customer record not found');
       return;
     }
-    const confirmed = window.confirm(`Delete ${customer.name} from the CRM? Existing bookings and invoices will stay in place.`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete customer?',
+      message: `Delete ${customer.name} from the CRM?`,
+      detail: 'Existing bookings and invoices will stay in place.',
+      confirmLabel: 'Delete Customer'
+    });
     if (!confirmed) return;
     const previousBookings = bookings.map((booking) => ({ ...booking }));
     const previousInvoices = invoices.map((invoice) => ({ ...invoice }));
@@ -5150,7 +5274,12 @@ function runOpsRuntime() {
       return;
     }
     const plural = empties.length === 1 ? '' : 's';
-    const confirmed = window.confirm(`Remove ${empties.length} blank customer record${plural}?\n\nThese have no name, phone, email, bookings, spend, or waiver. Everyone with any real info is kept.`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Remove blank customers?',
+      message: `Remove ${empties.length} blank customer record${plural}?`,
+      detail: 'These have no name, phone, email, bookings, spend, or waiver. Everyone with any real info is kept.',
+      confirmLabel: 'Remove Records'
+    });
     if (!confirmed) return;
     const removeIds = new Set(empties.map((customer) => Number(customer.id)));
     const previousCustomers = customers.map((customer) => ({ ...customer }));
@@ -5265,7 +5394,12 @@ function runOpsRuntime() {
       showToast('⚠️ Expense record not found');
       return;
     }
-    const confirmed = window.confirm(`Delete expense "${expense.name}" for ${Number(expense.amount || 0).toLocaleString()}?`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete expense?',
+      message: `Delete expense "${expense.name}"?`,
+      detail: `Amount: ${Number(expense.amount || 0).toLocaleString()}`,
+      confirmLabel: 'Delete Expense'
+    });
     if (!confirmed) return;
     const previousExpenses = JSON.parse(JSON.stringify(expenses));
     const shouldCloseEditor = editingExpenseId && Number(editingExpenseId) === Number(expenseId);
@@ -5387,18 +5521,18 @@ function runOpsRuntime() {
     const panel = document.getElementById('mass-email-recipient-panel');
     if (panel) panel.hidden = massEmailAudienceMode !== 'selected';
     if (note) note.textContent = integrations.emailConfigured
-      ? 'Draft one campaign and Shoreline Ops will send it through Resend in batches of up to 50 recipients.'
+      ? 'Draft one campaign for the full client email list. Shoreline Ops splits provider sends into batches automatically.'
       : 'Draft one campaign now. Add Resend credentials to send it directly from Shoreline Ops.';
     if (detail) detail.textContent = integrations.emailConfigured
       ? (massEmailAudienceMode === 'selected'
-        ? `Resend is configured. This campaign will go to ${emails.length} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'} from your selected customers.`
-        : `Resend is configured. This campaign will go to ${emails.length} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'} from the CRM email list.`)
+        ? `Resend is configured. This campaign will go to ${emails.length} selected recipients. Shoreline Ops will send ${batchCount} provider ${batchCount === 1 ? 'batch' : 'batches'} automatically.`
+        : `Resend is configured. This campaign will go to every client with an email address: ${emails.length} recipients across ${batchCount} provider ${batchCount === 1 ? 'batch' : 'batches'}.`)
       : 'Resend is not configured yet, so the email provider send button will stay disabled.';
     if (button) button.disabled = !integrations.emailConfigured || !emails.length || (massEmailAudienceMode === 'selected' && !selectedCustomers.length);
     if (summary) {
       summary.textContent = massEmailAudienceMode === 'selected'
-        ? `${selectedCustomers.length} selected · ${emails.length} email recipients ready · sends in batches of 50`
-        : `${eligibleCustomers.length} customers with email on file`;
+        ? `${selectedCustomers.length} selected · ${emails.length} email recipients ready`
+        : `${eligibleCustomers.length} clients with email on file · full list will be included`;
     }
     if (list) {
       renderOpsMarkup(list, visibleCustomers.length ? visibleCustomers.map((customer) => {
@@ -5535,6 +5669,20 @@ function runOpsRuntime() {
       showToast('⚠️ Add a subject, body, and make sure customers have emails on file');
       return;
     }
+    const batchCountPreview = Math.max(1, Math.ceil(bcc.length / 50));
+    const audienceLabel = massEmailAudienceMode === 'selected'
+      ? `${bcc.length} selected email ${bcc.length === 1 ? 'recipient' : 'recipients'}`
+      : `every client with an email address (${bcc.length} ${bcc.length === 1 ? 'recipient' : 'recipients'})`;
+    const confirmed = await requestOpsConfirm({
+      title: 'Send mass email?',
+      message: `Send this campaign to ${audienceLabel}?`,
+      detail: `Shoreline Ops will submit ${batchCountPreview} provider ${batchCountPreview === 1 ? 'batch' : 'batches'} automatically.`,
+      confirmLabel: 'Send Campaign',
+      tone: 'primary'
+    });
+    if (!confirmed) {
+      return;
+    }
     try {
       const sentAt = new Date().toISOString();
       const response = await requestJson('/api/ops/messages/send', {
@@ -5548,6 +5696,7 @@ function runOpsRuntime() {
         })
       });
       const batchCount = Number(response?.result?.batches) || Math.max(1, Math.ceil(bcc.length / 50));
+      const recipientCount = Number(response?.result?.recipientCount) || bcc.length;
       const recipientEmails = new Set(bcc);
       audienceCustomers.forEach((customer) => {
         const email = normalizeEmail(customer.email);
@@ -5566,7 +5715,7 @@ function runOpsRuntime() {
       renderCRM();
       renderReminders();
       renderCommsPanel();
-      showToast(logged ? `✉️ Mass email sent to ${bcc.length} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}` : `⚠️ Mass email sent in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}, but the CRM log could not be saved`);
+      showToast(logged ? `✉️ Mass email sent to ${recipientCount} recipients in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}` : `⚠️ Mass email sent in ${batchCount} ${batchCount === 1 ? 'batch' : 'batches'}, but the CRM log could not be saved`);
     } catch (error) {
       showToast(`⚠️ ${error.message}`);
     }
@@ -5776,7 +5925,13 @@ function runOpsRuntime() {
       return;
     }
     if (!valid.length) { showToast('⚠️ No valid phone numbers found (need 10+ digits)'); return; }
-    if (!confirm(`Text the review link to ${valid.length} ${valid.length === 1 ? 'person' : 'people'}?`)) return;
+    const confirmed = await requestOpsConfirm({
+      title: 'Send review texts?',
+      message: `Text the review link to ${valid.length} ${valid.length === 1 ? 'person' : 'people'}?`,
+      confirmLabel: 'Send Texts',
+      tone: 'primary'
+    });
+    if (!confirmed) return;
     if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
     if (statusEl) statusEl.textContent = 'Sending…';
     try {
@@ -6289,7 +6444,12 @@ function runOpsRuntime() {
       showToast('⚠️ Fuel entry not found');
       return;
     }
-    const confirmed = window.confirm(`Delete fuel entry for ${entry.craft} on ${formatShortDate(entry.date)}?`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete fuel entry?',
+      message: `Delete fuel entry for ${entry.craft}?`,
+      detail: `Date: ${formatShortDate(entry.date)}`,
+      confirmLabel: 'Delete Fuel Entry'
+    });
     if (!confirmed) return;
     const previousFuelLog = JSON.parse(JSON.stringify(fuelLog));
     const shouldCloseEditor = editingFuelId && Number(editingFuelId) === Number(fuelId);
@@ -6405,7 +6565,12 @@ function runOpsRuntime() {
       showToast('⚠️ Service record not found');
       return;
     }
-    const confirmed = window.confirm(`Delete ${entry.type} for ${entry.craft} on ${formatShortDate(entry.date)}?`);
+    const confirmed = await requestOpsConfirm({
+      title: 'Delete service record?',
+      message: `Delete ${entry.type} for ${entry.craft}?`,
+      detail: `Date: ${formatShortDate(entry.date)}`,
+      confirmLabel: 'Delete Service'
+    });
     if (!confirmed) return;
     const previousMaintLog = JSON.parse(JSON.stringify(maintLog));
     const shouldCloseEditor = editingMaintId && Number(editingMaintId) === Number(maintId);
@@ -6744,6 +6909,7 @@ function runOpsRuntime() {
   function exposeRuntimeActions() {
     Object.assign(window, {
       applyMassEmailQuickSelect,
+      cancelOpsConfirm,
       calcBookingPrice,
       cleanupEmptyCustomers,
       closeModal,
@@ -6779,6 +6945,7 @@ function runOpsRuntime() {
       recalcAllInvoices,
       renderCommsPanel,
       renderMassEmailDraft,
+      resolveOpsConfirm,
       saveBooking,
       saveCustomer,
       saveExpense,

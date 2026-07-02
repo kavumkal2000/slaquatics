@@ -22,7 +22,7 @@ Copy/paste this straight into your Google Business Profile. Pair it with the che
 2. **Are life jackets included?** — Yes, life jackets are included with every rental — always.
 3. **Can first-timers ride?** — Absolutely. We walk every first-timer through everything, and we're on standby by phone if questions come up on the water.
 4. **What's your cancellation policy?** — Free cancellation or reschedule up to 48 hours before your reservation; the $50 deposit is fully refundable.
-5. **Where do you launch?** — Lake Lewisville at 2000 Main St, Hickory Creek, TX. We meet you at the launch.
+5. **Where do you launch?** — Lake Lewisville at Point Vista Rd, Hickory Creek, TX 75065, United States. We meet you at the launch.
 6. **How do I book?** — See live availability and book online at slaquatics.com, or call/text (469) 693-7164.
 
 ---

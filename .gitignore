@@ -3,6 +3,9 @@ node_modules/
 .next/
 .open-next/
 .wrangler/
+media-source/images/
+media-source/videos/
+media-source/media-manifest.json
 .env
 .env.*
 !.env.example

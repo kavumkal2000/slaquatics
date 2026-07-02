@@ -1,7 +1,6 @@
 import { JetskiBookingClientBehavior } from './JetskiBookingClientBehavior';
 import { JetskiBookingStructuredData } from './JetskiBookingStructuredData';
 import { JetskiBookingStyles } from './JetskiBookingStyles';
-import { JetskiBookingAvailabilitySpotlight } from './components/JetskiBookingAvailabilitySpotlight';
 import { JetskiBookingFirstTimer } from './components/JetskiBookingFirstTimer';
 import { JetskiBookingFormCard } from './components/JetskiBookingFormCard';
 import { JetskiBookingHero } from './components/JetskiBookingHero';
@@ -17,7 +16,6 @@ export function JetskiBookingPage() {
       <JetskiBookingShell>
         <JetskiBookingTopbar />
         <JetskiBookingHero />
-        <JetskiBookingAvailabilitySpotlight />
         <JetskiBookingFirstTimer />
         <div className="content-grid">
           <JetskiBookingFormCard />

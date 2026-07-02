@@ -1,9 +1,9 @@
+'use client';
+
 import { HomeClientBehavior } from './HomeClientBehavior';
 import { HomeStructuredData } from './HomeStructuredData';
 import { HomeStyles } from './HomeStyles';
 import { HomeNav } from './components/HomeNav';
-import { HomeMobileBackdrop } from './components/HomeMobileBackdrop';
-import { HomeMobileNav } from './components/HomeMobileNav';
 import { HomeHero } from './components/HomeHero';
 import { HomeTrustBar } from './components/HomeTrustBar';
 import { HomeFleetSection } from './components/HomeFleetSection';
@@ -15,7 +15,6 @@ import { HomeLocationSection } from './components/HomeLocationSection';
 import { HomeFaqSection } from './components/HomeFaqSection';
 import { HomeReviewsSection } from './components/HomeReviewsSection';
 import { HomeInstagramSection } from './components/HomeInstagramSection';
-import { HomeNotifySection } from './components/HomeNotifySection';
 import { HomeCtaBand } from './components/HomeCtaBand';
 import { HomeFooter } from './components/HomeFooter';
 import { HomeMobileCtaBar } from './components/HomeMobileCtaBar';
@@ -27,8 +26,7 @@ export function HomePage() {
       <HomeStyles />
       <HomeStructuredData />
       <HomeNav />
-      <HomeMobileBackdrop />
-      <HomeMobileNav />
+      <HomeClientBehavior />
       <HomeHero />
       <HomeTrustBar />
       <HomeFleetSection />
@@ -37,15 +35,13 @@ export function HomePage() {
       <HomeHowSection />
       <HomeWhySection />
       <HomeLocationSection />
-      <HomeFaqSection />
       <HomeReviewsSection />
+      <HomeFaqSection />
       <HomeInstagramSection />
-      <HomeNotifySection />
       <HomeCtaBand />
       <HomeFooter />
       <HomeMobileCtaBar />
       <HomeBackToTop />
-      <HomeClientBehavior />
     </>
   );
 }

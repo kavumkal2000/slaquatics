@@ -1,5 +1,6 @@
 import { OpsBookingModal } from './components/OpsBookingModal';
 import { OpsClientBehavior } from './OpsClientBehavior';
+import { OpsConfirmModal } from './components/OpsConfirmModal';
 import { OpsCustomerModal } from './components/OpsCustomerModal';
 import { OpsStructuredData } from './OpsStructuredData';
 import { OpsStyles } from './OpsStyles';
@@ -27,6 +28,7 @@ export function OpsPage() {
       <OpsMobileNavBackdrop />
       <OpsDashboardWorkspace />
       <OpsBookingModal />
+      <OpsConfirmModal />
       <OpsInvoiceModal />
       <OpsFuelModal />
       <OpsMaintenanceModal />

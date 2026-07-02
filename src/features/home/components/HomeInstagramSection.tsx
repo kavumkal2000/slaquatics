@@ -1,5 +1,7 @@
 'use client';
 
+import { mediaUrl } from '../../../lib/media';
+
 export function HomeInstagramSection() {
   return (
     <section className="ig-section">
@@ -12,12 +14,12 @@ export function HomeInstagramSection() {
       </div>
     </div>
     <div className="ig-grid">
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-group-wide.png" alt="Shoreline group getting ready on jet skis" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-duo.png" alt="Two customers smiling on a Yamaha jet ski" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-riders.png" alt="Customers riding jet skis on Lake Lewisville" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/687eb467ca64a6008956c632.jpeg" alt="Jet ski rental" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Aerial drone coverage" /></div>
-      <div className="ig-tile"><img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/67d0b77af75b9a715dcea493.jpeg" alt="Drone" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4483.webp')} alt="Shoreline group with Yamaha jet skis on Lake Lewisville" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4198.webp')} alt="Customers meeting Shoreline Aquatics at the shoreline" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4175.webp')} alt="Two riders on Yamaha jet skis" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-8967.webp')} alt="Customer riding a Yamaha jet ski" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-3611.webp')} alt="Aerial-style Shoreline Aquatics customer moment" /></div>
+      <div className="ig-tile"><img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-9fc84833-3e1a-4cc9-90ed-a3f65305d6f8.webp')} alt="Shoreline Aquatics lake day moment" /></div>
     </div>
     <div className="ig-follow-cta">
       <p>See more shots from Lake Lewisville — follow us for availability, customer clips, and deals.</p>

@@ -1,10 +1,11 @@
 import { JsonLdStructuredData, type JsonLdValue } from '../JsonLdStructuredData';
+import { media } from '../../lib/media';
 
 const localBusinessJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'LocalBusiness',
   name: 'Shoreline Aquatics Jet Ski & Boat Rentals',
-  image: 'https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png',
+  image: media.heroPoster,
   '@id': 'https://slaquatics.com',
   url: 'https://slaquatics.com',
   telephone: '+14696937164',

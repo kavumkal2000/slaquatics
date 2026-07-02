@@ -3,7 +3,7 @@ import { JetskiBookingPage } from '../../features/jetskiBooking/JetskiBookingPag
 
 export const metadata: Metadata = {
   title: "Book a Rental | Shoreline Aquatics",
-  description: "See live Shoreline Aquatics availability, choose an open Lake Lewisville rental time, and continue to the contact, waiver, and $55 checkout step.",
+  description: "See live Shoreline Aquatics availability at Point Vista Rd, Hickory Creek, TX 75065, United States. Choose a 10 AM-8 PM Lake Lewisville rental time and continue to contact, waiver, and checkout.",
   robots: "index, follow",
   alternates: { canonical: "https://slaquatics.com/jetski-booking/" }
 };

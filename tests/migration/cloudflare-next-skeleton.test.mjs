@@ -14,6 +14,15 @@ function rgCount(dir, pattern) {
   }
   return count;
 }
+function collectFiles(dir, pattern) {
+  const files = [];
+  for (const entry of readdirSync(dir)) {
+    const file = `${dir}/${entry}`;
+    if (statSync(file).isDirectory()) files.push(...collectFiles(file, pattern));
+    else if (pattern.test(file)) files.push(file);
+  }
+  return files;
+}
 
 test('modern stack scripts and dependencies are declared', () => {
   const pkg = readJson('package.json');
@@ -22,8 +31,8 @@ test('modern stack scripts and dependencies are declared', () => {
   assert.equal(pkg.scripts.build, 'next build');
   assert.equal(pkg.scripts['cf:build'], 'opennextjs-cloudflare build');
   assert.equal(pkg.scripts['cf:preview'], 'opennextjs-cloudflare preview');
-  assert.equal(pkg.scripts['cf:deploy:dev'], 'wrangler deploy --env development');
-  assert.equal(pkg.scripts['cf:deploy:prod'], 'wrangler deploy --env production');
+  assert.equal(pkg.scripts['cf:deploy:dev'], 'opennextjs-cloudflare deploy --env development');
+  assert.equal(pkg.scripts['cf:deploy:prod'], 'opennextjs-cloudflare deploy --env production');
   assert.ok(pkg.dependencies.next);
   assert.ok(pkg.dependencies.react);
   assert.ok(pkg.dependencies['react-dom']);
@@ -69,25 +78,24 @@ test('root layout provides required html and body tags', () => {
   assert.match(layout, /\{children\}/);
 });
 
-test('legacy ops html URLs redirect to clean page routes', async () => {
+test('legacy ops html URLs are redirected by the Cloudflare worker without Next middleware or .html prerender entries', async () => {
   const { default: nextConfig } = await import(pathToFileURL('next.config.mjs'));
 
   assert.equal(typeof nextConfig.redirects, 'function');
 
   const redirects = await nextConfig.redirects();
 
-  assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops.html' || redirect.source === '/ops-login.html'), [
-    {
-      source: '/ops.html',
-      destination: '/ops',
-      permanent: true
-    },
-    {
-      source: '/ops-login.html',
-      destination: '/ops-login',
-      permanent: true
-    }
-  ]);
+  assert.deepEqual(redirects.filter((redirect) => redirect.source === '/ops.html' || redirect.source === '/ops-login.html'), []);
+
+  const worker = readText('src/worker.ts');
+  assert.match(worker, /legacyHtmlRedirects/);
+  assert.match(worker, /'\/ops\.html': '\/ops'/);
+  assert.match(worker, /'\/ops-login\.html': '\/ops-login'/);
+  assert.match(worker, /Response\.redirect\(url\.toString\(\), 308\)/);
+
+  assert.equal(existsSync('src/proxy.ts'), false);
+  assert.equal(existsSync('src/app/ops.html/page.tsx'), false);
+  assert.equal(existsSync('src/app/ops-login.html/page.tsx'), false);
 });
 
 test('Wrangler defines isolated development and production Cloudflare services', () => {
@@ -103,6 +111,75 @@ test('Wrangler defines isolated development and production Cloudflare services',
   assert.match(wrangler, /binding = "OPS_DB"/);
   assert.match(wrangler, /\[triggers\]\ncrons = \["0 14 \* \* 1"\]/);
   assert.doesNotMatch(wrangler, /shoreline-aquatics-ops\.onrender\.com/);
+});
+
+test('Wrangler defines split R2 media buckets and CDN domains per environment', () => {
+  const wrangler = readText('wrangler.toml');
+
+  assert.match(wrangler, /\[env\.development\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.dev\.slaquatics\.com"/);
+  assert.match(wrangler, /\[env\.production\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.slaquatics\.com"/);
+  assert.match(wrangler, /\[env\.development\.placement\]\nmode = "smart"/);
+  assert.match(wrangler, /\[env\.production\.placement\]\nmode = "smart"/);
+  assert.match(wrangler, /\[\[env\.development\.routes\]\]\npattern = "dev\.slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.production\.routes\]\]\npattern = "slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.production\.routes\]\]\npattern = "www\.slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.development\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-development"/);
+  assert.match(wrangler, /\[\[env\.production\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-production"/);
+});
+
+test('media CDN publishing is deterministic and excludes legacy archive inputs', () => {
+  const pkg = readJson('package.json');
+  const script = readText('scripts/publish-media-r2.mjs');
+  const docs = readText('docs/media-cdn.md');
+
+  assert.equal(pkg.scripts['media:publish'], 'node scripts/publish-media-r2.mjs');
+  assert.match(script, /slaquatics-media-development/);
+  assert.match(script, /slaquatics-media-production/);
+  assert.match(script, /cdn\.dev\.slaquatics\.com/);
+  assert.match(script, /cdn\.slaquatics\.com/);
+  assert.match(script, /media-source\/images/);
+  assert.match(script, /media-source\/videos/);
+  assert.match(script, /--env production/);
+  assert.match(script, /legacy\//);
+  assert.match(script, /manifests\/media-manifest\.json/);
+  assert.match(script, /--cache-control/);
+  assert.match(script, /--remote/);
+  assert.doesNotMatch(script, /readFileSync\(['"]legacy\//);
+  assert.equal(existsSync('public/assets'), false);
+  assert.equal(existsSync('public/assets/videos'), false);
+  assert.ok(existsSync('media-source/README.md'));
+
+  for (const required of [
+    'slaquatics-media-development',
+    'slaquatics-media-production',
+    'cdn.dev.slaquatics.com',
+    'cdn.slaquatics.com',
+    'site/images/',
+    'site/videos/',
+    'brand/',
+    'ops/',
+    'originals/',
+    'manifests/media-manifest.json'
+  ]) {
+    assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});
+
+test('active media references use the central CDN helper instead of legacy or third-party hosts', () => {
+  const helper = readText('src/lib/media.ts');
+  const activeDirs = ['src/app', 'src/features', 'src/lib'];
+  const activeSource = activeDirs
+    .flatMap((dir) => collectFiles(dir, /\.(tsx?|jsx?)$/))
+    .map((file) => readText(file))
+    .join('\n');
+
+  assert.match(helper, /PUBLIC_MEDIA_BASE_URL/);
+  assert.match(helper, /mediaUrl/);
+  assert.match(helper, /cdn\.slaquatics\.com/);
+  assert.doesNotMatch(activeSource, /images\.leadconnectorhq\.com/);
+  assert.doesNotMatch(activeSource, /storage\.googleapis\.com\/msgsndr/);
+  assert.doesNotMatch(activeSource, /src=["'](?:\.\.?\/)?assets\/images\//);
+  assert.doesNotMatch(activeSource, /https:\/\/slaquatics\.com\/assets\/images\//);
 });
 
 test('Cloudflare worker owns scheduled weekly digest dispatch', () => {
@@ -143,8 +220,18 @@ test('iOS native wrapper uses canonical HTTPS ops host only', () => {
   assert.match(readme, /https:\/\/slaquatics\.com\/ops-login/);
 });
 
-test('GitHub Actions does not own Cloudflare Worker deploys', () => {
-  assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), false);
+test('GitHub Actions validates PRs and deploys Cloudflare Workers from protected branches', () => {
+  assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), true);
+  const workflow = readText('.github/workflows/cloudflare-workers.yml');
+
+  assert.match(workflow, /pull_request:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /push:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /if: github\.event_name == 'push'/);
+  assert.match(workflow, /npm run check && npm run cf:build/);
+  assert.match(workflow, /npm run cf:deploy:dev/);
+  assert.match(workflow, /npm run cf:deploy:prod/);
+  assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(workflow, /CLOUDFLARE_API_TOKEN/);
 });
 
 test('Wrangler D1 bindings use created Cloudflare database IDs, not placeholders', () => {
@@ -224,7 +311,6 @@ test('jetski booking page is split into named React sections instead of generate
     'JetskiBookingShell',
     'JetskiBookingTopbar',
     'JetskiBookingHero',
-    'JetskiBookingAvailabilitySpotlight',
     'JetskiBookingFirstTimer',
     'JetskiBookingFormCard',
     'JetskiBookingStickyMobileBar'
@@ -236,17 +322,14 @@ test('jetski booking page is split into named React sections instead of generate
   assert.equal(existsSync('src/features/jetskiBooking/components/JetskiBookingDiv2.tsx'), false);
 });
 
-test('public pages keep live availability markup required by client behavior', () => {
-  const homeNotify = readText('src/features/home/components/HomeNotifySection.tsx');
-  const booking = readText('src/features/jetskiBooking/components/JetskiBookingAvailabilitySpotlight.tsx');
+test('public pages do not render removed availability promo sections', () => {
+  const homePage = readText('src/features/home/HomePage.tsx');
+  const bookingPage = readText('src/features/jetskiBooking/JetskiBookingPage.tsx');
 
-  for (const id of ['avail-date', 'avail-status', 'avail-slots']) {
-    assert.match(homeNotify, new RegExp(`id="${id}"`), `Home availability widget should include ${id}`);
-  }
-
-  for (const id of ['availability-spotlight-copy', 'availability-slot-grid']) {
-    assert.match(booking, new RegExp(`id="${id}"`), `Booking availability spotlight should include ${id}`);
-  }
+  assert.doesNotMatch(homePage, /HomeNotifySection/);
+  assert.doesNotMatch(bookingPage, /JetskiBookingAvailabilitySpotlight/);
+  assert.equal(existsSync('src/features/home/components/HomeNotifySection.tsx'), false);
+  assert.equal(existsSync('src/features/jetskiBooking/components/JetskiBookingAvailabilitySpotlight.tsx'), false);
 });
 
 test('public booking completion routes use typed React behavior instead of generated script shortcuts', () => {
@@ -963,6 +1046,37 @@ test('invoice runtime uses delegated data handlers instead of inline onclick', (
   assert.match(runtime, /closest\('\[data-invoice-action\]'\)/);
 });
 
+test('invoice delete uses a named confirmation modal and persists actual invoice removal', () => {
+  const runtime = readText('src/features/ops/runtime/opsRuntime.client.js');
+  const modal = readText('src/features/ops/components/OpsConfirmModal.tsx');
+  const actions = readText('src/features/ops/opsGlobalActions.ts');
+  const deleteSlice = runtime.slice(runtime.indexOf('function invoiceDeletionSummary'), runtime.indexOf('function triggerCRMImport'));
+
+  assert.match(modal, /id="ops-confirm-modal"/);
+  assert.match(modal, /id="ops-confirm-detail-title"/);
+  assert.match(actions, /resolveOpsConfirm/);
+  assert.match(actions, /cancelOpsConfirm/);
+  assert.match(deleteSlice, /requestOpsConfirm/);
+  assert.match(deleteSlice, /openInvoiceDeleteModal/);
+  assert.match(deleteSlice, /invoices = invoices\.filter/);
+  assert.match(deleteSlice, /linkedBooking\.invoiceSuppressed = true/);
+  assert.doesNotMatch(deleteSlice, /window\.confirm/);
+});
+
+test('ops confirmations use the shared modal instead of native browser confirms', () => {
+  const runtime = readText('src/features/ops/runtime/opsRuntime.client.js');
+  const page = readText('src/features/ops/OpsPage.tsx');
+  const modal = readText('src/features/ops/components/OpsConfirmModal.tsx');
+
+  assert.match(page, /<OpsConfirmModal \/>/);
+  assert.match(modal, /id="ops-confirm-modal"/);
+  assert.match(runtime, /function requestOpsConfirm/);
+  assert.match(runtime, /function resolveOpsConfirm/);
+  assert.match(runtime, /function cancelOpsConfirm/);
+  assert.doesNotMatch(runtime, /window\.confirm/);
+  assert.doesNotMatch(runtime, /(^|[^A-Za-z])confirm\(/);
+});
+
 test('CRM and waiver customer actions use delegated data handlers instead of inline onclick', () => {
   const runtime = readText('src/features/ops/runtime/opsRuntime.client.js');
   const customerSlice = runtime.slice(runtime.indexOf('function renderWaivers'), runtime.indexOf('async function saveCustomer'));
@@ -1146,17 +1260,9 @@ test('migrated components avoid React dev overlay warning patterns', () => {
   assert.equal(rgCount('src/features', /\sselected[=>]/g), 0);
 });
 
-test('existing static image URLs are mirrored into the Next public asset tree', () => {
-  [
-    'shoreline-customer-duo.png',
-    'shoreline-customer-group-wide.png',
-    'shoreline-customer-moments.png',
-    'shoreline-customer-riders.png',
-    'shoreline-pontoon-crop-final.png'
-  ].forEach((file) => {
-    assert.ok(existsSync(`assets/images/${file}`), `source asset ${file} should remain in place`);
-    assert.ok(existsSync(`public/assets/images/${file}`), `/assets/images/${file} should resolve in Next`);
-  });
+test('active media is CDN-backed and not bundled into the Worker static assets tree', () => {
+  assert.equal(existsSync('public/assets'), false, 'CDN media should not be committed under public/assets');
+  assert.ok(existsSync('media-source/README.md'), 'ignored local staging instructions should exist');
   assert.ok(existsSync('legacy/render/ops-sw.js'), 'legacy source service worker should remain archived');
   assert.ok(existsSync('public/ops-sw.js'), '/ops-sw.js should resolve in Next');
   assert.ok(existsSync('legacy/render/ops-app.webmanifest'), 'legacy source ops manifest should remain archived');

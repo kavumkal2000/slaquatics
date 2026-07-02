@@ -11,10 +11,15 @@
     "check": "node scripts/validate.js && npm run test:migration",
     "smoke": "node scripts/smoke.js",
     "ops-state:transfer": "node scripts/transfer-ops-state.mjs",
+    "media:publish": "node scripts/publish-media-r2.mjs",
+    "media:bucket:create:dev": "wrangler r2 bucket create slaquatics-media-development",
+    "media:bucket:create:prod": "wrangler r2 bucket create slaquatics-media-production",
+    "media:domain:dev": "wrangler r2 bucket domain add slaquatics-media-development --domain cdn.dev.slaquatics.com --zone-id $CLOUDFLARE_ZONE_ID",
+    "media:domain:prod": "wrangler r2 bucket domain add slaquatics-media-production --domain cdn.slaquatics.com --zone-id $CLOUDFLARE_ZONE_ID",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
-    "cf:deploy:dev": "wrangler deploy --env development",
-    "cf:deploy:prod": "wrangler deploy --env production",
+    "cf:deploy:dev": "opennextjs-cloudflare deploy --env development",
+    "cf:deploy:prod": "opennextjs-cloudflare deploy --env production",
     "test:migration": "node --experimental-strip-types --test tests/migration/*.test.mjs"
   },
   "dependencies": {

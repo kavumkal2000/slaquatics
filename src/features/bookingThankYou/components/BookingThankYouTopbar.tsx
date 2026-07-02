@@ -1,9 +1,11 @@
+import { media } from '../../../lib/media';
+
 export function BookingThankYouTopbar() {
   return (
     <div className="topbar">
       <a className="brand" href="../">
         <div className="brand-logo">
-          <img src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics" />
+          <img src={media.logo} alt="Shoreline Aquatics" />
         </div>
       </a>
       <div className="top-actions">

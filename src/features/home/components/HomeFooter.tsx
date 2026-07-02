@@ -1,17 +1,42 @@
 'use client';
 
+import { LAUNCH_ADDRESS, LAUNCH_HOURS } from '../../../lib/launch-info';
+import { media } from '../../../lib/media';
+
+function InstagramIcon() {
+  return (
+    <svg className="footer-social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg className="footer-social-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M14.2 8.3V6.9c0-.7.5-1.1 1.2-1.1H17V3.1c-.8-.1-1.7-.1-2.5-.1-2.6 0-4.4 1.6-4.4 4.5v.8H7.4v3h2.7V21h3.3v-9.7h2.8l.4-3h-3.2Z" />
+    </svg>
+  );
+}
+
 export function HomeFooter() {
   return (
     <footer>
   <div className="footer-inner">
     <div>
       <div className="footer-logo">
-        <img loading="lazy" decoding="async" src="https://images.leadconnectorhq.com/image/f_webp/q_80/r_1200/u_https://assets.cdn.filesafe.space/3PgAS2jkeJsHjqRMEuF6/media/681d97126b471ca2569a5463.png" alt="Shoreline Aquatics" />
+        <img loading="lazy" decoding="async" src={media.logo} alt="Shoreline Aquatics" />
       </div>
-      <p className="footer-about">Jet ski &amp; boat rentals at Lake Lewisville, TX. Meet us at the launch, get your walkthrough, and enjoy a cleaner rental flow from start to finish.</p>
+      <p className="footer-about">Jet ski &amp; boat rentals at Lake Lewisville, TX. Meet us at {LAUNCH_ADDRESS} during {LAUNCH_HOURS}.</p>
       <div className="footer-socials">
-        <a href="https://www.instagram.com/shorelineaquatic/" className="footer-social" target="_blank">ig</a>
-        <a href="https://www.facebook.com/slaquatic/" className="footer-social" target="_blank">fb</a>
+        <a href="https://www.instagram.com/shorelineaquatic/" className="footer-social" target="_blank" rel="noopener noreferrer" aria-label="Shoreline Aquatics on Instagram">
+          <InstagramIcon />
+        </a>
+        <a href="https://www.facebook.com/slaquatic/" className="footer-social" target="_blank" rel="noopener noreferrer" aria-label="Shoreline Aquatics on Facebook">
+          <FacebookIcon />
+        </a>
       </div>
     </div>
     <div className="footer-col">
@@ -44,7 +69,7 @@ export function HomeFooter() {
     </div>
   </div>
   <div className="footer-bottom">
-    <span>© 2026 Shoreline Aquatics LLC · Hickory Creek, TX · All rights reserved</span>
+    <span>© 2026 Shoreline Aquatics LLC · {LAUNCH_ADDRESS} · All rights reserved</span>
     <span><a href="./privacy-policy/">Privacy Policy</a></span>
   </div>
 </footer>

@@ -1,5 +1,6 @@
 'use client';
 
+import { mediaUrl } from '../../../lib/media';
 
 export function HomeFleetSection() {
   return (
@@ -18,9 +19,10 @@ export function HomeFleetSection() {
     <div className="fleet-grid">
       <div className="fleet-card" id="jetski">
         <div className="fleet-media fleet-slider">
-          <img className="slide active" loading="lazy" decoding="async" src="./assets/images/shoreline-customer-duo.png" alt="Two riders cheering on a Yamaha jet ski at Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-customer-riders.png" alt="Customers riding jet skis on Lake Lewisville" />
-          <img className="slide" loading="lazy" decoding="async" src="./assets/images/shoreline-customer-group-wide.png" alt="Shoreline group getting ready on Yamaha jet skis" />
+          <img className="slide active" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4856.webp')} alt="Customers on Yamaha jet skis at sunset on Lake Lewisville" />
+          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4198.webp')} alt="Customer riding a Yamaha jet ski on Lake Lewisville" />
+          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-e1efe821-ce35-4bb6-9bcf-46ea25bf784e.webp')} alt="Shoreline Aquatics jet ski customers on the water" />
+          <img className="slide" loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-jetski-rentals-action-20260630.webp')} alt="Shoreline Aquatics Yamaha jet skis cruising on Lake Lewisville" />
           <button className="slider-arrow prev" type="button" aria-label="Previous photo">‹</button>
           <button className="slider-arrow next" type="button" aria-label="Next photo">›</button>
           <div className="slider-dots" />
@@ -51,7 +53,7 @@ export function HomeFleetSection() {
       </div>
       <div className="fleet-card" id="boat">
         <div className="fleet-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Luxury tritoon on Lake Lewisville seating up to 14 guests" />
+          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-pontoon-crop-final.png')} alt="Luxury tritoon on Lake Lewisville seating up to 14 guests" />
         </div>
         <div className="fleet-body">
           <div className="fleet-badge">Starcraft Tritoon · Seats Up to 14</div>
@@ -62,14 +64,14 @@ export function HomeFleetSection() {
               <div className="fleet-stat-value">$160/hr</div>
             </div>
           </div>
-          <p className="fleet-desc">It's a <strong>Starcraft tritoon</strong> — three pontoons instead of two, so it rides smoother and faster than a regular pontoon. Seats up to 14 with cushioned loungers, Bluetooth speakers, and a shade top. Good for birthdays, bachelor and bachelorette trips, sandbar days, sunset cruises, and tubing. Comes with a captain.</p>
+          <p className="fleet-desc">It's a <strong>Starcraft tritoon</strong> — three pontoons instead of two, so it rides smoother and faster than a regular pontoon. Seats up to 14 with cushioned loungers, Bluetooth speakers, and a shade top. Good for birthdays, bachelor and bachelorette trips, sandbar days, sunset cruises, and floating. Comes with a captain.</p>
           <div className="fleet-perks">
             <span className="fleet-perk">Triple-Pontoon Tritoon</span>
             <span className="fleet-perk">Bluetooth Sound</span>
             <span className="fleet-perk">Seats up to 14</span>
             <span className="fleet-perk">Captain Included</span>
             <span className="fleet-perk">Loungers &amp; Shade</span>
-            <span className="fleet-perk">Tubing-Ready</span>
+            <span className="fleet-perk">Pool Tube Add-On</span>
           </div>
           <div className="fleet-actions">
             <a href="./jetski-booking/?type=boat&craft=partyboat" className="btn-primary">Book the Boat</a>
@@ -80,10 +82,10 @@ export function HomeFleetSection() {
     <div className="bundle-highlight">
       <div className="bundle-media-stack">
         <div className="bundle-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-pontoon-crop-final.png" alt="Pontoon boat on the water ready for a Shoreline group day" />
+          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-pontoon-crop-final.png')} alt="Pontoon boat on the water ready for a Shoreline group day" />
         </div>
         <div className="bundle-media">
-          <img loading="lazy" decoding="async" src="./assets/images/shoreline-customer-duo.png" alt="Shoreline riders enjoying a Yamaha jet ski on Lake Lewisville" />
+          <img loading="lazy" decoding="async" src={mediaUrl('site/images/shoreline-aquatics-img-4197.webp')} alt="Shoreline riders enjoying Yamaha jet skis on Lake Lewisville" />
         </div>
       </div>
       <div className="bundle-copy">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { LAUNCH_LOCATION_LABEL } from '../../lib/launch-info';
 
 type WaiverPayload = {
   acceptedRisk: boolean;
@@ -157,8 +158,8 @@ function createConfirmationController(signal: AbortSignal) {
     `Party size: ${booking.partySize || 'Not provided'}`,
     `Aerial drone coverage: ${booking.drone ? 'Yes' : 'No'}`,
     `Karaoke setup: ${booking.karaoke ? 'Yes' : 'No'}`,
-    `Towable tube: ${booking.tube ? 'Yes' : 'No'}`,
-    `Meeting spot: ${booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX'}`,
+    `Pool tube: ${booking.tube ? 'Yes' : 'No'}`,
+    `Meeting spot: ${booking.location || LAUNCH_LOCATION_LABEL}`,
     `Quoted total: $${Number(booking.total || 0).toLocaleString()}`,
     `Booking payment: ${booking.paymentStatus === 'paid' || booking.deposit ? '$55 paid ($50 deposit + $5 processing fee)' : '$55 due today ($50 deposit + $5 processing fee)'}`,
     `Notes: ${booking.notes || 'None'}`
@@ -175,7 +176,7 @@ function createConfirmationController(signal: AbortSignal) {
         : 'Your Yamaha jet ski rental is ready for the contact, waiver, and checkout step.');
     setText('summary-date', formatDateLabel(booking.date));
     setText('summary-time', formatTimeLabel(booking.time));
-    setText('summary-location', booking.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX');
+    setText('summary-location', booking.location || LAUNCH_LOCATION_LABEL);
     setText('summary-party', String(booking.partySize || '2'));
   };
 
@@ -236,7 +237,7 @@ function createConfirmationController(signal: AbortSignal) {
       name: input('name')?.value.trim() || '',
       phone: input('phone')?.value.trim() || '',
       email: input('email')?.value.trim() || '',
-      location: base?.location || 'Shoreline Aquatics launch - Point Vista Rd, Hickory Creek, TX',
+      location: base?.location || LAUNCH_LOCATION_LABEL,
       contactMethod: base?.contactMethod || matchedCustomer?.contactMethod || 'text',
       partySize: input('party-size')?.value || '',
       notes: byId<HTMLTextAreaElement>('notes')?.value.trim() || '',

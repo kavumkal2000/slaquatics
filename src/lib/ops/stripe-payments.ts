@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import { assertPublicSlotAvailable, priceForSelection, publicBookingPayload } from './public-api.ts';
 import { sendResendEmail } from './outbound.ts';
+import { renderBookingConfirmationEmail } from './email-templates.ts';
+import { LAUNCH_LOCATION_LABEL, LAUNCH_MAPS_URL, arrivalDirectionsText } from '../launch-info.ts';
 import type { OpsState } from './default-state.ts';
 
 const BOOKING_DEPOSIT_CENTS = 5000;
@@ -150,7 +152,7 @@ export function upsertCheckoutBooking(state: OpsState, payload: Record<string, a
     tubeAmount: pricing.tubeAmount,
     date: String(payload.date || '').trim(),
     time: String(payload.time || '').trim(),
-    location: String(payload.location || '').trim(),
+    location: String(payload.location || LAUNCH_LOCATION_LABEL).trim(),
     contactMethod: String(payload.contactMethod || 'text').trim(),
     partySize: String(payload.partySize || '').trim(),
     notes: String(payload.notes || '').trim(),
@@ -287,11 +289,20 @@ export async function sendBookingConfirmationEmail(state: OpsState, booking: any
     `Date: ${booking.date || ''}`,
     `Time: ${booking.time || ''}`,
     `Amount paid today: $${Number(booking.amountDueToday || 55).toFixed(2)}`,
+    `Meeting spot: ${booking.location || LAUNCH_LOCATION_LABEL}`,
+    `Maps: ${LAUNCH_MAPS_URL}`,
+    '',
+    'Point Vista Park Directions:',
+    arrivalDirectionsText(),
     '',
     'We will see you at the launch.'
   ];
   const text = lines.join('\n');
-  const html = `<p>${lines.map((line) => line || '<br>').join('</p><p>')}</p>`;
+  const html = renderBookingConfirmationEmail({
+    booking,
+    mapsUrl: LAUNCH_MAPS_URL,
+    directions: arrivalDirectionsText()
+  });
   const result = await sendResendEmail({
     to: booking.email,
     subject,

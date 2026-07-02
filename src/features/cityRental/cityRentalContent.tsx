@@ -71,7 +71,7 @@ export const cityRentalPages = {
     ],
     drive: {
       heading: 'The drive from Denton',
-      copy: 'From downtown Denton or UNT, Lake Lewisville is a short ~20–25 minute drive south down I-35E to the Hickory Creek launch at Point Vista Rd. It’s the closest open-water jet ski option for most Denton groups — no trailering, no boat ramp hassle, just show up and ride.'
+      copy: 'From downtown Denton or UNT, Lake Lewisville is a short ~20-25 minute drive south down I-35E to the Hickory Creek launch at Point Vista Rd, Hickory Creek, TX 75065, United States. Shoreline rents daily from 10 AM to 8 PM.'
     },
     pricingItems: [
       { heading: '2–4 Yamaha jet skis', copy: 'From $59/hr per ski on full-day blocks. Pick 2, 3, or 4 for your group.' },
@@ -118,7 +118,7 @@ export const cityRentalPages = {
     ],
     drive: {
       heading: 'The drive from Frisco',
-      copy: 'From The Star or downtown Frisco, the Hickory Creek launch on Lake Lewisville is roughly a 30–35 minute drive west via SH-121 and I-35E to Point Vista Rd. It’s the easiest open-water jet ski day for Frisco groups — skip the long haul to a busier lake and ride closer to home.'
+      copy: 'From The Star or downtown Frisco, the Hickory Creek launch on Lake Lewisville is roughly a 30-35 minute drive west via SH-121 and I-35E to Point Vista Rd, Hickory Creek, TX 75065, United States. Shoreline rents daily from 10 AM to 8 PM.'
     },
     pricingItems: [
       { heading: '2–4 Yamaha jet skis', copy: 'From $59/hr per ski on full-day blocks. Pick 2, 3, or 4 for your group.' },
@@ -165,7 +165,7 @@ export const cityRentalPages = {
     ],
     drive: {
       heading: 'Right on Lake Lewisville',
-      copy: 'Shoreline launches from the Hickory Creek side of Lake Lewisville at Point Vista Rd — about a 10–15 minute drive for most Lewisville residents. It’s the closest jet ski rental to home, so you spend the day on the water instead of towing a trailer across the metroplex.'
+      copy: 'Shoreline launches from the Hickory Creek side of Lake Lewisville at Point Vista Rd, Hickory Creek, TX 75065, United States, about a 10-15 minute drive for most Lewisville residents. Shoreline rents daily from 10 AM to 8 PM.'
     },
     pricingItems: [
       { heading: '2–4 Yamaha jet skis', copy: 'From $59/hr per ski on full-day blocks. Pick 2, 3, or 4 for your group.' },
