@@ -230,7 +230,12 @@ function createOpsLoginController(signal: AbortSignal) {
         signal
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Sign-in failed');
+      if (!response.ok) {
+        const details = [data.error || 'Sign-in failed', data.code ? `[${data.code}]` : '', data.reason || '']
+          .filter(Boolean)
+          .join(' ');
+        throw new Error(details);
+      }
       if (data.user?.role === 'client') {
         if (data.clientPassword?.shouldPrompt) {
           showClientPasswordPrompt();

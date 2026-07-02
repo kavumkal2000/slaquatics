@@ -728,6 +728,8 @@ test('/api/auth login handles empty payloads as credential failures instead of p
 
     assert.equal(login.status, 401);
     assert.equal(payload.error, 'Incorrect username or password.');
+    assert.equal(payload.code, 'AUTH_LOGIN_BAD_CREDENTIALS');
+    assert.match(payload.reason, /No enabled password user matched/);
   });
 });
 
@@ -746,6 +748,8 @@ test('/api/auth login rejects default credentials when ops secrets are not confi
   }));
 
   assert.equal(login.status, 401);
+  const payload = await responseJson(login);
+  assert.equal(payload.code, 'AUTH_LOGIN_BAD_CREDENTIALS');
   if (previousDevPassword === undefined) delete process.env.OPS_DEV_PASSWORD;
   else process.env.OPS_DEV_PASSWORD = previousDevPassword;
   if (previousOpsPassword === undefined) delete process.env.OPS_PASSWORD;

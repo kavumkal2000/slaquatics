@@ -65,7 +65,7 @@ export async function authRateLimit(request: Request, options: {
 
   try {
     const store = await getOpsAuthStore();
-    return store.incrementRateLimit({ key, limit: options.limit, windowMs });
+    return await store.incrementRateLimit({ key, limit: options.limit, windowMs });
   } catch {
     return localRateLimit(key, options.limit, windowMs);
   }

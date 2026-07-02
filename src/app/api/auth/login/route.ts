@@ -20,6 +20,10 @@ type LoginBody = {
   turnstileToken: string;
 };
 
+function loginErrorPayload(error: string, code: string, reason: string) {
+  return { error, code, reason };
+}
+
 function stringField(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
@@ -58,8 +62,17 @@ async function parseLoginBody(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let body: LoginBody;
   try {
-    const body = await parseLoginBody(request);
+    body = await parseLoginBody(request);
+  } catch {
+    return jsonResponse(
+      loginErrorPayload('Invalid login payload.', 'AUTH_LOGIN_INVALID_PAYLOAD', 'The request body could not be read as JSON, form data, or URL-encoded form data.'),
+      { status: 400, headers: { 'Set-Cookie': clearSessionCookie() } }
+    );
+  }
+
+  try {
     const rateKey = loginRateKey(request, body.username);
     const throttle = await authRateLimit(request, {
       scope: 'auth-login',
@@ -70,26 +83,32 @@ export async function POST(request: Request) {
     });
     if (!throttle.allowed) {
       return jsonResponse(
-        { error: 'Too many login attempts. Please try again shortly.' },
+        loginErrorPayload('Too many login attempts. Please try again shortly.', 'AUTH_LOGIN_RATE_LIMITED', 'The username and client address exceeded the auth rate limit window.'),
         { status: 429, headers: rateLimitHeaders(throttle) }
       );
     }
     const lockMs = loginLockRemainingMs(rateKey);
     if (lockMs > 0) {
       return jsonResponse(
-        { error: `Too many attempts. Try again in ${Math.ceil(lockMs / 60000)} minute(s).` },
+        loginErrorPayload(`Too many attempts. Try again in ${Math.ceil(lockMs / 60000)} minute(s).`, 'AUTH_LOGIN_LOCKED', 'This username and client address is temporarily locked after repeated failed credential checks.'),
         { status: 429 }
       );
     }
     const turnstile = await verifyTurnstileToken(request, body.turnstileToken);
     if (!turnstile.ok) {
       registerLoginFailure(rateKey);
-      return jsonResponse({ error: turnstile.error || 'Security check failed.' }, { status: 403 });
+      return jsonResponse(
+        loginErrorPayload(turnstile.error || 'Security check failed.', 'AUTH_LOGIN_TURNSTILE_FAILED', 'Turnstile did not validate this login attempt.'),
+        { status: 403 }
+      );
     }
     const resolvedUser = await findOpsUser(body.username, body.password);
     if (!resolvedUser) {
       registerLoginFailure(rateKey);
-      return jsonResponse({ error: 'Incorrect username or password.' }, { status: 401 });
+      return jsonResponse(
+        loginErrorPayload('Incorrect username or password.', 'AUTH_LOGIN_BAD_CREDENTIALS', 'No enabled password user matched the submitted username and password.'),
+        { status: 401 }
+      );
     }
     clearLoginFailures(rateKey);
     const passkey = await passkeyStatusForUser(resolvedUser);
@@ -100,8 +119,8 @@ export async function POST(request: Request) {
     );
   } catch {
     return jsonResponse(
-      { error: 'Invalid login payload.' },
-      { status: 400, headers: { 'Set-Cookie': clearSessionCookie() } }
+      loginErrorPayload('Authentication service is unavailable. Please try again shortly.', 'AUTH_LOGIN_SERVICE_ERROR', 'A server-side auth dependency failed before credentials could be checked.'),
+      { status: 503, headers: { 'Set-Cookie': clearSessionCookie() } }
     );
   }
 }
