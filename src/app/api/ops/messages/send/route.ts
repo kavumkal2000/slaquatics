@@ -8,7 +8,7 @@ function outboundEmailHtml({ subject, body, audienceLabel }: any) {
 }
 
 export async function POST(request: Request) {
-  const auth = requireMessagingSession(request, 'This login cannot send CRM messages.');
+  const auth = await requireMessagingSession(request, 'This login cannot send CRM messages.');
   if (auth.response) return auth.response;
 
   try {

@@ -3,7 +3,7 @@ import { requireMessagingSession } from '../../../../../lib/ops/api-auth.ts';
 import { sendOwnerWeeklyDigest } from '../../../../../lib/ops/owner-weekly-digest.ts';
 
 export async function POST(request: Request) {
-  const auth = requireMessagingSession(request, 'This login cannot send owner updates.');
+  const auth = await requireMessagingSession(request, 'This login cannot send owner updates.');
   if (auth.response) return auth.response;
 
   try {

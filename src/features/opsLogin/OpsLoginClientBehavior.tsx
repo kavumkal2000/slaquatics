@@ -45,12 +45,23 @@ function createOpsUrl(path: string) {
 
 function createOpsLoginController(signal: AbortSignal) {
   const form = byId<HTMLFormElement>('login-form');
+  const clientLinkForm = byId<HTMLFormElement>('client-magic-link-form');
   const status = byId('status');
   const submit = byId<HTMLButtonElement>('submit-btn');
+  const clientLinkBtn = byId<HTMLButtonElement>('client-link-btn');
+  const passkeyLoginBtn = byId<HTMLButtonElement>('passkey-login-btn');
+  const passkeyRegisterBtn = byId<HTMLButtonElement>('passkey-register-btn');
   const username = byId<HTMLInputElement>('username');
   const password = byId<HTMLInputElement>('password');
+  const clientEmail = byId<HTMLInputElement>('client-email');
+  const turnstileSlot = byId('turnstile-slot');
   const opsAppUrl = createOpsUrl('ops');
   const opsLoginUrl = createOpsUrl('ops-login');
+  let turnstileToken = '';
+  let authConfig = {
+    magicLinkConfigured: false,
+    turnstileSiteKey: ''
+  };
 
   if (window.location.protocol === 'file:') {
     window.location.replace(opsLoginUrl);
@@ -64,6 +75,67 @@ function createOpsLoginController(signal: AbortSignal) {
   };
   const setBusy = (isBusy: boolean) => {
     if (submit) submit.disabled = isBusy;
+  };
+  const setClientBusy = (isBusy: boolean) => {
+    if (clientLinkBtn) clientLinkBtn.disabled = isBusy;
+  };
+  const setPasskeyBusy = (isBusy: boolean) => {
+    if (passkeyLoginBtn) passkeyLoginBtn.disabled = isBusy;
+    if (passkeyRegisterBtn) passkeyRegisterBtn.disabled = isBusy;
+  };
+
+  const resetTurnstile = () => {
+    const turnstile = (window as any).turnstile;
+    if (turnstile?.reset && turnstileSlot && turnstileSlot.dataset.widgetId) {
+      turnstile.reset(turnstileSlot.dataset.widgetId);
+      turnstileToken = '';
+    }
+  };
+
+  const loadTurnstileScript = () => new Promise<void>((resolve, reject) => {
+    if ((window as any).turnstile) { resolve(); return; }
+    const existing = document.querySelector<HTMLScriptElement>('script[data-turnstile-loader="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true, signal });
+      existing.addEventListener('error', () => reject(new Error('Security check could not load.')), { once: true, signal });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.dataset.turnstileLoader = 'true';
+    script.addEventListener('load', () => resolve(), { once: true, signal });
+    script.addEventListener('error', () => reject(new Error('Security check could not load.')), { once: true, signal });
+    document.head.append(script);
+  });
+
+  const renderTurnstile = async () => {
+    if (!authConfig.turnstileSiteKey || !turnstileSlot || turnstileSlot.dataset.widgetId) return;
+    turnstileSlot.hidden = false;
+    await loadTurnstileScript();
+    const turnstile = (window as any).turnstile;
+    if (!turnstile?.render) return;
+    const widgetId = turnstile.render(turnstileSlot, {
+      sitekey: authConfig.turnstileSiteKey,
+      callback(token: string) {
+        turnstileToken = token;
+      },
+      'expired-callback'() {
+        turnstileToken = '';
+      },
+      'error-callback'() {
+        turnstileToken = '';
+      }
+    });
+    turnstileSlot.dataset.widgetId = String(widgetId);
+  };
+
+  const requireTurnstileToken = () => {
+    if (!authConfig.turnstileSiteKey) return true;
+    if (turnstileToken) return true;
+    setStatus('Complete the security check before signing in.', 'error');
+    return false;
   };
 
   if (isNativeOpsApp()) {
@@ -100,6 +172,14 @@ function createOpsLoginController(signal: AbortSignal) {
         window.location.replace(opsAppUrl);
         return;
       }
+      authConfig = {
+        magicLinkConfigured: Boolean(data.auth?.magicLinkConfigured),
+        turnstileSiteKey: String(data.auth?.turnstileSiteKey || '')
+      };
+      await renderTurnstile().catch((error) => {
+        console.error(error);
+        setStatus('Security check could not load. Try again shortly.', 'error');
+      });
       setStatus('Private service ready. Sign in with your Shoreline ops login.', 'success');
     } catch {
       setStatus('Could not reach the private ops service yet. Verify the local dev server, Cloudflare preview, and required environment bindings.', 'error');
@@ -108,6 +188,7 @@ function createOpsLoginController(signal: AbortSignal) {
   };
 
   const submitLogin = async () => {
+    if (!requireTurnstileToken()) return;
     setBusy(true);
     setStatus('Signing in...');
     try {
@@ -115,17 +196,103 @@ function createOpsLoginController(signal: AbortSignal) {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username?.value || '', password: password?.value || '' }),
+        body: JSON.stringify({ username: username?.value || '', password: password?.value || '', turnstileToken }),
         signal
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Sign-in failed');
+      if (data.passkey?.shouldPrompt && passkeyRegisterBtn) {
+        passkeyRegisterBtn.hidden = false;
+        setStatus('Password accepted. Set up a passkey to secure the owner account.', 'success');
+        setBusy(false);
+        return;
+      }
       setStatus('Access granted. Opening Shoreline ops...', 'success');
       window.location.replace(opsAppUrl);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Sign-in failed', 'error');
+      resetTurnstile();
       setBusy(false);
       if (password?.value) password.select();
+    }
+  };
+
+  const registerPasskey = async () => {
+    setPasskeyBusy(true);
+    setStatus('Opening passkey setup...');
+    try {
+      const { startRegistration } = await import('@simplewebauthn/browser');
+      const optionsResponse = await fetch('/api/auth/passkey/register/options', { credentials: 'same-origin', signal });
+      const optionsPayload = await optionsResponse.json().catch(() => ({}));
+      if (!optionsResponse.ok) throw new Error(optionsPayload.error || 'Could not start passkey setup.');
+      const credential = await startRegistration({ optionsJSON: optionsPayload.options });
+      const response = await fetch('/api/auth/passkey/register/verify', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credential),
+        signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not verify the passkey.');
+      setStatus('Passkey secured. Opening Shoreline ops...', 'success');
+      window.location.replace(opsAppUrl);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Passkey setup failed', 'error');
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
+
+  const loginWithPasskey = async () => {
+    setPasskeyBusy(true);
+    setStatus('Opening passkey sign-in...');
+    try {
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+      const optionsResponse = await fetch('/api/auth/passkey/login/options', { credentials: 'same-origin', signal });
+      const optionsPayload = await optionsResponse.json().catch(() => ({}));
+      if (!optionsResponse.ok) throw new Error(optionsPayload.error || 'Could not start passkey sign-in.');
+      const credential = await startAuthentication({ optionsJSON: optionsPayload.options });
+      const response = await fetch('/api/auth/passkey/login/verify', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credential),
+        signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Passkey sign-in failed.');
+      setStatus('Access granted. Opening Shoreline ops...', 'success');
+      window.location.replace(opsAppUrl);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Passkey sign-in failed', 'error');
+    } finally {
+      setPasskeyBusy(false);
+    }
+  };
+
+  const sendClientMagicLink = async () => {
+    if (!requireTurnstileToken()) return;
+    setClientBusy(true);
+    setStatus('Sending secure sign-in link...');
+    try {
+      const response = await fetch('/api/auth/client/magic-link', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clientEmail?.value || '', turnstileToken }),
+        signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not send the sign-in link.');
+      setStatus('Check your email for a secure sign-in link.', 'success');
+      if (clientEmail) clientEmail.value = '';
+      resetTurnstile();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not send the sign-in link.', 'error');
+      resetTurnstile();
+    } finally {
+      setClientBusy(false);
     }
   };
 
@@ -133,6 +300,12 @@ function createOpsLoginController(signal: AbortSignal) {
     event.preventDefault();
     void submitLogin();
   }, { signal });
+  clientLinkForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void sendClientMagicLink();
+  }, { signal });
+  passkeyRegisterBtn?.addEventListener('click', () => { void registerPasskey(); }, { signal });
+  passkeyLoginBtn?.addEventListener('click', () => { void loginWithPasskey(); }, { signal });
 
   if ('serviceWorker' in navigator && !isNativeOpsApp()) {
     window.addEventListener('load', () => {

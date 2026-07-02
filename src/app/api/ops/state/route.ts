@@ -77,7 +77,7 @@ function mergeServerOwnedCommunications(currentLog: any[] = [], incomingLog: any
 function normalizeRole(session: any) {
   const role = String(session?.role || '').trim().toLowerCase();
   if (role === 'developer' || role === 'owner' || role === 'employee' || role === 'crew') return role;
-  return 'owner';
+  return 'none';
 }
 
 function pickFields(record: any = {}, fields: string[]) {
@@ -183,8 +183,9 @@ function isOpsStateConflict(error: unknown) {
 }
 
 export async function GET(request: Request) {
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return unauthorized();
+  if (normalizeRole(session) === 'none') return jsonResponse({ error: 'Ops access required.' }, { status: 403 });
   const state = await readOpsState();
   const invoiceChanged = syncBookingsFromInvoices(state);
   const customerChanged = syncCustomersFromBookings(state);
@@ -196,11 +197,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const originError = sameOriginMutationError(request);
   if (originError) return originError;
-  const session = getSession(request);
+  const session = await getSession(request);
   if (!session) return unauthorized();
   const body = await request.json();
   const currentState = await readOpsState();
   const role = normalizeRole(session);
+  if (role === 'none') return jsonResponse({ error: 'Ops access required.' }, { status: 403 });
   const nextState = role === 'crew'
     ? mergeCrewState(currentState, body)
     : role === 'employee'

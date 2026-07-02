@@ -615,7 +615,10 @@ test('/api/auth login, session, logout, and /api/ops/state use signed same-origi
   const state = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
     headers: { cookie }
   })));
-  const logout = await logoutRoute.POST();
+  const logout = await logoutRoute.POST(new Request('https://slaquatics.test/api/auth/logout', {
+    method: 'POST',
+    headers: { cookie }
+  }));
 
   assert.equal(session.authenticated, true);
   assert.equal(session.user.role, 'developer');
@@ -681,21 +684,218 @@ test('/api/auth login locks repeated failures for the same user and client', asy
 });
 
 test('/api/auth cookies include Secure in production mode', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  try {
+    await withEnv({
+      NODE_ENV: 'production',
+      SESSION_SECRET: 'secure-cookie-session-secret',
+      OPS_DEV_PASSWORD: 'secure-cookie-password',
+      TURNSTILE_SECRET_KEY: 'turnstile-production-secret'
+    }, async () => {
+      const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=secure-cookie-login-${Date.now()}`);
+      const logoutRoute = await import(`../../src/app/api/auth/logout/route.ts?case=secure-cookie-logout-${Date.now()}`);
+      const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'developer', password: 'secure-cookie-password', turnstileToken: 'valid-token' })
+      }));
+      const logout = await logoutRoute.POST(new Request('https://slaquatics.test/api/auth/logout', {
+        method: 'POST',
+        headers: { cookie: login.headers.get('set-cookie') || '' }
+      }));
+
+      assert.match(login.headers.get('set-cookie') || '', /;\s*Secure(?:;|$)/);
+      assert.match(logout.headers.get('set-cookie') || '', /;\s*Secure(?:;|$)/);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('/api/auth login fails closed in production when Turnstile is not configured', async () => {
   await withEnv({
     NODE_ENV: 'production',
-    SESSION_SECRET: 'secure-cookie-session-secret',
-    OPS_DEV_PASSWORD: 'secure-cookie-password'
+    SESSION_SECRET: 'production-turnstile-session-secret',
+    OPS_DEV_PASSWORD: 'production-turnstile-password',
+    TURNSTILE_SECRET_KEY: undefined
   }, async () => {
-    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=secure-cookie-login-${Date.now()}`);
-    const logoutRoute = await import(`../../src/app/api/auth/logout/route.ts?case=secure-cookie-logout-${Date.now()}`);
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=prod-turnstile-missing-${Date.now()}`);
+    const login = await responseJson(await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'production-turnstile-password' })
+    })));
+
+    assert.equal(login.error, 'Security check is not configured.');
+  });
+});
+
+test('/api/auth client magic-link sends a single-use Resend link and consumes it into a revokable client session', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: 'email_magic_link_1' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({
+      RESEND_API_KEY: 're_magic_link',
+      RESEND_FROM_EMAIL: 'dock@slaquatics.test',
+      TURNSTILE_SECRET_KEY: undefined
+    }, async () => {
+      const magicRoute = await import(`../../src/app/api/auth/client/magic-link/route.ts?case=magic-send-${Date.now()}`);
+      const consumeRoute = await import(`../../src/app/api/auth/magic-link/consume/route.ts?case=magic-consume-${Date.now()}`);
+      const sessionRoute = await import(`../../src/app/api/auth/session/route.ts?case=magic-session-${Date.now()}`);
+      const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=magic-client-state-${Date.now()}`);
+
+      const send = await responseJson(await magicRoute.POST(new Request('https://slaquatics.test/api/auth/client/magic-link', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'Client.User+Lake@example.com' })
+      })));
+      const emailBody = JSON.parse(String(requests[0].init.body));
+      const link = String(emailBody.html.match(/https:\/\/slaquatics\.test\/api\/auth\/magic-link\/consume\?token=[^"]+/)?.[0] || '').replace(/&amp;/g, '&');
+      const token = new URL(link).searchParams.get('token') || '';
+
+      assert.equal(send.ok, true);
+      assert.equal(requests.length, 1);
+      assert.equal(emailBody.to[0], 'client.user+lake@example.com');
+      assert.match(emailBody.subject, /sign-in link/i);
+      assert.ok(token.length > 40);
+      assert.equal(emailBody.html.includes(token), true);
+
+      const consume = await consumeRoute.GET(new Request(link));
+      const cookie = consume.headers.get('set-cookie') || '';
+      assert.equal(consume.status, 303);
+      assert.match(cookie, /sla_ops_session=/);
+
+      const session = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
+        headers: { cookie }
+      })));
+      const opsState = await responseJson(await stateRoute.GET(new Request('https://slaquatics.test/api/ops/state', {
+        headers: { cookie }
+      })));
+      const replay = await consumeRoute.GET(new Request(link));
+
+      assert.equal(session.authenticated, true);
+      assert.equal(session.user.role, 'client');
+      assert.equal(session.passkey.required, false);
+      assert.equal(opsState.error, 'Ops access required.');
+      assert.equal(replay.status, 303);
+      assert.match(replay.headers.get('location') || '', /auth_error=magic-link-invalid/);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('/api/auth legacy oauth route is disabled while first-party Resend magic links are active', async () => {
+  await withEnv({
+    TURNSTILE_SECRET_KEY: undefined
+  }, async () => {
+    const oauthRoute = await import(`../../src/app/api/auth/oauth/start/route.ts?case=oauth-unconfigured-${Date.now()}`);
+    const magicRoute = await import(`../../src/app/api/auth/client/magic-link/route.ts?case=magic-unconfigured-${Date.now()}`);
+
+    const oauth = await responseJson(await oauthRoute.POST(new Request('https://slaquatics.test/api/auth/oauth/start', {
+      method: 'POST',
+      body: JSON.stringify({ provider: 'google' })
+    })));
+    const magic = await responseJson(await magicRoute.POST(new Request('https://slaquatics.test/api/auth/client/magic-link', {
+      method: 'POST',
+      body: JSON.stringify({ email: 'client@example.com' })
+    })));
+
+    assert.equal(oauth.error, 'OAuth sign-in is disabled.');
+    assert.equal(magic.error, 'Resend email is not configured yet.');
+  });
+});
+
+test('/api/auth session exposes owner passkey enrollment state after password login', async () => {
+  await withEnv({
+    SESSION_SECRET: 'owner-passkey-session-secret',
+    OPS_OWNER_PASSWORD: 'owner-passkey-password',
+    OWNER_PASSKEY_GRACE_SECONDS: '604800'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=owner-passkey-login-${Date.now()}`);
+    const sessionRoute = await import(`../../src/app/api/auth/session/route.ts?case=owner-passkey-session-${Date.now()}`);
+
     const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username: 'developer', password: 'secure-cookie-password' })
+      body: JSON.stringify({ username: 'owner', password: 'owner-passkey-password' })
     }));
-    const logout = await logoutRoute.POST();
+    const payload = await responseJson(login);
+    const session = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
+      headers: { cookie: login.headers.get('set-cookie') || '' }
+    })));
 
-    assert.match(login.headers.get('set-cookie') || '', /;\s*Secure(?:;|$)/);
-    assert.match(logout.headers.get('set-cookie') || '', /;\s*Secure(?:;|$)/);
+    assert.equal(login.status, 200);
+    assert.equal(payload.user.role, 'owner');
+    assert.equal(payload.passkey.required, true);
+    assert.equal(payload.passkey.enrolled, false);
+    assert.equal(payload.passkey.shouldPrompt, true);
+    assert.equal(session.passkey.required, true);
+    assert.equal(session.passkey.enrolled, false);
+    assert.match(session.passkey.graceEndsAt, /^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+test('/api/auth passkey registration options require an owner/admin session and persist a challenge', async () => {
+  await withEnv({
+    SESSION_SECRET: 'passkey-options-session-secret',
+    OPS_OWNER_PASSWORD: 'passkey-options-password'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=passkey-options-login-${Date.now()}`);
+    const route = await import(`../../src/app/api/auth/passkey/register/options/route.ts?case=passkey-options-${Date.now()}`);
+    const login = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'owner', password: 'passkey-options-password' })
+    }));
+    const unauthorized = await responseJson(await route.GET(new Request('https://slaquatics.test/api/auth/passkey/register/options')));
+    const response = await route.GET(new Request('https://slaquatics.test/api/auth/passkey/register/options', {
+      headers: { cookie: login.headers.get('set-cookie') || '' }
+    }));
+    const payload = await responseJson(response);
+
+    assert.equal(unauthorized.error, 'Authentication required.');
+    assert.equal(response.status, 200);
+    assert.equal(payload.ok, true);
+    assert.equal(payload.options.rp.name, 'Shoreline Aquatics');
+    assert.equal(payload.options.user.name, 'owner');
+    assert.ok(String(payload.options.challenge || '').length >= 20);
+  });
+});
+
+test('passkey verification source delegates WebAuthn checks and updates counters', async () => {
+  const source = await import('node:fs/promises').then((fs) => fs.readFile(new URL('../../src/lib/ops/passkeys.ts', import.meta.url), 'utf8'));
+
+  assert.match(source, /verifyRegistrationResponse/);
+  assert.match(source, /expectedOrigin:\s*expectedOriginFor\(request\)/);
+  assert.match(source, /expectedRPID:\s*rpIDFor\(request\)/);
+  assert.match(source, /requireUserVerification:\s*true/);
+  assert.match(source, /verifyAuthenticationResponse/);
+  assert.match(source, /store\.updatePasskeyCounter/);
+  assert.match(source, /authMethod:\s*'passkey'/);
+});
+
+test('/api/auth login requires Turnstile when the secret is configured', async () => {
+  await withEnv({
+    SESSION_SECRET: 'turnstile-login-session-secret',
+    OPS_DEV_PASSWORD: 'turnstile-real-password',
+    TURNSTILE_SECRET_KEY: 'turnstile-secret-for-test'
+  }, async () => {
+    const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=turnstile-required-${Date.now()}`);
+    const login = await responseJson(await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'turnstile-real-password' })
+    })));
+
+    assert.equal(login.error, 'Security check required.');
   });
 });
 
@@ -737,8 +937,13 @@ test('/api/ops/system/health is developer-only and reports configured integratio
     assert.equal(developerHealth.ok, true);
     assert.equal(developerHealth.runtime.storage, 'memory');
     assert.equal(developerHealth.runtime.sessionSecretSet, true);
-    assert.equal(developerHealth.auth.ok, true);
-    assert.deepEqual(developerHealth.auth.warnings, []);
+    assert.equal(developerHealth.auth.ok, false);
+    assert.equal(developerHealth.auth.storage, 'memory');
+    assert.equal(developerHealth.auth.d1Ready, true);
+    assert.equal(developerHealth.auth.magicLinkConfigured, true);
+    assert.equal(developerHealth.auth.turnstileConfigured, false);
+    assert.ok(developerHealth.auth.warnings.some((warning) => /Legacy env password fallback/.test(warning)));
+    assert.ok(developerHealth.auth.warnings.some((warning) => /TURNSTILE_SECRET_KEY is not set/.test(warning)));
     assert.equal(developerHealth.integrations.stripeConfigured, true);
     assert.equal(developerHealth.integrations.stripeWebhookConfigured, true);
     assert.equal(developerHealth.integrations.smsConfigured, true);
@@ -1324,9 +1529,9 @@ test('/api/ops/state filters employee and crew sessions and preserves hidden ser
   await withEnv({ SESSION_SECRET: 'state-role-session-secret' }, async () => {
     const { createSessionCookie } = await import(`../../src/lib/ops/auth.ts?case=roles-${Date.now()}`);
     const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=roles-${Date.now()}`);
-    const developerCookie = createSessionCookie({ username: 'developer', role: 'developer', displayName: 'Developer', password: '' });
-    const employeeCookie = createSessionCookie({ username: 'hugoprado', role: 'employee', displayName: 'Employee', password: '' });
-    const crewCookie = createSessionCookie({ username: 'crew', role: 'crew', displayName: 'Crew', password: '' });
+    const developerCookie = await createSessionCookie({ username: 'developer', role: 'developer', displayName: 'Developer', password: '' });
+    const employeeCookie = await createSessionCookie({ username: 'hugoprado', role: 'employee', displayName: 'Employee', password: '' });
+    const crewCookie = await createSessionCookie({ username: 'crew', role: 'crew', displayName: 'Crew', password: '' });
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',
@@ -1417,7 +1622,7 @@ test('/api/ops/state preserves server-owned digest metadata on full state writes
   await withEnv({ SESSION_SECRET: 'state-server-owned-session-secret' }, async () => {
     const { createSessionCookie } = await import(`../../src/lib/ops/auth.ts?case=server-owned-${Date.now()}`);
     const stateRoute = await import(`../../src/app/api/ops/state/route.ts?case=server-owned-${Date.now()}`);
-    const developerCookie = createSessionCookie({ username: 'developer', role: 'developer', displayName: 'Developer', password: '' });
+    const developerCookie = await createSessionCookie({ username: 'developer', role: 'developer', displayName: 'Developer', password: '' });
 
     await stateRoute.POST(new Request('https://slaquatics.test/api/ops/state', {
       method: 'POST',

@@ -5,7 +5,7 @@ import { readOpsState } from '../../../../../lib/ops/public-state.ts';
 import { reviewSettingsForState, reviewText, sendResendEmail, sendTwilioSms } from '../../../../../lib/ops/outbound.ts';
 
 export async function POST(request: Request) {
-  const auth = requireMessagingSession(request, 'This login cannot send review requests.');
+  const auth = await requireMessagingSession(request, 'This login cannot send review requests.');
   if (auth.response) return auth.response;
 
   try {

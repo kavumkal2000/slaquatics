@@ -2,6 +2,7 @@ export type D1DatabaseLike = {
   prepare(sql: string): {
     bind(...params: unknown[]): {
       first<T = unknown>(): Promise<T | null>;
+      all<T = unknown>(): Promise<{ results?: T[] }>;
       run(): Promise<unknown>;
     };
   };

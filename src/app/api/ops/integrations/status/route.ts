@@ -4,7 +4,8 @@ import { integrationStatus } from '../../../../../lib/cloudflare/integrations.ts
 import { readOpsState } from '../../../../../lib/ops/public-state.ts';
 
 export async function GET(request: Request) {
-  if (!getSession(request)) return jsonResponse({ error: 'Authentication required.' }, { status: 401 });
+  const session = await getSession(request);
+  if (!session || session.role === 'client') return jsonResponse({ error: 'Authentication required.' }, { status: 401 });
   const state = await readOpsState();
   const base = integrationStatus();
   const settings = state.reviewSettings || {};

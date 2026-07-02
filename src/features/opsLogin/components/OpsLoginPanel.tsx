@@ -13,8 +13,20 @@ export function OpsLoginPanel() {
             <label htmlFor="password">Password</label>
             <input id="password" name="password" type="password" autoComplete="current-password" placeholder="Enter your Shoreline ops password" required />
           </div>
+          <div className="turnstile-slot" id="turnstile-slot" hidden />
           <button className="submit" id="submit-btn" type="submit">Unlock Ops</button>
           <div className="status" id="status">Checking private service status...</div>
+        </form>
+        <div className="passkey-actions" id="passkey-actions">
+          <button className="secondary-action" id="passkey-login-btn" type="button">Use Passkey</button>
+          <button className="secondary-action" id="passkey-register-btn" type="button" hidden>Set Up Passkey</button>
+        </div>
+        <form className="client-link-form" id="client-magic-link-form">
+          <label htmlFor="client-email">Client email</label>
+          <div className="client-link-row">
+            <input id="client-email" name="client-email" type="email" autoComplete="email" placeholder="Send a secure sign-in link" />
+            <button className="secondary-action" id="client-link-btn" type="submit">Send Link</button>
+          </div>
         </form>
         <div className="support" id="support-copy">
           If the private CRM is unavailable, contact Shoreline support or your site administrator.

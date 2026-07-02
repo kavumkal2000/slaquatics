@@ -6,9 +6,12 @@ type AuthResult = {
   session?: any;
 };
 
-export function requireOpsSession(request: Request): AuthResult {
-  const session = getSession(request);
+export async function requireOpsSession(request: Request): Promise<AuthResult> {
+  const session = await getSession(request);
   if (!session) return { response: jsonResponse({ error: 'Authentication required.' }, { status: 401 }) };
+  if (String(session.role || '').toLowerCase() === 'client') {
+    return { response: jsonResponse({ error: 'Ops access required.' }, { status: 403 }) };
+  }
   return { session };
 }
 
@@ -30,10 +33,10 @@ export function sameOriginMutationError(request: Request) {
   return jsonResponse({ error: 'Invalid request origin.' }, { status: 403 });
 }
 
-export function requireMessagingSession(request: Request, message: string): AuthResult {
+export async function requireMessagingSession(request: Request, message: string): Promise<AuthResult> {
   const originError = sameOriginMutationError(request);
   if (originError) return { response: originError };
-  const auth = requireOpsSession(request);
+  const auth = await requireOpsSession(request);
   if (auth.response) return auth;
   if (!canManageMessagingOps(auth.session)) {
     return { response: jsonResponse({ error: message }, { status: 403 }) };

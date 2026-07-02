@@ -5,10 +5,12 @@ import {
   findOpsUser,
   loginLockRemainingMs,
   loginRateKey,
+  passkeyStatusForUser,
   registerLoginFailure,
   sessionUserPayload
 } from '../../../../lib/ops/auth.ts';
 import { jsonResponse } from '../../../../lib/cloudflare/http.ts';
+import { verifyTurnstileToken } from '../../../../lib/ops/turnstile.ts';
 
 export async function POST(request: Request) {
   try {
@@ -21,15 +23,21 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
-    const user = findOpsUser(body.username, body.password);
-    if (!user) {
+    const turnstile = await verifyTurnstileToken(request, body.turnstileToken || body['cf-turnstile-response'] || '');
+    if (!turnstile.ok) {
+      registerLoginFailure(rateKey);
+      return jsonResponse({ error: turnstile.error || 'Security check failed.' }, { status: 403 });
+    }
+    const resolvedUser = await findOpsUser(body.username, body.password);
+    if (!resolvedUser) {
       registerLoginFailure(rateKey);
       return jsonResponse({ error: 'Incorrect username or password.' }, { status: 401 });
     }
     clearLoginFailures(rateKey);
+    const passkey = await passkeyStatusForUser(resolvedUser);
     return jsonResponse(
-      { ok: true, user: sessionUserPayload(user) },
-      { headers: { 'Set-Cookie': createSessionCookie(user) } }
+      { ok: true, user: sessionUserPayload(resolvedUser), passkey },
+      { headers: { 'Set-Cookie': await createSessionCookie(resolvedUser, request) } }
     );
   } catch {
     return jsonResponse(
