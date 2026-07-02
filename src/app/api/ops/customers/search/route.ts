@@ -42,7 +42,7 @@ function customerPayload(customer: any = {}) {
 }
 
 export async function GET(request: Request) {
-  const auth = requireMessagingSession(request, 'This login cannot search CRM message recipients.');
+  const auth = await requireMessagingSession(request, 'This login cannot search CRM message recipients.');
   if (auth.response) return auth.response;
 
   const url = new URL(request.url);
