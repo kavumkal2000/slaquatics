@@ -13,21 +13,46 @@ import {
 import { jsonResponse } from '../../../../lib/cloudflare/http.ts';
 import { verifyTurnstileToken } from '../../../../lib/ops/turnstile.ts';
 
+type LoginBody = {
+  username: string;
+  password: string;
+  turnstileToken: string;
+};
+
+function stringField(value: unknown) {
+  return typeof value === 'string' ? value : '';
+}
+
+function objectFromSearchParams(rawBody: string) {
+  return Object.fromEntries(new URLSearchParams(rawBody).entries());
+}
+
+function normalizeLoginBody(value: unknown): LoginBody {
+  const body = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return {
+    username: stringField(body.username).trim(),
+    password: stringField(body.password),
+    turnstileToken: stringField(body.turnstileToken || body['cf-turnstile-response'])
+  };
+}
+
 async function parseLoginBody(request: Request) {
   const contentType = request.headers.get('content-type') || '';
   if (contentType.includes('multipart/form-data')) {
     const form = await request.formData();
-    return Object.fromEntries(form.entries());
+    return normalizeLoginBody(Object.fromEntries(form.entries()));
   }
   const rawBody = await request.text();
-  if (!rawBody.trim()) return {};
+  if (!rawBody.trim()) return normalizeLoginBody({});
   if (contentType.includes('application/x-www-form-urlencoded')) {
-    return Object.fromEntries(new URLSearchParams(rawBody).entries());
+    return normalizeLoginBody(objectFromSearchParams(rawBody));
   }
   try {
-    return JSON.parse(rawBody);
+    return normalizeLoginBody(JSON.parse(rawBody));
   } catch {
-    return Object.fromEntries(new URLSearchParams(rawBody).entries());
+    return normalizeLoginBody(objectFromSearchParams(rawBody));
   }
 }
 
@@ -42,7 +67,7 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
-    const turnstile = await verifyTurnstileToken(request, body.turnstileToken || body['cf-turnstile-response'] || '');
+    const turnstile = await verifyTurnstileToken(request, body.turnstileToken);
     if (!turnstile.ok) {
       registerLoginFailure(rateKey);
       return jsonResponse({ error: turnstile.error || 'Security check failed.' }, { status: 403 });
