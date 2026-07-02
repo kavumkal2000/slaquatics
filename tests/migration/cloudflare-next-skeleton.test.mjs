@@ -118,6 +118,11 @@ test('Wrangler defines split R2 media buckets and CDN domains per environment', 
 
   assert.match(wrangler, /\[env\.development\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.dev\.slaquatics\.com"/);
   assert.match(wrangler, /\[env\.production\.vars\][\s\S]*PUBLIC_MEDIA_BASE_URL = "https:\/\/cdn\.slaquatics\.com"/);
+  assert.match(wrangler, /\[env\.development\.placement\]\nmode = "smart"/);
+  assert.match(wrangler, /\[env\.production\.placement\]\nmode = "smart"/);
+  assert.match(wrangler, /\[\[env\.development\.routes\]\]\npattern = "dev\.slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.production\.routes\]\]\npattern = "slaquatics\.com"\ncustom_domain = true/);
+  assert.match(wrangler, /\[\[env\.production\.routes\]\]\npattern = "www\.slaquatics\.com"\ncustom_domain = true/);
   assert.match(wrangler, /\[\[env\.development\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-development"/);
   assert.match(wrangler, /\[\[env\.production\.r2_buckets\]\]\nbinding = "MEDIA_BUCKET"\nbucket_name = "slaquatics-media-production"/);
 });
@@ -215,8 +220,29 @@ test('iOS native wrapper uses canonical HTTPS ops host only', () => {
   assert.match(readme, /https:\/\/slaquatics\.com\/ops-login/);
 });
 
-test('GitHub Actions does not own Cloudflare Worker deploys', () => {
-  assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), false);
+test('GitHub Actions validates PRs and deploys Cloudflare Workers from protected branches', () => {
+  assert.equal(existsSync('.github/workflows/cloudflare-workers.yml'), true);
+  const workflow = readText('.github/workflows/cloudflare-workers.yml');
+
+  assert.match(workflow, /pull_request:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /push:\n\s+branches:\n\s+- development\n\s+- main/);
+  assert.match(workflow, /if: github\.event_name == 'push'/);
+  assert.match(workflow, /if: github\.event_name == 'pull_request' && github\.event\.pull_request\.base\.ref == 'development'/);
+  assert.match(workflow, /npm run check && npm run cf:build/);
+  assert.match(workflow, /npm run cf:upload:dev -- --preview-alias "pr-\$\{PR_NUMBER\}"/);  assert.match(workflow, /actions\/github-script@v8/);  assert.match(workflow, /Shoreline preview:/);
+  assert.match(workflow, /name: Restore production build cache\n\s+if: github\.ref_name == 'main'/);
+  assert.match(workflow, /path: \.next\/cache/);
+  assert.match(workflow, /key: next-production-/);
+  assert.match(workflow, /npm run cf:deploy:dev/);
+  assert.match(workflow, /npm run cf:deploy:prod/);
+  assert.match(workflow, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(workflow, /CLOUDFLARE_API_TOKEN/);
+
+  const pkg = JSON.parse(readText('package.json'));
+  assert.equal(pkg.scripts['cf:upload:dev'], 'opennextjs-cloudflare upload --env development');
+
+  const wrangler = readText('wrangler.toml');
+  assert.match(wrangler, /^preview_urls = true$/m);
 });
 
 test('Wrangler D1 bindings use created Cloudflare database IDs, not placeholders', () => {

@@ -103,6 +103,7 @@ export function priceForSelection(payload: Record<string, any>) {
   const droneAmount = drone ? 50 : 0;
   const karaokeAmount = karaoke ? 50 : 0;
   const tubeAmount = tube ? 50 : 0;
+  const amountDueToday = 50 + 5 + karaokeAmount + tubeAmount;
   return {
     craft,
     publicCraft: publicCraftKey(craft),
@@ -119,7 +120,7 @@ export function priceForSelection(payload: Record<string, any>) {
     total: baseTotal + droneAmount + karaokeAmount + tubeAmount,
     depositAmount: 50,
     processingFeeAmount: 5,
-    amountDueToday: 55
+    amountDueToday
   };
 }
 

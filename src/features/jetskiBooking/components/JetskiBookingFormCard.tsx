@@ -109,7 +109,7 @@ export function JetskiBookingFormCard() {
             </label>
             <label id="addon-tube-row" style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', padding: '0.6rem 0', cursor: 'pointer' }}>
               <input type="checkbox" id="addon-tube" style={{ width: 18, height: 18, accentColor: 'var(--gold)' }} />
-              <span style={{ flex: 1 }}>🛟 Towable tube</span><strong style={{ color: 'var(--gold)' }}>+$50</strong>
+              <span style={{ flex: 1 }}>🛟 Pool tube</span><strong style={{ color: 'var(--gold)' }}>+$50</strong>
             </label>
           </div>
           <div hidden aria-hidden="true">

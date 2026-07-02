@@ -20,6 +20,7 @@
     "turnstile:hostnames": "node scripts/sync-turnstile-hostnames.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare preview",
+    "cf:upload:dev": "opennextjs-cloudflare upload --env development",
     "cf:deploy:dev": "opennextjs-cloudflare deploy --env development",
     "cf:deploy:prod": "opennextjs-cloudflare deploy --env production",
     "test:migration": "node --experimental-strip-types --test tests/migration/*.test.mjs"

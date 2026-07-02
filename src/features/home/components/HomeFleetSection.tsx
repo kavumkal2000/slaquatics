@@ -64,14 +64,14 @@ export function HomeFleetSection() {
               <div className="fleet-stat-value">$160/hr</div>
             </div>
           </div>
-          <p className="fleet-desc">It's a <strong>Starcraft tritoon</strong> — three pontoons instead of two, so it rides smoother and faster than a regular pontoon. Seats up to 14 with cushioned loungers, Bluetooth speakers, and a shade top. Good for birthdays, bachelor and bachelorette trips, sandbar days, sunset cruises, and tubing. Comes with a captain.</p>
+          <p className="fleet-desc">It's a <strong>Starcraft tritoon</strong> — three pontoons instead of two, so it rides smoother and faster than a regular pontoon. Seats up to 14 with cushioned loungers, Bluetooth speakers, and a shade top. Good for birthdays, bachelor and bachelorette trips, sandbar days, sunset cruises, and floating. Comes with a captain.</p>
           <div className="fleet-perks">
             <span className="fleet-perk">Triple-Pontoon Tritoon</span>
             <span className="fleet-perk">Bluetooth Sound</span>
             <span className="fleet-perk">Seats up to 14</span>
             <span className="fleet-perk">Captain Included</span>
             <span className="fleet-perk">Loungers &amp; Shade</span>
-            <span className="fleet-perk">Tubing-Ready</span>
+            <span className="fleet-perk">Pool Tube Add-On</span>
           </div>
           <div className="fleet-actions">
             <a href="./jetski-booking/?type=boat&craft=partyboat" className="btn-primary">Book the Boat</a>

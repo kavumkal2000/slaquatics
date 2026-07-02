@@ -9,6 +9,10 @@ const nextConfig = {
   poweredByHeader: false,
   trailingSlash: true,
   skipTrailingSlashRedirect: true,
+  allowedDevOrigins: ['100.84.72.59'],
+  env: {
+    NEXT_PUBLIC_MEDIA_BASE_URL: process.env.NEXT_PUBLIC_MEDIA_BASE_URL || process.env.PUBLIC_MEDIA_BASE_URL || 'https://cdn.slaquatics.com'
+  },
   turbopack: {
     root: repoRoot
   },

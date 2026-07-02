@@ -4,6 +4,7 @@ import {
   applyMassEmailQuickSelect,
   cleanupEmptyCustomers,
   copySocialCaption,
+  filterCommCustomers,
   filterCRM,
   filterMassEmailRecipients,
   filterWaivers,
@@ -260,6 +261,10 @@ export function OpsDashboardWorkspace() {
         <div className="compose-card">
           <h3>1-to-1 follow-up</h3>
           <p id="comm-provider-note">Pick a customer, draft the message once, then send it from the connected provider.</p>
+          <div style={{marginTop: '1rem'}}>
+            <label htmlFor="comm-customer-search">Search customers</label>
+            <input className="search-input" id="comm-customer-search" type="search" placeholder="Search name, email, phone, notes..." onInput={(event) => filterCommCustomers(event.currentTarget)} />
+          </div>
           <div style={{marginTop: '1rem'}}>
             <label htmlFor="comm-customer">Customer</label>
             <select id="comm-customer" onChange={renderCommsPanel} />

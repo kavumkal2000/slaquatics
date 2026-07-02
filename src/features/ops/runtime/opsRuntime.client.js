@@ -654,7 +654,12 @@ function runOpsRuntime() {
   let waiverSearchQuery = '';
   let crmViewFilter = 'all';
   let crmSortMode = 'recent';
+  let commCustomerSearchQuery = '';
+  let commCustomerSearchResults = null;
+  let commCustomerSearchRequestId = 0;
   let massEmailSearchQuery = '';
+  let massEmailSearchResults = null;
+  let massEmailSearchRequestId = 0;
   let massEmailAudienceMode = 'all';
   let selectedMassEmailCustomerIds = new Set();
   let invoiceSearchQuery = '';
@@ -5522,8 +5527,8 @@ function runOpsRuntime() {
   function massEmailEligibleCustomers() {
     return customers.filter((customer) => normalizeEmail(customer.email));
   }
-  function massEmailRecipientMatchesSearch(customer) {
-    if (!massEmailSearchQuery) return true;
+  function customerMatchesSearch(customer, query) {
+    if (!query) return true;
     return [
       customer.name,
       customer.phone,
@@ -5532,11 +5537,39 @@ function runOpsRuntime() {
       customer.source,
       customer.crmTags,
       customer.crmNotes,
-      customer.tag
-    ].join(' ').toLowerCase().includes(massEmailSearchQuery);
+      customer.tag,
+      customer.notes
+    ].join(' ').toLowerCase().includes(query);
+  }
+  function mergeCustomerSearchResults(results = []) {
+    results.forEach((result) => {
+      if (!result || result.id == null) return;
+      const existing = customers.find((customer) => String(customer.id) === String(result.id));
+      if (existing) Object.assign(existing, result);
+      else customers.push(result);
+    });
+  }
+  async function searchOpsCustomers(query, options = {}) {
+    const normalizedQuery = String(query || '').trim();
+    if (!backendAvailable || !normalizedQuery) return [];
+    const params = new URLSearchParams({
+      q: normalizedQuery,
+      limit: String(options.limit || 50)
+    });
+    if (options.emailOnly) params.set('emailOnly', 'true');
+    const payload = await requestJson(`/api/ops/customers/search?${params.toString()}`);
+    const results = Array.isArray(payload?.customers) ? payload.customers : [];
+    mergeCustomerSearchResults(results);
+    return results;
+  }
+  function massEmailRecipientMatchesSearch(customer) {
+    return customerMatchesSearch(customer, massEmailSearchQuery);
   }
   function massEmailVisibleCustomers() {
-    return sortCustomersForCRM(massEmailEligibleCustomers().filter(massEmailRecipientMatchesSearch));
+    const source = massEmailSearchQuery && Array.isArray(massEmailSearchResults)
+      ? massEmailSearchResults
+      : massEmailEligibleCustomers();
+    return sortCustomersForCRM(source.filter((customer) => normalizeEmail(customer.email)).filter(massEmailRecipientMatchesSearch));
   }
   function selectedMassEmailCustomers() {
     normalizeMassEmailSelection();
@@ -5546,9 +5579,22 @@ function runOpsRuntime() {
     massEmailAudienceMode = value === 'selected' ? 'selected' : 'all';
     renderMassEmailDraft();
   }
-  function filterMassEmailRecipients(input) {
+  async function filterMassEmailRecipients(input) {
     massEmailSearchQuery = String(input?.value || '').trim().toLowerCase();
+    const requestId = ++massEmailSearchRequestId;
+    massEmailSearchResults = null;
     renderMassEmailDraft();
+    if (!massEmailSearchQuery) return;
+    try {
+      const results = await searchOpsCustomers(massEmailSearchQuery, { emailOnly: true, limit: 100 });
+      if (requestId !== massEmailSearchRequestId) return;
+      massEmailSearchResults = results;
+      renderMassEmailDraft();
+    } catch (error) {
+      if (requestId !== massEmailSearchRequestId) return;
+      console.error('Customer recipient search failed:', error);
+      showToast(`⚠️ ${error.message || 'Could not search customers'}`);
+    }
   }
   function toggleMassEmailRecipient(customerId, checked) {
     const normalizedId = Number(customerId);
@@ -5631,21 +5677,48 @@ function runOpsRuntime() {
       }).join('') : '<div class="empty"><div class="icon">📬</div><p>No customers with email match this search.</p></div>');
     }
   }
+  function visibleCommsCustomers() {
+    const source = commCustomerSearchQuery && Array.isArray(commCustomerSearchResults)
+      ? commCustomerSearchResults
+      : customers.filter((customer) => customerMatchesSearch(customer, commCustomerSearchQuery));
+    return [...source].sort((left, right) => String(left.name || left.email || '').localeCompare(String(right.name || right.email || '')));
+  }
+  async function filterCommCustomers(input) {
+    commCustomerSearchQuery = String(input?.value || '').trim().toLowerCase();
+    const requestId = ++commCustomerSearchRequestId;
+    commCustomerSearchResults = null;
+    renderCommsPanel();
+    if (!commCustomerSearchQuery) return;
+    try {
+      const results = await searchOpsCustomers(commCustomerSearchQuery, { limit: 50 });
+      if (requestId !== commCustomerSearchRequestId) return;
+      commCustomerSearchResults = results;
+      renderCommsPanel();
+    } catch (error) {
+      if (requestId !== commCustomerSearchRequestId) return;
+      console.error('Customer search failed:', error);
+      showToast(`⚠️ ${error.message || 'Could not search customers'}`);
+    }
+  }
   function renderCommsPanel() {
     const select = document.getElementById('comm-customer');
+    const searchInput = document.getElementById('comm-customer-search');
     const customerCard = document.getElementById('comm-customer-card');
     if (!select || !customerCard) return;
+    if (searchInput && searchInput.value !== commCustomerSearchQuery) searchInput.value = commCustomerSearchQuery;
   
-    const ordered = [...customers].sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+    const ordered = visibleCommsCustomers();
     const existingValue = select.value;
-    renderOpsMarkup(select, ordered.map((customer) => `<option value="${customer.id}">${escapeHtml(customer.name)}</option>`).join(''));
+    renderOpsMarkup(select, ordered.map((customer) => `<option value="${customer.id}">${escapeHtml(customer.name || customer.email || 'Customer')}${customer.email ? ` — ${escapeHtml(customer.email)}` : ''}</option>`).join(''));
     if (existingValue && ordered.some((customer) => String(customer.id) === existingValue)) {
       select.value = existingValue;
     }
     const current = ordered.find((customer) => String(customer.id) === String(select.value)) || ordered[0];
     if (!current) {
       renderOpsMarkup(select, '');
-      renderOpsMarkup(customerCard, '<p class="note-soft">Import or add a customer to start drafting follow-ups.</p>');
+      renderOpsMarkup(customerCard, commCustomerSearchQuery
+        ? '<p class="note-soft">No customers match this search.</p>'
+        : '<p class="note-soft">Import or add a customer to start drafting follow-ups.</p>');
       renderMassEmailDraft();
       renderCommunications();
       return;
@@ -5655,7 +5728,7 @@ function runOpsRuntime() {
       <h3>${escapeHtml(current.name)}</h3>
       <p>${current.phone ? escapeHtml(current.phone) : 'No phone on file'}${current.email ? ` · ${escapeHtml(current.email)}` : ''}</p>
       <div class="mini-kpis">
-        <div class="mini-kpi"><strong>${current.bookings}</strong><span>bookings</span></div>
+        <div class="mini-kpi"><strong>${Number(current.bookings || 0)}</strong><span>bookings</span></div>
         <div class="mini-kpi money-hide"><strong>${moneyLabel(current.totalSpent)}</strong><span>lifetime</span></div>
         <div class="mini-kpi"><strong>${current.lastBooking === 'N/A' ? '—' : current.lastBooking}</strong><span>last booking</span></div>
       </div>
@@ -6995,6 +7068,7 @@ function runOpsRuntime() {
       exportInvoicesCsv,
       exportReportsCsv,
       filterByStatus,
+      filterCommCustomers,
       filterCRM,
       filterInvoices,
       filterMassEmailRecipients,
