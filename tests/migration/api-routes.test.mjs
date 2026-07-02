@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import { test } from 'node:test';
 
@@ -27,6 +28,24 @@ function withEnv(values, fn) {
 function stripeSignatureHeader(rawBody, secret, timestamp = Math.floor(Date.now() / 1000)) {
   const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex');
   return `t=${timestamp},v1=${signature}`;
+}
+
+function runNodeScript(args, stdin = '') {
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', args, { cwd: process.cwd(), stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve({ stdout, stderr });
+      else reject(new Error(`Command failed with code ${code}: ${stderr}`));
+    });
+    child.stdin.end(stdin);
+  });
 }
 
 test('/api/health route returns Cloudflare-compatible health payload', async () => {
@@ -747,7 +766,8 @@ test('/api/auth client magic-link sends a single-use Resend link and consumes it
   try {
     await withEnv({
       RESEND_API_KEY: 're_magic_link',
-      RESEND_FROM_EMAIL: 'dock@slaquatics.test',
+      RESEND_FROM_EMAIL: 'bookings@slaquatics.test',
+      AUTH_RESEND_FROM_EMAIL: 'auth@slaquatics.test',
       TURNSTILE_SECRET_KEY: undefined
     }, async () => {
       const magicRoute = await import(`../../src/app/api/auth/client/magic-link/route.ts?case=magic-send-${Date.now()}`);
@@ -765,6 +785,7 @@ test('/api/auth client magic-link sends a single-use Resend link and consumes it
 
       assert.equal(send.ok, true);
       assert.equal(requests.length, 1);
+      assert.equal(emailBody.from, 'auth@slaquatics.test');
       assert.equal(emailBody.to[0], 'client.user+lake@example.com');
       assert.match(emailBody.subject, /sign-in link/i);
       assert.ok(token.length > 40);
@@ -795,6 +816,98 @@ test('/api/auth client magic-link sends a single-use Resend link and consumes it
   }
 });
 
+test('/api/auth client magic-link session prompts optional password setup and can set a password', async () => {
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, init = {}) => {
+    requests.push({ url: String(url), init });
+    return new Response(JSON.stringify({ id: 'email_magic_link_password_setup' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+
+  try {
+    await withEnv({
+      SESSION_SECRET: 'client-password-session-secret',
+      RESEND_API_KEY: 're_magic_link_password',
+      AUTH_RESEND_FROM_EMAIL: 'auth@slaquatics.test',
+      TURNSTILE_SECRET_KEY: undefined
+    }, async () => {
+      const magicRoute = await import(`../../src/app/api/auth/client/magic-link/route.ts?case=magic-password-send-${Date.now()}`);
+      const consumeRoute = await import(`../../src/app/api/auth/magic-link/consume/route.ts?case=magic-password-consume-${Date.now()}`);
+      const sessionRoute = await import(`../../src/app/api/auth/session/route.ts?case=magic-password-session-${Date.now()}`);
+      const passwordRoute = await import(`../../src/app/api/auth/client/password/route.ts?case=client-password-set-${Date.now()}`);
+      const loginRoute = await import(`../../src/app/api/auth/login/route.ts?case=client-password-login-${Date.now()}`);
+
+      await responseJson(await magicRoute.POST(new Request('https://slaquatics.test/api/auth/client/magic-link', {
+        method: 'POST',
+        body: JSON.stringify({ email: 'Password.Client@example.com' })
+      })));
+      const emailBody = JSON.parse(String(requests[0].init.body));
+      const link = String(emailBody.html.match(/https:\/\/slaquatics\.test\/api\/auth\/magic-link\/consume\?token=[^"]+/)?.[0] || '').replace(/&amp;/g, '&');
+      const consume = await consumeRoute.GET(new Request(link));
+      const cookie = consume.headers.get('set-cookie') || '';
+      const initialSession = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
+        headers: { cookie }
+      })));
+
+      assert.equal(initialSession.user.role, 'client');
+      assert.equal(initialSession.clientPassword.canSet, true);
+      assert.equal(initialSession.clientPassword.hasPassword, false);
+      assert.equal(initialSession.clientPassword.shouldPrompt, true);
+
+      const weak = await responseJson(await passwordRoute.POST(new Request('https://slaquatics.test/api/auth/client/password', {
+        method: 'POST',
+        headers: { cookie, origin: 'https://evil.example' },
+        body: JSON.stringify({ password: 'Short!' })
+      })));
+      assert.equal(weak.error, 'Invalid request origin.');
+
+      const saved = await responseJson(await passwordRoute.POST(new Request('https://slaquatics.test/api/auth/client/password', {
+        method: 'POST',
+        headers: { cookie, origin: 'https://slaquatics.test' },
+        body: JSON.stringify({ password: 'Client!' })
+      })));
+      assert.equal(saved.ok, true);
+
+      const updatedSession = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
+        headers: { cookie }
+      })));
+      assert.equal(updatedSession.clientPassword.canSet, true);
+      assert.equal(updatedSession.clientPassword.hasPassword, true);
+      assert.equal(updatedSession.clientPassword.shouldPrompt, false);
+
+      const clientLogin = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'password.client@example.com', password: 'Client!' })
+      }));
+      const clientLoginPayload = await responseJson(clientLogin);
+      assert.equal(clientLogin.status, 200);
+      assert.equal(clientLoginPayload.user.role, 'client');
+      assert.equal(clientLoginPayload.clientPassword.shouldPrompt, false);
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('ops password hash helper accepts six character privileged passwords with uppercase and special characters', async () => {
+  const { stdout } = await runNodeScript([
+    'scripts/generate-ops-password-hash.mjs',
+    '--username',
+    'developer',
+    '--role',
+    'developer',
+    '--env',
+    'production',
+    '--password-stdin'
+  ], 'Admin!\nAdmin!\n');
+
+  assert.match(stdout, /INSERT INTO ops_auth_users/);
+  assert.match(stdout, /pbkdf2-sha256:210000:/);
+});
+
 test('/api/auth legacy oauth route is disabled while first-party Resend magic links are active', async () => {
   await withEnv({
     TURNSTILE_SECRET_KEY: undefined
@@ -816,9 +929,10 @@ test('/api/auth legacy oauth route is disabled while first-party Resend magic li
   });
 });
 
-test('/api/auth session exposes owner passkey enrollment state after password login', async () => {
+test('/api/auth session exposes privileged passkey enrollment state after password login', async () => {
   await withEnv({
     SESSION_SECRET: 'owner-passkey-session-secret',
+    OPS_DEV_PASSWORD: 'developer-passkey-password',
     OPS_OWNER_PASSWORD: 'owner-passkey-password',
     OWNER_PASSKEY_GRACE_SECONDS: '604800'
   }, async () => {
@@ -842,6 +956,24 @@ test('/api/auth session exposes owner passkey enrollment state after password lo
     assert.equal(session.passkey.required, true);
     assert.equal(session.passkey.enrolled, false);
     assert.match(session.passkey.graceEndsAt, /^\d{4}-\d{2}-\d{2}T/);
+
+    const developerLogin = await loginRoute.POST(new Request('https://slaquatics.test/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'developer', password: 'developer-passkey-password' })
+    }));
+    const developerPayload = await responseJson(developerLogin);
+    const developerSession = await responseJson(await sessionRoute.GET(new Request('https://slaquatics.test/api/auth/session', {
+      headers: { cookie: developerLogin.headers.get('set-cookie') || '' }
+    })));
+
+    assert.equal(developerLogin.status, 200);
+    assert.equal(developerPayload.user.role, 'developer');
+    assert.equal(developerPayload.passkey.required, true);
+    assert.equal(developerPayload.passkey.enrolled, false);
+    assert.equal(developerPayload.passkey.shouldPrompt, true);
+    assert.equal(developerSession.passkey.required, true);
+    assert.equal(developerSession.passkey.enrolled, false);
+    assert.match(developerSession.passkey.graceEndsAt, /^\d{4}-\d{2}-\d{2}T/);
   });
 });
 

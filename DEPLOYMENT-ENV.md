@@ -22,7 +22,7 @@ All runtime config for the Shoreline Aquatics Worker. Set non-secret values as W
 Before client magic-link and owner passkey auth can work in production:
 
 - Seed privileged users in D1 `ops_auth_users` with PBKDF2 password hashes.
-- Configure Resend and set `RESEND_API_KEY` plus `RESEND_FROM_EMAIL`.
+- Configure Resend and set `RESEND_API_KEY` plus `AUTH_RESEND_FROM_EMAIL` for auth magic links.
 - Configure Turnstile and set both keys before exposing auth endpoints to production traffic.
 - Have the owner sign in with their password and complete passkey setup during the grace window.
 
@@ -31,6 +31,7 @@ Before client magic-link and owner passkey auth can work in production:
 |---|---|
 | `RESEND_API_KEY` | Your Resend API key. |
 | `RESEND_FROM_EMAIL` | Verified sender address (e.g. `bookings@slaquatics.com`). |
+| `AUTH_RESEND_FROM_EMAIL` | Verified sender address used only for auth magic links (e.g. `auth@slaquatics.com`). Falls back to `RESEND_FROM_EMAIL` if unset. |
 | `RESEND_FROM_NAME` | Defaults to `Shoreline Aquatics`. |
 | `OWNER_UPDATE_EMAILS` | Comma-separated owner email(s) — receives the **weekly digest** + owner updates. |
 | `BOOKING_ALERT_EMAILS` | Who gets new-booking alerts (falls back to OWNER_UPDATE_EMAILS). |
@@ -61,4 +62,4 @@ Before client magic-link and owner passkey auth can work in production:
 ---
 
 ### Minimum to be "secure + emailing":
-Seed D1 `ops_auth_users`, remove production `OPS_*_PASSWORD*` fallbacks, set `SESSION_SECRET`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OWNER_UPDATE_EMAILS`, and `OWNER_WEEKLY_CRON_SECRET`. The System page in the ops tool flags missing runtime config.
+Seed D1 `ops_auth_users`, remove production `OPS_*_PASSWORD*` fallbacks, set `SESSION_SECRET`, `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, `AUTH_RESEND_FROM_EMAIL`, `OWNER_UPDATE_EMAILS`, and `OWNER_WEEKLY_CRON_SECRET`. The System page in the ops tool flags missing runtime config.

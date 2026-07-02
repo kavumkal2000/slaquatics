@@ -2,6 +2,7 @@ import {
   clearLoginFailures,
   clearSessionCookie,
   createSessionCookie,
+  clientPasswordStatusForUser,
   findOpsUser,
   loginLockRemainingMs,
   loginRateKey,
@@ -35,8 +36,9 @@ export async function POST(request: Request) {
     }
     clearLoginFailures(rateKey);
     const passkey = await passkeyStatusForUser(resolvedUser);
+    const clientPassword = clientPasswordStatusForUser(resolvedUser);
     return jsonResponse(
-      { ok: true, user: sessionUserPayload(resolvedUser), passkey },
+      { ok: true, user: sessionUserPayload(resolvedUser), passkey, clientPassword },
       { headers: { 'Set-Cookie': await createSessionCookie(resolvedUser, request) } }
     );
   } catch {

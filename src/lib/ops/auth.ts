@@ -132,6 +132,14 @@ export function createPasswordHash(password: string, salt = crypto.randomBytes(1
   return `pbkdf2-sha256:${PBKDF2_ITERATIONS}:${salt}:${hash}`;
 }
 
+export function passwordPolicyError(password = '') {
+  const value = String(password || '');
+  if (value.length < 6) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  if (!/[A-Z]/.test(value)) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  if (!/[^A-Za-z0-9]/.test(value)) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  return '';
+}
+
 export function verifyPassword(password: string, storedHash = '') {
   const hash = String(storedHash || '').trim();
   const [algorithm, iterationsValue, salt, expected] = hash.split(':');
@@ -253,7 +261,7 @@ export async function consumeClientMagicLink(token: string, request: Request) {
 export async function passkeyStatusForUser(user: OpsAuthUser | SessionUser | null) {
   if (!user) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '' };
   const role = String(user.role || '').toLowerCase();
-  const required = role === 'owner';
+  const required = role === 'owner' || role === 'developer';
   if (!required) return { required: false, enrolled: false, shouldPrompt: false, graceEndsAt: '' };
   const store = await getOpsAuthStore();
   const passkeys = await store.listPasskeysForUser(user.id);
@@ -267,6 +275,17 @@ export async function passkeyStatusForUser(user: OpsAuthUser | SessionUser | nul
     shouldPrompt: !enrolled,
     graceEndsAt
   };
+}
+
+export function clientPasswordStatusForUser(user: OpsAuthUser | SessionUser | null) {
+  const role = String(user?.role || '').toLowerCase();
+  if (role !== 'client') return { canSet: false, hasPassword: false, shouldPrompt: false };
+  const hasPassword = Boolean(user?.passwordHash);
+  return { canSet: true, hasPassword, shouldPrompt: !hasPassword };
+}
+
+export function authResendFromEmail() {
+  return process.env.AUTH_RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || '';
 }
 
 export function collectAuthConfigWarnings() {
@@ -283,8 +302,8 @@ export function collectAuthConfigWarnings() {
   if (legacyPasswordKeys.length) {
     warnings.push(`Legacy env password fallback is present (${legacyPasswordKeys.join(', ')}). Rotate these users into D1 hashes and remove the env passwords before cutover.`);
   }
-  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
-    warnings.push('Resend email is not configured yet. Client magic-link sign-in cannot send email until RESEND_API_KEY and RESEND_FROM_EMAIL are set.');
+  if (!process.env.RESEND_API_KEY || !authResendFromEmail()) {
+    warnings.push('Resend email is not configured yet. Client magic-link sign-in cannot send email until RESEND_API_KEY and AUTH_RESEND_FROM_EMAIL are set.');
   }
   if (!process.env.TURNSTILE_SECRET_KEY) {
     warnings.push('TURNSTILE_SECRET_KEY is not set. Auth spam protection is disabled until Cloudflare Turnstile is configured.');

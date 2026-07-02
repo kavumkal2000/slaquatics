@@ -8,6 +8,10 @@ function validEmail(value = '') {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function authFromEmail() {
+  return process.env.AUTH_RESEND_FROM_EMAIL || process.env.RESEND_FROM_EMAIL || '';
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const email = normalizeEmail(body.email || '');
@@ -26,6 +30,7 @@ export async function POST(request: Request) {
       footerNote: 'If you did not request this link, you can ignore this email.'
     });
     await sendResendEmail({
+      from: authFromEmail(),
       to: email,
       subject: 'Your Shoreline Aquatics secure sign-in link',
       text: `Use this secure sign-in link within 15 minutes:\n\n${link.url}`,

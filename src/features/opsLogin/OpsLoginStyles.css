@@ -120,9 +120,16 @@ input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(26,15
 .client-link-row{
   display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0.7rem;align-items:center
 }
+.client-password-form{
+  margin-top:1rem
+}
 .client-link-row .secondary-action{
   width:auto;margin-top:0;white-space:nowrap
 }
+.text-action{
+  margin-top:0.7rem;border:0;background:transparent;color:var(--muted);font:inherit;font-size:0.82rem;cursor:pointer
+}
+.text-action:hover{color:var(--white)}
 .turnstile-slot{
   margin:0.25rem 0 0.85rem;min-height:65px
 }

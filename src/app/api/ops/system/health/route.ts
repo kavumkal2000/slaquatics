@@ -1,4 +1,4 @@
-import { collectAuthConfigWarnings, getSession } from '../../../../../lib/ops/auth.ts';
+import { authResendFromEmail, collectAuthConfigWarnings, getSession } from '../../../../../lib/ops/auth.ts';
 import { jsonResponse } from '../../../../../lib/cloudflare/http.ts';
 import { integrationStatus } from '../../../../../lib/cloudflare/integrations.ts';
 import { getOpsAuthStore } from '../../../../../lib/ops/auth-store.ts';
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       warnings,
       storage: authStorage,
       d1Ready: authReady,
-      magicLinkConfigured: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL),
+      magicLinkConfigured: Boolean(process.env.RESEND_API_KEY && authResendFromEmail()),
       turnstileConfigured: Boolean(process.env.TURNSTILE_SECRET_KEY && publicTurnstileSiteKey())
     },
     integrations: integrationStatus()

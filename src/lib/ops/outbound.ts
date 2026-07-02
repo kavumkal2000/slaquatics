@@ -34,8 +34,9 @@ export async function sendTwilioSms({ to, body }: { to: string; body: string }) 
   return json;
 }
 
-export async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyKey = '' }: any) {
-  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+export async function sendResendEmail({ to, subject, text, html, bcc = [], idempotencyKey = '', from = '' }: any) {
+  const fromEmail = normalizeEmail(from || process.env.RESEND_FROM_EMAIL || '');
+  if (!process.env.RESEND_API_KEY || !fromEmail) {
     throw new Error('Resend email is not configured yet.');
   }
   const recipients = Array.from(new Set((Array.isArray(to) ? to : [to]).map(normalizeEmail).filter(Boolean)));
@@ -49,7 +50,7 @@ export async function sendResendEmail({ to, subject, text, html, bcc = [], idemp
       ...(idempotencyKey ? { 'Idempotency-Key': String(idempotencyKey) } : {})
     },
     body: JSON.stringify({
-      from: process.env.RESEND_FROM_EMAIL,
+      from: fromEmail,
       to: recipients,
       bcc: bccRecipients.length ? bccRecipients : undefined,
       subject: subject || 'Shoreline Aquatics',

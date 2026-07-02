@@ -8,8 +8,8 @@ This blueprint describes the native authentication system used for SLAquatics an
 - Use opaque browser cookies only. Never store role claims, user IDs, JWTs, or permissions in client-readable state.
 - Store only hashes of session tokens and magic-link tokens.
 - Use Resend only to deliver single-use client magic links.
-- Use password login only for privileged staff/owner accounts.
-- Require owner passkey enrollment after password login.
+- Use password login for privileged staff/owner accounts, and allow clients to add an optional password after magic-link sign-in.
+- Require owner/developer passkey enrollment after password login.
 - Protect auth entrypoints with Cloudflare Turnstile in production.
 - Revoke sessions server-side by updating D1.
 
@@ -71,9 +71,10 @@ Create these tables in the same D1 database as the app state:
 
 ## Password Login
 
-Use password login only for privileged staff roles.
+Use password login for privileged staff roles, plus optional client passwords after magic-link signup.
 
 - Hash passwords with PBKDF2-SHA256, at least 210,000 iterations, 32-byte output, random salt.
+- For this implementation, accepted passwords must be 6+ characters and include at least one uppercase letter and one special character.
 - Do not allow production to depend on env-var passwords.
 - Keep env password fallback local/test-only while bootstrapping.
 - Rate-limit by username plus Cloudflare client IP.
@@ -103,6 +104,12 @@ Endpoint shape:
   - Finds or creates a user with role `client`.
   - Issues the same opaque session cookie as password/passkey auth.
 
+- `POST /api/auth/client/password`
+  - Requires an authenticated `client` session.
+  - Requires same-origin mutation headers when present.
+  - Stores a PBKDF2 password hash on the client user.
+  - Leaves magic-link sign-in available as the primary signup/sign-in path.
+
 Client users must never be allowed into ops APIs.
 
 ## Passkeys
@@ -111,7 +118,7 @@ Use `@simplewebauthn/server` and `@simplewebauthn/browser`.
 
 Registration:
 
-- Owner signs in with password.
+- Owner/developer signs in with password.
 - Server generates registration options with RP name, RP ID, user ID, username, and existing credentials to exclude.
 - Store the challenge hash and raw challenge in `ops_auth_challenges`.
 - Browser calls `startRegistration`.
@@ -164,7 +171,7 @@ Required:
 - `TURNSTILE_SITE_KEY`
 - `TURNSTILE_SECRET_KEY`
 - `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
+- `AUTH_RESEND_FROM_EMAIL`
 - D1 binding for auth tables
 
 Optional:

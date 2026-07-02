@@ -17,8 +17,9 @@ function errorUrl(request: Request, reason: string) {
 }
 
 function clientUrl(request: Request) {
-  const url = new URL('/', publicAuthOrigin(request));
+  const url = new URL('/ops-login', publicAuthOrigin(request));
   url.searchParams.set('client_login', 'ok');
+  url.searchParams.set('client_password', 'optional');
   return String(url);
 }
 

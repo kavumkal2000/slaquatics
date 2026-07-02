@@ -28,6 +28,14 @@ export function OpsLoginPanel() {
             <button className="secondary-action" id="client-link-btn" type="submit">Send Link</button>
           </div>
         </form>
+        <form className="client-password-form" id="client-password-form" hidden>
+          <label htmlFor="client-password">Optional client password</label>
+          <div className="client-link-row">
+            <input id="client-password" name="client-password" type="password" autoComplete="new-password" placeholder="6+ chars, uppercase, special" />
+            <button className="secondary-action" id="client-password-btn" type="submit">Save Password</button>
+          </div>
+          <button className="text-action" id="client-password-skip-btn" type="button">Skip for now</button>
+        </form>
         <div className="support" id="support-copy">
           If the private CRM is unavailable, contact Shoreline support or your site administrator.
           On iPhone, open this in Safari, tap Share, then Add to Home Screen.

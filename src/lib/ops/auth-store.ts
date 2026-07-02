@@ -56,6 +56,7 @@ export type OpsAuthStore = {
   createMagicLink(input: MagicLinkInput): Promise<void>;
   findMagicLink(tokenHash: string): Promise<{ tokenHash: string; email: string; roleIntent: 'client'; expiresAt: string; consumedAt: string } | null>;
   consumeMagicLink(tokenHash: string): Promise<void>;
+  updateUserPassword(userId: number, passwordHash: string, authProvider?: string): Promise<void>;
   listPasskeysForUser(userId: number): Promise<OpsPasskey[]>;
   findPasskeyByCredentialId(credentialId: string): Promise<OpsPasskey | null>;
   createPasskey(input: CreatePasskeyInput): Promise<void>;
@@ -371,6 +372,12 @@ function createD1AuthStore(db: D1DatabaseLike): OpsAuthStore {
         "UPDATE ops_auth_magic_links SET consumed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE token_hash = ? AND consumed_at IS NULL"
       ).bind(tokenHash).run();
     },
+    async updateUserPassword(userId, passwordHash, authProvider = 'password') {
+      await ensureReady();
+      await db.prepare(
+        "UPDATE ops_auth_users SET password_hash = ?, auth_provider = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
+      ).bind(passwordHash, authProvider, userId).run();
+    },
     async listPasskeysForUser(userId) {
       await ensureReady();
       const result = await db.prepare('SELECT * FROM ops_auth_passkeys WHERE user_id = ?').bind(userId).all<PasskeyRow>();
@@ -553,6 +560,14 @@ function createMemoryAuthStore(): OpsAuthStore {
     async consumeMagicLink(tokenHash) {
       const link = memory.magicLinks.get(tokenHash);
       if (link && !link.consumedAt) link.consumedAt = new Date().toISOString();
+    },
+    async updateUserPassword(userId, passwordHash, authProvider = 'password') {
+      const user = memory.users.find((item) => item.id === Number(userId));
+      if (user) {
+        user.passwordHash = passwordHash;
+        user.authProvider = authProvider;
+        user.updatedAt = new Date().toISOString();
+      }
     },
     async listPasskeysForUser(userId) {
       return memory.passkeys.filter((passkey) => passkey.userId === Number(userId));

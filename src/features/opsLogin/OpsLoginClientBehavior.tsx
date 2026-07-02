@@ -46,14 +46,18 @@ function createOpsUrl(path: string) {
 function createOpsLoginController(signal: AbortSignal) {
   const form = byId<HTMLFormElement>('login-form');
   const clientLinkForm = byId<HTMLFormElement>('client-magic-link-form');
+  const clientPasswordForm = byId<HTMLFormElement>('client-password-form');
   const status = byId('status');
   const submit = byId<HTMLButtonElement>('submit-btn');
   const clientLinkBtn = byId<HTMLButtonElement>('client-link-btn');
+  const clientPasswordBtn = byId<HTMLButtonElement>('client-password-btn');
+  const clientPasswordSkipBtn = byId<HTMLButtonElement>('client-password-skip-btn');
   const passkeyLoginBtn = byId<HTMLButtonElement>('passkey-login-btn');
   const passkeyRegisterBtn = byId<HTMLButtonElement>('passkey-register-btn');
   const username = byId<HTMLInputElement>('username');
   const password = byId<HTMLInputElement>('password');
   const clientEmail = byId<HTMLInputElement>('client-email');
+  const clientPassword = byId<HTMLInputElement>('client-password');
   const turnstileSlot = byId('turnstile-slot');
   const opsAppUrl = createOpsUrl('ops');
   const opsLoginUrl = createOpsUrl('ops-login');
@@ -78,6 +82,10 @@ function createOpsLoginController(signal: AbortSignal) {
   };
   const setClientBusy = (isBusy: boolean) => {
     if (clientLinkBtn) clientLinkBtn.disabled = isBusy;
+  };
+  const setClientPasswordBusy = (isBusy: boolean) => {
+    if (clientPasswordBtn) clientPasswordBtn.disabled = isBusy;
+    if (clientPasswordSkipBtn) clientPasswordSkipBtn.disabled = isBusy;
   };
   const setPasskeyBusy = (isBusy: boolean) => {
     if (passkeyLoginBtn) passkeyLoginBtn.disabled = isBusy;
@@ -118,6 +126,7 @@ function createOpsLoginController(signal: AbortSignal) {
     if (!turnstile?.render) return;
     const widgetId = turnstile.render(turnstileSlot, {
       sitekey: authConfig.turnstileSiteKey,
+      theme: 'dark',
       callback(token: string) {
         turnstileToken = token;
       },
@@ -136,6 +145,18 @@ function createOpsLoginController(signal: AbortSignal) {
     if (turnstileToken) return true;
     setStatus('Complete the security check before signing in.', 'error');
     return false;
+  };
+
+  const showClientPasswordPrompt = () => {
+    if (form) form.hidden = true;
+    if (clientLinkForm) clientLinkForm.hidden = true;
+    if (passkeyLoginBtn) passkeyLoginBtn.hidden = true;
+    if (clientPasswordForm) clientPasswordForm.hidden = false;
+  };
+
+  const finishClientLogin = () => {
+    setStatus('Client sign-in complete.', 'success');
+    window.location.replace(createOpsUrl(''));
   };
 
   if (isNativeOpsApp()) {
@@ -169,6 +190,15 @@ function createOpsLoginController(signal: AbortSignal) {
       }
       const data = await response.json();
       if (data.authenticated) {
+        if (data.user?.role === 'client') {
+          if (data.clientPassword?.shouldPrompt) {
+            showClientPasswordPrompt();
+            setStatus('You are signed in. Add an optional password or skip for now.', 'success');
+            return;
+          }
+          finishClientLogin();
+          return;
+        }
         window.location.replace(opsAppUrl);
         return;
       }
@@ -201,9 +231,19 @@ function createOpsLoginController(signal: AbortSignal) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Sign-in failed');
+      if (data.user?.role === 'client') {
+        if (data.clientPassword?.shouldPrompt) {
+          showClientPasswordPrompt();
+          setStatus('You are signed in. Add an optional password or skip for now.', 'success');
+          setBusy(false);
+          return;
+        }
+        finishClientLogin();
+        return;
+      }
       if (data.passkey?.shouldPrompt && passkeyRegisterBtn) {
         passkeyRegisterBtn.hidden = false;
-        setStatus('Password accepted. Set up a passkey to secure the owner account.', 'success');
+        setStatus('Password accepted. Set up a passkey to secure this admin account.', 'success');
         setBusy(false);
         return;
       }
@@ -296,6 +336,27 @@ function createOpsLoginController(signal: AbortSignal) {
     }
   };
 
+  const saveClientPassword = async () => {
+    setClientPasswordBusy(true);
+    setStatus('Saving optional password...');
+    try {
+      const response = await fetch('/api/auth/client/password', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: clientPassword?.value || '' }),
+        signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not save password.');
+      finishClientLogin();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not save password.', 'error');
+      setClientPasswordBusy(false);
+      if (clientPassword?.value) clientPassword.select();
+    }
+  };
+
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
     void submitLogin();
@@ -303,6 +364,13 @@ function createOpsLoginController(signal: AbortSignal) {
   clientLinkForm?.addEventListener('submit', (event) => {
     event.preventDefault();
     void sendClientMagicLink();
+  }, { signal });
+  clientPasswordForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void saveClientPassword();
+  }, { signal });
+  clientPasswordSkipBtn?.addEventListener('click', () => {
+    finishClientLogin();
   }, { signal });
   passkeyRegisterBtn?.addEventListener('click', () => { void registerPasskey(); }, { signal });
   passkeyLoginBtn?.addEventListener('click', () => { void loginWithPasskey(); }, { signal });

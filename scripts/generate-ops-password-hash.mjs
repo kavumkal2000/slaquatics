@@ -19,6 +19,20 @@ function createPasswordHash(password, salt = crypto.randomBytes(16).toString('ba
   return `pbkdf2-sha256:${PBKDF2_ITERATIONS}:${salt}:${hash}`;
 }
 
+async function readStdinText() {
+  let text = '';
+  for await (const chunk of input) text += chunk;
+  return text;
+}
+
+function passwordPolicyError(password = '') {
+  const value = String(password || '');
+  if (value.length < 6) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  if (!/[A-Z]/.test(value)) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  if (!/[^A-Za-z0-9]/.test(value)) return 'Password must be at least 6 characters and include an uppercase letter and a special character.';
+  return '';
+}
+
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 1) {
   const arg = process.argv[index];
@@ -28,18 +42,34 @@ for (let index = 2; index < process.argv.length; index += 1) {
 
 const username = String(args.get('username') || '').trim().toLowerCase();
 const env = String(args.get('env') || 'development').trim();
+const role = String(args.get('role') || (username === 'owner' ? 'owner' : 'developer')).trim().toLowerCase();
+const email = String(args.get('email') || '').trim().toLowerCase();
+const displayName = String(args.get('display-name') || (role === 'owner' ? 'Owner' : 'Developer')).trim();
 if (!username) {
-  console.error('Usage: npm run ops-auth:hash -- --username owner --env production');
+  console.error('Usage: npm run ops-auth:hash -- --username owner --role owner --email owner@example.com --display-name "Owner" --env production');
+  process.exit(1);
+}
+if (!['developer', 'owner', 'employee', 'crew'].includes(role)) {
+  console.error('Role must be developer, owner, employee, or crew.');
   process.exit(1);
 }
 
-const rl = readline.createInterface({ input, output });
-const password = await rl.question('New password: ');
-const confirm = await rl.question('Confirm password: ');
-rl.close();
+let password = '';
+let confirm = '';
+if (args.get('password-stdin') === 'true') {
+  const lines = (await readStdinText()).split(/\r?\n/);
+  password = lines[0] || '';
+  confirm = lines[1] || '';
+} else {
+  const rl = readline.createInterface({ input, output });
+  password = await rl.question('New password: ');
+  confirm = await rl.question('Confirm password: ');
+  rl.close();
+}
 
-if (!password || password.length < 14) {
-  console.error('Password must be at least 14 characters.');
+const policyError = passwordPolicyError(password);
+if (policyError) {
+  console.error(policyError);
   process.exit(1);
 }
 if (password !== confirm) {
@@ -48,10 +78,11 @@ if (password !== confirm) {
 }
 
 const hash = createPasswordHash(password);
-const updateSql = [
-  'UPDATE ops_auth_users',
-  `SET password_hash = ${sqlQuote(hash)}, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`,
-  `WHERE username = ${sqlQuote(username)} OR email = ${sqlQuote(username)};`
+const upsertSql = [
+  'INSERT INTO ops_auth_users (username, email, role, display_name, password_hash, auth_provider, enabled)',
+  `VALUES (${sqlQuote(username)}, ${email ? sqlQuote(email) : 'NULL'}, ${sqlQuote(role)}, ${sqlQuote(displayName || username)}, ${sqlQuote(hash)}, 'password', 1)`,
+  'ON CONFLICT(username) DO UPDATE SET',
+  `email = excluded.email, role = excluded.role, display_name = excluded.display_name, password_hash = excluded.password_hash, auth_provider = excluded.auth_provider, enabled = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now');`
 ].join(' ');
 const revokeSql = [
   'UPDATE ops_auth_sessions',
@@ -62,7 +93,7 @@ const revokeSql = [
 ].join(' ');
 
 console.log('\nPassword hash generated. Do not store the plaintext password.');
-console.log('\nUpdate password hash:');
-console.log(`npx wrangler d1 execute --env ${env} --remote OPS_DB --command ${shellQuote(updateSql)}`);
+console.log('\nCreate or update user password hash:');
+console.log(`npx wrangler d1 execute --env ${env} --remote OPS_DB --command ${shellQuote(upsertSql)}`);
 console.log('\nRevoke existing sessions for this user:');
 console.log(`npx wrangler d1 execute --env ${env} --remote OPS_DB --command ${shellQuote(revokeSql)}`);
