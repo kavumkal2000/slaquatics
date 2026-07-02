@@ -99,11 +99,21 @@ input{
 input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(26,158,212,0.12)}
 .field{margin-bottom:1rem}
 .submit{
-  width:100%;margin-top:0.35rem;padding:0.95rem 1rem;border:none;border-radius:14px;
+  width:100%;padding:0.95rem 1rem;border:none;border-radius:14px;
   background:linear-gradient(135deg, var(--sky), var(--wave));color:#fff;font:inherit;
   font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer
 }
 .submit:disabled{opacity:0.65;cursor:wait}
+.login-action-row{
+  display:grid;grid-template-columns:minmax(0,1fr) 3.25rem;gap:0.65rem;align-items:stretch;margin-top:0.35rem
+}
+.passkey-icon-action{
+  display:grid;place-items:center;border-radius:14px;border:1px solid rgba(26,158,212,0.28);
+  background:rgba(255,255,255,0.04);color:var(--white);cursor:pointer
+}
+.passkey-icon-action svg{width:1.45rem;height:1.45rem;fill:currentColor}
+.passkey-icon-action:hover{border-color:rgba(15,184,224,0.52);background:rgba(15,184,224,0.1)}
+.passkey-icon-action:disabled{opacity:0.65;cursor:wait}
 .secondary-action{
   width:100%;margin-top:0.75rem;padding:0.88rem 1rem;border-radius:14px;
   border:1px solid rgba(26,158,212,0.28);background:rgba(255,255,255,0.04);color:var(--white);
@@ -113,9 +123,6 @@ input:focus{outline:none;border-color:var(--sky);box-shadow:0 0 0 3px rgba(26,15
 .secondary-action:disabled{opacity:0.65;cursor:wait}
 .passkey-actions{
   display:grid;grid-template-columns:1fr;gap:0.7rem;margin-top:0.85rem
-}
-.client-link-form{
-  margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08)
 }
 .client-link-row{
   display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0.7rem;align-items:center
